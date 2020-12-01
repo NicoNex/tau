@@ -48,13 +48,13 @@ const (
 )
 
 var typemap = map[Type]string{
-	EOF:   "EOF",
-	ERROR: "ERROR",
+	EOF:   "eof",
+	ERROR: "error",
 
 	IDENT:  "IDENT",
-	INT:    "INT",
-	FLOAT:  "FLOAT",
-	STRING: "STRING",
+	INT:    "int",
+	FLOAT:  "float",
+	STRING: "string",
 
 	ASSIGN:   "=",
 	PLUS:     "+",
@@ -74,6 +74,7 @@ var typemap = map[Type]string{
 
 	COMMA:     ",",
 	SEMICOLON: ";",
+	NEW_LINE:  "new line",
 
 	LPAREN:  "(",
 	RPAREN:  ")",
@@ -84,11 +85,11 @@ var typemap = map[Type]string{
 	LBRACKET: "[",
 	RBRACKET: "]",
 
-	FUNCTION: "FUNCTION",
-	IF:       "IF",
-	ELSE:     "ELSE",
-	TRUE:     "TRUE",
-	FALSE:    "FALSE",
+	FUNCTION: "function",
+	IF:       "if",
+	ELSE:     "else",
+	TRUE:     "true",
+	FALSE:    "false",
 }
 
 var keywords = map[string]Type{

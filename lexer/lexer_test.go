@@ -8,18 +8,18 @@ import (
 
 func TestNextItem(t *testing.T) {
 	input := `
-five = 5
-ten = 10
+five = 5;
+ten = 10;
 
 add = fn(x, y) {
-  x + y
+  x + y;
 };
 
-result = add(five, ten)
-!-/*5
-5 < 10 > 5
+result = add(five, ten);
+!-/*5;
+5 < 10 > 5;
 
-if (5 < 10) {
+if 5 < 10 {
 	true;
 } else {
 	false;
@@ -27,15 +27,15 @@ if (5 < 10) {
 
 10 == 10;
 10 != 9;
-"foobar"
-"foo bar"
+"foobar";
+"foo bar";
 [1, 2];
 
 fn mul(x, y) {
-	x * y
+	x * y;
 }
 
-10.5 == 10.45
+10.5 == 10.45;
 
 `
 
@@ -46,12 +46,12 @@ fn mul(x, y) {
 		{item.IDENT, "five"},
 		{item.ASSIGN, "="},
 		{item.INT, "5"},
-		{item.SEMICOLON, "\n"},
+		{item.SEMICOLON, ";"},
 
 		{item.IDENT, "ten"},
 		{item.ASSIGN, "="},
 		{item.INT, "10"},
-		{item.SEMICOLON, "\n"},
+		{item.SEMICOLON, ";"},
 
 		{item.IDENT, "add"},
 		{item.ASSIGN, "="},
@@ -65,7 +65,7 @@ fn mul(x, y) {
 		{item.IDENT, "x"},
 		{item.PLUS, "+"},
 		{item.IDENT, "y"},
-		{item.SEMICOLON, "\n"},
+		{item.SEMICOLON, ";"},
 		{item.RBRACE, "}"},
 		{item.SEMICOLON, ";"},
 
@@ -77,28 +77,26 @@ fn mul(x, y) {
 		{item.COMMA, ","},
 		{item.IDENT, "ten"},
 		{item.RPAREN, ")"},
-		{item.SEMICOLON, "\n"},
+		{item.SEMICOLON, ";"},
 
 		{item.BANG, "!"},
 		{item.MINUS, "-"},
 		{item.SLASH, "/"},
 		{item.ASTERISK, "*"},
 		{item.INT, "5"},
-		{item.SEMICOLON, "\n"},
+		{item.SEMICOLON, ";"},
 
 		{item.INT, "5"},
 		{item.LT, "<"},
 		{item.INT, "10"},
 		{item.GT, ">"},
 		{item.INT, "5"},
-		{item.SEMICOLON, "\n"},
+		{item.SEMICOLON, ";"},
 
 		{item.IF, "if"},
-		{item.LPAREN, "("},
 		{item.INT, "5"},
 		{item.LT, "<"},
 		{item.INT, "10"},
-		{item.RPAREN, ")"},
 		{item.LBRACE, "{"},
 		{item.TRUE, "true"},
 		{item.SEMICOLON, ";"},
@@ -108,7 +106,6 @@ fn mul(x, y) {
 		{item.FALSE, "false"},
 		{item.SEMICOLON, ";"},
 		{item.RBRACE, "}"},
-		{item.SEMICOLON, "\n"},
 
 		{item.INT, "10"},
 		{item.EQ, "=="},
@@ -121,10 +118,10 @@ fn mul(x, y) {
 		{item.SEMICOLON, ";"},
 
 		{item.STRING, "foobar"},
-		{item.SEMICOLON, "\n"},
+		{item.SEMICOLON, ";"},
 
 		{item.STRING, "foo bar"},
-		{item.SEMICOLON, "\n"},
+		{item.SEMICOLON, ";"},
 
 		{item.LBRACKET, "["},
 		{item.INT, "1"},
@@ -144,14 +141,13 @@ fn mul(x, y) {
 		{item.IDENT, "x"},
 		{item.ASTERISK, "*"},
 		{item.IDENT, "y"},
-		{item.SEMICOLON, "\n"},
+		{item.SEMICOLON, ";"},
 		{item.RBRACE, "}"},
-		{item.SEMICOLON, "\n"},
 
 		{item.FLOAT, "10.5"},
 		{item.EQ, "=="},
 		{item.FLOAT, "10.45"},
-		{item.SEMICOLON, "\n"},
+		{item.SEMICOLON, ";"},
 
 
 		// {item.LBRACE, "{"},

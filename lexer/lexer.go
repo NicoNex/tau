@@ -96,56 +96,6 @@ func (l *lexer) run() {
 	close(l.items)
 }
 
-// func lexOperator(l *lexer) stateFn {
-// 	switch r := l.next(); {
-// 	case r == '+':
-// 		l.emit(item.PLUS)
-// 	case r == '-':
-// 		l.emit(item.MINUS)
-// 	case r == '*':
-// 		if l.next() == '*' {
-// 			l.emit(item.POWER)
-// 		} else {
-// 			l.backup()
-// 			l.emit(item.ASTERISK)
-// 		}
-// 	case r == '/':
-// 		l.emit(item.SLASH)
-// 	case r == '=':
-// 		if l.next() == '=' {
-// 			l.emit(item.EQ)
-// 		} else {
-// 			l.backup()
-// 			l.emit(item.ASSIGN)
-// 		}
-// 	case r == '!':
-// 		if l.next() == '=' {
-// 			l.emit(item.NOT_EQ)
-// 		} else {
-// 			l.backup()
-// 			l.emit(item.BANG)
-// 		}
-// 	case r == '<':
-// 		if l.next() == '=' {
-// 			l.emit(item.LT_EQ)
-// 		} else {
-// 			l.backup()
-// 			l.emit(item.LT)
-// 		}
-// 	case r == '>':
-// 		if l.next() == '=' {
-// 			l.emit(item.GT_EQ)
-// 		} else {
-// 			l.backup()
-// 			l.emit(item.GT)
-// 		}
-// 	default:
-// 		l.errorf("illegal operator: %q", r)
-// 		return nil
-// 	}
-// 	return lexExpression
-// }
-
 func lexIdentifier(l *lexer) stateFn {
 	var chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 	if l.acceptRun(chars) {
@@ -199,17 +149,9 @@ func lexExpression(l *lexer) stateFn {
 	case isSpace(r):
 		l.ignore()
 
-	// case isOperator(r):
-	// 	l.backup()
-	// 	return lexOperator
-
 	case isLetter(r):
 		l.backup()
 		return lexIdentifier
-
-	case r == '\n':
-		l.emit(item.SEMICOLON)
-		l.ignoreSpaces()
 
 	case r == '"':
 		l.ignore()
@@ -310,13 +252,8 @@ func isLetter(r rune) bool {
 }
 
 func isSpace(r rune) bool {
-	return r == ' ' || r == '\t' || r == '\r'
+	return r == ' ' || r == '\t' || r == '\r' || r == '\n'
 }
-
-// func isOperator(r rune) bool {
-// 	return r == '+' || r == '-' || r == '*' || r == '/' || r == '^' ||
-// 		r == '=' || r == '!' || r == '<' || r == '>'
-// }
 
 func isNumber(r rune) bool {
 	return r == '+' || r == '-' || unicode.IsNumber(r)

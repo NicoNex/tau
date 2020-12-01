@@ -7,7 +7,6 @@ import (
 
 type Integer int64
 
-// Maybe remove this.
 func NewInteger(i int64) Node {
 	return Integer(i)
 }

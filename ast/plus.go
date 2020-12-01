@@ -18,6 +18,13 @@ func (p Plus) Eval() obj.Object {
 	var left = p.l.Eval()
 	var right = p.r.Eval()
 
+	if isError(left) {
+		return left
+	}
+	if isError(right) {
+		return right
+	}
+
 	if left.Type() != right.Type() {
 		return obj.NewError(
 			"invalid operation %v + %v (mismatched types %v and %v)",

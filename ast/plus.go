@@ -54,5 +54,5 @@ func (p Plus) Eval() obj.Object {
 }
 
 func (p Plus) String() string {
-	return fmt.Sprintf("(%v+%v)", p.l, p.r)
+	return fmt.Sprintf("(%v + %v)", p.l, p.r)
 }

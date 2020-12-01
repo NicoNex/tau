@@ -17,5 +17,5 @@ func (i Integer) Eval() obj.Object {
 }
 
 func (i Integer) String() string {
-	return strconv.ParseInt(int64(i), 64)
+	return strconv.FormatInt(int64(i), 64)
 }

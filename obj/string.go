@@ -1,14 +1,17 @@
 package obj
 
-type String struct {
-	Value string
+type String string
+
+func NewString(s string) Object {
+	var ret = String(s)
+	return &ret
 }
 
-func (s *String) Type() Type {
+func (s String) Type() Type {
 	return STRING
 }
 
-func (s *String) String() string {
+func (s String) String() string {
 	return string(s)
 }
 

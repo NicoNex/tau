@@ -5,7 +5,8 @@ import "strconv"
 type Float float64
 
 func NewFloat(f float64) Object {
-	return &Float(f)
+	var ret = Float(f)
+	return &ret
 }
 
 func (f Float) String() string {

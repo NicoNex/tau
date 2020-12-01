@@ -5,7 +5,8 @@ import "strconv"
 type Boolean bool
 
 func NewBoolean(b bool) Object {
-	return &Boolean(b)
+	var ret = Boolean(b)
+	return &ret
 }
 
 func (b Boolean) String() string {

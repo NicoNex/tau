@@ -16,5 +16,5 @@ func (f Float) Eval() obj.Object {
 }
 
 func (f Float) String() string {
-	return strconv.ParseFloat(float64(f), 'f', -1, 64)
+	return strconv.FormatFloat(float64(f), 'f', -1, 64)
 }

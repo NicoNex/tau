@@ -5,7 +5,8 @@ import "strconv"
 type Integer int64
 
 func NewInteger(i int64) Object {
-	return &Integer(i)
+	var ret = Integer(i)
+	return &ret
 }
 
 func (i Integer) String() string {

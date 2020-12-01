@@ -2,6 +2,10 @@ package obj
 
 type Null struct{}
 
+func NewNull() Object {
+	return new(Null)
+}
+
 func (n Null) String() string {
 	return "null"
 }

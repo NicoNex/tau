@@ -1,6 +1,8 @@
 package ast
 
+import "tau/obj"
+
 type Node interface {
-	Eval() float64
+	Eval() *obj.Object
 	String() string
 }

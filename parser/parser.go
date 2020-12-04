@@ -64,16 +64,16 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.INT, p.parseInteger)
 	p.registerPrefix(item.FLOAT, p.parseFloat)
 	// p.registerPrefix(item.STRING, p.parseStringLiteral)
-	// p.registerPrefix(item.MINUS, p.parsePrefixExpression)
-	// p.registerPrefix(item.BANG, p.parsePrefixExpression)
-	// p.registerPrefix(item.TRUE, p.parseBoolean)
-	// p.registerPrefix(item.FALSE, p.parseBoolean)
+	p.registerPrefix(item.MINUS, p.parsePrefixMinus)
+	p.registerPrefix(item.BANG, p.parseBang)
+	p.registerPrefix(item.TRUE, p.parseBoolean)
+	p.registerPrefix(item.FALSE, p.parseBoolean)
 	// p.registerPrefix(item.LPAREN, p.parseGroupedExpression)
 	// p.registerPrefix(item.IF, p.parseIfExpression)
 	// p.registerPrefix(item.FUNCTION, p.parseFunctionLiteral)
 	// p.registerPrefix(item.LBRACKET, p.parseArrayLiteral)
 
-	// p.registerInfix(item.EQ, p.parseInfixExpression)
+	p.registerInfix(item.EQ, p.parseEquals)
 	// p.registerInfix(item.NOT_EQ, p.parseInfixExpression)
 	// p.registerInfix(item.LT, p.parseInfixExpression)
 	// p.registerInfix(item.GT, p.parseInfixExpression)
@@ -128,8 +128,8 @@ func (p *Parser) parseReturn() ast.Node {
 }
 
 func (p *Parser) parseExpr(precedence int) ast.Node {
-	if fn, ok := p.prefixParsers[p.cur.Typ]; ok {
-		leftExp := fn()
+	if prefixFn, ok := p.prefixParsers[p.cur.Typ]; ok {
+		leftExp := prefixFn()
 
 		for !p.peek.Is(item.SEMICOLON) && precedence < p.peekPrecedence() {
 			if infixFn, ok := p.infixParsers[p.peek.Typ]; ok {
@@ -171,6 +171,30 @@ func (p *Parser) parseFloat() ast.Node {
 // func (p *Parser) parseIdentifier() ast.Identifier {
 // 	return ast.NewIdentifier(p.cur.Val)
 // }
+
+// Returns a boolean node.
+func (p *Parser) parseBoolean() ast.Node {
+	return ast.NewBoolean(p.cur.Is(item.TRUE))
+}
+
+// Returns a node of type PrefixMinus.
+func (p *Parser) parsePrefixMinus() ast.Node {
+	p.next()
+	return ast.NewPrefixMinus(p.parseExpr(PREFIX))
+}
+
+// Returns a node of type Bang.
+func (p *Parser) parseBang() ast.Node {
+	p.next()
+	return ast.NewBang(p.parseExpr(PREFIX))
+}
+
+// Returns a node of type ast.Equals.
+func (p *Parser) parseEquals(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewEquals(left, p.parseExpr(prec))
+}
 
 // Returns the expression obtained by parsin an infix expression.
 func (p *Parser) parseInfixExpression(left ast.Node) ast.Node {

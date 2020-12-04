@@ -36,18 +36,23 @@ func (e Equals) Eval() obj.Object {
 	case obj.INT:
 		l := left.(*obj.Integer)
 		r := right.(*obj.Integer)
-		return btoo(l.Val() == r.Val())
+		return obj.ParseBool(l.Val() == r.Val())
 
 	case obj.FLOAT:
 		l := left.(*obj.Float)
 		r := right.(*obj.Float)
-		return btoo(l.Val() == r.Val())
+		return obj.ParseBool(l.Val() == r.Val())
+
+	case obj.STRING:
+		l := left.(*obj.String)
+		r := right.(*obj.String)
+		return obj.ParseBool(l.Val() == r.Val())
 
 	case obj.BOOL:
-		return btoo(left == right)
+		return obj.ParseBool(left == right)
 
 	case obj.NULL:
-		return btoo(true)
+		return obj.ParseBool(true)
 
 	default:
 		return obj.NewError("unsupported operator '==' for type %v", left.Type())

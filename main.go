@@ -37,7 +37,7 @@ func main() {
 			for _, e := range errs {
 				tmp = append(tmp, e)
 			}
-			fmt.Fprintln(term, tmp)
+			fmt.Fprintln(term, tmp...)
 			continue
 		}
 		fmt.Fprintln(term, res.Eval())

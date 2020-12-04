@@ -4,47 +4,42 @@ package main
 
 import (
 	"fmt"
-	// "io"
-	// "os"
-	// "strings"
+	"io"
+	"os"
 
-	// "tau/obj"
-	"tau/ast"
-	// "tau/parser"
-	// "golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/crypto/ssh/terminal"
+	"tau/parser"
 )
 
 func main() {
-	l := ast.NewInteger(3)
-	r := ast.NewInteger(5)
-	sum := ast.NewPlus(l, r)
+	initState, err := terminal.MakeRaw(0)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	defer terminal.Restore(0, initState)
 
-	fmt.Println(sum.Eval())
+	term := terminal.NewTerminal(os.Stdin, ">>> ")
+	for {
+		input, err := term.ReadLine()
+		if err != nil {
+			// Quit without error on Ctrl^D.
+			if err != io.EOF {
+				fmt.Println(err)
+			}
+			return
+		}
 
+		res, errs := parser.Parse(input)
+		if len(errs) != 0 {
+			var tmp []interface{}
 
-	// initState, err := terminal.MakeRaw(0)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// 	return
-	// }
-	// defer terminal.Restore(0, initState)
-
-	// term := terminal.NewTerminal(os.Stdin, ">>> ")
-	// for {
-	// 	input, err := term.ReadLine()
-	// 	if err != nil {
-	// 		// Quit without error on Ctrl^D.
-	// 		if err != io.EOF {
-	// 			fmt.Println(err)
-	// 		}
-	// 		return
-	// 	}
-
-	// 	res, err := parser.Parse(input)
-	// 	if err != nil {
-	// 		fmt.Fprintln(term, err)
-	// 		continue
-	// 	}
-	// 	fmt.Fprintln(term, res.Eval())
-	// }
+			for _, e := range errs {
+				tmp = append(tmp, e)
+			}
+			fmt.Fprintln(term, tmp)
+			continue
+		}
+		fmt.Fprintln(term, res.Eval())
+	}
 }

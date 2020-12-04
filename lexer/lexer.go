@@ -10,10 +10,10 @@ import (
 )
 
 type lexer struct {
-	input  string
-	start  int
-	pos    int
-	width  int
+	input string
+	start int
+	pos   int
+	width int
 	items chan item.Item
 }
 
@@ -261,7 +261,7 @@ func isNumber(r rune) bool {
 
 func Lex(in string) chan item.Item {
 	l := &lexer{
-		input:  in,
+		input: in,
 		items: make(chan item.Item),
 	}
 	go l.run()

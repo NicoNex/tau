@@ -1,15 +1,20 @@
 package ast
 
-import "strings"
+import (
+	"strings"
+	"tau/obj"
+)
 
-type Block struct {
-	nodes []Node
+type Block []Node
+
+func NewBlock() Block {
+	return Block([]Node{})
 }
 
 func (b Block) Eval() obj.Object {
 	var res obj.Object
 
-	for _, n := range nodes {
+	for _, n := range b {
 		res = n.Eval()
 
 		if res != nil {
@@ -25,12 +30,12 @@ func (b Block) Eval() obj.Object {
 func (b Block) String() string {
 	var nodes []string
 
-	for _, n := range b.nodes {
+	for _, n := range b {
 		nodes = append(nodes, n.String())
 	}
 	return strings.Join(nodes, "; ")
 }
 
 func (b *Block) Add(n Node) {
-	b.nodes = append(b.nodes, n)
+	*b = append(*b, n)
 }

@@ -32,7 +32,7 @@ if 5 < 10 {
 [1, 2];
 
 fn mul(x, y) {
-	x * y;
+	return x * y;
 }
 
 10.5 == 10.45;
@@ -138,6 +138,7 @@ fn mul(x, y) {
 		{item.IDENT, "y"},
 		{item.RPAREN, ")"},
 		{item.LBRACE, "{"},
+		{item.RETURN, "return"},
 		{item.IDENT, "x"},
 		{item.ASTERISK, "*"},
 		{item.IDENT, "y"},
@@ -148,7 +149,6 @@ fn mul(x, y) {
 		{item.EQ, "=="},
 		{item.FLOAT, "10.45"},
 		{item.SEMICOLON, ";"},
-
 
 		// {item.LBRACE, "{"},
 		// {item.STRING, "foo"},

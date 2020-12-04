@@ -1,150 +1,236 @@
 package parser
 
 import (
-	"errors"
+	"fmt"
 	"strconv"
 
-	"github.com/NicoNex/calc/ast"
-	"github.com/NicoNex/calc/utils"
+	"tau/ast"
+	"tau/item"
+	"tau/lexer"
 )
 
-// Type used to abstract the constructor functions of the operators.
-type newOp func(ast.Node, ast.Node) ast.Node
-
-var opFuncs = map[string]newOp{
-	"+": ast.NewPlus,
-	"-": ast.NewMinus,
-	"*": ast.NewTimes,
-	"/": ast.NewDivide,
-	"^": ast.NewPower,
+type Parser struct {
+	cur           item.Item
+	peek          item.Item
+	items         chan item.Item
+	errs          []string
+	prefixParsers map[item.Type]parsePrefixFn
+	infixParsers  map[item.Type]parseInfixFn
 }
 
-var precedence = map[string]int{
-	"+": 0,
-	"-": 0,
-	"*": 1,
-	"/": 1,
-	"^": 2,
-	"=": 3,
+type (
+	parsePrefixFn func() ast.Node
+	parseInfixFn  func(ast.Node) ast.Node
+)
+
+// Operators' precedence classes.
+const (
+	LOWEST int = iota
+	EQUALS
+	LESSGREATER
+	SUM
+	PRODUCT
+	PREFIX
+	CALL
+	INDEX
+)
+
+// Links each operator to its precedence class.
+var precedences = map[item.Type]int{
+	item.EQ:       EQUALS,
+	item.NOT_EQ:   EQUALS,
+	item.LT:       LESSGREATER,
+	item.GT:       LESSGREATER,
+	item.LT_EQ:    LESSGREATER,
+	item.GT_EQ:    LESSGREATER,
+	item.PLUS:     SUM,
+	item.MINUS:    SUM,
+	item.SLASH:    PRODUCT,
+	item.ASTERISK: PRODUCT,
+	item.POWER:    PRODUCT,
+	item.LPAREN:   CALL,
+	item.LBRACKET: INDEX,
 }
 
-var input string
+func newParser(items chan item.Item) *Parser {
+	p := &Parser{
+		cur:           <-items,
+		peek:          <-items,
+		items:         items,
+		prefixParsers: make(map[item.Type]parsePrefixFn),
+		infixParsers:  make(map[item.Type]parseInfixFn),
+	}
+	// p.registerPrefix(item.IDENT, p.parseIdentifier)
+	p.registerPrefix(item.INT, p.parseInteger)
+	p.registerPrefix(item.FLOAT, p.parseFloat)
+	// p.registerPrefix(item.STRING, p.parseStringLiteral)
+	// p.registerPrefix(item.MINUS, p.parsePrefixExpression)
+	// p.registerPrefix(item.BANG, p.parsePrefixExpression)
+	// p.registerPrefix(item.TRUE, p.parseBoolean)
+	// p.registerPrefix(item.FALSE, p.parseBoolean)
+	// p.registerPrefix(item.LPAREN, p.parseGroupedExpression)
+	// p.registerPrefix(item.IF, p.parseIfExpression)
+	// p.registerPrefix(item.FUNCTION, p.parseFunctionLiteral)
+	// p.registerPrefix(item.LBRACKET, p.parseArrayLiteral)
 
-// Converts a string operand to a float64 and returns it.
-func parseOperand(o string) (float64, error) {
-	return strconv.ParseFloat(o, 64)
+	// p.registerInfix(item.EQ, p.parseInfixExpression)
+	// p.registerInfix(item.NOT_EQ, p.parseInfixExpression)
+	// p.registerInfix(item.LT, p.parseInfixExpression)
+	// p.registerInfix(item.GT, p.parseInfixExpression)
+	// p.registerInfix(item.LT_EQ, p.parseInfixExpression)
+	// p.registerInfix(item.GT_EQ, p.parseInfixExpression)
+	p.registerInfix(item.PLUS, p.parseInfixExpression)
+	p.registerInfix(item.MINUS, p.parseInfixExpression)
+	p.registerInfix(item.SLASH, p.parseInfixExpression)
+	p.registerInfix(item.ASTERISK, p.parseInfixExpression)
+	// p.registerInfix(item.POWER, p.parseInfixExpression)
+	// p.registerInfix(item.LPAREN, p.parseCallExpression)
+	// p.registerInfix(item.LBRACKET, p.parseIndexExpression)
+	return p
 }
 
-// Returns the AST generated from the operators stack and operands queue.
-func genAst(expr []item) (ast.Node, error) {
-	var output = utils.NewStack()
+func (p *Parser) next() {
+	p.cur = p.peek
+	p.peek = <-p.items
+}
 
-	for i, itm := range expr {
-		switch itm.typ {
-		case itemOperand:
-			val, err := parseOperand(itm.val)
-			if err != nil {
-				return nil, NewSyntaxError("invalid operand", input, itm.pos)
-			}
-			output.Push(ast.NewConst(val))
+func (p *Parser) errors() []string {
+	return p.errs
+}
 
-		case itemOperator:
-			rnode := output.Pop()
-			if rnode == nil {
-				return nil, NewSyntaxError("invalid operator", input, itm.pos)
-			}
-			lnode := output.Pop()
-			if lnode == nil {
-				return nil, NewSyntaxError("invalid operator", input, itm.pos)
-			}
-			if fn, ok := opFuncs[itm.val]; ok {
-				output.Push(fn(lnode.(ast.Node), rnode.(ast.Node)))
-			} else {
-				return nil, NewSyntaxError("invalid operator", input, itm.pos)
-			}
+func (p *Parser) parse() ast.Node {
+	var block = ast.NewBlock()
 
-		case itemVariable:
-			output.Push(ast.NewVariable(itm.val))
-
-		case itemAssign:
-			output.Pop()
-			v := output.Pop()
-			if v == nil {
-				return nil, NewSyntaxError("invalid statement", input, itm.pos)
-			}
-			if i > 0 {
-				tmp := append(expr[1:i], expr[i+1:]...)
-				right, err := genAst(tmp)
-				if err != nil {
-					return nil, err
-				}
-				va, ok := v.(ast.Variable)
-				if !ok {
-					return nil, NewSyntaxError("invalid assignment", input, itm.pos)
-				}
-				return ast.NewAssign(va, right), nil
-			}
-			return nil, NewSyntaxError("invalid statement", input, itm.pos)
-
-		default:
-			return nil, NewSyntaxError("invalid syntax", input, itm.pos)
+	for !p.cur.Is(item.EOF) {
+		if s := p.parseStatement(); s != nil {
+			block.Add(s)
 		}
+		p.next()
 	}
-
-	if ret := output.Pop(); ret != nil {
-		return ret.(ast.Node), nil
-	}
-	return nil, errors.New("syntax error")
+	return block
 }
 
-// Returns true if a has precedence over b.
-func hasPrecendence(a, b item) bool {
-	return precedence[a.val] > precedence[b.val]
+func (p *Parser) parseStatement() ast.Node {
+	if p.cur.Is(item.RETURN) {
+		return p.parseReturn()
+	}
+	return p.parseExpr(LOWEST)
 }
 
-func toPostfix(items chan item) []item {
-	var ret []item
-	var stack = utils.NewStack()
+func (p *Parser) parseReturn() ast.Node {
+	p.next()
+	var ret = ast.NewReturn(p.parseExpr(LOWEST))
 
-	for i := range items {
-		switch i.typ {
-		case itemOperand, itemVariable, itemError:
-			ret = append(ret, i)
-
-		case itemOperator, itemAssign:
-			for o := stack.Peek(); o != nil; o = stack.Peek() {
-				if !hasPrecendence(o.(item), i) {
-					break
-				}
-				ret = append(ret, o.(item))
-				stack.Pop()
-			}
-			stack.Push(i)
-
-		case itemBracket:
-			switch i.val {
-			case "(":
-				stack.Push(i)
-			case ")":
-				for o := stack.Pop(); o != nil; o = stack.Pop() {
-					if tmp := o.(item); tmp.val == "(" {
-						break
-					}
-					ret = append(ret, o.(item))
-				}
-			}
-		}
-	}
-
-	for o := stack.Pop(); o != nil; o = stack.Pop() {
-		ret = append(ret, o.(item))
+	if p.peek.Is(item.SEMICOLON) {
+		p.next()
 	}
 	return ret
 }
 
-// Evaluates the types from the lexer and returns the AST.
-func Parse(a string) (ast.Node, error) {
-	_, items := lex(a)
-	input = a
-	return genAst(toPostfix(items))
+func (p *Parser) parseExpr(precedence int) ast.Node {
+	if fn, ok := p.prefixParsers[p.cur.Typ]; ok {
+		leftExp := fn()
+
+		for !p.peek.Is(item.SEMICOLON) && precedence < p.peekPrecedence() {
+			if infixFn, ok := p.infixParsers[p.peek.Typ]; ok {
+				p.next()
+				leftExp = infixFn(leftExp)
+			} else {
+				break
+			}
+		}
+		return leftExp
+	}
+	p.noParsePrefixFnError(p.cur.Typ)
+	return nil
+}
+
+// Returns an integer node.
+func (p *Parser) parseInteger() ast.Node {
+	i, err := strconv.ParseInt(p.cur.Val, 0, 64)
+	if err != nil {
+		msg := fmt.Sprintf("unable to parse %q as integer", p.cur.Val)
+		p.errs = append(p.errs, msg)
+		return nil
+	}
+	return ast.NewInteger(i)
+}
+
+// Returns a float node.
+func (p *Parser) parseFloat() ast.Node {
+	f, err := strconv.ParseFloat(p.cur.Val, 64)
+	if err != nil {
+		msg := fmt.Sprintf("unable to parse %q as float", p.cur.Val)
+		p.errs = append(p.errs, msg)
+		return nil
+	}
+	return ast.NewFloat(f)
+}
+
+// Returns an identifier node.
+// func (p *Parser) parseIdentifier() ast.Identifier {
+// 	return ast.NewIdentifier(p.cur.Val)
+// }
+
+// Returns the expression obtained by parsin an infix expression.
+func (p *Parser) parseInfixExpression(left ast.Node) ast.Node {
+	var prec = p.precedence()
+	var typ = p.cur.Typ
+
+	p.next()
+	switch typ {
+	case item.PLUS:
+		return ast.NewPlus(left, p.parseExpr(prec))
+
+	case item.MINUS:
+		return ast.NewMinus(left, p.parseExpr(prec))
+
+	case item.ASTERISK:
+		return ast.NewTimes(left, p.parseExpr(prec))
+
+	case item.SLASH:
+		return ast.NewDivide(left, p.parseExpr(prec))
+
+	default:
+		msg := fmt.Sprintf("cannot parse %v infix operator", p.cur)
+		p.errs = append(p.errs, msg)
+		return nil
+	}
+}
+
+// Returns the precedence value of the type of the peek item.
+func (p *Parser) peekPrecedence() int {
+	if prec, ok := precedences[p.peek.Typ]; ok {
+		return prec
+	}
+	return LOWEST
+}
+
+// Returns the precedence value of the type of the current item.
+func (p *Parser) precedence() int {
+	if prec, ok := precedences[p.cur.Typ]; ok {
+		return prec
+	}
+	return LOWEST
+}
+
+// Adds fn to the prefix parsers table with key 'typ'.
+func (p *Parser) registerPrefix(typ item.Type, fn parsePrefixFn) {
+	p.prefixParsers[typ] = fn
+}
+
+// Adds fn to the infix parsers table with key 'typ'.
+func (p *Parser) registerInfix(typ item.Type, fn parseInfixFn) {
+	p.infixParsers[typ] = fn
+}
+
+func (p *Parser) noParsePrefixFnError(t item.Type) {
+	msg := fmt.Sprintf("no parse prefix function for '%s' found", t)
+	p.errs = append(p.errs, msg)
+}
+
+func Parse(input string) (prog ast.Node, errs []string) {
+	items := lexer.Lex(input)
+	p := newParser(items)
+	return p.parse(), p.errors()
 }

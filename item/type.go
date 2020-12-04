@@ -45,6 +45,7 @@ const (
 	ELSE
 	TRUE
 	FALSE
+	RETURN
 )
 
 var typemap = map[Type]string{
@@ -76,8 +77,8 @@ var typemap = map[Type]string{
 	SEMICOLON: ";",
 	NEW_LINE:  "new line",
 
-	LPAREN:  "(",
-	RPAREN:  ")",
+	LPAREN: "(",
+	RPAREN: ")",
 
 	LBRACE: "{",
 	RBRACE: "}",
@@ -90,6 +91,7 @@ var typemap = map[Type]string{
 	ELSE:     "else",
 	TRUE:     "true",
 	FALSE:    "false",
+	RETURN:   "return",
 }
 
 var keywords = map[string]Type{
@@ -98,6 +100,7 @@ var keywords = map[string]Type{
 	"else":   ELSE,
 	"true":   TRUE,
 	"false":  FALSE,
+	"return": RETURN,
 }
 
 func (t Type) String() string {

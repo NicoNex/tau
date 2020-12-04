@@ -8,8 +8,8 @@ type Node interface {
 }
 
 var (
-	NULL = obj.NewNull()
-	TRUE = obj.NewBoolean(true)
+	NULL  = obj.NewNull()
+	TRUE  = obj.NewBoolean(true)
 	FALSE = obj.NewBoolean(false)
 )
 

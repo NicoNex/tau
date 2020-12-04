@@ -5,6 +5,11 @@ import (
 	"tau/obj"
 )
 
+type Minus struct {
+	l Node
+	r Node
+}
+
 func NewMinus(l, r Node) Node {
 	return Minus{l, r}
 }
@@ -31,12 +36,12 @@ func (m Minus) Eval() obj.Object {
 	case obj.INT:
 		l := left.(*obj.Integer)
 		r := right.(*obj.Integer)
-		return obj.NewInteger(l.Val() + r.Val())
+		return obj.NewInteger(l.Val() - r.Val())
 
 	case obj.FLOAT:
 		l := left.(*obj.Float)
 		r := right.(*obj.Float)
-		return obj.NewFloat(l.Val() + r.Val())
+		return obj.NewFloat(l.Val() - r.Val())
 
 	default:
 		return obj.NewError("unsupported operator '-' for type %v", left.Type())

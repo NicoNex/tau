@@ -68,7 +68,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.BANG, p.parseBang)
 	p.registerPrefix(item.TRUE, p.parseBoolean)
 	p.registerPrefix(item.FALSE, p.parseBoolean)
-	// p.registerPrefix(item.LPAREN, p.parseGroupedExpression)
+	p.registerPrefix(item.LPAREN, p.parseGroupedExpr)
 	// p.registerPrefix(item.IF, p.parseIfExpression)
 	// p.registerPrefix(item.FUNCTION, p.parseFunctionLiteral)
 	// p.registerPrefix(item.LBRACKET, p.parseArrayLiteral)
@@ -79,10 +79,10 @@ func newParser(items chan item.Item) *Parser {
 	// p.registerInfix(item.GT, p.parseInfixExpression)
 	// p.registerInfix(item.LT_EQ, p.parseInfixExpression)
 	// p.registerInfix(item.GT_EQ, p.parseInfixExpression)
-	p.registerInfix(item.PLUS, p.parseInfixExpression)
-	p.registerInfix(item.MINUS, p.parseInfixExpression)
-	p.registerInfix(item.SLASH, p.parseInfixExpression)
-	p.registerInfix(item.ASTERISK, p.parseInfixExpression)
+	p.registerInfix(item.PLUS, p.parsePlus)
+	p.registerInfix(item.MINUS, p.parseMinus)
+	p.registerInfix(item.SLASH, p.parseSlash)
+	p.registerInfix(item.ASTERISK, p.parseAsterisk)
 	// p.registerInfix(item.POWER, p.parseInfixExpression)
 	// p.registerInfix(item.LPAREN, p.parseCallExpression)
 	// p.registerInfix(item.LBRACKET, p.parseIndexExpression)
@@ -145,6 +145,16 @@ func (p *Parser) parseExpr(precedence int) ast.Node {
 	return nil
 }
 
+// Returns the node representing an expression enclosed in parenthesys.
+func (p *Parser) parseGroupedExpr() ast.Node {
+	p.next()
+	exp := p.parseExpr(LOWEST)
+	if !p.expectPeek(item.RPAREN) {
+		return nil
+	}
+	return exp
+}
+
 // Returns an integer node.
 func (p *Parser) parseInteger() ast.Node {
 	i, err := strconv.ParseInt(p.cur.Val, 0, 64)
@@ -196,30 +206,47 @@ func (p *Parser) parseEquals(left ast.Node) ast.Node {
 	return ast.NewEquals(left, p.parseExpr(prec))
 }
 
-// Returns the expression obtained by parsin an infix expression.
-func (p *Parser) parseInfixExpression(left ast.Node) ast.Node {
-	var prec = p.precedence()
-	var typ = p.cur.Typ
-
+func (p *Parser) parsePlus(left ast.Node) ast.Node {
+	prec := p.precedence()
 	p.next()
-	switch typ {
-	case item.PLUS:
-		return ast.NewPlus(left, p.parseExpr(prec))
+	return ast.NewPlus(left, p.parseExpr(prec))
+}
 
-	case item.MINUS:
-		return ast.NewMinus(left, p.parseExpr(prec))
+func (p *Parser) parseMinus(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewMinus(left, p.parseExpr(prec))
+}
 
-	case item.ASTERISK:
-		return ast.NewTimes(left, p.parseExpr(prec))
+func (p *Parser) parseAsterisk(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewTimes(left, p.parseExpr(prec))
+}
 
-	case item.SLASH:
-		return ast.NewDivide(left, p.parseExpr(prec))
+func (p *Parser) parseSlash(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewDivide(left, p.parseExpr(prec))
+}
 
-	default:
-		msg := fmt.Sprintf("cannot parse %v infix operator", p.cur)
-		p.errs = append(p.errs, msg)
-		return nil
+// Returns true if the peek is of the provided type 't', otherwhise returns
+// false and appends an error to p.errs.
+func (p *Parser) expectPeek(t item.Type) bool {
+	if p.peek.Is(t) {
+		p.next()
+		return true
 	}
+	p.peekError(t)
+	return false
+}
+
+// Emits an error if the peek item is not of tipe t.
+func (p *Parser) peekError(t item.Type) {
+	p.errs = append(
+		p.errs,
+		fmt.Sprintf("expected next item to be %v, got %v instead", t, p.peek.Typ),
+	)
 }
 
 // Returns the precedence value of the type of the peek item.

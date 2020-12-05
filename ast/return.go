@@ -18,5 +18,5 @@ func (r Return) Eval(env *obj.Env) obj.Object {
 }
 
 func (r Return) String() string {
-	return fmt.Sprintf("return %v;", r.v)
+	return fmt.Sprintf("return %v", r.v)
 }

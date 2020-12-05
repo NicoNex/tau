@@ -72,7 +72,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.FALSE, p.parseBoolean)
 	p.registerPrefix(item.LPAREN, p.parseGroupedExpr)
 	p.registerPrefix(item.IF, p.parseIfExpr)
-	// p.registerPrefix(item.FUNCTION, p.parseFunctionLiteral)
+	p.registerPrefix(item.FUNCTION, p.parseFunction)
 	// p.registerPrefix(item.LBRACKET, p.parseArrayLiteral)
 
 	p.registerInfix(item.EQ, p.parseEquals)
@@ -87,7 +87,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.ASTERISK, p.parseAsterisk)
 	p.registerInfix(item.ASSIGN, p.parseAssign)
 	// p.registerInfix(item.POWER, p.parseInfixExpression)
-	// p.registerInfix(item.LPAREN, p.parseCallExpression)
+	p.registerInfix(item.LPAREN, p.parseCall)
 	// p.registerInfix(item.LBRACKET, p.parseIndexExpression)
 	return p
 }
@@ -163,7 +163,7 @@ func (p *Parser) parseBlock() ast.Node {
 	p.next()
 
 	for !p.cur.Is(item.RBRACE) && !p.cur.Is(item.EOF) {
-		if s := p.parseExpr(LOWEST); s != nil {
+		if s := p.parseStatement(); s != nil {
 			block.Add(s)
 		}
 		p.next()
@@ -199,6 +199,44 @@ func (p *Parser) parseIfExpr() ast.Node {
 	return ast.NewIfExpr(cond, body, alt)
 }
 
+func (p *Parser) parseFunction() ast.Node {
+	if !p.expectPeek(item.LPAREN) {
+		return nil
+	}
+
+	params := p.parseFunctionParams()
+	if !p.expectPeek(item.LBRACE) {
+		return nil
+	}
+
+	body := p.parseBlock()
+	return ast.NewFunction(params, body)
+}
+
+func (p *Parser) parseFunctionParams() []ast.Identifier {
+	var ret []ast.Identifier
+
+	if p.peek.Is(item.RPAREN) {
+		p.next()
+		return ret
+	}
+
+	p.next()
+	ret = append(ret, ast.Identifier(p.cur.Val))
+
+	for p.peek.Is(item.COMMA) {
+		p.next()
+		p.next()
+		ret = append(ret, ast.Identifier(p.cur.Val))
+	}
+
+	if !p.expectPeek(item.RPAREN) {
+		return nil
+	}
+	return ret
+}
+
+// Returns an identifier node.
 func (p *Parser) parseIdentifier() ast.Node {
 	return ast.NewIdentifier(p.cur.Val)
 }
@@ -228,11 +266,6 @@ func (p *Parser) parseFloat() ast.Node {
 func (p *Parser) parseString() ast.Node {
 	return ast.NewString(p.cur.Val)
 }
-
-// Returns an identifier node.
-// func (p *Parser) parseIdentifier() ast.Identifier {
-// 	return ast.NewIdentifier(p.cur.Val)
-// }
 
 // Returns a boolean node.
 func (p *Parser) parseBoolean() ast.Node {
@@ -317,6 +350,34 @@ func (p *Parser) parseAssign(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseCall(fn ast.Node) ast.Node {
+	return ast.NewCall(fn, p.parseNodeList(item.RPAREN))
+}
+
+func (p *Parser) parseNodeList(end item.Type) []ast.Node {
+	var list []ast.Node
+
+	if p.peek.Is(end) {
+		p.next()
+		return list
+	}
+
+	p.next()
+	list = append(list, p.parseExpr(LOWEST))
+
+	for p.peek.Is(item.COMMA) {
+		p.next()
+		p.next()
+		list = append(list, p.parseExpr(LOWEST))
+	}
+
+	if !p.expectPeek(end) {
+		return nil
+	}
+
+	return list
 }
 
 // Returns true if the peek is of the provided type 't', otherwhise returns

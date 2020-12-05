@@ -36,12 +36,9 @@ func main() {
 
 		res, errs := parser.Parse(input)
 		if len(errs) != 0 {
-			var tmp []interface{}
-
 			for _, e := range errs {
-				tmp = append(tmp, e)
+				fmt.Fprintln(term, e)
 			}
-			fmt.Fprintln(term, tmp...)
 			continue
 		}
 		fmt.Fprintln(term, res.Eval(env))

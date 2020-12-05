@@ -11,7 +11,7 @@ func NewInteger(i int64) Node {
 	return Integer(i)
 }
 
-func (i Integer) Eval() obj.Object {
+func (i Integer) Eval(env *obj.Env) obj.Object {
 	return obj.NewInteger(int64(i))
 }
 

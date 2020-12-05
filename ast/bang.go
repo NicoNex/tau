@@ -13,8 +13,8 @@ func NewBang(n Node) Node {
 	return Bang{n}
 }
 
-func (b Bang) Eval() obj.Object {
-	var value = b.n.Eval()
+func (b Bang) Eval(env *obj.Env) obj.Object {
+	var value = b.n.Eval(env)
 
 	if isError(value) {
 		return value
@@ -25,10 +25,10 @@ func (b Bang) Eval() obj.Object {
 		return obj.ParseBool(!v.Val())
 
 	case *obj.Null:
-		return obj.False
+		return obj.True
 
 	default:
-		return obj.True
+		return obj.False
 	}
 }
 

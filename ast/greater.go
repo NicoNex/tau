@@ -14,9 +14,9 @@ func NewGreater(l, r Node) Node {
 	return Greater{l, r}
 }
 
-func (g Greater) Eval() obj.Object {
-	var left = g.l.Eval()
-	var right = g.r.Eval()
+func (g Greater) Eval(env *obj.Env) obj.Object {
+	var left = g.l.Eval(env)
+	var right = g.r.Eval(env)
 
 	if isError(left) {
 		return left

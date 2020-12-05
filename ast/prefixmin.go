@@ -13,8 +13,8 @@ func NewPrefixMinus(n Node) Node {
 	return PrefixMinus{n}
 }
 
-func (p PrefixMinus) Eval() obj.Object {
-	var value = p.n.Eval()
+func (p PrefixMinus) Eval(env *obj.Env) obj.Object {
+	var value = p.n.Eval(env)
 
 	if isError(value) {
 		return value

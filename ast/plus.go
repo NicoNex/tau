@@ -14,9 +14,9 @@ func NewPlus(l, r Node) Node {
 	return Plus{l, r}
 }
 
-func (p Plus) Eval() obj.Object {
-	var left = p.l.Eval()
-	var right = p.r.Eval()
+func (p Plus) Eval(env *obj.Env) obj.Object {
+	var left = p.l.Eval(env)
+	var right = p.r.Eval(env)
 
 	if isError(left) {
 		return left

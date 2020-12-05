@@ -14,9 +14,9 @@ func NewLessEq(l, r Node) Node {
 	return LessEq{l, r}
 }
 
-func (l LessEq) Eval() obj.Object {
-	var left = l.l.Eval()
-	var right = l.r.Eval()
+func (l LessEq) Eval(env *obj.Env) obj.Object {
+	var left = l.l.Eval(env)
+	var right = l.r.Eval(env)
 
 	if isError(left) {
 		return left

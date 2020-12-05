@@ -13,8 +13,8 @@ func NewReturn(n Node) Node {
 	return Return{n}
 }
 
-func (r Return) Eval() obj.Object {
-	return obj.NewReturn(r.v.Eval())
+func (r Return) Eval(env *obj.Env) obj.Object {
+	return obj.NewReturn(r.v.Eval(env))
 }
 
 func (r Return) String() string {

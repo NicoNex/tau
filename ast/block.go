@@ -11,11 +11,11 @@ func NewBlock() Block {
 	return Block([]Node{})
 }
 
-func (b Block) Eval() obj.Object {
+func (b Block) Eval(env *obj.Env) obj.Object {
 	var res obj.Object
 
 	for _, n := range b {
-		res = n.Eval()
+		res = n.Eval(env)
 
 		if res != nil {
 			typ := res.Type()

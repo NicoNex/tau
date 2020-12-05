@@ -8,7 +8,7 @@ func NewString(s string) Node {
 	return String(s)
 }
 
-func (s String) Eval() obj.Object {
+func (s String) Eval(env *obj.Env) obj.Object {
 	return obj.NewString(string(s))
 }
 

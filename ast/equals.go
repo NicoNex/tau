@@ -14,9 +14,9 @@ func NewEquals(l, r Node) Node {
 	return Equals{l, r}
 }
 
-func (e Equals) Eval() obj.Object {
-	var left = e.l.Eval()
-	var right = e.r.Eval()
+func (e Equals) Eval(env *obj.Env) obj.Object {
+	var left = e.l.Eval(env)
+	var right = e.r.Eval(env)
 
 	if isError(left) {
 		return left

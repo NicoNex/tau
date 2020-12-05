@@ -14,9 +14,9 @@ func NewMinus(l, r Node) Node {
 	return Minus{l, r}
 }
 
-func (m Minus) Eval() obj.Object {
-	var left = m.l.Eval()
-	var right = m.r.Eval()
+func (m Minus) Eval(env *obj.Env) obj.Object {
+	var left = m.l.Eval(env)
+	var right = m.r.Eval(env)
 
 	if isError(left) {
 		return left

@@ -8,7 +8,7 @@ func NewBoolean(b bool) Node {
 	return Boolean(b)
 }
 
-func (b Boolean) Eval() obj.Object {
+func (b Boolean) Eval(env *obj.Env) obj.Object {
 	return obj.ParseBool(bool(b))
 }
 

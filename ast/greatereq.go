@@ -14,9 +14,9 @@ func NewGreaterEq(l, r Node) Node {
 	return GreaterEq{l, r}
 }
 
-func (g GreaterEq) Eval() obj.Object {
-	var left = g.l.Eval()
-	var right = g.r.Eval()
+func (g GreaterEq) Eval(env *obj.Env) obj.Object {
+	var left = g.l.Eval(env)
+	var right = g.r.Eval(env)
 
 	if isError(left) {
 		return left

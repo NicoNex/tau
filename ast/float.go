@@ -11,7 +11,7 @@ func NewFloat(f float64) Node {
 	return Float(f)
 }
 
-func (f Float) Eval() obj.Object {
+func (f Float) Eval(env *obj.Env) obj.Object {
 	return obj.NewFloat(float64(f))
 }
 

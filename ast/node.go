@@ -3,7 +3,7 @@ package ast
 import "tau/obj"
 
 type Node interface {
-	Eval() obj.Object
+	Eval(*obj.Env) obj.Object
 	String() string
 }
 

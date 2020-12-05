@@ -7,11 +7,15 @@ import (
 	"io"
 	"os"
 
-	"golang.org/x/crypto/ssh/terminal"
+	"tau/obj"
 	"tau/parser"
+
+	"golang.org/x/crypto/ssh/terminal"
 )
 
 func main() {
+	var env = obj.NewEnv()
+
 	initState, err := terminal.MakeRaw(0)
 	if err != nil {
 		fmt.Println(err)
@@ -40,6 +44,6 @@ func main() {
 			fmt.Fprintln(term, tmp...)
 			continue
 		}
-		fmt.Fprintln(term, res.Eval())
+		fmt.Fprintln(term, res.Eval(env))
 	}
 }

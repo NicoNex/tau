@@ -14,9 +14,9 @@ func NewDivide(l, r Node) Node {
 	return Divide{l, r}
 }
 
-func (d Divide) Eval() obj.Object {
-	var left = d.l.Eval()
-	var right = d.r.Eval()
+func (d Divide) Eval(env *obj.Env) obj.Object {
+	var left = d.l.Eval(env)
+	var right = d.r.Eval(env)
 
 	if isError(left) {
 		return left

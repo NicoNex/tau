@@ -33,6 +33,7 @@ const (
 	PREFIX
 	CALL
 	INDEX
+	ASSIGNMENT
 )
 
 // Links each operator to its precedence class.
@@ -50,6 +51,7 @@ var precedences = map[item.Type]int{
 	item.POWER:    PRODUCT,
 	item.LPAREN:   CALL,
 	item.LBRACKET: INDEX,
+	item.ASSIGN:   ASSIGNMENT,
 }
 
 func newParser(items chan item.Item) *Parser {
@@ -60,7 +62,7 @@ func newParser(items chan item.Item) *Parser {
 		prefixParsers: make(map[item.Type]parsePrefixFn),
 		infixParsers:  make(map[item.Type]parseInfixFn),
 	}
-	// p.registerPrefix(item.IDENT, p.parseIdentifier)
+	p.registerPrefix(item.IDENT, p.parseIdentifier)
 	p.registerPrefix(item.INT, p.parseInteger)
 	p.registerPrefix(item.FLOAT, p.parseFloat)
 	p.registerPrefix(item.STRING, p.parseString)
@@ -83,6 +85,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.MINUS, p.parseMinus)
 	p.registerInfix(item.SLASH, p.parseSlash)
 	p.registerInfix(item.ASTERISK, p.parseAsterisk)
+	p.registerInfix(item.ASSIGN, p.parseAssign)
 	// p.registerInfix(item.POWER, p.parseInfixExpression)
 	// p.registerInfix(item.LPAREN, p.parseCallExpression)
 	// p.registerInfix(item.LBRACKET, p.parseIndexExpression)
@@ -196,6 +199,10 @@ func (p *Parser) parseIfExpr() ast.Node {
 	return ast.NewIfExpr(cond, body, alt)
 }
 
+func (p *Parser) parseIdentifier() ast.Node {
+	return ast.NewIdentifier(p.cur.Val)
+}
+
 // Returns an integer node.
 func (p *Parser) parseInteger() ast.Node {
 	i, err := strconv.ParseInt(p.cur.Val, 0, 64)
@@ -304,6 +311,12 @@ func (p *Parser) parseGreaterEq(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewGreaterEq(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewAssign(left, p.parseExpr(prec))
 }
 
 // Returns true if the peek is of the provided type 't', otherwhise returns

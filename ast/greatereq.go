@@ -5,16 +5,16 @@ import (
 	"tau/obj"
 )
 
-type Greater struct {
+type GreaterEq struct {
 	l Node
 	r Node
 }
 
-func NewGreater(l, r Node) Node {
-	return Greater{l, r}
+func NewGreaterEq(l, r Node) Node {
+	return GreaterEq{l, r}
 }
 
-func (g Greater) Eval() obj.Object {
+func (g GreaterEq) Eval() obj.Object {
 	var left = g.l.Eval()
 	var right = g.r.Eval()
 
@@ -27,7 +27,7 @@ func (g Greater) Eval() obj.Object {
 
 	if left.Type() != right.Type() {
 		return obj.NewError(
-			"invalid operation %v > %v (mismatched types %v and %v)",
+			"invalid operation %v >= %v (mismatched types %v and %v)",
 			left, right, left.Type(), right.Type(),
 		)
 	}
@@ -36,18 +36,18 @@ func (g Greater) Eval() obj.Object {
 	case obj.INT:
 		l := left.(*obj.Integer)
 		r := right.(*obj.Integer)
-		return obj.ParseBool(l.Val() > r.Val())
+		return obj.ParseBool(l.Val() >= r.Val())
 
 	case obj.FLOAT:
 		l := left.(*obj.Float)
 		r := right.(*obj.Float)
-		return obj.ParseBool(l.Val() > r.Val())
+		return obj.ParseBool(l.Val() >= r.Val())
 
 	default:
-		return obj.NewError("unsupported operator '>' for type %v", left.Type())
+		return obj.NewError("unsupported operator '>=' for type %v", left.Type())
 	}
 }
 
-func (g Greater) String() string {
-	return fmt.Sprintf("(%v > %v)", g.l, g.r)
+func (g GreaterEq) String() string {
+	return fmt.Sprintf("(%v >= %v)", g.l, g.r)
 }

@@ -17,9 +17,9 @@ func (i IfElse) Eval() obj.Object {
 	switch c := cond.(type) {
 	case *obj.Boolean:
 		if c.Val() {
-			return body.Eval()
+			return i.body.Eval()
 		}
-		return altern.Eval()
+		return i.altern.Eval()
 
 	case *obj.Null:
 		return obj.False

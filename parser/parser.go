@@ -74,11 +74,11 @@ func newParser(items chan item.Item) *Parser {
 	// p.registerPrefix(item.LBRACKET, p.parseArrayLiteral)
 
 	p.registerInfix(item.EQ, p.parseEquals)
-	// p.registerInfix(item.NOT_EQ, p.parseInfixExpression)
-	// p.registerInfix(item.LT, p.parseInfixExpression)
-	// p.registerInfix(item.GT, p.parseInfixExpression)
-	// p.registerInfix(item.LT_EQ, p.parseInfixExpression)
-	// p.registerInfix(item.GT_EQ, p.parseInfixExpression)
+	p.registerInfix(item.NOT_EQ, p.parseNotEquals)
+	p.registerInfix(item.LT, p.parseLess)
+	p.registerInfix(item.GT, p.parseGreater)
+	p.registerInfix(item.LT_EQ, p.parseLessEq)
+	p.registerInfix(item.GT_EQ, p.parseGreaterEq)
 	p.registerInfix(item.PLUS, p.parsePlus)
 	p.registerInfix(item.MINUS, p.parseMinus)
 	p.registerInfix(item.SLASH, p.parseSlash)
@@ -199,13 +199,6 @@ func (p *Parser) parseBang() ast.Node {
 	return ast.NewBang(p.parseExpr(PREFIX))
 }
 
-// Returns a node of type ast.Equals.
-func (p *Parser) parseEquals(left ast.Node) ast.Node {
-	prec := p.precedence()
-	p.next()
-	return ast.NewEquals(left, p.parseExpr(prec))
-}
-
 func (p *Parser) parsePlus(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
@@ -228,6 +221,44 @@ func (p *Parser) parseSlash(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewDivide(left, p.parseExpr(prec))
+}
+
+// Returns a node of type ast.Equals.
+func (p *Parser) parseEquals(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewEquals(left, p.parseExpr(prec))
+}
+
+// Returns a node of type ast.Equals.
+func (p *Parser) parseNotEquals(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewNotEquals(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseLess(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewLess(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseGreater(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewGreater(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseLessEq(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewLessEq(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseGreaterEq(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewGreaterEq(left, p.parseExpr(prec))
 }
 
 // Returns true if the peek is of the provided type 't', otherwhise returns

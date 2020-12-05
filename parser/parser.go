@@ -63,13 +63,13 @@ func newParser(items chan item.Item) *Parser {
 	// p.registerPrefix(item.IDENT, p.parseIdentifier)
 	p.registerPrefix(item.INT, p.parseInteger)
 	p.registerPrefix(item.FLOAT, p.parseFloat)
-	// p.registerPrefix(item.STRING, p.parseStringLiteral)
+	p.registerPrefix(item.STRING, p.parseString)
 	p.registerPrefix(item.MINUS, p.parsePrefixMinus)
 	p.registerPrefix(item.BANG, p.parseBang)
 	p.registerPrefix(item.TRUE, p.parseBoolean)
 	p.registerPrefix(item.FALSE, p.parseBoolean)
 	p.registerPrefix(item.LPAREN, p.parseGroupedExpr)
-	// p.registerPrefix(item.IF, p.parseIfExpression)
+	p.registerPrefix(item.IF, p.parseIfExpr)
 	// p.registerPrefix(item.FUNCTION, p.parseFunctionLiteral)
 	// p.registerPrefix(item.LBRACKET, p.parseArrayLiteral)
 
@@ -155,6 +155,47 @@ func (p *Parser) parseGroupedExpr() ast.Node {
 	return exp
 }
 
+func (p *Parser) parseBlock() ast.Node {
+	var block ast.Block
+	p.next()
+
+	for !p.cur.Is(item.RBRACE) && !p.cur.Is(item.EOF) {
+		if s := p.parseExpr(LOWEST); s != nil {
+			block.Add(s)
+		}
+		p.next()
+	}
+	return block
+}
+
+func (p *Parser) parseIfExpr() ast.Node {
+	p.next()
+	cond := p.parseExpr(LOWEST)
+
+	if !p.expectPeek(item.LBRACE) {
+		return nil
+	}
+
+	body := p.parseBlock()
+
+	var alt ast.Node
+	if p.peek.Is(item.ELSE) {
+		p.next()
+
+		if p.peek.Is(item.IF) {
+			p.next()
+			alt = p.parseIfExpr()
+		} else {
+			if !p.expectPeek(item.LBRACE) {
+				return nil
+			}
+			alt = p.parseBlock()
+		}
+	}
+
+	return ast.NewIfExpr(cond, body, alt)
+}
+
 // Returns an integer node.
 func (p *Parser) parseInteger() ast.Node {
 	i, err := strconv.ParseInt(p.cur.Val, 0, 64)
@@ -175,6 +216,10 @@ func (p *Parser) parseFloat() ast.Node {
 		return nil
 	}
 	return ast.NewFloat(f)
+}
+
+func (p *Parser) parseString() ast.Node {
+	return ast.NewString(p.cur.Val)
 }
 
 // Returns an identifier node.

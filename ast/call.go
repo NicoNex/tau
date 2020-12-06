@@ -18,7 +18,8 @@ func NewCall(fn Node, args []Node) Node {
 func (c Call) Eval(env *obj.Env) obj.Object {
 	var fnObj = c.fn.Eval(env)
 
-	if fn, ok := fnObj.(*obj.Function); ok {
+	switch fn := fnObj.(type) {
+	case *obj.Function:
 		var args []obj.Object
 
 		for _, a := range c.args {
@@ -27,8 +28,18 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 
 		extEnv := extendEnv(fn, args)
 		return unwrapReturn(fn.Body.(Node).Eval(extEnv))
+
+	case obj.Builtin:
+		var args []obj.Object
+
+		for _, a := range c.args {
+			args = append(args, a.Eval(env))
+		}
+		return fn(args...)
+
+	default:
+		return obj.NewError("%q object is not callable", fnObj.Type())
 	}
-	return obj.NewError("%q object is not callable", fnObj.Type())
 }
 
 func (c Call) String() string {

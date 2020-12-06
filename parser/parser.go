@@ -33,7 +33,6 @@ const (
 	PREFIX
 	CALL
 	INDEX
-	ASSIGNMENT
 )
 
 // Links each operator to its precedence class.
@@ -51,7 +50,6 @@ var precedences = map[item.Type]int{
 	item.POWER:    PRODUCT,
 	item.LPAREN:   CALL,
 	item.LBRACKET: INDEX,
-	item.ASSIGN:   ASSIGNMENT,
 }
 
 func newParser(items chan item.Item) *Parser {
@@ -347,9 +345,8 @@ func (p *Parser) parseGreaterEq(left ast.Node) ast.Node {
 }
 
 func (p *Parser) parseAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewAssign(left, p.parseExpr(prec))
+	return ast.NewAssign(left, p.parseExpr(LOWEST))
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {

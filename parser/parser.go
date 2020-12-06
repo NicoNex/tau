@@ -26,6 +26,7 @@ type (
 // Operators' precedence classes.
 const (
 	LOWEST int = iota
+	ASSIGNMENT
 	EQUALS
 	LESSGREATER
 	SUM
@@ -50,6 +51,7 @@ var precedences = map[item.Type]int{
 	item.POWER:    PRODUCT,
 	item.LPAREN:   CALL,
 	item.LBRACKET: INDEX,
+	item.ASSIGN:   ASSIGNMENT,
 }
 
 func newParser(items chan item.Item) *Parser {
@@ -345,8 +347,9 @@ func (p *Parser) parseGreaterEq(left ast.Node) ast.Node {
 }
 
 func (p *Parser) parseAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
 	p.next()
-	return ast.NewAssign(left, p.parseExpr(LOWEST))
+	return ast.NewAssign(left, p.parseExpr(prec))
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {

@@ -4,9 +4,9 @@ import (
 	"fmt"
 	"strconv"
 
-	"tau/ast"
-	"tau/item"
-	"tau/lexer"
+	"github.com/NicoNex/tau/ast"
+	"github.com/NicoNex/tau/item"
+	"github.com/NicoNex/tau/lexer"
 )
 
 type Parser struct {

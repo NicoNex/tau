@@ -2,7 +2,7 @@ package ast
 
 import (
 	"strconv"
-	"tau/obj"
+	"github.com/NicoNex/tau/obj"
 )
 
 type Integer int64

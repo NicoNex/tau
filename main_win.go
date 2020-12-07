@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"os"
 
-	"tau/obj"
-	"tau/parser"
+	"github.com/NicoNex/tau/obj"
+	"github.com/NicoNex/tau/parser"
 )
 
 func main() {

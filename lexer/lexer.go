@@ -6,7 +6,7 @@ import (
 	"unicode"
 	"unicode/utf8"
 
-	"tau/item"
+	"github.com/NicoNex/tau/item"
 )
 
 type lexer struct {

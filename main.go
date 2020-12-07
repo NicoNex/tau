@@ -7,8 +7,8 @@ import (
 	"io"
 	"os"
 
-	"tau/obj"
-	"tau/parser"
+	"github.com/NicoNex/tau/obj"
+	"github.com/NicoNex/tau/parser"
 
 	"golang.org/x/crypto/ssh/terminal"
 )

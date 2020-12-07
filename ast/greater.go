@@ -2,7 +2,7 @@ package ast
 
 import (
 	"fmt"
-	"tau/obj"
+	"github.com/NicoNex/tau/obj"
 )
 
 type Greater struct {

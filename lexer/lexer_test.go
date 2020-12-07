@@ -3,7 +3,7 @@ package lexer
 import (
 	"testing"
 
-	"tau/item"
+	"github.com/NicoNex/tau/item"
 )
 
 func TestNextItem(t *testing.T) {

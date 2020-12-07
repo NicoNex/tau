@@ -3,7 +3,7 @@ package ast
 import (
 	"fmt"
 	"strings"
-	"tau/obj"
+	"github.com/NicoNex/tau/obj"
 )
 
 type Call struct {

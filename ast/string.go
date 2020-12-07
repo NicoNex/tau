@@ -1,6 +1,6 @@
 package ast
 
-import "tau/obj"
+import "github.com/NicoNex/tau/obj"
 
 type String string
 

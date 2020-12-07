@@ -90,6 +90,7 @@ func (l *lexer) errorf(format string, args ...interface{}) {
 }
 
 func (l *lexer) run() {
+	l.ignoreSpaces()
 	for state := lexExpression; state != nil; {
 		state = state(l)
 	}

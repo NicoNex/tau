@@ -42,6 +42,10 @@ func main() {
 			}
 			continue
 		}
-		res.Eval(env)
+
+		val := res.Eval(env)
+		if val != obj.NullObj && val != nil {
+			fmt.Fprintln(term, val)
+		}
 	}
 }

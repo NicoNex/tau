@@ -30,6 +30,14 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 			args = append(args, o)
 		}
 
+		if len(args) != len(fn.Params) {
+			return obj.NewError(
+				"wrong number of arguments, expected %d, got %d",
+				len(fn.Params),
+				len(args),
+			)
+		}
+
 		extEnv := extendEnv(fn, args)
 		return unwrapReturn(fn.Body.(Node).Eval(extEnv))
 

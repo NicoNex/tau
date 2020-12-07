@@ -1,8 +1,8 @@
 package ast
 
 import (
-	"strings"
 	"github.com/NicoNex/tau/obj"
+	"strings"
 )
 
 type Block []Node

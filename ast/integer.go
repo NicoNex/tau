@@ -1,8 +1,8 @@
 package ast
 
 import (
-	"strconv"
 	"github.com/NicoNex/tau/obj"
+	"strconv"
 )
 
 type Integer int64

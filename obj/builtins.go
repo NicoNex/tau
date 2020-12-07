@@ -2,8 +2,8 @@ package obj
 
 import (
 	"fmt"
-	"os"
 	"io"
+	"os"
 )
 
 var Stdout io.Writer = os.Stdout

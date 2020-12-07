@@ -45,3 +45,20 @@ loop = fn(times, function) {
 
 loop(5, fn() { print("Hello World") })
 ```
+
+#### Noteworthy features
+The return value can be implicit:
+```
+add = fn(x, y) { x + y }
+sum = add(9, 1)
+print(sum)
+10
+```
+
+Also you can inline the if expressions:
+```
+a = 0
+b = 1
+
+minimum = if a < b { a } else { b }
+```

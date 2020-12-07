@@ -153,6 +153,10 @@ func lexExpression(l *lexer) stateFn {
 		l.backup()
 		return lexIdentifier
 
+	case r == '\n':
+		l.emit(item.SEMICOLON)
+		l.ignoreSpaces()
+
 	case r == '"':
 		l.ignore()
 		return lexString
@@ -252,7 +256,7 @@ func isLetter(r rune) bool {
 }
 
 func isSpace(r rune) bool {
-	return r == ' ' || r == '\t' || r == '\r' || r == '\n'
+	return r == ' ' || r == '\t' || r == '\r'
 }
 
 func isNumber(r rune) bool {

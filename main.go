@@ -24,6 +24,7 @@ func main() {
 	defer terminal.Restore(0, initState)
 
 	term := terminal.NewTerminal(os.Stdin, ">>> ")
+	obj.Stdout = term
 	for {
 		input, err := term.ReadLine()
 		if err != nil {
@@ -41,6 +42,6 @@ func main() {
 			}
 			continue
 		}
-		fmt.Fprintln(term, res.Eval(env))
+		res.Eval(env)
 	}
 }

@@ -23,7 +23,11 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 		var args []obj.Object
 
 		for _, a := range c.args {
-			args = append(args, a.Eval(env))
+			o := a.Eval(env)
+			if isError(o) {
+				return o
+			}
+			args = append(args, o)
 		}
 
 		extEnv := extendEnv(fn, args)

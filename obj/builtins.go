@@ -1,15 +1,21 @@
 package obj
 
-import "fmt"
+import (
+	"fmt"
+	"os"
+	"io"
+)
+
+var Stdout io.Writer = os.Stdout
 
 var Builtins = map[string]Builtin{
-	"println": func(args ...Object) Object {
+	"print": func(args ...Object) Object {
 		var arguments []interface{}
 
 		for _, a := range args {
 			arguments = append(arguments, a.String())
 		}
-		fmt.Println(arguments...)
+		fmt.Fprintln(Stdout, arguments...)
 		return NullObj
 	},
 }

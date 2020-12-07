@@ -142,6 +142,10 @@ func (p *Parser) parseExpr(precedence int) ast.Node {
 				break
 			}
 		}
+
+		if p.peek.Is(item.SEMICOLON) {
+			p.next()
+		}
 		return leftExp
 	}
 	p.noParsePrefixFnError(p.cur.Typ)

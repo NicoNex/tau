@@ -33,5 +33,5 @@ func (b Bang) Eval(env *obj.Env) obj.Object {
 }
 
 func (b Bang) String() string {
-	return fmt.Sprintf("-%v", b.n)
+	return fmt.Sprintf("!%v", b.n)
 }

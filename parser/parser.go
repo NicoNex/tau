@@ -84,6 +84,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.LT_EQ, p.parseLessEq)
 	p.registerInfix(item.GT_EQ, p.parseGreaterEq)
 	p.registerInfix(item.AND, p.parseAnd)
+	p.registerInfix(item.OR, p.parseOr)
 	p.registerInfix(item.PLUS, p.parsePlus)
 	p.registerInfix(item.MINUS, p.parseMinus)
 	p.registerInfix(item.SLASH, p.parseSlash)
@@ -357,6 +358,12 @@ func (p *Parser) parseAnd(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewAnd(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseOr(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewOr(left, p.parseExpr(prec))
 }
 
 func (p *Parser) parseAssign(left ast.Node) ast.Node {

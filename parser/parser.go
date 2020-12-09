@@ -46,9 +46,11 @@ var precedences = map[item.Type]int{
 	item.GT_EQ:    LESSGREATER,
 	item.PLUS:     SUM,
 	item.MINUS:    SUM,
+	item.OR:       SUM,
 	item.SLASH:    PRODUCT,
 	item.ASTERISK: PRODUCT,
 	item.POWER:    PRODUCT,
+	item.AND:      PRODUCT,
 	item.LPAREN:   CALL,
 	item.LBRACKET: INDEX,
 	item.ASSIGN:   ASSIGNMENT,
@@ -81,6 +83,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.GT, p.parseGreater)
 	p.registerInfix(item.LT_EQ, p.parseLessEq)
 	p.registerInfix(item.GT_EQ, p.parseGreaterEq)
+	p.registerInfix(item.AND, p.parseAnd)
 	p.registerInfix(item.PLUS, p.parsePlus)
 	p.registerInfix(item.MINUS, p.parseMinus)
 	p.registerInfix(item.SLASH, p.parseSlash)
@@ -348,6 +351,12 @@ func (p *Parser) parseGreaterEq(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewGreaterEq(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseAnd(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewAnd(left, p.parseExpr(prec))
 }
 
 func (p *Parser) parseAssign(left ast.Node) ast.Node {

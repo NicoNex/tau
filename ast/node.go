@@ -11,3 +11,14 @@ type Node interface {
 func isError(o obj.Object) bool {
 	return o.Type() == obj.ERROR
 }
+
+func isTruthy(o obj.Object) bool {
+	switch o.(type) {
+	case *obj.Boolean:
+		return o == obj.True
+	case *obj.Null:
+		return false
+	default:
+		return true
+	}
+}

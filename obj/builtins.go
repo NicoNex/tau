@@ -29,8 +29,23 @@ var Builtins = map[string]Builtin{
 	},
 	"string": func(args ...Object) Object {
 		if l := len(args); l != 1 {
-			return NewError("wrong number of arguments, expected 1, got %d", l)
+			return NewError("string: wrong number of arguments, expected 1, got %d", l)
 		}
 		return NewString(args[0].String())
+	},
+	"append": func(args ...Object) Object {
+		if len(args) == 0 {
+			return NewError("append: no argument provided")
+		}
+
+		lst, ok := args[0].(List)
+		if !ok {
+			return NewError("append: first argument must be a list")
+		}
+
+		if len(args) > 1 {
+			return append(lst, args[1:]...)
+		}
+		return lst
 	},
 }

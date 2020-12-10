@@ -14,6 +14,7 @@ func NewAssign(l, r Node) Node {
 	return Assign{l, r}
 }
 
+// TODO: fix the bug in case a builtin function returns an error.
 func (a Assign) Eval(env *obj.Env) obj.Object {
 	if left, ok := a.l.(Identifier); ok {
 		env.Set(left.String(), a.r.Eval(env))

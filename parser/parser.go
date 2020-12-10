@@ -75,7 +75,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.LPAREN, p.parseGroupedExpr)
 	p.registerPrefix(item.IF, p.parseIfExpr)
 	p.registerPrefix(item.FUNCTION, p.parseFunction)
-	// p.registerPrefix(item.LBRACKET, p.parseArrayLiteral)
+	p.registerPrefix(item.LBRACKET, p.parseList)
 
 	p.registerInfix(item.EQ, p.parseEquals)
 	p.registerInfix(item.NOT_EQ, p.parseNotEquals)
@@ -92,7 +92,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.ASSIGN, p.parseAssign)
 	// p.registerInfix(item.POWER, p.parseInfixExpression)
 	p.registerInfix(item.LPAREN, p.parseCall)
-	// p.registerInfix(item.LBRACKET, p.parseIndexExpression)
+	p.registerInfix(item.LBRACKET, p.parseIndex)
 	return p
 }
 
@@ -205,6 +205,11 @@ func (p *Parser) parseIfExpr() ast.Node {
 	}
 
 	return ast.NewIfExpr(cond, body, alt)
+}
+
+func (p *Parser) parseList() ast.Node {
+	nodes := p.parseNodeList(item.RBRACKET)
+	return ast.NewList(nodes...)
 }
 
 func (p *Parser) parseFunction() ast.Node {
@@ -374,6 +379,15 @@ func (p *Parser) parseAssign(left ast.Node) ast.Node {
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {
 	return ast.NewCall(fn, p.parseNodeList(item.RPAREN))
+}
+
+func (p *Parser) parseIndex(list ast.Node) ast.Node {
+	p.next()
+	expr := p.parseExpr(LOWEST)
+	if !p.expectPeek(item.RBRACKET) {
+		return nil
+	}
+	return ast.NewIndex(list, expr)
 }
 
 func (p *Parser) parseNodeList(end item.Type) []ast.Node {

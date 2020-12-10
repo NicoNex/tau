@@ -62,6 +62,13 @@ func (l *lexer) acceptRun(valid string) bool {
 	return true
 }
 
+func (l *lexer) acceptUntil(end rune) {
+	for l.next() != end {
+
+	}
+	l.backup()
+}
+
 func (l *lexer) emit(t item.Type) {
 	l.items <- item.Item{
 		Typ: t,
@@ -253,6 +260,11 @@ func lexExpression(l *lexer) stateFn {
 			l.backup()
 			l.emit(item.BWOR)
 		}
+
+	case r == '#':
+		l.acceptUntil('\n')
+		l.next()
+		l.ignore()
 
 	case r == 0:
 		l.emit(item.EOF)

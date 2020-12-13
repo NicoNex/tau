@@ -31,6 +31,10 @@ var Builtins = map[string]Builtin{
 		if l := len(args); l != 1 {
 			return NewError("string: wrong number of arguments, expected 1, got %d", l)
 		}
+
+		if s, ok := args[0].(*String); ok {
+			return NewString(string(*s))
+		}
 		return NewString(args[0].String())
 	},
 	"append": func(args ...Object) Object {

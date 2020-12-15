@@ -52,4 +52,18 @@ var Builtins = map[string]Builtin{
 		}
 		return lst
 	},
+	"len": func(args ...Object) Object {
+		if l := len(args); l != 1 {
+			return NewError("len: wrong number of arguments, expected 1, got %d", l)
+		}
+
+		switch o := args[0].(type) {
+		case List:
+			return NewInteger(int64(len(o)))
+		case *String:
+			return NewInteger(int64(len(*o)))
+		default:
+			return NewError("len: object of type %q has no length", o.Type())
+		}
+	},
 }

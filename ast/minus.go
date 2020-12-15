@@ -25,27 +25,23 @@ func (m Minus) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if left.Type() != right.Type() {
-		return obj.NewError(
-			"invalid operation %v - %v (mismatched types %v and %v)",
-			left, right, left.Type(), right.Type(),
-		)
-	}
-
-	switch left.Type() {
-	case obj.INT:
-		l := left.(*obj.Integer)
-		r := right.(*obj.Integer)
-		return obj.NewInteger(l.Val() - r.Val())
-
-	case obj.FLOAT:
-		l := left.(*obj.Float)
-		r := right.(*obj.Float)
-		return obj.NewFloat(l.Val() - r.Val())
-
-	default:
+	if !assertTypes(left, obj.INT, obj.FLOAT) {
 		return obj.NewError("unsupported operator '-' for type %v", left.Type())
 	}
+	if !assertTypes(right, obj.INT, obj.FLOAT) {
+		return obj.NewError("unsupported operator '-' for type %v", right.Type())
+	}
+
+	if assertTypes(left, obj.INT) && assertTypes(right, obj.INT) {
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		return obj.NewInteger(l - r)
+	}
+
+	left, right = convert(left, right)
+	l := left.(*obj.Float).Val()
+	r := right.(*obj.Float).Val()
+	return obj.NewFloat(l - r)
 }
 
 func (m Minus) String() string {

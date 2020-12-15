@@ -25,31 +25,35 @@ func (p Plus) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if left.Type() != right.Type() {
-		return obj.NewError(
-			"invalid operation %v + %v (mismatched types %v and %v)",
-			left, right, left.Type(), right.Type(),
-		)
+	if !assertTypes(left, obj.INT, obj.FLOAT, obj.STRING) {
+		return obj.NewError("unsupported operator '+' for type %v", left.Type())
+	}
+	if !assertTypes(right, obj.INT, obj.FLOAT, obj.STRING) {
+		return obj.NewError("unsupported operator '+' for type %v", right.Type())
 	}
 
-	switch left.Type() {
-	case obj.INT:
-		l := left.(*obj.Integer)
-		r := right.(*obj.Integer)
-		return obj.NewInteger(l.Val() + r.Val())
+	switch {
+	case assertTypes(left, obj.STRING) && assertTypes(right, obj.STRING):
+		l := left.(*obj.String).Val()
+		r := right.(*obj.String).Val()
+		return obj.NewString(l + r)
 
-	case obj.FLOAT:
-		l := left.(*obj.Float)
-		r := right.(*obj.Float)
-		return obj.NewFloat(l.Val() + r.Val())
+	case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		return obj.NewInteger(l + r)
 
-	case obj.STRING:
-		l := left.(*obj.String)
-		r := right.(*obj.String)
-		return obj.NewString(l.Val() + r.Val())
+	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
+		left, right = convert(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		return obj.NewFloat(l + r)
 
 	default:
-		return obj.NewError("unsupported operator '+' for type %v", left.Type())
+		return obj.NewError(
+			"invalid operation %v + %v (wrong types %v and %v)",
+			left, right, left.Type(), right.Type(),
+		)
 	}
 }
 

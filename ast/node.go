@@ -23,21 +23,13 @@ func isTruthy(o obj.Object) bool {
 	}
 }
 
-func assertType(o obj.Object, types ...obj.Type) bool {
+func assertTypes(o obj.Object, types ...obj.Type) bool {
 	for _, t := range types {
 		if t == o.Type() {
 			return true
 		}
 	}
 	return false
-}
-
-func isFloat(o obj.Object) bool {
-	return o.Type() == obj.FLOAT
-}
-
-func shouldConvert(l, r obj.Object) bool {
-	return isFloat(l) || isFloat(r)
 }
 
 func convert(l, r obj.Object) (obj.Object, obj.Object) {
@@ -48,13 +40,4 @@ func convert(l, r obj.Object) (obj.Object, obj.Object) {
 		r = obj.NewFloat(float64(*i))
 	}
 	return l, r
-}
-
-func toFloat(o obj.Object) obj.Object {
-	if i, ok := o.(*obj.Integer); ok {
-		return obj.NewFloat(float64(*i))
-	} else if isFloat(o) {
-		return o
-	}
-	return obj.NewError("cannot cast type %v to float", o.Type())
 }

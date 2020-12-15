@@ -17,6 +17,9 @@ func NewCall(fn Node, args []Node) Node {
 
 func (c Call) Eval(env *obj.Env) obj.Object {
 	var fnObj = c.fn.Eval(env)
+	if isError(fnObj) {
+		return fnObj
+	}
 
 	switch fn := fnObj.(type) {
 	case *obj.Function:

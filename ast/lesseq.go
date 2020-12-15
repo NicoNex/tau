@@ -25,27 +25,23 @@ func (l LessEq) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if left.Type() != right.Type() {
-		return obj.NewError(
-			"invalid operation %v <= %v (mismatched types %v and %v)",
-			left, right, left.Type(), right.Type(),
-		)
-	}
-
-	switch left.Type() {
-	case obj.INT:
-		l := left.(*obj.Integer)
-		r := right.(*obj.Integer)
-		return obj.ParseBool(l.Val() <= r.Val())
-
-	case obj.FLOAT:
-		l := left.(*obj.Float)
-		r := right.(*obj.Float)
-		return obj.ParseBool(l.Val() <= r.Val())
-
-	default:
+	if !assertTypes(left, obj.INT, obj.FLOAT) {
 		return obj.NewError("unsupported operator '<=' for type %v", left.Type())
 	}
+	if !assertTypes(right, obj.INT, obj.FLOAT) {
+		return obj.NewError("unsupported operator '<=' for type %v", right.Type())
+	}
+
+	if assertTypes(left, obj.INT) && assertTypes(right, obj.INT) {
+		le := left.(*obj.Integer).Val()
+		ri := right.(*obj.Integer).Val()
+		return obj.ParseBool(le <= ri)
+	}
+
+	left, right = convert(left, right)
+	le := left.(*obj.Float).Val()
+	ri := right.(*obj.Float).Val()
+	return obj.ParseBool(le <= ri)
 }
 
 func (l LessEq) String() string {

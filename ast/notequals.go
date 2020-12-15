@@ -25,37 +25,35 @@ func (n NotEquals) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if left.Type() != right.Type() {
-		return obj.NewError(
-			"invalid operation %v != %v (mismatched types %v and %v)",
-			left, right, left.Type(), right.Type(),
-		)
+	if !assertTypes(left, obj.INT, obj.FLOAT, obj.STRING) {
+		return obj.NewError("unsupported operator '!=' for type %v", left.Type())
+	}
+	if !assertTypes(right, obj.INT, obj.FLOAT, obj.STRING) {
+		return obj.NewError("unsupported operator '!=' for type %v", right.Type())
 	}
 
-	switch left.Type() {
-	case obj.INT:
-		l := left.(*obj.Integer)
-		r := right.(*obj.Integer)
-		return obj.ParseBool(l.Val() != r.Val())
-
-	case obj.FLOAT:
-		l := left.(*obj.Float)
-		r := right.(*obj.Float)
-		return obj.ParseBool(l.Val() != r.Val())
-
-	case obj.STRING:
+	switch {
+	case assertTypes(left, obj.STRING) && assertTypes(right, obj.STRING):
 		l := left.(*obj.String)
 		r := right.(*obj.String)
 		return obj.ParseBool(l.Val() != r.Val())
 
-	case obj.BOOL:
-		return obj.ParseBool(left != right)
+	case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
+		l := left.(*obj.Integer)
+		r := right.(*obj.Integer)
+		return obj.ParseBool(l.Val() != r.Val())
 
-	case obj.NULL:
-		return obj.ParseBool(true)
+	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
+		left, right = convert(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		return obj.ParseBool(l != r)
 
 	default:
-		return obj.NewError("unsupported operator '!=' for type %v", left.Type())
+		return obj.NewError(
+			"invalid operation %v != %v (wrong types %v and %v)",
+			left, right, left.Type(), right.Type(),
+		)
 	}
 }
 

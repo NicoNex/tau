@@ -34,14 +34,14 @@ func (n NotEquals) Eval(env *obj.Env) obj.Object {
 
 	switch {
 	case assertTypes(left, obj.STRING) && assertTypes(right, obj.STRING):
-		l := left.(*obj.String)
-		r := right.(*obj.String)
-		return obj.ParseBool(l.Val() != r.Val())
+		l := left.(*obj.String).Val()
+		r := right.(*obj.String).Val()
+		return obj.ParseBool(l != r)
 
 	case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
-		l := left.(*obj.Integer)
-		r := right.(*obj.Integer)
-		return obj.ParseBool(l.Val() != r.Val())
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		return obj.ParseBool(l != r)
 
 	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
 		left, right = convert(left, right)

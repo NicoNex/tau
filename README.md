@@ -1,6 +1,6 @@
 # τ
 
-Tau is an open source programming language designed to be minimal, fast and efficient.
+Tau is a dinamically-typed open source programming language designed to be minimal, fast and efficient.
 
 ## Syntax
 
@@ -71,6 +71,68 @@ The semicolon character `;` is implicit on a newline but can be used to separate
 printData = fn(a, b, c) { println(a); println(b); println(c) }
 ```
 
+Functions are first-class and treated as any other data type.
+```
+get_minumum = fn(a, b) {
+	if a < b { 
+		return a 
+	}
+	b
+}
+
+var1 = 1
+var2 = 2
+
+min = get_minimum(var1, var2)
+println(min)
+
+>>> 1
+```
+
 ##### REPL
 Tau also supports a REPL:
 ![repl](./images/tauloop.png)
+
+### Data types
+Tau is a dynamically-typed programming language and it supports the following primitive types:
+
+#### Integer
+```
+my_var = 10
+```
+
+#### Float
+```
+my_var = 2.5
+```
+
+#### String
+```
+str = "My string here"
+```
+
+#### Boolean
+```
+t = true
+f = false
+```
+
+#### Function
+```
+pow = fn(base, exponent) {
+	if exponent > 0 {
+		return base * pow(base, exponent-1)
+	}
+	1 # You could optionally write 'return 1', but in this case the return is implicit.
+}
+```
+
+#### List
+```
+empty = []
+stuff = ["Hello World", 1, 2, 3, true]
+```
+
+#### Dictionary
+Coming soon...
+

@@ -136,3 +136,10 @@ stuff = ["Hello World", 1, 2, 3, true]
 #### Dictionary
 Coming soon...
 
+### Installation
+In order to install Tau you need to have the go compiler installed or otherwhise you can get it from ![here](https://golang.org/).
+
+Once done, running the following command will successfully install Tau:
+```bash
+go get github.com/NicoNex/Tau
+```

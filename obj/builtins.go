@@ -66,4 +66,58 @@ var Builtins = map[string]Builtin{
 			return NewError("len: object of type %q has no length", o.Type())
 		}
 	},
+	"range": func(args ...Object) Object {
+		switch len(args) {
+		case 1:
+			if stop, ok := args[0].(*Integer); ok {
+				return listify(0, int(*stop), 1)
+			}
+			return NewError("range: start value must be an int")
+
+		case 2:
+			start, ok := args[0].(*Integer)
+			if !ok {
+				return NewError("range: start value must be an int")
+			}
+
+			stop, ok := args[1].(*Integer)
+			if !ok {
+				return NewError("range: stop value must be an int")
+			}
+			return listify(int(*start), int(*stop), 1)
+
+		case 3:
+			start, ok := args[0].(*Integer)
+			if !ok {
+				return NewError("range: start value must be an int")
+			}
+
+			stop, ok := args[1].(*Integer)
+			if !ok {
+				return NewError("range: stop value must be an int")
+			}
+
+			step, ok := args[2].(*Integer)
+			if !ok {
+				return NewError("range: step value must be an int")
+			}
+
+			if s := int(*step); s != 0 {
+				return listify(int(*start), int(*stop), s)
+			}
+			return NewError("range: step value must not be zero")
+
+		default:
+			return NewError("range: wrong number of arguments, max 3, got %d", len(args))
+		}
+	},
+}
+
+func listify(start, stop, step int) List {
+	var l List
+
+	for i := start; i < stop; i += step {
+		l = append(l, NewInteger(int64(i)))
+	}
+	return l
 }

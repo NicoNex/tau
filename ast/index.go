@@ -31,7 +31,7 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		i := idx.(*obj.Integer).Val()
 
 		if int(i) >= len(l) {
-			return obj.NewError("index out of range [%d] with length %d", i, len(l))
+			return obj.NullObj
 		}
 		return l[i]
 

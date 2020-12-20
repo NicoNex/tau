@@ -74,8 +74,8 @@ printData = fn(a, b, c) { println(a); println(b); println(c) }
 Functions are first-class and treated as any other data type.
 ```
 get_minumum = fn(a, b) {
-	if a < b { 
-		return a 
+	if a < b {
+		return a
 	}
 	b
 }
@@ -141,5 +141,5 @@ In order to install Tau you need to have the go compiler installed or otherwhise
 
 Once done, running the following command will successfully install Tau:
 ```bash
-go get github.com/NicoNex/Tau
+go get github.com/NicoNex/tau
 ```

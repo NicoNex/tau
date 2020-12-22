@@ -2,8 +2,9 @@ package ast
 
 import (
 	"fmt"
-	"github.com/NicoNex/tau/obj"
 	"strings"
+
+	"github.com/NicoNex/tau/obj"
 )
 
 type Call struct {

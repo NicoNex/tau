@@ -2,6 +2,7 @@ package ast
 
 import (
 	"fmt"
+
 	"github.com/NicoNex/tau/obj"
 )
 

@@ -33,12 +33,6 @@ func (d Divide) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("unsupported operator '/' for type %v", right.Type())
 	}
 
-	if assertTypes(left, obj.INT) && assertTypes(right, obj.INT) {
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
-		return obj.NewInteger(l / r)
-	}
-
 	left, right = convert(left, right)
 	l := left.(*obj.Float).Val()
 	r := right.(*obj.Float).Val()

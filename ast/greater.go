@@ -39,7 +39,7 @@ func (g Greater) Eval(env *obj.Env) obj.Object {
 		return obj.ParseBool(l > r)
 	}
 
-	left, right = convert(left, right)
+	left, right = toFloat(left, right)
 	l := left.(*obj.Float).Val()
 	r := right.(*obj.Float).Val()
 	return obj.ParseBool(l > r)

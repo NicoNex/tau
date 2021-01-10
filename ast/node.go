@@ -32,7 +32,7 @@ func assertTypes(o obj.Object, types ...obj.Type) bool {
 	return false
 }
 
-func convert(l, r obj.Object) (obj.Object, obj.Object) {
+func toFloat(l, r obj.Object) (obj.Object, obj.Object) {
 	if i, ok := l.(*obj.Integer); ok {
 		l = obj.NewFloat(float64(*i))
 	}

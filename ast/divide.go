@@ -33,7 +33,7 @@ func (d Divide) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("unsupported operator '/' for type %v", right.Type())
 	}
 
-	left, right = convert(left, right)
+	left, right = toFloat(left, right)
 	l := left.(*obj.Float).Val()
 	r := right.(*obj.Float).Val()
 	return obj.NewFloat(l / r)

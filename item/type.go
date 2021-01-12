@@ -16,6 +16,10 @@ const (
 	MINUS
 	SLASH
 	ASTERISK
+	PLUS_ASSIGN
+	MINUS_ASSIGN
+	ASTERISK_ASSIGN
+	SLASH_ASSIGN
 	POWER
 	EQ
 	NOT_EQ
@@ -62,21 +66,25 @@ var typemap = map[Type]string{
 	FLOAT:  "float",
 	STRING: "string",
 
-	ASSIGN:   "=",
-	PLUS:     "+",
-	MINUS:    "*",
-	SLASH:    "/",
-	ASTERISK: "*",
-	POWER:    "**",
-	EQ:       "==",
-	NOT_EQ:   "!=",
-	BANG:     "!",
-	LT:       "<",
-	GT:       ">",
-	LT_EQ:    "<=",
-	GT_EQ:    ">=",
-	AND:      "&&",
-	OR:       "||",
+	ASSIGN:          "=",
+	PLUS:            "+",
+	MINUS:           "*",
+	SLASH:           "/",
+	ASTERISK:        "*",
+	POWER:           "**",
+	EQ:              "==",
+	NOT_EQ:          "!=",
+	BANG:            "!",
+	LT:              "<",
+	GT:              ">",
+	LT_EQ:           "<=",
+	GT_EQ:           ">=",
+	AND:             "&&",
+	OR:              "||",
+	PLUS_ASSIGN:     "+=",
+	MINUS_ASSIGN:    "-=",
+	ASTERISK_ASSIGN: "*=",
+	SLASH_ASSIGN:    "/=",
 
 	COMMA:     ",",
 	SEMICOLON: ";",

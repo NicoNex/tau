@@ -52,6 +52,27 @@ var Builtins = map[string]Builtin{
 		}
 		return lst
 	},
+	"push": func(args ...Object) Object {
+		if len(args) == 0 {
+			return NewError("push: no argument provided")
+		}
+
+		lst, ok := args[0].(List)
+		if !ok {
+			return NewError("push: first argument must be a list")
+		}
+
+		if len(args) > 1 {
+			var tmp List
+
+			for i := len(args) - 1; i > 0; i-- {
+				tmp = append(tmp, args[i])
+			}
+
+			return append(tmp, lst...)
+		}
+		return lst
+	},
 	"len": func(args ...Object) Object {
 		if l := len(args); l != 1 {
 			return NewError("len: wrong number of arguments, expected 1, got %d", l)
@@ -110,6 +131,45 @@ var Builtins = map[string]Builtin{
 		default:
 			return NewError("range: wrong number of arguments, max 3, got %d", len(args))
 		}
+	},
+	"first": func(args ...Object) Object {
+		if l := len(args); l != 1 {
+			return NewError("first: wrong number of arguments, expected 1, got %d", l)
+		}
+
+		if list, ok := args[0].(List); ok {
+			if len(list) > 0 {
+				return list[0]
+			}
+			return NullObj
+		}
+		return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
+	},
+	"last": func(args ...Object) Object {
+		if l := len(args); l != 1 {
+			return NewError("last: wrong number of arguments, expected 1, got %d", l)
+		}
+
+		if list, ok := args[0].(List); ok {
+			if len(list) > 0 {
+				return list[len(list)-1]
+			}
+			return NullObj
+		}
+		return NewError("last: wrong argument type, expected list, got %s", args[0].Type())
+	},
+	"tail": func(args ...Object) Object {
+		if l := len(args); l != 1 {
+			return NewError("tail: wrong number of arguments, expected 1, got %d", l)
+		}
+
+		if list, ok := args[0].(List); ok {
+			if len(list) > 0 {
+				return list[1:]
+			}
+			return NullObj
+		}
+		return NewError("tail: wrong argument type, expected list, got %s", args[0].Type())
 	},
 }
 

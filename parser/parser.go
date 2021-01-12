@@ -38,22 +38,26 @@ const (
 
 // Links each operator to its precedence class.
 var precedences = map[item.Type]int{
-	item.EQ:       EQUALS,
-	item.NOT_EQ:   EQUALS,
-	item.LT:       LESSGREATER,
-	item.GT:       LESSGREATER,
-	item.LT_EQ:    LESSGREATER,
-	item.GT_EQ:    LESSGREATER,
-	item.PLUS:     SUM,
-	item.MINUS:    SUM,
-	item.OR:       SUM,
-	item.SLASH:    PRODUCT,
-	item.ASTERISK: PRODUCT,
-	item.POWER:    PRODUCT,
-	item.AND:      PRODUCT,
-	item.LPAREN:   CALL,
-	item.LBRACKET: INDEX,
-	item.ASSIGN:   ASSIGNMENT,
+	item.EQ:              EQUALS,
+	item.NOT_EQ:          EQUALS,
+	item.LT:              LESSGREATER,
+	item.GT:              LESSGREATER,
+	item.LT_EQ:           LESSGREATER,
+	item.GT_EQ:           LESSGREATER,
+	item.PLUS:            SUM,
+	item.MINUS:           SUM,
+	item.OR:              SUM,
+	item.SLASH:           PRODUCT,
+	item.ASTERISK:        PRODUCT,
+	item.POWER:           PRODUCT,
+	item.AND:             PRODUCT,
+	item.LPAREN:          CALL,
+	item.LBRACKET:        INDEX,
+	item.ASSIGN:          ASSIGNMENT,
+	item.PLUS_ASSIGN:     ASSIGNMENT,
+	item.MINUS_ASSIGN:    ASSIGNMENT,
+	item.SLASH_ASSIGN:    ASSIGNMENT,
+	item.ASTERISK_ASSIGN: ASSIGNMENT,
 }
 
 func newParser(items chan item.Item) *Parser {
@@ -89,8 +93,13 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.MINUS, p.parseMinus)
 	p.registerInfix(item.SLASH, p.parseSlash)
 	p.registerInfix(item.ASTERISK, p.parseAsterisk)
-	p.registerInfix(item.ASSIGN, p.parseAssign)
 	// p.registerInfix(item.POWER, p.parseInfixExpression)
+	p.registerInfix(item.ASSIGN, p.parseAssign)
+	p.registerInfix(item.PLUS_ASSIGN, p.parsePlusAssign)
+	p.registerInfix(item.MINUS_ASSIGN, p.parseMinusAssign)
+	p.registerInfix(item.SLASH_ASSIGN, p.parseSlashAssign)
+	p.registerInfix(item.ASTERISK_ASSIGN, p.parseAsteriskAssign)
+
 	p.registerInfix(item.LPAREN, p.parseCall)
 	p.registerInfix(item.LBRACKET, p.parseIndex)
 	return p
@@ -375,6 +384,30 @@ func (p *Parser) parseAssign(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parsePlusAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewPlusAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseMinusAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewMinusAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseSlashAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewDivideAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseAsteriskAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewTimesAssign(left, p.parseExpr(prec))
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {

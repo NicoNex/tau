@@ -21,9 +21,9 @@ func (m MinusAssign) Eval(env *obj.Env) obj.Object {
 	var right = m.r.Eval(env)
 
 	if ident, ok := m.l.(Identifier); ok {
-    	name = ident.String()
+		name = ident.String()
 	} else {
-    	return obj.NewError("cannot assign to literal")
+		return obj.NewError("cannot assign to literal")
 	}
 
 	if isError(left) {
@@ -41,22 +41,22 @@ func (m MinusAssign) Eval(env *obj.Env) obj.Object {
 	}
 
 	switch {
-		case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
-			l := left.(*obj.Integer).Val()
-			r := right.(*obj.Integer).Val()
-			env.Set(name, obj.NewInteger(l - r))
+	case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		env.Set(name, obj.NewInteger(l-r))
 
-		case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
-			left, right = toFloat(left, right)
-			l := left.(*obj.Float).Val()
-			r := right.(*obj.Float).Val()
-			env.Set(name, obj.NewFloat(l - r))
+	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
+		left, right = toFloat(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		env.Set(name, obj.NewFloat(l-r))
 
-		default:
-			return obj.NewError(
-				"invalid operation %v -= %v (wrong types %v and %v)",
-				left, right, left.Type(), right.Type(),
-			)
+	default:
+		return obj.NewError(
+			"invalid operation %v -= %v (wrong types %v and %v)",
+			left, right, left.Type(), right.Type(),
+		)
 	}
 
 	return obj.NullObj

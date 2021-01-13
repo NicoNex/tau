@@ -21,9 +21,9 @@ func (d DivideAssign) Eval(env *obj.Env) obj.Object {
 	var right = d.r.Eval(env)
 
 	if ident, ok := d.l.(Identifier); ok {
-    	name = ident.String()
+		name = ident.String()
 	} else {
-    	return obj.NewError("cannot assign to literal")
+		return obj.NewError("cannot assign to literal")
 	}
 
 	if isError(left) {
@@ -43,7 +43,7 @@ func (d DivideAssign) Eval(env *obj.Env) obj.Object {
 	left, right = toFloat(left, right)
 	l := left.(*obj.Float).Val()
 	r := right.(*obj.Float).Val()
-	env.Set(name, obj.NewFloat(l / r))
+	env.Set(name, obj.NewFloat(l/r))
 
 	return obj.NullObj
 }

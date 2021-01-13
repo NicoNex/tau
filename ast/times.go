@@ -39,7 +39,7 @@ func (t Times) Eval(env *obj.Env) obj.Object {
 		return obj.NewInteger(l * r)
 	}
 
-	left, right = convert(left, right)
+	left, right = toFloat(left, right)
 	l := left.(*obj.Float).Val()
 	r := right.(*obj.Float).Val()
 	return obj.NewFloat(l * r)

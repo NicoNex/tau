@@ -24,7 +24,7 @@ func (a Assign) Eval(env *obj.Env) obj.Object {
 		}
 
 		env.Set(left.String(), right)
-		return obj.NullObj
+		return right
 	}
 	return obj.NewError("cannot assign to literal")
 }

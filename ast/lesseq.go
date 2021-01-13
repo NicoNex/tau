@@ -39,7 +39,7 @@ func (l LessEq) Eval(env *obj.Env) obj.Object {
 		return obj.ParseBool(le <= ri)
 	}
 
-	left, right = convert(left, right)
+	left, right = toFloat(left, right)
 	le := left.(*obj.Float).Val()
 	ri := right.(*obj.Float).Val()
 	return obj.ParseBool(le <= ri)

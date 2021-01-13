@@ -16,7 +16,7 @@ add = fn(x, y) {
 };
 
 result = add(five, ten);
-!-/*5;
+! - / * 5 += -= *= /= ** ;
 5 < 10 > 5;
 
 if 5 < 10 {
@@ -84,6 +84,11 @@ fn mul(x, y) {
 		{item.SLASH, "/"},
 		{item.ASTERISK, "*"},
 		{item.INT, "5"},
+		{item.PLUS_ASSIGN, "+="},
+		{item.MINUS_ASSIGN, "-="},
+		{item.ASTERISK_ASSIGN, "*="},
+		{item.SLASH_ASSIGN, "/="},
+		{item.POWER, "**"},
 		{item.SEMICOLON, ";"},
 
 		{item.INT, "5"},
@@ -106,6 +111,7 @@ fn mul(x, y) {
 		{item.FALSE, "false"},
 		{item.SEMICOLON, ";"},
 		{item.RBRACE, "}"},
+		{item.SEMICOLON, "\n"},
 
 		{item.INT, "10"},
 		{item.EQ, "=="},
@@ -144,6 +150,7 @@ fn mul(x, y) {
 		{item.IDENT, "y"},
 		{item.SEMICOLON, ";"},
 		{item.RBRACE, "}"},
+		{item.SEMICOLON, "\n"},
 
 		{item.FLOAT, "10.5"},
 		{item.EQ, "=="},

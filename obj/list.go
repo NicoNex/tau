@@ -9,11 +9,7 @@ type List []Object
 
 func NewList(elems ...Object) Object {
 	var ret List
-
-	for _, e := range elems {
-		ret = append(ret, e)
-	}
-	return ret
+	return append(ret, elems...)
 }
 
 func (l List) Type() Type {

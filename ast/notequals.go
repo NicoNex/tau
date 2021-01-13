@@ -45,7 +45,7 @@ func (n NotEquals) Eval(env *obj.Env) obj.Object {
 		return obj.ParseBool(l != r)
 
 	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
-		left, right = convert(left, right)
+		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
 		return obj.ParseBool(l != r)

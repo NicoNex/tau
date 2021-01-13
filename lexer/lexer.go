@@ -151,6 +151,63 @@ func lexString(l *lexer) stateFn {
 	return lexString
 }
 
+func lexPlus(l *lexer) stateFn {
+	switch l.next() {
+	case '=':
+		l.emit(item.PLUS_ASSIGN)
+
+	// case '+':
+	// 	l.emit(item.INCREMENT)
+
+	default:
+		l.backup()
+		l.emit(item.PLUS)
+	}
+	return lexExpression
+}
+
+func lexMinus(l *lexer) stateFn {
+	switch l.next() {
+	case '=':
+		l.emit(item.MINUS_ASSIGN)
+
+	// case '-':
+	// 	l.emit(item.DECREMENT)
+
+	default:
+		l.backup()
+		l.emit(item.MINUS)
+	}
+	return lexExpression
+}
+
+func lexTimes(l *lexer) stateFn {
+	switch l.next() {
+	case '=':
+		l.emit(item.ASTERISK_ASSIGN)
+
+	case '*':
+		l.emit(item.POWER)
+
+	default:
+		l.backup()
+		l.emit(item.ASTERISK)
+	}
+	return lexExpression
+}
+
+func lexSlash(l *lexer) stateFn {
+	switch l.next() {
+	case '=':
+		l.emit(item.SLASH_ASSIGN)
+
+	default:
+		l.backup()
+		l.emit(item.SLASH)
+	}
+	return lexExpression
+}
+
 func lexExpression(l *lexer) stateFn {
 	switch r := l.next(); {
 
@@ -197,21 +254,16 @@ func lexExpression(l *lexer) stateFn {
 		l.emit(item.RBRACE)
 
 	case r == '+':
-		l.emit(item.PLUS)
+		return lexPlus
 
 	case r == '-':
-		l.emit(item.MINUS)
+		return lexMinus
 
 	case r == '*':
-		if l.next() == '*' {
-			l.emit(item.POWER)
-		} else {
-			l.backup()
-			l.emit(item.ASTERISK)
-		}
+		return lexTimes
 
 	case r == '/':
-		l.emit(item.SLASH)
+		return lexSlash
 
 	case r == '=':
 		if l.next() == '=' {

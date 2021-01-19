@@ -9,14 +9,6 @@ func NewInteger(i int64) Object {
 	return &ret
 }
 
-func ObjectToInt(i Object) (int64, bool) {
-	a := i.String()
-	if b, ok := strconv.ParseFloat(string(a), 64); ok == nil {
-		return int64(b), true
-	}
-	return -1, false
-}
-
 func (i Integer) String() string {
 	return strconv.FormatInt(int64(i), 10)
 }

@@ -3,6 +3,7 @@ import (
 	"io"
 	"fmt"
 	"os"
+	"strconv"
 )
 
 var Stdout io.Writer = os.Stdout
@@ -37,34 +38,73 @@ var Builtins = map[string]Builtin{
 	},
 	"int": func(args ...Object) Object {
 		if l := len(args); l != 1 {
-			return NewError("string: wrong number of arguments, expected 1, got %d", l)
+			return NewError("int: wrong number of arguments, expected 1, got %d", l)
 		}
 
-		if i, ok := args[0].(*Integer); ok {
-			return NewInteger(int64(*i))
+		switch o := args[0].(type) {
+			case *Integer:
+				return NewInteger(int64(*o))
+
+			case *Float:
+				return NewInteger(int64(*o))
+
+			case *String:
+				if a, ok := strconv.ParseFloat(string(*o), 64); ok == nil {
+					return NewInteger(int64(a))
+				}
+				return NewError("%v is not a number", args[0])
+
+			default:
+				return NewError("%v is not a number", args[0])
 		}
-		if a, b := ObjectToInt(args[0]); b {
-			return NewInteger(a)
-		}
-		return NewError("%s is not an integer", args[0])
 	},
 	"float": func(args ...Object) Object {
 		if l := len(args); l != 1 {
-			return NewError("string: wrong number of arguments, expected 1, got %d", l)
+			return NewError("float: wrong number of arguments, expected 1, got %d", l)
 		}
 
-		if i, ok := args[0].(*Float); ok {
-			return NewFloat(float64(*i))
+		switch o := args[0].(type) {
+			case *Integer:
+				return NewFloat(float64(*o))
+
+			case *Float:
+				return NewFloat(float64(*o))
+
+			case *String:
+				if a, ok := strconv.ParseFloat(string(*o), 64); ok == nil {
+					return NewFloat(a)
+				}
+				return NewError("%v is not a number", args[0])
+
+			default:
+				return NewError("%v is not a number", args[0])
 		}
-		if a, b := ObjectToFloat(args[0]); b {
-			return NewFloat(a)
-		}
-		return NewError("%s is not an integer", args[0])
 	},
-
 	"exit": func(args ...Object) Object {
-		os.Exit(1)
-		return NewError("ERROR")
+		l := len(args)
+		if l == 0 {
+			os.Exit(0)
+		} else if l > 2 {
+			return NewError("exit: wrong number of arguments, expected maxium 2, got %d", l)
+		}
+
+		switch o := args[0].(type) {
+			case *Integer:
+				os.Exit(int(*o))
+
+			case *String:
+				fmt.Fprintln(Stdout, args[0])
+				if l == 2 {
+					switch o2 := args[1].(type) {
+						case *Integer:
+							os.Exit(int(*o2))
+						default:
+							return NewError("exit: second argument is not an int")
+					}
+				}
+				os.Exit(0)
+		}
+		return NullObj
 	},
 	"append": func(args ...Object) Object {
 		if len(args) == 0 {

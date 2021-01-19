@@ -1,6 +1,8 @@
 package obj
 
-import "strconv"
+import (
+	"strconv"
+)
 
 type String string
 

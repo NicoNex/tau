@@ -37,6 +37,19 @@ var Builtins = map[string]Builtin{
 		}
 		return NewString(args[0].String())
 	},
+	"int": func(args ...Object) Object {
+		if l := len(args); l != 1 {
+			return NewError("string: wrong number of arguments, expected 1, got %d", l)
+		}
+
+		if i, ok := args[0].(*Integer); ok {
+			return NewInteger(int64(*i))
+		}
+		if a, b := ObjectToInt(args[0]); b {
+			return NewInteger(a)
+		}
+		return NewError("Not an integer")
+	},
 	"append": func(args ...Object) Object {
 		if len(args) == 0 {
 			return NewError("append: no argument provided")

@@ -11,7 +11,7 @@ func NewInteger(i int64) Object {
 
 func ObjectToInt(i Object) (int64, bool) {
 	a := i.String()
-	if b, ok := strconv.ParseFloat(a, 64); ok == nil {
+	if b, ok := strconv.ParseFloat(string(a), 64); ok == nil {
 		return int64(b), true
 	}
 	return -1, false

@@ -1,13 +1,11 @@
 package obj
-
 import (
-	"fmt"
 	"io"
+	"fmt"
 	"os"
 )
 
 var Stdout io.Writer = os.Stdout
-
 var Builtins = map[string]Builtin{
 	"println": func(args ...Object) Object {
 		var arguments []interface{}
@@ -48,7 +46,25 @@ var Builtins = map[string]Builtin{
 		if a, b := ObjectToInt(args[0]); b {
 			return NewInteger(a)
 		}
-		return NewError("Not an integer")
+		return NewError("%s is not an integer", args[0])
+	},
+	"float": func(args ...Object) Object {
+		if l := len(args); l != 1 {
+			return NewError("string: wrong number of arguments, expected 1, got %d", l)
+		}
+
+		if i, ok := args[0].(*Float); ok {
+			return NewFloat(float64(*i))
+		}
+		if a, b := ObjectToFloat(args[0]); b {
+			return NewFloat(a)
+		}
+		return NewError("%s is not an integer", args[0])
+	},
+
+	"exit": func(args ...Object) Object {
+		os.Exit(1)
+		return NewError("ERROR")
 	},
 	"append": func(args ...Object) Object {
 		if len(args) == 0 {

@@ -1,11 +1,11 @@
 package obj
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 	"os"
 	"strconv"
+	"strings"
 )
 
 var Stdout io.Writer = os.Stdout
@@ -47,7 +47,7 @@ var Builtins = map[string]Builtin{
 		return NewString(tmp)
 	},
 	"string": func(args ...Object) Object {
-		var buf bytes.Buffer
+		var buf strings.Builder
 
 		for _, a := range args {
 			buf.WriteString(a.String())

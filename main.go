@@ -10,24 +10,23 @@ import (
 
 	"github.com/NicoNex/tau/obj"
 	"github.com/NicoNex/tau/parser"
-
-	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/term"
 )
 
 func repl() {
 	var env = obj.NewEnv()
 
-	initState, err := terminal.MakeRaw(0)
+	initState, err := term.MakeRaw(0)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
-	defer terminal.Restore(0, initState)
+	defer term.Restore(0, initState)
 
-	term := terminal.NewTerminal(os.Stdin, ">>> ")
-	obj.Stdout = term
+	t := term.NewTerminal(os.Stdin, ">>> ")
+	obj.Stdout = t
 	for {
-		input, err := term.ReadLine()
+		input, err := t.ReadLine()
 		if err != nil {
 			// Quit without error on Ctrl^D.
 			if err != io.EOF {
@@ -39,15 +38,11 @@ func repl() {
 		res, errs := parser.Parse(input)
 		if len(errs) != 0 {
 			for _, e := range errs {
-				fmt.Fprintln(term, e)
+				fmt.Fprintln(t, e)
 			}
 			continue
 		}
-
-		val := res.Eval(env)
-		if val != obj.NullObj && val != nil {
-			fmt.Fprintln(term, val)
-		}
+		res.Eval(env)
 	}
 }
 

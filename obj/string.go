@@ -1,7 +1,5 @@
 package obj
 
-import "strconv"
-
 type String string
 
 func NewString(s string) Object {
@@ -14,7 +12,7 @@ func (s String) Type() Type {
 }
 
 func (s String) String() string {
-	return strconv.Quote(string(s))
+	return string(s)
 }
 
 func (s String) Val() string {

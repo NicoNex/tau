@@ -2,6 +2,7 @@ package obj
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -20,7 +21,11 @@ func (l List) String() string {
 	var elements []string
 
 	for _, e := range l {
-		elements = append(elements, e.String())
+		if e.Type() == STRING {
+			elements = append(elements, strconv.Quote(e.String()))
+		} else {
+			elements = append(elements, e.String())
+		}
 	}
 	return fmt.Sprintf("[%s]", strings.Join(elements, ", "))
 }

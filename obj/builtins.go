@@ -1,9 +1,9 @@
 package obj
-
 import (
-	"fmt"
 	"io"
+	"fmt"
 	"os"
+	"strconv"
 )
 
 var Stdout io.Writer = os.Stdout
@@ -36,6 +36,85 @@ var Builtins = map[string]Builtin{
 			return NewString(string(*s))
 		}
 		return NewString(args[0].String())
+	},
+	"int": func(args ...Object) Object {
+		if l := len(args); l != 1 {
+			return NewError("int: wrong number of arguments, expected 1, got %d", l)
+		}
+
+		switch o := args[0].(type) {
+			case *Integer:
+				return NewInteger(int64(*o))
+
+			case *Float:
+				return NewInteger(int64(*o))
+
+			case *String:
+				if a, err := strconv.ParseFloat(string(*o), 64); err == nil {
+					return NewInteger(int64(a))
+				}
+				return NewError("%v is not a number", args[0])
+
+			default:
+				return NewError("%v is not a number", args[0])
+		}
+	},
+	"float": func(args ...Object) Object {
+		if l := len(args); l != 1 {
+			return NewError("float: wrong number of arguments, expected 1, got %d", l)
+		}
+
+		switch o := args[0].(type) {
+			case *Integer:
+				return NewFloat(float64(*o))
+
+			case *Float:
+				return NewFloat(float64(*o))
+
+			case *String:
+				if a, err := strconv.ParseFloat(string(*o), 64); err == nil {
+					return NewFloat(a)
+				}
+				return NewError("%v is not a number", args[0])
+
+			default:
+				return NewError("%v is not a number", args[0])
+		}
+	},
+	"exit": func(args ...Object) Object {
+		var l = len(args)
+
+		if l == 0 {
+			os.Exit(0)
+		} else if l > 2 {
+			return NewError("exit: wrong number of arguments, max 2, got %d", l)
+		} else if l == 1 {
+			switch o := args[0].(type) {
+			case *Integer:
+				os.Exit(int(*o))
+
+			case *String:
+				fmt.Fprintln(Stdout, o)
+				os.Exit(0)
+
+			default:
+				return NewError("exit: argument must be an integer or string")
+			}
+		}
+
+		msg, ok := args[0].(*String)
+		if !ok {
+			return NewError("exit: first argument must be a string")
+		}
+
+		code, ok := args[1].(*Integer)
+		if !ok {
+			return NewError("exit: second argument must be an int")
+		}
+
+		fmt.Fprintln(Stdout, string(*msg))
+		os.Exit(int(*code))
+		return NullObj
 	},
 	"append": func(args ...Object) Object {
 		if len(args) == 0 {

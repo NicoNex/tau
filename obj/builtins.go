@@ -7,6 +7,7 @@ import (
 )
 
 var Stdout io.Writer = os.Stdout
+
 var Builtins = map[string]Builtin{
 	"println": func(args ...Object) Object {
 		var arguments []interface{}
@@ -49,7 +50,7 @@ var Builtins = map[string]Builtin{
 				return NewInteger(int64(*o))
 
 			case *String:
-				if a, ok := strconv.ParseFloat(string(*o), 64); ok == nil {
+				if a, err := strconv.ParseFloat(string(*o), 64); err == nil {
 					return NewInteger(int64(a))
 				}
 				return NewError("%v is not a number", args[0])
@@ -71,7 +72,7 @@ var Builtins = map[string]Builtin{
 				return NewFloat(float64(*o))
 
 			case *String:
-				if a, ok := strconv.ParseFloat(string(*o), 64); ok == nil {
+				if a, err := strconv.ParseFloat(string(*o), 64); err == nil {
 					return NewFloat(a)
 				}
 				return NewError("%v is not a number", args[0])
@@ -81,29 +82,38 @@ var Builtins = map[string]Builtin{
 		}
 	},
 	"exit": func(args ...Object) Object {
-		l := len(args)
+		var l = len(args)
+
 		if l == 0 {
 			os.Exit(0)
 		} else if l > 2 {
-			return NewError("exit: wrong number of arguments, expected maxium 2, got %d", l)
-		}
-
-		switch o := args[0].(type) {
+			return NewError("exit: wrong number of arguments, max 2, got %d", l)
+		} else if l == 1 {
+			switch o := args[0].(type) {
 			case *Integer:
 				os.Exit(int(*o))
 
 			case *String:
-				fmt.Fprintln(Stdout, args[0])
-				if l == 2 {
-					switch o2 := args[1].(type) {
-						case *Integer:
-							os.Exit(int(*o2))
-						default:
-							return NewError("exit: second argument is not an int")
-					}
-				}
+				fmt.Fprintln(Stdout, o)
 				os.Exit(0)
+
+			default:
+				return NewError("exit: argument must be an integer or string")
+			}
 		}
+
+		msg, ok := args[0].(*String)
+		if !ok {
+			return NewError("exit: first argument must be a string")
+		}
+
+		code, ok := args[1].(*Integer)
+		if !ok {
+			return NewError("exit: second argument must be an int")
+		}
+
+		fmt.Fprintln(Stdout, string(*msg))
+		os.Exit(int(*code))
 		return NullObj
 	},
 	"append": func(args ...Object) Object {

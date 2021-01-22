@@ -43,9 +43,7 @@ func (d DivideAssign) Eval(env *obj.Env) obj.Object {
 	left, right = toFloat(left, right)
 	l := left.(*obj.Float).Val()
 	r := right.(*obj.Float).Val()
-	env.Set(name, obj.NewFloat(l/r))
-
-	return obj.NullObj
+	return env.Set(name, obj.NewFloat(l/r))
 }
 
 func (d DivideAssign) String() string {

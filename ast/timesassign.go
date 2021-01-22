@@ -44,13 +44,13 @@ func (t TimesAssign) Eval(env *obj.Env) obj.Object {
 	case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
 		l := left.(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
-		env.Set(name, obj.NewInteger(l*r))
+		return env.Set(name, obj.NewInteger(l*r))
 
 	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
-		env.Set(name, obj.NewFloat(l*r))
+		return env.Set(name, obj.NewFloat(l*r))
 
 	default:
 		return obj.NewError(
@@ -58,8 +58,6 @@ func (t TimesAssign) Eval(env *obj.Env) obj.Object {
 			left, right, left.Type(), right.Type(),
 		)
 	}
-
-	return obj.NullObj
 }
 
 func (t TimesAssign) String() string {

@@ -68,7 +68,6 @@ func main() {
 		if val != obj.NullObj && val != nil {
 			fmt.Println(val)
 		}
-		fmt.Println(val)
 	} else {
 		repl()
 	}

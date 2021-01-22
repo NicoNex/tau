@@ -156,8 +156,8 @@ func lexPlus(l *lexer) stateFn {
 	case '=':
 		l.emit(item.PLUS_ASSIGN)
 
-	// case '+':
-	// 	l.emit(item.INCREMENT)
+	case '+':
+		l.emit(item.PLUSPLUS)
 
 	default:
 		l.backup()
@@ -171,8 +171,8 @@ func lexMinus(l *lexer) stateFn {
 	case '=':
 		l.emit(item.MINUS_ASSIGN)
 
-	// case '-':
-	// 	l.emit(item.DECREMENT)
+	case '-':
+		l.emit(item.MINUSMINUS)
 
 	default:
 		l.backup()

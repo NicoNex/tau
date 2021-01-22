@@ -32,15 +32,12 @@ func (m PlusPlus) Eval(env *obj.Env) obj.Object {
 
 	if assertTypes(left, obj.INT) {
 		l := left.(*obj.Integer).Val()
-		env.Set(name, obj.NewInteger(l+1))
-		return obj.NullObj
+		return env.Set(name, obj.NewInteger(l+1))
 	}
 
 	left, _ = toFloat(left, obj.NullObj)
 	l := left.(*obj.Float).Val()
-	env.Set(name, obj.NewFloat(l+1))
-
-	return obj.NullObj
+	return env.Set(name, obj.NewFloat(l+1))
 }
 
 func (m PlusPlus) String() string {

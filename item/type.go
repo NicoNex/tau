@@ -35,6 +35,8 @@ const (
 	BWXOR
 	LSHIFT
 	RSHIFT
+	PLUSPLUS
+	MINUSMINUS
 
 	COMMA
 	SEMICOLON
@@ -55,9 +57,6 @@ const (
 	TRUE
 	FALSE
 	RETURN
-
-	PLUSPLUS
-	MINUSMINUS
 )
 
 var typemap = map[Type]string{
@@ -88,9 +87,8 @@ var typemap = map[Type]string{
 	MINUS_ASSIGN:    "-=",
 	ASTERISK_ASSIGN: "*=",
 	SLASH_ASSIGN:    "/=",
-
-	PLUSPLUS:   "++",
-	MINUSMINUS: "--",
+	PLUSPLUS:        "++",
+	MINUSMINUS:      "--",
 
 	COMMA:     ",",
 	SEMICOLON: ";",

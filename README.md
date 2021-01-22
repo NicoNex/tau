@@ -4,6 +4,14 @@ Tau is a dinamically-typed open source programming language designed to be minim
 
 ## Syntax
 
+### Installation
+In order to install Tau you need to have the go compiler installed or otherwhise you can get it from ![here](https://golang.org/).
+
+Once done, running the following command will successfully install the tau interpreter:
+```bash
+go get github.com/NicoNex/tau
+```
+
 ### Hello World
 We all start from here...
 ```
@@ -135,11 +143,3 @@ stuff = ["Hello World", 1, 2, 3, true]
 
 #### Dictionary
 Coming soon...
-
-### Installation
-In order to install Tau you need to have the go compiler installed or otherwhise you can get it from ![here](https://golang.org/).
-
-Once done, running the following command will successfully install Tau:
-```bash
-go get github.com/NicoNex/tau
-```

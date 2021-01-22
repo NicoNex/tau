@@ -208,6 +208,18 @@ func lexSlash(l *lexer) stateFn {
 	return lexExpression
 }
 
+func lexMod(l *lexer) stateFn {
+	switch l.next() {
+	case '=':
+		l.emit(item.MODULUS_ASSIGN)
+
+	default:
+		l.backup()
+		l.emit(item.MODULUS)
+	}
+	return lexExpression
+}
+
 func lexExpression(l *lexer) stateFn {
 	switch r := l.next(); {
 
@@ -264,6 +276,9 @@ func lexExpression(l *lexer) stateFn {
 
 	case r == '/':
 		return lexSlash
+
+	case r == '%':
+		return lexMod
 
 	case r == '=':
 		if l.next() == '=' {

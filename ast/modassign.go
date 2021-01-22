@@ -49,5 +49,5 @@ func (p ModAssign) Eval(env *obj.Env) obj.Object {
 }
 
 func (p ModAssign) String() string {
-	return fmt.Sprintf("(%v %= %v)", p.l, p.r)
+	return fmt.Sprintf("(%v %%= %v)", p.l, p.r)
 }

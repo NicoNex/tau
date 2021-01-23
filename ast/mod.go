@@ -27,17 +27,18 @@ func (p Mod) Eval(env *obj.Env) obj.Object {
 	}
 
 	if !assertTypes(left, obj.INT) {
-		return obj.NewError("unsupported operator '%' for type %v", left.Type())
+		return obj.NewError("unsupported operator '%%' for type %v", left.Type())
 	}
 	if !assertTypes(right, obj.INT) {
-		return obj.NewError("unsupported operator '%' for type %v", right.Type())
-	}
-	if right.(*obj.Integer).Val() == 0 {
-		return obj.NewError("Can't divide by 0")
+		return obj.NewError("unsupported operator '%%' for type %v", right.Type())
 	}
 
 	l := left.(*obj.Integer).Val()
 	r := right.(*obj.Integer).Val()
+
+	if r == 0 {
+		return obj.NewError("can't divide by 0")
+	}
 	return obj.NewInteger(l % r)
 }
 

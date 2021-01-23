@@ -7,39 +7,39 @@ import (
 )
 
 type PlusPlus struct {
-	l Node
+	r Node
 }
 
-func NewPlusPlus(l Node) Node {
-	return PlusPlus{l}
+func NewPlusPlus(r Node) Node {
+	return PlusPlus{r}
 }
 
 func (m PlusPlus) Eval(env *obj.Env) obj.Object {
-	var left = m.l.Eval(env)
+	var right = m.r.Eval(env)
 	var name string
 
-	if isError(left) {
-		return left
+	if isError(right) {
+		return right
 	}
 
-	if ident, ok := m.l.(Identifier); ok {
+	if ident, ok := m.r.(Identifier); ok {
 		name = ident.String()
 	}
 
-	if !assertTypes(left, obj.INT, obj.FLOAT) {
-		return obj.NewError("unsupported operator '++' for type %v", left.Type())
+	if !assertTypes(right, obj.INT, obj.FLOAT) {
+		return obj.NewError("unsupported operator '++' for type %v", right.Type())
 	}
 
-	if assertTypes(left, obj.INT) {
-		l := left.(*obj.Integer).Val()
-		return env.Set(name, obj.NewInteger(l+1))
+	if assertTypes(right, obj.INT) {
+		r := right.(*obj.Integer).Val()
+		return env.Set(name, obj.NewInteger(r+1))
 	}
 
-	left, _ = toFloat(left, obj.NullObj)
-	l := left.(*obj.Float).Val()
-	return env.Set(name, obj.NewFloat(l+1))
+	right, _ = toFloat(right, obj.NullObj)
+	r := right.(*obj.Float).Val()
+	return env.Set(name, obj.NewFloat(r+1))
 }
 
 func (m PlusPlus) String() string {
-	return fmt.Sprintf("%v++", m.l)
+	return fmt.Sprintf("++%v", m.r)
 }

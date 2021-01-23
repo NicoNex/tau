@@ -7,39 +7,39 @@ import (
 )
 
 type MinusMinus struct {
-	l Node
+	r Node
 }
 
-func NewMinusMinus(l Node) Node {
-	return MinusMinus{l}
+func NewMinusMinus(r Node) Node {
+	return MinusMinus{r}
 }
 
 func (m MinusMinus) Eval(env *obj.Env) obj.Object {
 	var name string
-	var left = m.l.Eval(env)
+	var right = m.r.Eval(env)
 
-	if isError(left) {
-		return left
+	if isError(right) {
+		return right
 	}
 
-	if ident, ok := m.l.(Identifier); ok {
+	if ident, ok := m.r.(Identifier); ok {
 		name = ident.String()
 	}
 
-	if !assertTypes(left, obj.INT, obj.FLOAT) {
-		return obj.NewError("unsupported operator '--' for type %v", left.Type())
+	if !assertTypes(right, obj.INT, obj.FLOAT) {
+		return obj.NewError("unsupported operator '--' for type %v", right.Type())
 	}
 
-	if assertTypes(left, obj.INT) {
-		l := left.(*obj.Integer).Val()
-		return env.Set(name, obj.NewInteger(l-1))
+	if assertTypes(right, obj.INT) {
+		r := right.(*obj.Integer).Val()
+		return env.Set(name, obj.NewInteger(r-1))
 	}
 
-	left, _ = toFloat(left, obj.NullObj)
-	l := left.(*obj.Float).Val()
-	return env.Set(name, obj.NewFloat(l-1))
+	right, _ = toFloat(right, obj.NullObj)
+	r := right.(*obj.Float).Val()
+	return env.Set(name, obj.NewFloat(r-1))
 }
 
 func (m MinusMinus) String() string {
-	return fmt.Sprintf("%v--", m.l)
+	return fmt.Sprintf("--%v", m.r)
 }

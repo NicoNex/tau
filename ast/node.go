@@ -13,9 +13,13 @@ func isError(o obj.Object) bool {
 }
 
 func isTruthy(o obj.Object) bool {
-	switch o.(type) {
+	switch val := o.(type) {
 	case *obj.Boolean:
 		return o == obj.True
+	case *obj.Integer:
+		return val.Val() != 0
+	case *obj.Float:
+		return val.Val() != 0
 	case *obj.Null:
 		return false
 	default:

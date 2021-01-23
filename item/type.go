@@ -32,11 +32,13 @@ const (
 	GT_EQ
 	AND
 	OR
+
 	BWAND
 	BWOR
 	BWXOR
 	LSHIFT
 	RSHIFT
+
 	PLUSPLUS
 	MINUSMINUS
 
@@ -92,6 +94,12 @@ var typemap = map[Type]string{
 	SLASH_ASSIGN:    "/=",
 	PLUSPLUS:        "++",
 	MINUSMINUS:      "--",
+
+	BWAND:  "&",
+	BWOR:   "|",
+	BWXOR:  "^",
+	LSHIFT: "<<",
+	RSHIFT: ">>",
 
 	COMMA:     ",",
 	SEMICOLON: ";",

@@ -51,6 +51,7 @@ var precedences = map[item.Type]int{
 	item.ASTERISK:        PRODUCT,
 	item.POWER:           PRODUCT,
 	item.AND:             PRODUCT,
+	item.MODULUS:         PRODUCT,
 	item.LPAREN:          CALL,
 	item.LBRACKET:        INDEX,
 	item.ASSIGN:          ASSIGNMENT,
@@ -58,6 +59,7 @@ var precedences = map[item.Type]int{
 	item.MINUS_ASSIGN:    ASSIGNMENT,
 	item.SLASH_ASSIGN:    ASSIGNMENT,
 	item.ASTERISK_ASSIGN: ASSIGNMENT,
+	item.MODULUS_ASSIGN:  ASSIGNMENT,
 	item.PLUSPLUS:        ASSIGNMENT,
 	item.MINUSMINUS:      ASSIGNMENT,
 }
@@ -97,12 +99,14 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.MINUS, p.parseMinus)
 	p.registerInfix(item.SLASH, p.parseSlash)
 	p.registerInfix(item.ASTERISK, p.parseAsterisk)
+	p.registerInfix(item.MODULUS, p.parseModulus)
 	// p.registerInfix(item.POWER, p.parseInfixExpression)
 	p.registerInfix(item.ASSIGN, p.parseAssign)
 	p.registerInfix(item.PLUS_ASSIGN, p.parsePlusAssign)
 	p.registerInfix(item.MINUS_ASSIGN, p.parseMinusAssign)
 	p.registerInfix(item.SLASH_ASSIGN, p.parseSlashAssign)
 	p.registerInfix(item.ASTERISK_ASSIGN, p.parseAsteriskAssign)
+	p.registerInfix(item.MODULUS_ASSIGN, p.parseModulusAssign)
 	p.registerInfix(item.LPAREN, p.parseCall)
 	p.registerInfix(item.LBRACKET, p.parseIndex)
 	return p
@@ -343,6 +347,12 @@ func (p *Parser) parseSlash(left ast.Node) ast.Node {
 	return ast.NewDivide(left, p.parseExpr(prec))
 }
 
+func (p *Parser) parseModulus(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewMod(left, p.parseExpr(prec))
+}
+
 // Returns a node of type ast.Equals.
 func (p *Parser) parseEquals(left ast.Node) ast.Node {
 	prec := p.precedence()
@@ -421,6 +431,12 @@ func (p *Parser) parseAsteriskAssign(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewTimesAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseModulusAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewModAssign(left, p.parseExpr(prec))
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {

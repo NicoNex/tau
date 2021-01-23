@@ -16,10 +16,12 @@ const (
 	MINUS
 	SLASH
 	ASTERISK
+	MODULUS
 	PLUS_ASSIGN
 	MINUS_ASSIGN
 	ASTERISK_ASSIGN
 	SLASH_ASSIGN
+	MODULUS_ASSIGN
 	POWER
 	EQ
 	NOT_EQ
@@ -73,6 +75,7 @@ var typemap = map[Type]string{
 	MINUS:           "*",
 	SLASH:           "/",
 	ASTERISK:        "*",
+	MODULUS:         "%",
 	POWER:           "**",
 	EQ:              "==",
 	NOT_EQ:          "!=",

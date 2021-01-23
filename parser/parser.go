@@ -82,6 +82,8 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.IF, p.parseIfExpr)
 	p.registerPrefix(item.FUNCTION, p.parseFunction)
 	p.registerPrefix(item.LBRACKET, p.parseList)
+	p.registerPrefix(item.PLUSPLUS, p.parsePlusPlus)
+	p.registerPrefix(item.MINUSMINUS, p.parseMinusMinus)
 
 	p.registerInfix(item.EQ, p.parseEquals)
 	p.registerInfix(item.NOT_EQ, p.parseNotEquals)
@@ -101,9 +103,6 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.MINUS_ASSIGN, p.parseMinusAssign)
 	p.registerInfix(item.SLASH_ASSIGN, p.parseSlashAssign)
 	p.registerInfix(item.ASTERISK_ASSIGN, p.parseAsteriskAssign)
-	p.registerInfix(item.PLUSPLUS, p.parsePlusPlus)
-	p.registerInfix(item.MINUSMINUS, p.parseMinusMinus)
-
 	p.registerInfix(item.LPAREN, p.parseCall)
 	p.registerInfix(item.LBRACKET, p.parseIndex)
 	return p
@@ -304,6 +303,16 @@ func (p *Parser) parsePrefixMinus() ast.Node {
 	return ast.NewPrefixMinus(p.parseExpr(PREFIX))
 }
 
+func (p *Parser) parsePlusPlus() ast.Node {
+	p.next()
+	return ast.NewPlusPlus(p.parseExpr(PREFIX))
+}
+
+func (p *Parser) parseMinusMinus() ast.Node {
+	p.next()
+	return ast.NewMinusMinus(p.parseExpr(PREFIX))
+}
+
 // Returns a node of type Bang.
 func (p *Parser) parseBang() ast.Node {
 	p.next()
@@ -412,14 +421,6 @@ func (p *Parser) parseAsteriskAssign(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewTimesAssign(left, p.parseExpr(prec))
-}
-
-func (p *Parser) parsePlusPlus(left ast.Node) ast.Node {
-	return ast.NewPlusPlus(left)
-}
-
-func (p *Parser) parseMinusMinus(left ast.Node) ast.Node {
-	return ast.NewMinusMinus(left)
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {

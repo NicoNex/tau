@@ -27,17 +27,30 @@ type (
 const (
 	LOWEST int = iota
 	ASSIGNMENT
+	LOGICALOR
+	LOGICALAND
+	BITWISEOR
+	BITWISEXOR
+	BITWISEAND
 	EQUALS
 	LESSGREATER
+	SHIFT
 	SUM
 	PRODUCT
 	PREFIX
-	CALL
-	INDEX
+	POSTFIX
 )
 
 // Links each operator to its precedence class.
 var precedences = map[item.Type]int{
+	item.ASSIGN:          ASSIGNMENT,
+	item.PLUS_ASSIGN:     ASSIGNMENT,
+	item.MINUS_ASSIGN:    ASSIGNMENT,
+	item.SLASH_ASSIGN:    ASSIGNMENT,
+	item.ASTERISK_ASSIGN: ASSIGNMENT,
+	item.MODULUS_ASSIGN:  ASSIGNMENT,
+	item.OR:              LOGICALOR,
+	item.AND:             LOGICALAND,
 	item.EQ:              EQUALS,
 	item.NOT_EQ:          EQUALS,
 	item.LT:              LESSGREATER,
@@ -46,22 +59,14 @@ var precedences = map[item.Type]int{
 	item.GT_EQ:           LESSGREATER,
 	item.PLUS:            SUM,
 	item.MINUS:           SUM,
-	item.OR:              SUM,
-	item.SLASH:           PRODUCT,
-	item.ASTERISK:        PRODUCT,
-	item.POWER:           PRODUCT,
-	item.AND:             PRODUCT,
-	item.MODULUS:         PRODUCT,
-	item.LPAREN:          CALL,
-	item.LBRACKET:        INDEX,
-	item.ASSIGN:          ASSIGNMENT,
-	item.PLUS_ASSIGN:     ASSIGNMENT,
-	item.MINUS_ASSIGN:    ASSIGNMENT,
-	item.SLASH_ASSIGN:    ASSIGNMENT,
-	item.ASTERISK_ASSIGN: ASSIGNMENT,
-	item.MODULUS_ASSIGN:  ASSIGNMENT,
-	item.PLUSPLUS:        ASSIGNMENT,
-	item.MINUSMINUS:      ASSIGNMENT,
+	//item.POWER:           PRODUCT,
+	item.MODULUS:    PRODUCT,
+	item.SLASH:      PRODUCT,
+	item.ASTERISK:   PRODUCT,
+	item.PLUSPLUS:   PREFIX,
+	item.MINUSMINUS: PREFIX,
+	item.LPAREN:     POSTFIX,
+	item.LBRACKET:   POSTFIX,
 }
 
 func newParser(items chan item.Item) *Parser {

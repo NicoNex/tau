@@ -92,6 +92,11 @@ var typemap = map[Type]string{
 	SLASH_ASSIGN:    "/=",
 	PLUSPLUS:        "++",
 	MINUSMINUS:      "--",
+	BWAND:           "&",
+	BWOR:            "|",
+	BWXOR:           "^",
+	LSHIFT:          "<<",
+	RSHIFT:          ">>",
 
 	COMMA:     ",",
 	SEMICOLON: ";",

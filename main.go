@@ -42,7 +42,9 @@ func repl() {
 			}
 			continue
 		}
-		res.Eval(env)
+		if val := res.Eval(env); val != nil && val != obj.NullObj {
+			fmt.Fprintln(t, val)
+		}
 	}
 }
 

@@ -27,10 +27,16 @@ type (
 const (
 	LOWEST int = iota
 	ASSIGNMENT
-	EQUALS
-	LESSGREATER
-	SUM
-	PRODUCT
+	LOGICALOR
+	LOGICALAND
+	BITWISEOR
+	BITWISEXOR
+	BITWISEAND
+	EQUALITY
+	RELATIONAL
+	SHIFT
+	ADDITIVE
+	MULTIPLICATIVE
 	PREFIX
 	CALL
 	INDEX
@@ -38,35 +44,30 @@ const (
 
 // Links each operator to its precedence class.
 var precedences = map[item.Type]int{
-	item.EQ:              EQUALS,
-	item.NOT_EQ:          EQUALS,
-	item.LT:              LESSGREATER,
-	item.GT:              LESSGREATER,
-	item.LT_EQ:           LESSGREATER,
-	item.GT_EQ:           LESSGREATER,
-	item.PLUS:            SUM,
-	item.MINUS:           SUM,
-	item.OR:              SUM,
-	item.SLASH:           PRODUCT,
-	item.ASTERISK:        PRODUCT,
-	item.POWER:           PRODUCT,
-	item.AND:             PRODUCT,
-	item.MODULUS:         PRODUCT,
-	item.BWAND:           PRODUCT,
-	item.BWOR:            PRODUCT,
-	item.BWXOR:           PRODUCT,
-	item.LSHIFT:          PRODUCT,
-	item.RSHIFT:          PRODUCT,
-	item.LPAREN:          CALL,
-	item.LBRACKET:        INDEX,
 	item.ASSIGN:          ASSIGNMENT,
 	item.PLUS_ASSIGN:     ASSIGNMENT,
 	item.MINUS_ASSIGN:    ASSIGNMENT,
 	item.SLASH_ASSIGN:    ASSIGNMENT,
 	item.ASTERISK_ASSIGN: ASSIGNMENT,
 	item.MODULUS_ASSIGN:  ASSIGNMENT,
-	item.PLUSPLUS:        ASSIGNMENT,
-	item.MINUSMINUS:      ASSIGNMENT,
+	item.OR:              LOGICALOR,
+	item.AND:             LOGICALAND,
+	item.EQ:              EQUALITY,
+	item.NOT_EQ:          EQUALITY,
+	item.LT:              RELATIONAL,
+	item.GT:              RELATIONAL,
+	item.LT_EQ:           RELATIONAL,
+	item.GT_EQ:           RELATIONAL,
+	item.PLUS:            ADDITIVE,
+	item.MINUS:           ADDITIVE,
+	item.MODULUS:         MULTIPLICATIVE,
+	item.SLASH:           MULTIPLICATIVE,
+	item.ASTERISK:        MULTIPLICATIVE,
+	item.PLUSPLUS:        PREFIX,
+	item.MINUSMINUS:      PREFIX,
+	item.LPAREN:          CALL,
+	item.LBRACKET:        INDEX,
+	//item.POWER:           MULTIPLICATIVE,
 }
 
 func newParser(items chan item.Item) *Parser {

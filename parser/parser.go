@@ -106,6 +106,11 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.SLASH, p.parseSlash)
 	p.registerInfix(item.ASTERISK, p.parseAsterisk)
 	p.registerInfix(item.MODULUS, p.parseModulus)
+	p.registerInfix(item.BWAND, p.parseBwAnd)
+	p.registerInfix(item.BWOR, p.parseBwOr)
+	p.registerInfix(item.BWXOR, p.parseBwXor)
+	p.registerInfix(item.LSHIFT, p.parseLShift)
+	p.registerInfix(item.RSHIFT, p.parseRShift)
 	// p.registerInfix(item.POWER, p.parseInfixExpression)
 	p.registerInfix(item.ASSIGN, p.parseAssign)
 	p.registerInfix(item.PLUS_ASSIGN, p.parsePlusAssign)
@@ -357,6 +362,36 @@ func (p *Parser) parseModulus(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewMod(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseBwAnd(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewBitwiseAnd(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseBwOr(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewBitwiseOr(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseBwXor(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewBitwiseXor(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseLShift(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewBitwiseLeftShift(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseRShift(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewBitwiseRightShift(left, p.parseExpr(prec))
 }
 
 // Returns a node of type ast.Equals.

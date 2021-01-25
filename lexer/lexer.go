@@ -297,16 +297,22 @@ func lexExpression(l *lexer) stateFn {
 		}
 
 	case r == '<':
-		if l.next() == '=' {
+		next := l.next()
+		if next == '=' {
 			l.emit(item.LT_EQ)
+		} else if next == '<' {
+			l.emit(item.LSHIFT)
 		} else {
 			l.backup()
 			l.emit(item.LT)
 		}
 
 	case r == '>':
-		if l.next() == '=' {
+		next := l.next()
+		if next == '=' {
 			l.emit(item.GT_EQ)
+		} else if next == '>' {
+			l.emit(item.RSHIFT)
 		} else {
 			l.backup()
 			l.emit(item.GT)
@@ -327,6 +333,9 @@ func lexExpression(l *lexer) stateFn {
 			l.backup()
 			l.emit(item.BWOR)
 		}
+
+	case r == '^':
+		l.emit(item.BWXOR)
 
 	case r == '#':
 		l.acceptUntil('\n')

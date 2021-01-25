@@ -32,13 +32,14 @@ const (
 	BITWISEOR
 	BITWISEXOR
 	BITWISEAND
-	EQUALS
-	LESSGREATER
+	EQUALITY
+	RELATIONAL
 	SHIFT
-	SUM
-	PRODUCT
+	ADDITIVE
+	MULTIPLICATIVE
 	PREFIX
-	POSTFIX
+	CALL
+	INDEX
 )
 
 // Links each operator to its precedence class.
@@ -51,22 +52,22 @@ var precedences = map[item.Type]int{
 	item.MODULUS_ASSIGN:  ASSIGNMENT,
 	item.OR:              LOGICALOR,
 	item.AND:             LOGICALAND,
-	item.EQ:              EQUALS,
-	item.NOT_EQ:          EQUALS,
-	item.LT:              LESSGREATER,
-	item.GT:              LESSGREATER,
-	item.LT_EQ:           LESSGREATER,
-	item.GT_EQ:           LESSGREATER,
-	item.PLUS:            SUM,
-	item.MINUS:           SUM,
-	//item.POWER:           PRODUCT,
-	item.MODULUS:    PRODUCT,
-	item.SLASH:      PRODUCT,
-	item.ASTERISK:   PRODUCT,
-	item.PLUSPLUS:   PREFIX,
-	item.MINUSMINUS: PREFIX,
-	item.LPAREN:     POSTFIX,
-	item.LBRACKET:   POSTFIX,
+	item.EQ:              EQUALITY,
+	item.NOT_EQ:          EQUALITY,
+	item.LT:              RELATIONAL,
+	item.GT:              RELATIONAL,
+	item.LT_EQ:           RELATIONAL,
+	item.GT_EQ:           RELATIONAL,
+	item.PLUS:            ADDITIVE,
+	item.MINUS:           ADDITIVE,
+	item.MODULUS:         MULTIPLICATIVE,
+	item.SLASH:           MULTIPLICATIVE,
+	item.ASTERISK:        MULTIPLICATIVE,
+	item.PLUSPLUS:        PREFIX,
+	item.MINUSMINUS:      PREFIX,
+	item.LPAREN:          CALL,
+	item.LBRACKET:        INDEX,
+	//item.POWER:           MULTIPLICATIVE,
 }
 
 func newParser(items chan item.Item) *Parser {

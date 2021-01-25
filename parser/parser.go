@@ -67,6 +67,7 @@ var precedences = map[item.Type]int{
 	item.MINUSMINUS:      PREFIX,
 	item.BWAND:           BITWISEAND,
 	item.BWOR:            BITWISEOR,
+	item.BWXOR:           BITWISEOR,
 	item.LSHIFT:          SHIFT,
 	item.RSHIFT:          SHIFT,
 	item.LPAREN:          CALL,

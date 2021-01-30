@@ -301,7 +301,12 @@ func lexExpression(l *lexer) stateFn {
 		if next == '=' {
 			l.emit(item.LT_EQ)
 		} else if next == '<' {
-			l.emit(item.LSHIFT)
+			if l.next() == '=' {
+				l.emit(item.LSHIFT_ASSIGN)
+			} else {
+				l.backup()
+				l.emit(item.LSHIFT)
+			}
 		} else {
 			l.backup()
 			l.emit(item.LT)
@@ -312,30 +317,45 @@ func lexExpression(l *lexer) stateFn {
 		if next == '=' {
 			l.emit(item.GT_EQ)
 		} else if next == '>' {
-			l.emit(item.RSHIFT)
+			if l.next() == '=' {
+				l.emit(item.RSHIFT_ASSIGN)
+			} else {
+				l.backup()
+				l.emit(item.RSHIFT)
+			}
 		} else {
 			l.backup()
 			l.emit(item.GT)
 		}
 
 	case r == '&':
-		if l.next() == '&' {
+		next := l.next()
+		if next == '&' {
 			l.emit(item.AND)
+		} else if next == '=' {
+			l.emit(item.BWAND_ASSIGN)
 		} else {
 			l.backup()
 			l.emit(item.BWAND)
 		}
 
 	case r == '|':
-		if l.next() == '|' {
+		next := l.next()
+		if next == '|' {
 			l.emit(item.OR)
+		} else if next == '=' {
+			l.emit(item.BWOR_ASSIGN)
 		} else {
 			l.backup()
 			l.emit(item.BWOR)
 		}
 
 	case r == '^':
-		l.emit(item.BWXOR)
+		if l.next() == '=' {
+			l.emit(item.BWXOR_ASSIGN)
+		} else {
+			l.emit(item.BWXOR)
+		}
 
 	case r == '#':
 		l.acceptUntil('\n')

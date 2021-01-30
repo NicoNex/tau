@@ -50,6 +50,11 @@ var precedences = map[item.Type]int{
 	item.SLASH_ASSIGN:    ASSIGNMENT,
 	item.ASTERISK_ASSIGN: ASSIGNMENT,
 	item.MODULUS_ASSIGN:  ASSIGNMENT,
+	item.BWAND_ASSIGN:    ASSIGNMENT,
+	item.BWOR_ASSIGN:     ASSIGNMENT,
+	item.BWXOR_ASSIGN:    ASSIGNMENT,
+	item.LSHIFT_ASSIGN:   ASSIGNMENT,
+	item.RSHIFT_ASSIGN:   ASSIGNMENT,
 	item.OR:              LOGICALOR,
 	item.AND:             LOGICALAND,
 	item.EQ:              EQUALITY,
@@ -123,6 +128,11 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.SLASH_ASSIGN, p.parseSlashAssign)
 	p.registerInfix(item.ASTERISK_ASSIGN, p.parseAsteriskAssign)
 	p.registerInfix(item.MODULUS_ASSIGN, p.parseModulusAssign)
+	p.registerInfix(item.BWAND_ASSIGN, p.parseBwAndAssign)
+	p.registerInfix(item.BWOR_ASSIGN, p.parseBwOrAssign)
+	p.registerInfix(item.BWXOR_ASSIGN, p.parseBwXorAssign)
+	p.registerInfix(item.LSHIFT_ASSIGN, p.parseLShiftAssign)
+	p.registerInfix(item.RSHIFT_ASSIGN, p.parseRShiftAssign)
 	p.registerInfix(item.LPAREN, p.parseCall)
 	p.registerInfix(item.LBRACKET, p.parseIndex)
 	return p
@@ -483,6 +493,36 @@ func (p *Parser) parseModulusAssign(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewModAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseBwAndAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewBitwiseAndAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseBwOrAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewBitwiseOrAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseBwXorAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewBitwiseXorAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseLShiftAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewBitwiseShiftLeftAssign(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseRShiftAssign(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewBitwiseShiftRightAssign(left, p.parseExpr(prec))
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {

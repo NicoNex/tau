@@ -15,9 +15,9 @@ func NewBitwiseOr(l, r Node) Node {
 	return BitwiseOr{l, r}
 }
 
-func (p BitwiseOr) Eval(env *obj.Env) obj.Object {
-	var left = p.l.Eval(env)
-	var right = p.r.Eval(env)
+func (b BitwiseOr) Eval(env *obj.Env) obj.Object {
+	var left = b.l.Eval(env)
+	var right = b.r.Eval(env)
 
 	if isError(left) {
 		return left
@@ -37,6 +37,6 @@ func (p BitwiseOr) Eval(env *obj.Env) obj.Object {
 	return obj.NewInteger(l | r)
 }
 
-func (p BitwiseOr) String() string {
-	return fmt.Sprintf("(%v | %v)", p.l, p.r)
+func (b BitwiseOr) String() string {
+	return fmt.Sprintf("(%v | %v)", b.l, b.r)
 }

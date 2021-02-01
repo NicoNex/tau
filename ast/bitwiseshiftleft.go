@@ -15,9 +15,9 @@ func NewBitwiseLeftShift(l, r Node) Node {
 	return BitwiseLeftShift{l, r}
 }
 
-func (p BitwiseLeftShift) Eval(env *obj.Env) obj.Object {
-	var left = p.l.Eval(env)
-	var right = p.r.Eval(env)
+func (b BitwiseLeftShift) Eval(env *obj.Env) obj.Object {
+	var left = b.l.Eval(env)
+	var right = b.r.Eval(env)
 
 	if isError(left) {
 		return left
@@ -37,6 +37,6 @@ func (p BitwiseLeftShift) Eval(env *obj.Env) obj.Object {
 	return obj.NewInteger(l << r)
 }
 
-func (p BitwiseLeftShift) String() string {
-	return fmt.Sprintf("(%v << %v)", p.l, p.r)
+func (b BitwiseLeftShift) String() string {
+	return fmt.Sprintf("(%v << %v)", b.l, b.r)
 }

@@ -15,9 +15,9 @@ func NewMod(l, r Node) Node {
 	return Mod{l, r}
 }
 
-func (p Mod) Eval(env *obj.Env) obj.Object {
-	var left = p.l.Eval(env)
-	var right = p.r.Eval(env)
+func (m Mod) Eval(env *obj.Env) obj.Object {
+	var left = m.l.Eval(env)
+	var right = m.r.Eval(env)
 
 	if isError(left) {
 		return left
@@ -42,6 +42,6 @@ func (p Mod) Eval(env *obj.Env) obj.Object {
 	return obj.NewInteger(l % r)
 }
 
-func (p Mod) String() string {
-	return fmt.Sprintf("(%v %% %v)", p.l, p.r)
+func (m Mod) String() string {
+	return fmt.Sprintf("(%v %% %v)", m.l, m.r)
 }

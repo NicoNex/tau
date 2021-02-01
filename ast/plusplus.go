@@ -14,15 +14,15 @@ func NewPlusPlus(r Node) Node {
 	return PlusPlus{r}
 }
 
-func (m PlusPlus) Eval(env *obj.Env) obj.Object {
-	var right = m.r.Eval(env)
+func (p PlusPlus) Eval(env *obj.Env) obj.Object {
+	var right = p.r.Eval(env)
 	var name string
 
 	if isError(right) {
 		return right
 	}
 
-	if ident, ok := m.r.(Identifier); ok {
+	if ident, ok := p.r.(Identifier); ok {
 		name = ident.String()
 	}
 
@@ -40,6 +40,6 @@ func (m PlusPlus) Eval(env *obj.Env) obj.Object {
 	return env.Set(name, obj.NewFloat(r+1))
 }
 
-func (m PlusPlus) String() string {
-	return fmt.Sprintf("++%v", m.r)
+func (p PlusPlus) String() string {
+	return fmt.Sprintf("++%v", p.r)
 }

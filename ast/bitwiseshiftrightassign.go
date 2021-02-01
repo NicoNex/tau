@@ -15,12 +15,12 @@ func NewBitwiseShiftRightAssign(l, r Node) Node {
 	return BitwiseShiftRightAssign{l, r}
 }
 
-func (p BitwiseShiftRightAssign) Eval(env *obj.Env) obj.Object {
+func (b BitwiseShiftRightAssign) Eval(env *obj.Env) obj.Object {
 	var name string
-	var left = p.l.Eval(env)
-	var right = p.r.Eval(env)
+	var left = b.l.Eval(env)
+	var right = b.r.Eval(env)
 
-	if ident, ok := p.l.(Identifier); ok {
+	if ident, ok := b.l.(Identifier); ok {
 		name = ident.String()
 	} else {
 		return obj.NewError("cannot assign to literal")
@@ -44,6 +44,6 @@ func (p BitwiseShiftRightAssign) Eval(env *obj.Env) obj.Object {
 	return env.Set(name, obj.NewInteger(l>>r))
 }
 
-func (p BitwiseShiftRightAssign) String() string {
-	return fmt.Sprintf("(%v >> %v)", p.l, p.r)
+func (b BitwiseShiftRightAssign) String() string {
+	return fmt.Sprintf("(%v >> %v)", b.l, b.r)
 }

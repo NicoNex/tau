@@ -15,9 +15,9 @@ func NewBitwiseAnd(l, r Node) Node {
 	return BitwiseAnd{l, r}
 }
 
-func (p BitwiseAnd) Eval(env *obj.Env) obj.Object {
-	var left = p.l.Eval(env)
-	var right = p.r.Eval(env)
+func (b BitwiseAnd) Eval(env *obj.Env) obj.Object {
+	var left = b.l.Eval(env)
+	var right = b.r.Eval(env)
 
 	if isError(left) {
 		return left
@@ -37,6 +37,6 @@ func (p BitwiseAnd) Eval(env *obj.Env) obj.Object {
 	return obj.NewInteger(l & r)
 }
 
-func (p BitwiseAnd) String() string {
-	return fmt.Sprintf("(%v & %v)", p.l, p.r)
+func (b BitwiseAnd) String() string {
+	return fmt.Sprintf("(%v & %v)", b.l, b.r)
 }

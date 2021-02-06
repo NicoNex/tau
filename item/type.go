@@ -59,6 +59,7 @@ const (
 	RBRACKET
 
 	FUNCTION
+	FOR
 	IF
 	ELSE
 	TRUE
@@ -117,6 +118,7 @@ var typemap = map[Type]string{
 	RBRACKET: "]",
 
 	FUNCTION: "function",
+	FOR:      "for",
 	IF:       "if",
 	ELSE:     "else",
 	TRUE:     "true",
@@ -126,6 +128,7 @@ var typemap = map[Type]string{
 
 var keywords = map[string]Type{
 	"fn":     FUNCTION,
+	"for":    FOR,
 	"if":     IF,
 	"else":   ELSE,
 	"true":   TRUE,

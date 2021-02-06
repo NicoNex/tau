@@ -15,11 +15,10 @@ func NewFor(cond, body Node) Node {
 	return For{cond, body}
 }
 
-func (f For) shouldContinue(env *obj.Env) bool {
-	return false
-}
-
 func (f For) Eval(env *obj.Env) obj.Object {
+	for isTruthy(f.cond.Eval(env)) {
+		f.body.Eval(env)
+	}
 	return obj.NullObj
 }
 

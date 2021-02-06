@@ -102,6 +102,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.LBRACKET, p.parseList)
 	p.registerPrefix(item.PLUSPLUS, p.parsePlusPlus)
 	p.registerPrefix(item.MINUSMINUS, p.parseMinusMinus)
+	p.registerPrefix(item.FOR, p.parseFor)
 
 	p.registerInfix(item.EQ, p.parseEquals)
 	p.registerInfix(item.NOT_EQ, p.parseNotEquals)
@@ -135,6 +136,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.RSHIFT_ASSIGN, p.parseRShiftAssign)
 	p.registerInfix(item.LPAREN, p.parseCall)
 	p.registerInfix(item.LBRACKET, p.parseIndex)
+
 	return p
 }
 
@@ -208,6 +210,7 @@ func (p *Parser) parseGroupedExpr() ast.Node {
 	return exp
 }
 
+// Returns the node representing a series of expressions enclosed in curly braces.
 func (p *Parser) parseBlock() ast.Node {
 	var block ast.Block
 	p.next()
@@ -341,6 +344,17 @@ func (p *Parser) parsePlusPlus() ast.Node {
 func (p *Parser) parseMinusMinus() ast.Node {
 	p.next()
 	return ast.NewMinusMinus(p.parseExpr(PREFIX))
+}
+
+func (p *Parser) parseFor() ast.Node {
+	p.next()
+
+	condition := p.parseExpr(LOWEST)
+	if !p.expectPeek(item.LBRACE) {
+		return nil
+	}
+
+	return ast.NewFor(condition, p.parseBlock())
 }
 
 // Returns a node of type Bang.

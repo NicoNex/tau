@@ -27,14 +27,23 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 	}
 
 	switch {
-	case lst.Type() == obj.LIST && idx.Type() == obj.INT:
+	case assertTypes(lst, obj.LIST) && assertTypes(idx, obj.INT):
 		l := lst.(obj.List)
 		i := idx.(*obj.Integer).Val()
 
 		if int(i) >= len(l) {
-			return obj.NullObj
+			return obj.NewError("intex out of range")
 		}
 		return l[i]
+
+	case assertTypes(lst, obj.STRING) && assertTypes(idx, obj.INT):
+		s := lst.(*obj.String)
+		i := idx.(*obj.Integer).Val()
+
+		if int(i) >= len(*s) {
+			return obj.NewError("intex out of range")
+		}
+		return obj.NewString(string(string(*s)[i]))
 
 	default:
 		return obj.NewError(

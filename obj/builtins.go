@@ -233,39 +233,44 @@ var Builtins = map[string]Builtin{
 			return NewError("first: wrong number of arguments, expected 1, got %d", l)
 		}
 
-		if list, ok := args[0].(List); ok {
-			if len(list) > 0 {
-				return list[0]
-			}
-			return NullObj
+		switch o := args[0].(type) {
+		case List:
+			return o[0]
+		case *String:
+			return NewString(string(string(*o)[0]))
+		default:
+			return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
 		}
-		return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
 	},
 	"last": func(args ...Object) Object {
 		if l := len(args); l != 1 {
 			return NewError("last: wrong number of arguments, expected 1, got %d", l)
 		}
 
-		if list, ok := args[0].(List); ok {
-			if len(list) > 0 {
-				return list[len(list)-1]
-			}
-			return NullObj
+		switch o := args[0].(type) {
+		case List:
+			return o[len(o)-1]
+		case *String:
+			s := string(*o)
+			return NewString(string(s[len(s)-1]))
+		default:
+			return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
 		}
-		return NewError("last: wrong argument type, expected list, got %s", args[0].Type())
 	},
 	"tail": func(args ...Object) Object {
 		if l := len(args); l != 1 {
 			return NewError("tail: wrong number of arguments, expected 1, got %d", l)
 		}
 
-		if list, ok := args[0].(List); ok {
-			if len(list) > 0 {
-				return list[1:]
-			}
-			return NullObj
+		switch o := args[0].(type) {
+		case List:
+			return o[1:]
+		case *String:
+			s := string(*o)
+			return NewString(s[1:])
+		default:
+			return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
 		}
-		return NewError("tail: wrong argument type, expected list, got %s", args[0].Type())
 	},
 }
 

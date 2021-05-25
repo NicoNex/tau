@@ -18,6 +18,14 @@ func (r Return) Type() Type {
 	return RETURN
 }
 
+func (r Return) Get(n string) (Object, bool) {
+	return nil, false
+}
+
+func (r Return) Set(n string, o Object) Object {
+	return nil
+}
+
 func (r Return) Val() Object {
 	return r.v
 }

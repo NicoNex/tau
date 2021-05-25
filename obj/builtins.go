@@ -61,13 +61,13 @@ var Builtins = map[string]Builtin{
 
 		switch o := args[0].(type) {
 		case *Integer:
-			return NewInteger(int64(*o))
+			return NewInteger(o.i)
 
 		case *Float:
-			return NewInteger(int64(*o))
+			return NewInteger(int64(o.f))
 
 		case *String:
-			if a, err := strconv.ParseFloat(string(*o), 64); err == nil {
+			if a, err := strconv.ParseFloat(o.s, 64); err == nil {
 				return NewInteger(int64(a))
 			}
 			return NewError("%v is not a number", args[0])
@@ -83,13 +83,13 @@ var Builtins = map[string]Builtin{
 
 		switch o := args[0].(type) {
 		case *Integer:
-			return NewFloat(float64(*o))
+			return NewFloat(float64(o.i))
 
 		case *Float:
-			return NewFloat(float64(*o))
+			return NewFloat(o.f)
 
 		case *String:
-			if a, err := strconv.ParseFloat(string(*o), 64); err == nil {
+			if a, err := strconv.ParseFloat(o.s, 64); err == nil {
 				return NewFloat(a)
 			}
 			return NewError("%v is not a number", args[0])
@@ -108,7 +108,7 @@ var Builtins = map[string]Builtin{
 		} else if l == 1 {
 			switch o := args[0].(type) {
 			case *Integer:
-				os.Exit(int(*o))
+				os.Exit(int(o.i))
 
 			case *String:
 				fmt.Fprintln(Stdout, o)
@@ -129,8 +129,8 @@ var Builtins = map[string]Builtin{
 			return NewError("exit: second argument must be an int")
 		}
 
-		fmt.Fprintln(Stdout, string(*msg))
-		os.Exit(int(*code))
+		fmt.Fprintln(Stdout, msg.s)
+		os.Exit(int(code.i))
 		return NullObj
 	},
 	"append": func(args ...Object) Object {
@@ -144,7 +144,7 @@ var Builtins = map[string]Builtin{
 		}
 
 		if len(args) > 1 {
-			return append(lst, args[1:]...)
+			lst.l = append(lst.l, args[1:]...)
 		}
 		return lst
 	},
@@ -159,13 +159,13 @@ var Builtins = map[string]Builtin{
 		}
 
 		if len(args) > 1 {
-			var tmp List
+			var tmp []Object
 
 			for i := len(args) - 1; i > 0; i-- {
 				tmp = append(tmp, args[i])
 			}
 
-			return append(tmp, lst...)
+			lst.l = append(tmp, lst.l...)
 		}
 		return lst
 	},
@@ -176,9 +176,9 @@ var Builtins = map[string]Builtin{
 
 		switch o := args[0].(type) {
 		case List:
-			return NewInteger(int64(len(o)))
+			return NewInteger(int64(len(o.l)))
 		case *String:
-			return NewInteger(int64(len(*o)))
+			return NewInteger(int64(len(o.s)))
 		default:
 			return NewError("len: object of type %q has no length", o.Type())
 		}
@@ -187,7 +187,7 @@ var Builtins = map[string]Builtin{
 		switch len(args) {
 		case 1:
 			if stop, ok := args[0].(*Integer); ok {
-				return listify(0, int(*stop), 1)
+				return listify(0, int(stop.i), 1)
 			}
 			return NewError("range: start value must be an int")
 
@@ -201,7 +201,7 @@ var Builtins = map[string]Builtin{
 			if !ok {
 				return NewError("range: stop value must be an int")
 			}
-			return listify(int(*start), int(*stop), 1)
+			return listify(int(start.i), int(stop.i), 1)
 
 		case 3:
 			start, ok := args[0].(*Integer)
@@ -219,8 +219,8 @@ var Builtins = map[string]Builtin{
 				return NewError("range: step value must be an int")
 			}
 
-			if s := int(*step); s != 0 {
-				return listify(int(*start), int(*stop), s)
+			if s := int(step.i); s != 0 {
+				return listify(int(start.i), int(stop.i), s)
 			}
 			return NewError("range: step value must not be zero")
 
@@ -235,9 +235,9 @@ var Builtins = map[string]Builtin{
 
 		switch o := args[0].(type) {
 		case List:
-			return o[0]
+			return o.l[0]
 		case *String:
-			return NewString(string(string(*o)[0]))
+			return NewString(string(o.s[0]))
 		default:
 			return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
 		}
@@ -249,10 +249,9 @@ var Builtins = map[string]Builtin{
 
 		switch o := args[0].(type) {
 		case List:
-			return o[len(o)-1]
+			return o.l[len(o.l)-1]
 		case *String:
-			s := string(*o)
-			return NewString(string(s[len(s)-1]))
+			return NewString(string(o.s[len(o.s)-1]))
 		default:
 			return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
 		}
@@ -264,10 +263,10 @@ var Builtins = map[string]Builtin{
 
 		switch o := args[0].(type) {
 		case List:
-			return o[1:]
+			o.l = o.l[1:]
+			return o
 		case *String:
-			s := string(*o)
-			return NewString(s[1:])
+			return NewString(o.s[1:])
 		default:
 			return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
 		}
@@ -275,10 +274,12 @@ var Builtins = map[string]Builtin{
 }
 
 func listify(start, stop, step int) List {
-	var l List
+	var ret = List{
+		Env: NewEnv(),
+	}
 
 	for i := start; i < stop; i += step {
-		l = append(l, NewInteger(int64(i)))
+		ret.l = append(ret.l, NewInteger(int64(i)))
 	}
-	return l
+	return ret
 }

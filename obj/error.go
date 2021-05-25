@@ -2,11 +2,16 @@ package obj
 
 import "fmt"
 
-type Error string
+type Error struct {
+	e string
+	*Env
+}
 
 func NewError(f string, a ...interface{}) Object {
-	var ret = Error(fmt.Sprintf(f, a...))
-	return &ret
+	return &Error{
+		e: fmt.Sprintf(f, a...),
+		Env: NewEnv(),
+	}
 }
 
 func (e Error) Type() Type {
@@ -14,5 +19,5 @@ func (e Error) Type() Type {
 }
 
 func (e Error) String() string {
-	return fmt.Sprintf("error: %s", string(e))
+	return fmt.Sprintf("error: %s", e.e)
 }

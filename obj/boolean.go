@@ -2,15 +2,20 @@ package obj
 
 import "strconv"
 
-type Boolean bool
+type Boolean struct {
+	b bool
+	*Env
+}
 
 func NewBoolean(b bool) Object {
-	var ret = Boolean(b)
-	return &ret
+	return &Boolean{
+		b: b,
+		Env: NewEnv(),
+	}
 }
 
 func (b Boolean) String() string {
-	return strconv.FormatBool(bool(b))
+	return strconv.FormatBool(b.b)
 }
 
 func (b Boolean) Type() Type {
@@ -18,5 +23,5 @@ func (b Boolean) Type() Type {
 }
 
 func (b Boolean) Val() bool {
-	return bool(b)
+	return b.b
 }

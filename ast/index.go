@@ -31,19 +31,19 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		l := lst.(obj.List)
 		i := idx.(*obj.Integer).Val()
 
-		if int(i) >= len(l) {
+		if int(i) >= l.Len() {
 			return obj.NewError("intex out of range")
 		}
-		return l[i]
+		return l.Val(i)
 
 	case assertTypes(lst, obj.STRING) && assertTypes(idx, obj.INT):
 		s := lst.(*obj.String)
 		i := idx.(*obj.Integer).Val()
 
-		if int(i) >= len(*s) {
+		if int(i) >= s.Len() {
 			return obj.NewError("intex out of range")
 		}
-		return obj.NewString(string(string(*s)[i]))
+		return obj.NewString(string(s.Val()[i]))
 
 	default:
 		return obj.NewError(

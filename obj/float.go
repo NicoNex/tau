@@ -2,15 +2,20 @@ package obj
 
 import "strconv"
 
-type Float float64
+type Float struct {
+	f float64
+	*Env
+}
 
 func NewFloat(f float64) Object {
-	var ret = Float(f)
-	return &ret
+	return &Float{
+		f: f,
+		Env: NewEnv(),
+	}
 }
 
 func (f Float) String() string {
-	return strconv.FormatFloat(float64(f), 'f', -1, 64)
+	return strconv.FormatFloat(f.f, 'f', -1, 64)
 }
 
 func (f Float) Type() Type {
@@ -18,5 +23,5 @@ func (f Float) Type() Type {
 }
 
 func (f Float) Val() float64 {
-	return float64(f)
+	return f.f
 }

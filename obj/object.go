@@ -2,6 +2,8 @@ package obj
 
 type Object interface {
 	Type() Type
+	Get(n string) (Object, bool)
+	Set(n string, o Object) Object
 	String() string
 }
 

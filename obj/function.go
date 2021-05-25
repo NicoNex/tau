@@ -8,7 +8,7 @@ import (
 type Function struct {
 	Params []string
 	Body   interface{}
-	Env    *Env
+	*Env
 }
 
 func NewFunction(params []string, env *Env, body interface{}) Object {

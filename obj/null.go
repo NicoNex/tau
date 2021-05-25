@@ -1,9 +1,11 @@
 package obj
 
-type Null struct{}
+type Null struct {
+	*Env
+}
 
 func NewNull() Object {
-	return new(Null)
+	return &Null{NewEnv()}
 }
 
 func (n Null) String() string {

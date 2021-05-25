@@ -1,20 +1,26 @@
 package obj
 
-type String string
+type String struct {
+	s string
+	*Env
+}
 
 func NewString(s string) Object {
-	var ret = String(s)
-	return &ret
+	return &String{s, NewEnv()}
 }
 
 func (s String) Type() Type {
 	return STRING
 }
 
+func (s String) Len() int {
+	return len(s.s)
+}
+
 func (s String) String() string {
-	return string(s)
+	return s.s
 }
 
 func (s String) Val() string {
-	return string(s)
+	return s.s
 }

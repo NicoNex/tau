@@ -2,21 +2,23 @@ package obj
 
 import "strconv"
 
-type Integer int64
+type Integer struct {
+	i int64
+	*Env
+}
 
 func NewInteger(i int64) Object {
-	var ret = Integer(i)
-	return &ret
+	return &Integer{i, NewEnv()}
 }
 
 func (i Integer) String() string {
-	return strconv.FormatInt(int64(i), 10)
+	return strconv.FormatInt(i.i, 10)
+}
+
+func (i Integer) Val() int64 {
+	return i.i
 }
 
 func (i Integer) Type() Type {
 	return INT
-}
-
-func (i Integer) Val() int64 {
-	return int64(i)
 }

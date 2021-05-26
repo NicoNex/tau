@@ -29,3 +29,7 @@ func (l List) String() string {
 	}
 	return fmt.Sprintf("[%s]", strings.Join(elements, ", "))
 }
+
+func (l List) Val() []Object {
+	return []Object(l)
+}

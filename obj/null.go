@@ -13,3 +13,7 @@ func (n Null) String() string {
 func (n Null) Type() Type {
 	return NULL
 }
+
+func (n Null) Val() interface{} {
+	return nil
+}

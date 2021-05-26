@@ -16,3 +16,7 @@ func (e Error) Type() Type {
 func (e Error) String() string {
 	return fmt.Sprintf("error: %s", string(e))
 }
+
+func (e Error) Val() string {
+	return string(e)
+}

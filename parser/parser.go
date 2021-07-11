@@ -103,6 +103,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.PLUSPLUS, p.parsePlusPlus)
 	p.registerPrefix(item.MINUSMINUS, p.parseMinusMinus)
 	p.registerPrefix(item.FOR, p.parseFor)
+	p.registerPrefix(item.LBRACE, p.parseMap)
 
 	p.registerInfix(item.EQ, p.parseEquals)
 	p.registerInfix(item.NOT_EQ, p.parseNotEquals)
@@ -255,6 +256,11 @@ func (p *Parser) parseIfExpr() ast.Node {
 func (p *Parser) parseList() ast.Node {
 	nodes := p.parseNodeList(item.RBRACKET)
 	return ast.NewList(nodes...)
+}
+
+func (p *Parser) parseMap() ast.Node {
+	couples := p.parseNodePairs(item.RBRACE)
+	return ast.NewMap(couples...)
 }
 
 func (p *Parser) parseFunction() ast.Node {
@@ -552,15 +558,47 @@ func (p *Parser) parseIndex(list ast.Node) ast.Node {
 	return ast.NewIndex(list, expr)
 }
 
+func (p *Parser) parsePair() [2]ast.Node {
+	l := p.parseExpr(LOWEST)
+	if !p.expectPeek(item.COLON) {
+		return [2]ast.Node{}
+	}
+	p.next()
+	r := p.parseExpr(LOWEST)
+
+	return [2]ast.Node{l, r}
+}
+
+func (p *Parser) parseNodePairs(end item.Type) [][2]ast.Node {
+	var pairs [][2]ast.Node
+
+	p.next()
+	if p.cur.Is(end) {
+		return pairs
+	}
+
+	pairs = append(pairs, p.parsePair())
+	for p.peek.Is(item.COMMA) {
+		p.next()
+		p.next()
+		pairs = append(pairs, p.parsePair())
+	}
+
+	if !p.expectPeek(end) {
+		return nil
+	}
+
+	return pairs
+}
+
 func (p *Parser) parseNodeList(end item.Type) []ast.Node {
 	var list []ast.Node
 
-	if p.peek.Is(end) {
-		p.next()
+	p.next()
+	if p.cur.Is(end) {
 		return list
 	}
 
-	p.next()
 	list = append(list, p.parseExpr(LOWEST))
 
 	for p.peek.Is(item.COMMA) {

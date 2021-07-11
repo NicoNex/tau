@@ -20,3 +20,7 @@ func (i Integer) Type() Type {
 func (i Integer) Val() int64 {
 	return int64(i)
 }
+
+func (i Integer) KeyHash() KeyHash {
+	return KeyHash{Type: INT, Value: uint64(i)}
+}

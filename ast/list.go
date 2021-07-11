@@ -22,7 +22,11 @@ func (l List) Eval(env *obj.Env) obj.Object {
 	var elements []obj.Object
 
 	for _, e := range l {
-		elements = append(elements, e.Eval(env))
+		v := e.Eval(env)
+		if isError(v) {
+			return v
+		}
+		elements = append(elements, v)
 	}
 	return obj.NewList(elements...)
 }

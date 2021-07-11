@@ -20,3 +20,7 @@ func (f Float) Type() Type {
 func (f Float) Val() float64 {
 	return float64(f)
 }
+
+func (f Float) KeyHash() KeyHash {
+	return KeyHash{Type: FLOAT, Value: uint64(f)}
+}

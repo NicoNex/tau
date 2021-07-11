@@ -1,5 +1,10 @@
 package obj
 
+import (
+	"hash/fnv"
+	"strconv"
+)
+
 type String string
 
 func NewString(s string) Object {
@@ -12,9 +17,16 @@ func (s String) Type() Type {
 }
 
 func (s String) String() string {
-	return string(s)
+	return strconv.Quote(string(s))
 }
 
 func (s String) Val() string {
 	return string(s)
+}
+
+func (s String) KeyHash() KeyHash {
+	var h = fnv.New64a()
+	h.Write([]byte(s))
+
+	return KeyHash{Type: STRING, Value: h.Sum64()}
 }

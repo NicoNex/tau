@@ -242,6 +242,10 @@ func lexExpression(l *lexer) stateFn {
 		l.emit(item.SEMICOLON)
 		l.ignoreSpaces()
 
+	case r == ':':
+		l.emit(item.COLON)
+		// l.ignoreSpaces()
+
 	case r == '(':
 		l.emit(item.LPAREN)
 

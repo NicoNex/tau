@@ -7,7 +7,7 @@ import (
 )
 
 type Index struct {
-	list  Node
+	left  Node
 	index Node
 }
 
@@ -16,19 +16,19 @@ func NewIndex(l, i Node) Node {
 }
 
 func (i Index) Eval(env *obj.Env) obj.Object {
-	var lst = i.list.Eval(env)
+	var lft = i.left.Eval(env)
 	var idx = i.index.Eval(env)
 
-	if isError(lst) {
-		return lst
+	if isError(lft) {
+		return lft
 	}
 	if isError(idx) {
 		return idx
 	}
 
 	switch {
-	case assertTypes(lst, obj.LIST) && assertTypes(idx, obj.INT):
-		l := lst.(obj.List)
+	case assertTypes(lft, obj.LIST) && assertTypes(idx, obj.INT):
+		l := lft.(obj.List)
 		i := idx.(*obj.Integer).Val()
 
 		if int(i) >= len(l) {
@@ -36,8 +36,8 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		}
 		return l[i]
 
-	case assertTypes(lst, obj.STRING) && assertTypes(idx, obj.INT):
-		s := lst.(*obj.String)
+	case assertTypes(lft, obj.STRING) && assertTypes(idx, obj.INT):
+		s := lft.(*obj.String)
 		i := idx.(*obj.Integer).Val()
 
 		if int(i) >= len(*s) {
@@ -45,15 +45,20 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		}
 		return obj.NewString(string(string(*s)[i]))
 
+	case assertTypes(lft, obj.MAP) && assertTypes(idx, obj.INT, obj.FLOAT, obj.STRING, obj.BOOL):
+		m := lft.(obj.Map)
+		k := idx.(obj.Hashable)
+		return m.Get(k.KeyHash()).Value
+
 	default:
 		return obj.NewError(
 			"invalid index operator for types %v and %v",
-			lst.Type(),
+			lft.Type(),
 			idx.Type(),
 		)
 	}
 }
 
 func (i Index) String() string {
-	return fmt.Sprintf("%v[%v]", i.list, i.index)
+	return fmt.Sprintf("%v[%v]", i.left, i.index)
 }

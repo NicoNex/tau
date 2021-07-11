@@ -46,6 +46,7 @@ const (
 	MINUSMINUS
 
 	COMMA
+	COLON
 	SEMICOLON
 	NEW_LINE
 
@@ -105,6 +106,7 @@ var typemap = map[Type]string{
 	RSHIFT:          ">>",
 
 	COMMA:     ",",
+	COLON:     ":",
 	SEMICOLON: ";",
 	NEW_LINE:  "new line",
 

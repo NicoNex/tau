@@ -20,3 +20,10 @@ func (b Boolean) Type() Type {
 func (b Boolean) Val() bool {
 	return bool(b)
 }
+
+func (b Boolean) KeyHash() KeyHash {
+	if b {
+		return KeyHash{Type: BOOL, Value: 1}
+	}
+	return KeyHash{Type: BOOL, Value: 0}
+}

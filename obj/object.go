@@ -5,6 +5,15 @@ type Object interface {
 	String() string
 }
 
+type KeyHash struct {
+	Type  Type
+	Value uint64
+}
+
+type Hashable interface {
+	KeyHash() KeyHash
+}
+
 type Type int
 
 const (
@@ -18,6 +27,7 @@ const (
 	FUNCTION
 	BUILTIN
 	LIST
+	MAP
 )
 
 var (
@@ -37,6 +47,7 @@ var typrepr = map[Type]string{
 	FUNCTION: "FUNCTION",
 	BUILTIN:  "BUILTIN",
 	LIST:     "LIST",
+	MAP:      "MAP",
 }
 
 func (t Type) String() string {

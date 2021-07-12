@@ -141,7 +141,7 @@ empty = []
 stuff = ["Hello World", 1, 2, 3, true]
 ```
 
-#### Maps
+#### Map
 ```
 empty = {}
 stuff = {"Hello": "World", 123: true}

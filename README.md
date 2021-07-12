@@ -5,7 +5,7 @@ Tau is a dinamically-typed open source programming language designed to be minim
 ## Syntax
 
 ### Installation
-In order to install Tau you need to have the go compiler installed or otherwhise you can get it from ![here](https://golang.org/).
+In order to install Tau, you'll need [Go](https://golang.org/).
 
 Once done, running the following command will successfully install the tau interpreter:
 ```bash
@@ -13,12 +13,12 @@ go get github.com/NicoNex/tau
 ```
 
 ### Hello World
-We all start from here...
+_We all start from here..._
 ```
 println("Hello World")
 ```
 
-### Examples of syntax
+### Syntax examples
 
 #### File
 ![file](./images/taufile.png)
@@ -98,7 +98,7 @@ println(min)
 ```
 
 ##### REPL
-Tau also supports a REPL:
+Tau also supports REPL:
 ![repl](./images/tauloop.png)
 
 ### Data types
@@ -139,6 +139,12 @@ pow = fn(base, exponent) {
 ```
 empty = []
 stuff = ["Hello World", 1, 2, 3, true]
+```
+
+#### Maps
+```
+empty = {}
+stuff = {"Hello": "World", 123: true}
 ```
 
 #### Dictionary

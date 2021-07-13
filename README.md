@@ -146,6 +146,3 @@ stuff = ["Hello World", 1, 2, 3, true]
 empty = {}
 stuff = {"Hello": "World", 123: true}
 ```
-
-#### Dictionary
-Coming soon...

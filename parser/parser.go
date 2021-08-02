@@ -353,14 +353,30 @@ func (p *Parser) parseMinusMinus() ast.Node {
 }
 
 func (p *Parser) parseFor() ast.Node {
-	p.next()
+	var arg []ast.Node
 
-	condition := p.parseExpr(LOWEST)
-	if !p.expectPeek(item.LBRACE) {
-		return nil
+	p.next()
+	if p.cur.Is(item.LBRACE) {
+		return ast.NewFor(ast.NewBoolean(true), p.parseBlock(), nil, nil)
 	}
 
-	return ast.NewFor(condition, p.parseBlock())
+	for !p.cur.Is(item.LBRACE) {
+		arg = append(arg, p.parseExpr(LOWEST))
+		p.next()
+	}
+
+	switch l := len(arg); l {
+	case 1:
+		return ast.NewFor(arg[0], p.parseBlock(), nil, nil)
+
+	case 3:
+		return ast.NewFor(arg[1], p.parseBlock(), arg[0], arg[2])
+
+	default:
+		msg := fmt.Sprintf("wrong number of expressions, expected 1 or 3 but got %d", l)
+		p.errs = append(p.errs, msg)
+		return nil
+	}
 }
 
 // Returns a node of type Bang.
@@ -592,26 +608,30 @@ func (p *Parser) parseNodePairs(end item.Type) [][2]ast.Node {
 }
 
 func (p *Parser) parseNodeList(end item.Type) []ast.Node {
-	var list []ast.Node
+	return p.parseNodeSequence(item.COMMA, end)
+}
+
+// Returns a slice of expressions separated by 'separator'.
+func (p *Parser) parseNodeSequence(sep, end item.Type) []ast.Node {
+	var seq []ast.Node
 
 	p.next()
 	if p.cur.Is(end) {
-		return list
+		return seq
 	}
 
-	list = append(list, p.parseExpr(LOWEST))
+	seq = append(seq, p.parseExpr(LOWEST))
 
-	for p.peek.Is(item.COMMA) {
+	for p.peek.Is(sep) {
 		p.next()
 		p.next()
-		list = append(list, p.parseExpr(LOWEST))
+		seq = append(seq, p.parseExpr(LOWEST))
 	}
 
 	if !p.expectPeek(end) {
 		return nil
 	}
-
-	return list
+	return seq
 }
 
 // Returns true if the peek is of the provided type 't', otherwhise returns

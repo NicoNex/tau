@@ -8,9 +8,9 @@ import (
 
 type For struct {
 	before Node
-	after Node
-	cond Node
-	body Node
+	after  Node
+	cond   Node
+	body   Node
 }
 
 func NewFor(cond, body, before, after Node) Node {

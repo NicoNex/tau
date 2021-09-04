@@ -45,6 +45,7 @@ const (
 	PLUSPLUS
 	MINUSMINUS
 
+	DOT
 	COMMA
 	COLON
 	SEMICOLON
@@ -105,6 +106,7 @@ var typemap = map[Type]string{
 	LSHIFT:          "<<",
 	RSHIFT:          ">>",
 
+	DOT:       ".",
 	COMMA:     ",",
 	COLON:     ":",
 	SEMICOLON: ";",

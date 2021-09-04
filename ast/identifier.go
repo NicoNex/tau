@@ -9,8 +9,8 @@ func NewIdentifier(name string) Node {
 }
 
 func (i Identifier) Eval(env *obj.Env) obj.Object {
-	if o, ok := env.Get(string(i)); ok {
-		return o
+	if c, ok := env.Get(string(i)); ok {
+		return c.Object()
 	} else if o, ok := obj.Builtins[string(i)]; ok {
 		return o
 	}

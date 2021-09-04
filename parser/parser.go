@@ -40,6 +40,7 @@ const (
 	PREFIX
 	CALL
 	INDEX
+	DOT
 )
 
 // Links each operator to its precedence class.
@@ -77,6 +78,7 @@ var precedences = map[item.Type]int{
 	item.RSHIFT:          SHIFT,
 	item.LPAREN:          CALL,
 	item.LBRACKET:        INDEX,
+	item.DOT:             DOT,
 	//item.POWER:           MULTIPLICATIVE,
 }
 
@@ -137,6 +139,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.RSHIFT_ASSIGN, p.parseRShiftAssign)
 	p.registerInfix(item.LPAREN, p.parseCall)
 	p.registerInfix(item.LBRACKET, p.parseIndex)
+	p.registerInfix(item.DOT, p.parseDot)
 
 	return p
 }
@@ -572,6 +575,12 @@ func (p *Parser) parseIndex(list ast.Node) ast.Node {
 		return nil
 	}
 	return ast.NewIndex(list, expr)
+}
+
+func (p *Parser) parseDot(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewDot(left, p.parseExpr(prec))
 }
 
 func (p *Parser) parsePair() [2]ast.Node {

@@ -23,6 +23,7 @@ const (
 	FLOAT
 	BOOL
 	STRING
+	CLASS
 	RETURN
 	FUNCTION
 	BUILTIN
@@ -43,6 +44,7 @@ var typrepr = map[Type]string{
 	FLOAT:    "FLOAT",
 	BOOL:     "BOOLEAN",
 	STRING:   "STRING",
+	CLASS:    "CLASS",
 	RETURN:   "RETURN",
 	FUNCTION: "FUNCTION",
 	BUILTIN:  "BUILTIN",

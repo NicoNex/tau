@@ -282,6 +282,12 @@ var Builtins = map[string]Builtin{
 			return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
 		}
 	},
+	"new": func(args ...Object) Object {
+		if l := len(args); l != 0 {
+			return NewError("new: wrong number of arguments, expected 0, got %d", l)
+		}
+		return NewClass()
+	},
 }
 
 func listify(start, stop, step int) List {

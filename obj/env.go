@@ -2,18 +2,18 @@ package obj
 
 type Env struct {
 	outer *Env
-	store map[string]Object
+	store map[string]*Container
 }
 
 func NewEnv() *Env {
-	return &Env{nil, make(map[string]Object)}
+	return &Env{nil, make(map[string]*Container)}
 }
 
 func NewEnvWrap(e *Env) *Env {
-	return &Env{e, make(map[string]Object)}
+	return &Env{e, make(map[string]*Container)}
 }
 
-func (e *Env) Get(n string) (Object, bool) {
+func (e *Env) Get(n string) (*Container, bool) {
 	ret, ok := e.store[n]
 	if !ok && e.outer != nil {
 		return e.outer.Get(n)
@@ -21,7 +21,8 @@ func (e *Env) Get(n string) (Object, bool) {
 	return ret, ok
 }
 
-func (e *Env) Set(n string, o Object) Object {
-	e.store[n] = o
-	return o
+func (e *Env) Set(n string, o Object) *Container {
+	c := &Container{o}
+	e.store[n] = c
+	return c
 }

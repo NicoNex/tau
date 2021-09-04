@@ -262,6 +262,9 @@ func lexExpression(l *lexer) stateFn {
 		l.emit(item.COMMA)
 		l.ignoreSpaces()
 
+	case r == '.':
+		l.emit(item.DOT)
+
 	case r == '{':
 		l.emit(item.LBRACE)
 		l.ignoreSpaces()

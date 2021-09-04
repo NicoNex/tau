@@ -15,7 +15,6 @@ func NewAssign(l, r Node) Node {
 	return Assign{l, r}
 }
 
-// TODO: fix the bug in case a builtin function returns an error.
 func (a Assign) Eval(env *obj.Env) obj.Object {
 	if left, ok := a.l.(Identifier); ok {
 		right := a.r.Eval(env)
@@ -24,6 +23,16 @@ func (a Assign) Eval(env *obj.Env) obj.Object {
 		}
 		return env.Set(left.String(), right)
 	}
+
+	left := a.l.Eval(env)
+	if c, ok := left.(*obj.Container); ok {
+		right := a.r.Eval(env)
+		if isError(right) {
+			return right
+		}
+		return c.Set(right)
+	}
+
 	return obj.NewError("cannot assign to literal")
 }
 

@@ -16,8 +16,10 @@ func NewAnd(l, r Node) Node {
 }
 
 func (a And) Eval(env *obj.Env) obj.Object {
-	var left = unwrap(a.l.Eval(env))
-	var right = unwrap(a.r.Eval(env))
+	var (
+		left  = unwrap(a.l.Eval(env))
+		right = unwrap(a.r.Eval(env))
+	)
 
 	if isError(left) {
 		return left

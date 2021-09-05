@@ -18,6 +18,7 @@ func NewCall(fn Node, args []Node) Node {
 
 func (c Call) Eval(env *obj.Env) obj.Object {
 	var fnObj = unwrap(c.fn.Eval(env))
+
 	if isError(fnObj) {
 		return fnObj
 	}

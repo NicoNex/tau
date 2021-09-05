@@ -16,8 +16,10 @@ func NewPlus(l, r Node) Node {
 }
 
 func (p Plus) Eval(env *obj.Env) obj.Object {
-	var left = unwrap(p.l.Eval(env))
-	var right = unwrap(p.r.Eval(env))
+	var (
+		left  = unwrap(p.l.Eval(env))
+		right = unwrap(p.r.Eval(env))
+	)
 
 	if isError(left) {
 		return left

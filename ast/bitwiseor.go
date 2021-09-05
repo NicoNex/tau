@@ -16,8 +16,10 @@ func NewBitwiseOr(l, r Node) Node {
 }
 
 func (b BitwiseOr) Eval(env *obj.Env) obj.Object {
-	var left = unwrap(b.l.Eval(env))
-	var right = unwrap(b.r.Eval(env))
+	var (
+		left  = unwrap(b.l.Eval(env))
+		right = unwrap(b.r.Eval(env))
+	)
 
 	if isError(left) {
 		return left

@@ -16,8 +16,10 @@ func NewIndex(l, i Node) Node {
 }
 
 func (i Index) Eval(env *obj.Env) obj.Object {
-	var lft = i.left.Eval(env)
-	var idx = i.index.Eval(env)
+	var (
+		lft = i.left.Eval(env)
+		idx = i.index.Eval(env)
+	)
 
 	if isError(lft) {
 		return lft

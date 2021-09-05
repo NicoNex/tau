@@ -16,8 +16,10 @@ func NewGreaterEq(l, r Node) Node {
 }
 
 func (g GreaterEq) Eval(env *obj.Env) obj.Object {
-	var left = unwrap(g.l.Eval(env))
-	var right = unwrap(g.r.Eval(env))
+	var (
+		left  = unwrap(g.l.Eval(env))
+		right = unwrap(g.r.Eval(env))
+	)
 
 	if isError(left) {
 		return left

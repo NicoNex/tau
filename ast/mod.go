@@ -16,8 +16,10 @@ func NewMod(l, r Node) Node {
 }
 
 func (m Mod) Eval(env *obj.Env) obj.Object {
-	var left = unwrap(m.l.Eval(env))
-	var right = unwrap(m.r.Eval(env))
+	var (
+		left  = unwrap(m.l.Eval(env))
+		right = unwrap(m.r.Eval(env))
+	)
 
 	if isError(left) {
 		return left

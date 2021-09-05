@@ -16,8 +16,10 @@ func NewLess(l, r Node) Node {
 }
 
 func (l Less) Eval(env *obj.Env) obj.Object {
-	var left = unwrap(l.l.Eval(env))
-	var right = unwrap(l.r.Eval(env))
+	var (
+		left  = unwrap(l.l.Eval(env))
+		right = unwrap(l.r.Eval(env))
+	)
 
 	if isError(left) {
 		return left

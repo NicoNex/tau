@@ -16,13 +16,16 @@ func NewTimesAssign(l, r Node) Node {
 }
 
 func (t TimesAssign) Eval(env *obj.Env) obj.Object {
-	var name string
-	var left = t.l.Eval(env)
-	var right = t.r.Eval(env)
+	var (
+		name        string
+		isContainer bool
+		left        = t.l.Eval(env)
+		right       = unwrap(t.r.Eval(env))
+	)
 
 	if ident, ok := t.l.(Identifier); ok {
 		name = ident.String()
-	} else {
+	} else if _, isContainer = left.(*obj.Container); !isContainer {
 		return obj.NewError("cannot assign to literal")
 	}
 
@@ -42,14 +45,20 @@ func (t TimesAssign) Eval(env *obj.Env) obj.Object {
 
 	switch {
 	case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
-		l := left.(*obj.Integer).Val()
+		l := unwrap(left).(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
+		if isContainer {
+			return left.(*obj.Container).Set(obj.NewInteger(l * r))
+		}
 		return env.Set(name, obj.NewInteger(l*r))
 
 	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
-		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
+		leftFl, rightFl := toFloat(unwrap(left), right)
+		l := leftFl.(*obj.Float).Val()
+		r := rightFl.(*obj.Float).Val()
+		if isContainer {
+			return left.(*obj.Container).Set(obj.NewFloat(l * r))
+		}
 		return env.Set(name, obj.NewFloat(l*r))
 
 	default:

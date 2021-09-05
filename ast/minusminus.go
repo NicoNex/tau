@@ -15,8 +15,11 @@ func NewMinusMinus(r Node) Node {
 }
 
 func (m MinusMinus) Eval(env *obj.Env) obj.Object {
-	var name string
-	var right = m.r.Eval(env)
+	var (
+		name        string
+		isContainer bool
+		right       = m.r.Eval(env)
+	)
 
 	if isError(right) {
 		return right
@@ -24,6 +27,8 @@ func (m MinusMinus) Eval(env *obj.Env) obj.Object {
 
 	if ident, ok := m.r.(Identifier); ok {
 		name = ident.String()
+	} else {
+		_, isContainer = right.(*obj.Container)
 	}
 
 	if !assertTypes(right, obj.INT, obj.FLOAT) {
@@ -31,12 +36,20 @@ func (m MinusMinus) Eval(env *obj.Env) obj.Object {
 	}
 
 	if assertTypes(right, obj.INT) {
-		r := right.(*obj.Integer).Val()
+		r := unwrap(right).(*obj.Integer).Val()
+
+		if isContainer {
+			return right.(*obj.Container).Set(obj.NewInteger(r - 1))
+		}
 		return env.Set(name, obj.NewInteger(r-1))
 	}
 
-	right, _ = toFloat(right, obj.NullObj)
-	r := right.(*obj.Float).Val()
+	rightFl, _ := toFloat(unwrap(right), obj.NullObj)
+	r := rightFl.(*obj.Float).Val()
+
+	if isContainer {
+		return right.(*obj.Container).Set(obj.NewFloat(r - 1))
+	}
 	return env.Set(name, obj.NewFloat(r-1))
 }
 

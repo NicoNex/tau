@@ -16,13 +16,16 @@ func NewPlusAssign(l, r Node) Node {
 }
 
 func (p PlusAssign) Eval(env *obj.Env) obj.Object {
-	var name string
-	var left = p.l.Eval(env)
-	var right = p.r.Eval(env)
+	var (
+		name        string
+		isContainer bool
+		left        = p.l.Eval(env)
+		right       = unwrap(p.r.Eval(env))
+	)
 
 	if ident, ok := p.l.(Identifier); ok {
 		name = ident.String()
-	} else {
+	} else if _, isContainer = left.(*obj.Container); !isContainer {
 		return obj.NewError("cannot assign to literal")
 	}
 
@@ -42,19 +45,28 @@ func (p PlusAssign) Eval(env *obj.Env) obj.Object {
 
 	switch {
 	case assertTypes(left, obj.STRING) && assertTypes(right, obj.STRING):
-		l := left.(*obj.String).Val()
+		l := unwrap(left).(*obj.String).Val()
 		r := right.(*obj.String).Val()
+		if isContainer {
+			return left.(*obj.Container).Set(obj.NewString(l + r))
+		}
 		return env.Set(name, obj.NewString(l+r))
 
 	case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
-		l := left.(*obj.Integer).Val()
+		l := unwrap(left).(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
+		if isContainer {
+			return left.(*obj.Container).Set(obj.NewInteger(l + r))
+		}
 		return env.Set(name, obj.NewInteger(l+r))
 
 	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
-		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
+		leftFl, rightFl := toFloat(unwrap(left), right)
+		l := leftFl.(*obj.Float).Val()
+		r := rightFl.(*obj.Float).Val()
+		if isContainer {
+			return left.(*obj.Container).Set(obj.NewFloat(l + r))
+		}
 		return env.Set(name, obj.NewFloat(l+r))
 
 	default:

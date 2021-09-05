@@ -16,8 +16,8 @@ func NewOr(l, r Node) Node {
 }
 
 func (o Or) Eval(env *obj.Env) obj.Object {
-	var left = o.l.Eval(env)
-	var right = o.r.Eval(env)
+	var left = unwrap(o.l.Eval(env))
+	var right = unwrap(o.r.Eval(env))
 
 	if isError(left) {
 		return left

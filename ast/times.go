@@ -16,8 +16,8 @@ func NewTimes(l, r Node) Node {
 }
 
 func (t Times) Eval(env *obj.Env) obj.Object {
-	var left = t.l.Eval(env)
-	var right = t.r.Eval(env)
+	var left = unwrap(t.l.Eval(env))
+	var right = unwrap(t.r.Eval(env))
 
 	if isError(left) {
 		return left

@@ -16,8 +16,8 @@ func NewNotEquals(l, r Node) Node {
 }
 
 func (n NotEquals) Eval(env *obj.Env) obj.Object {
-	var left = n.l.Eval(env)
-	var right = n.r.Eval(env)
+	var left = unwrap(n.l.Eval(env))
+	var right = unwrap(n.r.Eval(env))
 
 	if isError(left) {
 		return left

@@ -16,13 +16,16 @@ func NewModAssign(l, r Node) Node {
 }
 
 func (m ModAssign) Eval(env *obj.Env) obj.Object {
-	var name string
-	var left = m.l.Eval(env)
-	var right = m.r.Eval(env)
+	var (
+		name        string
+		isContainer bool
+		left        = m.l.Eval(env)
+		right       = unwrap(m.r.Eval(env))
+	)
 
 	if ident, ok := m.l.(Identifier); ok {
 		name = ident.String()
-	} else {
+	} else if _, isContainer = left.(*obj.Container); !isContainer {
 		return obj.NewError("cannot assign to literal")
 	}
 
@@ -40,11 +43,15 @@ func (m ModAssign) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("unsupported operator '%%=' for type %v", right.Type())
 	}
 
-	l := left.(*obj.Integer).Val()
+	l := unwrap(left).(*obj.Integer).Val()
 	r := right.(*obj.Integer).Val()
 
 	if r == 0 {
 		return obj.NewError("can't divide by 0")
+	}
+
+	if isContainer {
+		return left.(*obj.Container).Set(obj.NewInteger(l % r))
 	}
 	return env.Set(name, obj.NewInteger(l%r))
 }

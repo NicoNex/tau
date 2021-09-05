@@ -16,8 +16,8 @@ func NewEquals(l, r Node) Node {
 }
 
 func (e Equals) Eval(env *obj.Env) obj.Object {
-	var left = e.l.Eval(env)
-	var right = e.r.Eval(env)
+	var left = unwrap(e.l.Eval(env))
+	var right = unwrap(e.r.Eval(env))
 
 	if isError(left) {
 		return left

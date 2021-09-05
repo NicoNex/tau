@@ -45,3 +45,10 @@ func toFloat(l, r obj.Object) (obj.Object, obj.Object) {
 	}
 	return l, r
 }
+
+func unwrap(o obj.Object) obj.Object {
+	if c, ok := o.(*obj.Container); ok {
+		return c.Object()
+	}
+	return o
+}

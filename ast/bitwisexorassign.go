@@ -16,13 +16,16 @@ func NewBitwiseXorAssign(l, r Node) Node {
 }
 
 func (b BitwiseXorAssign) Eval(env *obj.Env) obj.Object {
-	var name string
-	var left = b.l.Eval(env)
-	var right = b.r.Eval(env)
+	var (
+		name        string
+		isContainer bool
+		left        = b.l.Eval(env)
+		right       = unwrap(b.r.Eval(env))
+	)
 
 	if ident, ok := b.l.(Identifier); ok {
 		name = ident.String()
-	} else {
+	} else if _, isContainer = left.(*obj.Container); !isContainer {
 		return obj.NewError("cannot assign to literal")
 	}
 
@@ -39,8 +42,12 @@ func (b BitwiseXorAssign) Eval(env *obj.Env) obj.Object {
 	if !assertTypes(right, obj.INT) {
 		return obj.NewError("unsupported operator '^=' for type %v", right.Type())
 	}
-	l := left.(*obj.Integer).Val()
+	l := unwrap(left).(*obj.Integer).Val()
 	r := right.(*obj.Integer).Val()
+
+	if isContainer {
+		return left.(*obj.Container).Set(obj.NewInteger(l ^ r))
+	}
 	return env.Set(name, obj.NewInteger(l^r))
 }
 

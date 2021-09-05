@@ -5,17 +5,19 @@ package main
 import (
 	"bufio"
 	"fmt"
-	"os"
-
 	"io/ioutil"
+	"os"
 
 	"github.com/NicoNex/tau/obj"
 	"github.com/NicoNex/tau/parser"
 )
 
 func repl() {
-	var env = obj.NewEnv()
-	var reader = bufio.NewReader(os.Stdin)
+	var (
+		env    = obj.NewEnv()
+		reader = bufio.NewReader(os.Stdin)
+	)
+
 	for {
 		fmt.Print(">>> ")
 		input, err := reader.ReadString('\n')

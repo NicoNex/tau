@@ -99,7 +99,25 @@ println(min)
 
 ##### REPL
 Tau also supports REPL:
-![repl](./images/tauloop.png)
+```
+>>> add = fn(a, b) { a + b }
+>>> string(add)
+fn(a, b) { (a + b) }
+>>> string(21)
+21
+>>> recursive_loop = fn(n, func) { if n != 0 { func(n); recursive_loop(n-1, func) } }
+>>> recursive_loop(10, fn(n) { println("hello", n) })
+hello 10
+hello 9
+hello 8
+hello 7
+hello 6
+hello 5
+hello 4
+hello 3
+hello 2
+hello 1
+```
 
 ### Data types
 Tau is a dynamically-typed programming language and it supports the following primitive types:
@@ -145,4 +163,33 @@ stuff = ["Hello World", 1, 2, 3, true]
 ```
 empty = {}
 stuff = {"Hello": "World", 123: true}
+```
+
+#### Loop
+Loops are WIP since they are missing the `continue` and `break` control flow statements.
+```
+for i = 0; i < 10; ++i {
+	println("hello world", i)
+}
+
+lst = [0, 1, 2, 3, 4]
+
+println(lst)
+for len(lst) > 0 {
+	println(lst = tail(lst))
+}
+```
+
+#### Objects
+```
+obj = new()
+obj.value1 = 123
+obj.value2 = 456
+
+obj.sum_values = fn() {
+	obj.value1 + obj.value2
+}
+
+obj.child = new()
+obj.child.value = obj.sum_values()
 ```

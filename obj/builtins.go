@@ -8,8 +8,10 @@ import (
 	"strings"
 )
 
-var Stdout io.Writer = os.Stdout
-var Stdin io.Reader = os.Stdin
+var (
+	Stdout io.Writer = os.Stdout
+	Stdin  io.Reader = os.Stdin
+)
 
 var Builtins = map[string]Builtin{
 	"println": func(args ...Object) Object {

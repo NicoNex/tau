@@ -28,10 +28,10 @@ func (n NotEquals) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.INT, obj.FLOAT, obj.STRING) {
+	if !assertTypes(left, obj.INT, obj.FLOAT, obj.STRING, obj.BOOL) {
 		return obj.NewError("unsupported operator '!=' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.INT, obj.FLOAT, obj.STRING) {
+	if !assertTypes(right, obj.INT, obj.FLOAT, obj.STRING, obj.BOOL) {
 		return obj.NewError("unsupported operator '!=' for type %v", right.Type())
 	}
 
@@ -50,6 +50,11 @@ func (n NotEquals) Eval(env *obj.Env) obj.Object {
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
+		return obj.ParseBool(l != r)
+
+	case assertTypes(left, obj.BOOL) && assertTypes(right, obj.BOOL):
+		l := left.(*obj.Boolean).Val()
+		r := right.(*obj.Boolean).Val()
 		return obj.ParseBool(l != r)
 
 	default:

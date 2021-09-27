@@ -81,7 +81,6 @@ var precedences = map[item.Type]int{
 	item.LPAREN:          CALL,
 	item.LBRACKET:        INDEX,
 	item.DOT:             DOT,
-	//item.POWER:           MULTIPLICATIVE,
 }
 
 func newParser(items chan item.Item) *Parser {
@@ -129,7 +128,6 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.BWXOR, p.parseBwXor)
 	p.registerInfix(item.LSHIFT, p.parseLShift)
 	p.registerInfix(item.RSHIFT, p.parseRShift)
-	// p.registerInfix(item.POWER, p.parseInfixExpression)
 	p.registerInfix(item.ASSIGN, p.parseAssign)
 	p.registerInfix(item.PLUS_ASSIGN, p.parsePlusAssign)
 	p.registerInfix(item.MINUS_ASSIGN, p.parseMinusAssign)
@@ -208,7 +206,7 @@ func (p *Parser) parseExpr(precedence int) ast.Node {
 	return nil
 }
 
-// Returns the node representing an expression enclosed in parenthesys.
+// Returns the node representing an expression enclosed in parentheses.
 func (p *Parser) parseGroupedExpr() ast.Node {
 	p.next()
 	exp := p.parseExpr(LOWEST)

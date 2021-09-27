@@ -27,6 +27,7 @@ type (
 const (
 	LOWEST int = iota
 	ASSIGNMENT
+	LOGICALIN
 	LOGICALOR
 	LOGICALAND
 	BITWISEOR
@@ -56,6 +57,7 @@ var precedences = map[item.Type]int{
 	item.BWXOR_ASSIGN:    ASSIGNMENT,
 	item.LSHIFT_ASSIGN:   ASSIGNMENT,
 	item.RSHIFT_ASSIGN:   ASSIGNMENT,
+	item.IN:              LOGICALIN,
 	item.OR:              LOGICALOR,
 	item.AND:             LOGICALAND,
 	item.EQ:              EQUALITY,
@@ -116,6 +118,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.GT_EQ, p.parseGreaterEq)
 	p.registerInfix(item.AND, p.parseAnd)
 	p.registerInfix(item.OR, p.parseOr)
+	p.registerInfix(item.IN, p.parseIn)
 	p.registerInfix(item.PLUS, p.parsePlus)
 	p.registerInfix(item.MINUS, p.parseMinus)
 	p.registerInfix(item.SLASH, p.parseSlash)
@@ -501,6 +504,12 @@ func (p *Parser) parseOr(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewOr(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseIn(left ast.Node) ast.Node {
+	prec := p.precedence()
+	p.next()
+	return ast.NewIn(left, p.parseExpr(prec))
 }
 
 func (p *Parser) parseAssign(left ast.Node) ast.Node {

@@ -38,6 +38,7 @@ const (
 	GT_EQ
 	AND
 	OR
+	IN
 	BWAND
 	BWOR
 	BWXOR
@@ -96,6 +97,7 @@ var typemap = map[Type]string{
 	GT_EQ:           ">=",
 	AND:             "&&",
 	OR:              "||",
+	IN:              "in",
 	PLUS_ASSIGN:     "+=",
 	MINUS_ASSIGN:    "-=",
 	ASTERISK_ASSIGN: "*=",
@@ -133,6 +135,7 @@ var typemap = map[Type]string{
 }
 
 var keywords = map[string]Type{
+	"in":     IN,
 	"fn":     FUNCTION,
 	"for":    FOR,
 	"if":     IF,

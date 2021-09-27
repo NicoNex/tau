@@ -2,15 +2,15 @@
 
 Tau is a dinamically-typed open source programming language designed to be minimal, fast and efficient.
 
-## Syntax
-
-### Installation
+## Installation
 In order to install Tau, you'll need [Go](https://golang.org/).
 
 Once done, running the following command will successfully install the tau interpreter:
 ```bash
-go get github.com/NicoNex/tau
+go install github.com/NicoNex/tau
 ```
+
+## Syntax
 
 ### Hello World
 _We all start from here..._
@@ -18,10 +18,21 @@ _We all start from here..._
 println("Hello World")
 ```
 
-### Syntax examples
+### Examples
 
 #### File
-![file](./images/taufile.png)
+As every interpreter Tau supports files either by passing the path to the interpreter or by using the shabang.
+
+```
+# helloworld.tau
+
+println("hello world")
+```
+
+```
+$ tau helloworld.tau
+hello world
+```
 
 #### if-else blocks
 

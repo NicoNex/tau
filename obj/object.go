@@ -17,18 +17,18 @@ type Hashable interface {
 type Type int
 
 const (
-	NULL Type = iota
-	ERROR
-	INT
-	FLOAT
-	BOOL
-	STRING
-	CLASS
-	RETURN
-	FUNCTION
-	BUILTIN
-	LIST
-	MAP
+	NullType Type = iota
+	ErrorType
+	IntType
+	FloatType
+	BoolType
+	StringType
+	ClassType
+	ReturnType
+	FunctionType
+	BuiltinType
+	ListType
+	MapType
 )
 
 var (
@@ -38,18 +38,18 @@ var (
 )
 
 var typrepr = map[Type]string{
-	NULL:     "NULL",
-	ERROR:    "ERROR",
-	INT:      "INTEGER",
-	FLOAT:    "FLOAT",
-	BOOL:     "BOOLEAN",
-	STRING:   "STRING",
-	CLASS:    "CLASS",
-	RETURN:   "RETURN",
-	FUNCTION: "FUNCTION",
-	BUILTIN:  "BUILTIN",
-	LIST:     "LIST",
-	MAP:      "MAP",
+	NullType:     "null",
+	ErrorType:    "error",
+	IntType:      "int",
+	FloatType:    "float",
+	BoolType:     "bool",
+	StringType:   "string",
+	ClassType:    "class",
+	ReturnType:   "return",
+	FunctionType: "function",
+	BuiltinType:  "builtin",
+	ListType:     "list",
+	MapType:      "map",
 }
 
 func (t Type) String() string {

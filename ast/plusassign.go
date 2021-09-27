@@ -36,15 +36,15 @@ func (p PlusAssign) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.INT, obj.FLOAT, obj.STRING) {
+	if !assertTypes(left, obj.IntType, obj.FloatType, obj.StringType) {
 		return obj.NewError("unsupported operator '+=' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.INT, obj.FLOAT, obj.STRING) {
+	if !assertTypes(right, obj.IntType, obj.FloatType, obj.StringType) {
 		return obj.NewError("unsupported operator '+=' for type %v", right.Type())
 	}
 
 	switch {
-	case assertTypes(left, obj.STRING) && assertTypes(right, obj.STRING):
+	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
 		l := unwrap(left).(*obj.String).Val()
 		r := right.(*obj.String).Val()
 		if isContainer {
@@ -52,7 +52,7 @@ func (p PlusAssign) Eval(env *obj.Env) obj.Object {
 		}
 		return env.Set(name, obj.NewString(l+r))
 
-	case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		l := unwrap(left).(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
 		if isContainer {
@@ -60,7 +60,7 @@ func (p PlusAssign) Eval(env *obj.Env) obj.Object {
 		}
 		return env.Set(name, obj.NewInteger(l+r))
 
-	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
+	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
 		leftFl, rightFl := toFloat(unwrap(left), right)
 		l := leftFl.(*obj.Float).Val()
 		r := rightFl.(*obj.Float).Val()

@@ -28,28 +28,28 @@ func (e Equals) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.INT, obj.FLOAT, obj.STRING, obj.BOOL, obj.NULL) {
+	if !assertTypes(left, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
 		return obj.NewError("unsupported operator '==' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.INT, obj.FLOAT, obj.STRING, obj.BOOL, obj.NULL) {
+	if !assertTypes(right, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
 		return obj.NewError("unsupported operator '==' for type %v", right.Type())
 	}
 
 	switch {
-	case assertTypes(left, obj.BOOL, obj.NULL) || assertTypes(right, obj.BOOL, obj.NULL):
+	case assertTypes(left, obj.BoolType, obj.NullType) || assertTypes(right, obj.BoolType, obj.NullType):
 		return obj.ParseBool(left == right)
 
-	case assertTypes(left, obj.STRING) && assertTypes(right, obj.STRING):
+	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
 		l := left.(*obj.String).Val()
 		r := right.(*obj.String).Val()
 		return obj.ParseBool(l == r)
 
-	case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		l := left.(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
 		return obj.ParseBool(l == r)
 
-	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
+	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()

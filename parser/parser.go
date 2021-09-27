@@ -25,62 +25,62 @@ type (
 
 // Operators' precedence classes.
 const (
-	LOWEST int = iota
-	ASSIGNMENT
-	LOGICALIN
-	LOGICALOR
-	LOGICALAND
-	BITWISEOR
-	BITWISEXOR
-	BITWISEAND
-	EQUALITY
-	RELATIONAL
-	SHIFT
-	ADDITIVE
-	MULTIPLICATIVE
-	PREFIX
-	CALL
-	INDEX
-	DOT
+	Lowest int = iota
+	Assignment
+	LogicalIn
+	LogicalOr
+	LogicalAnd
+	BitwiseOr
+	BitwiseXor
+	BitwiseAnd
+	Equality
+	Relational
+	Shift
+	Additive
+	Multiplicative
+	Prefix
+	Call
+	Index
+	Dot
 )
 
 // Links each operator to its precedence class.
 var precedences = map[item.Type]int{
-	item.ASSIGN:          ASSIGNMENT,
-	item.PLUS_ASSIGN:     ASSIGNMENT,
-	item.MINUS_ASSIGN:    ASSIGNMENT,
-	item.SLASH_ASSIGN:    ASSIGNMENT,
-	item.ASTERISK_ASSIGN: ASSIGNMENT,
-	item.MODULUS_ASSIGN:  ASSIGNMENT,
-	item.BWAND_ASSIGN:    ASSIGNMENT,
-	item.BWOR_ASSIGN:     ASSIGNMENT,
-	item.BWXOR_ASSIGN:    ASSIGNMENT,
-	item.LSHIFT_ASSIGN:   ASSIGNMENT,
-	item.RSHIFT_ASSIGN:   ASSIGNMENT,
-	item.IN:              LOGICALIN,
-	item.OR:              LOGICALOR,
-	item.AND:             LOGICALAND,
-	item.EQ:              EQUALITY,
-	item.NOT_EQ:          EQUALITY,
-	item.LT:              RELATIONAL,
-	item.GT:              RELATIONAL,
-	item.LT_EQ:           RELATIONAL,
-	item.GT_EQ:           RELATIONAL,
-	item.PLUS:            ADDITIVE,
-	item.MINUS:           ADDITIVE,
-	item.MODULUS:         MULTIPLICATIVE,
-	item.SLASH:           MULTIPLICATIVE,
-	item.ASTERISK:        MULTIPLICATIVE,
-	item.PLUSPLUS:        PREFIX,
-	item.MINUSMINUS:      PREFIX,
-	item.BWAND:           BITWISEAND,
-	item.BWOR:            BITWISEOR,
-	item.BWXOR:           BITWISEOR,
-	item.LSHIFT:          SHIFT,
-	item.RSHIFT:          SHIFT,
-	item.LPAREN:          CALL,
-	item.LBRACKET:        INDEX,
-	item.DOT:             DOT,
+	item.Assign:         Assignment,
+	item.PlusAssign:     Assignment,
+	item.MinusAssign:    Assignment,
+	item.SlashAssign:    Assignment,
+	item.AsteriskAssign: Assignment,
+	item.ModulusAssign:  Assignment,
+	item.BwAndAssign:    Assignment,
+	item.BwOrAssign:     Assignment,
+	item.BwXorAssign:    Assignment,
+	item.LShiftAssign:   Assignment,
+	item.RShiftAssign:   Assignment,
+	item.In:             LogicalIn,
+	item.Or:             LogicalOr,
+	item.And:            LogicalAnd,
+	item.Equals:         Equality,
+	item.NotEquals:      Equality,
+	item.LT:             Relational,
+	item.GT:             Relational,
+	item.LTEQ:           Relational,
+	item.GTEQ:           Relational,
+	item.Plus:           Additive,
+	item.Minus:          Additive,
+	item.Modulus:        Multiplicative,
+	item.Slash:          Multiplicative,
+	item.Asterisk:       Multiplicative,
+	item.PlusPlus:       Prefix,
+	item.MinusMinus:     Prefix,
+	item.BwAnd:          BitwiseAnd,
+	item.BwOr:           BitwiseOr,
+	item.BwXor:          BitwiseOr,
+	item.LShift:         Shift,
+	item.RShift:         Shift,
+	item.LParen:         Call,
+	item.LBracket:       Index,
+	item.Dot:            Dot,
 }
 
 func newParser(items chan item.Item) *Parser {
@@ -91,57 +91,57 @@ func newParser(items chan item.Item) *Parser {
 		prefixParsers: make(map[item.Type]parsePrefixFn),
 		infixParsers:  make(map[item.Type]parseInfixFn),
 	}
-	p.registerPrefix(item.IDENT, p.parseIdentifier)
-	p.registerPrefix(item.INT, p.parseInteger)
-	p.registerPrefix(item.FLOAT, p.parseFloat)
-	p.registerPrefix(item.STRING, p.parseString)
-	p.registerPrefix(item.MINUS, p.parsePrefixMinus)
-	p.registerPrefix(item.BANG, p.parseBang)
-	p.registerPrefix(item.TRUE, p.parseBoolean)
-	p.registerPrefix(item.FALSE, p.parseBoolean)
-	p.registerPrefix(item.LPAREN, p.parseGroupedExpr)
-	p.registerPrefix(item.IF, p.parseIfExpr)
-	p.registerPrefix(item.FUNCTION, p.parseFunction)
-	p.registerPrefix(item.LBRACKET, p.parseList)
-	p.registerPrefix(item.PLUSPLUS, p.parsePlusPlus)
-	p.registerPrefix(item.MINUSMINUS, p.parseMinusMinus)
-	p.registerPrefix(item.FOR, p.parseFor)
-	p.registerPrefix(item.LBRACE, p.parseMap)
-	p.registerPrefix(item.NULL, p.parseNull)
+	p.registerPrefix(item.Ident, p.parseIdentifier)
+	p.registerPrefix(item.Int, p.parseInteger)
+	p.registerPrefix(item.Float, p.parseFloat)
+	p.registerPrefix(item.String, p.parseString)
+	p.registerPrefix(item.Minus, p.parsePrefixMinus)
+	p.registerPrefix(item.Bang, p.parseBang)
+	p.registerPrefix(item.True, p.parseBoolean)
+	p.registerPrefix(item.False, p.parseBoolean)
+	p.registerPrefix(item.LParen, p.parseGroupedExpr)
+	p.registerPrefix(item.If, p.parseIfExpr)
+	p.registerPrefix(item.Function, p.parseFunction)
+	p.registerPrefix(item.LBracket, p.parseList)
+	p.registerPrefix(item.PlusPlus, p.parsePlusPlus)
+	p.registerPrefix(item.MinusMinus, p.parseMinusMinus)
+	p.registerPrefix(item.For, p.parseFor)
+	p.registerPrefix(item.LBrace, p.parseMap)
+	p.registerPrefix(item.Null, p.parseNull)
 
-	p.registerInfix(item.EQ, p.parseEquals)
-	p.registerInfix(item.NOT_EQ, p.parseNotEquals)
+	p.registerInfix(item.Equals, p.parseEquals)
+	p.registerInfix(item.NotEquals, p.parseNotEquals)
 	p.registerInfix(item.LT, p.parseLess)
 	p.registerInfix(item.GT, p.parseGreater)
-	p.registerInfix(item.LT_EQ, p.parseLessEq)
-	p.registerInfix(item.GT_EQ, p.parseGreaterEq)
-	p.registerInfix(item.AND, p.parseAnd)
-	p.registerInfix(item.OR, p.parseOr)
-	p.registerInfix(item.IN, p.parseIn)
-	p.registerInfix(item.PLUS, p.parsePlus)
-	p.registerInfix(item.MINUS, p.parseMinus)
-	p.registerInfix(item.SLASH, p.parseSlash)
-	p.registerInfix(item.ASTERISK, p.parseAsterisk)
-	p.registerInfix(item.MODULUS, p.parseModulus)
-	p.registerInfix(item.BWAND, p.parseBwAnd)
-	p.registerInfix(item.BWOR, p.parseBwOr)
-	p.registerInfix(item.BWXOR, p.parseBwXor)
-	p.registerInfix(item.LSHIFT, p.parseLShift)
-	p.registerInfix(item.RSHIFT, p.parseRShift)
-	p.registerInfix(item.ASSIGN, p.parseAssign)
-	p.registerInfix(item.PLUS_ASSIGN, p.parsePlusAssign)
-	p.registerInfix(item.MINUS_ASSIGN, p.parseMinusAssign)
-	p.registerInfix(item.SLASH_ASSIGN, p.parseSlashAssign)
-	p.registerInfix(item.ASTERISK_ASSIGN, p.parseAsteriskAssign)
-	p.registerInfix(item.MODULUS_ASSIGN, p.parseModulusAssign)
-	p.registerInfix(item.BWAND_ASSIGN, p.parseBwAndAssign)
-	p.registerInfix(item.BWOR_ASSIGN, p.parseBwOrAssign)
-	p.registerInfix(item.BWXOR_ASSIGN, p.parseBwXorAssign)
-	p.registerInfix(item.LSHIFT_ASSIGN, p.parseLShiftAssign)
-	p.registerInfix(item.RSHIFT_ASSIGN, p.parseRShiftAssign)
-	p.registerInfix(item.LPAREN, p.parseCall)
-	p.registerInfix(item.LBRACKET, p.parseIndex)
-	p.registerInfix(item.DOT, p.parseDot)
+	p.registerInfix(item.LTEQ, p.parseLessEq)
+	p.registerInfix(item.GTEQ, p.parseGreaterEq)
+	p.registerInfix(item.And, p.parseAnd)
+	p.registerInfix(item.Or, p.parseOr)
+	p.registerInfix(item.In, p.parseIn)
+	p.registerInfix(item.Plus, p.parsePlus)
+	p.registerInfix(item.Minus, p.parseMinus)
+	p.registerInfix(item.Slash, p.parseSlash)
+	p.registerInfix(item.Asterisk, p.parseAsterisk)
+	p.registerInfix(item.Modulus, p.parseModulus)
+	p.registerInfix(item.BwAnd, p.parseBwAnd)
+	p.registerInfix(item.BwOr, p.parseBwOr)
+	p.registerInfix(item.BwXor, p.parseBwXor)
+	p.registerInfix(item.LShift, p.parseLShift)
+	p.registerInfix(item.RShift, p.parseRShift)
+	p.registerInfix(item.Assign, p.parseAssign)
+	p.registerInfix(item.PlusAssign, p.parsePlusAssign)
+	p.registerInfix(item.MinusAssign, p.parseMinusAssign)
+	p.registerInfix(item.SlashAssign, p.parseSlashAssign)
+	p.registerInfix(item.AsteriskAssign, p.parseAsteriskAssign)
+	p.registerInfix(item.ModulusAssign, p.parseModulusAssign)
+	p.registerInfix(item.BwAndAssign, p.parseBwAndAssign)
+	p.registerInfix(item.BwOrAssign, p.parseBwOrAssign)
+	p.registerInfix(item.BwXorAssign, p.parseBwXorAssign)
+	p.registerInfix(item.LShiftAssign, p.parseLShiftAssign)
+	p.registerInfix(item.RShiftAssign, p.parseRShiftAssign)
+	p.registerInfix(item.LParen, p.parseCall)
+	p.registerInfix(item.LBracket, p.parseIndex)
+	p.registerInfix(item.Dot, p.parseDot)
 
 	return p
 }
@@ -168,17 +168,17 @@ func (p *Parser) parse() ast.Node {
 }
 
 func (p *Parser) parseStatement() ast.Node {
-	if p.cur.Is(item.RETURN) {
+	if p.cur.Is(item.Return) {
 		return p.parseReturn()
 	}
-	return p.parseExpr(LOWEST)
+	return p.parseExpr(Lowest)
 }
 
 func (p *Parser) parseReturn() ast.Node {
 	p.next()
-	var ret = ast.NewReturn(p.parseExpr(LOWEST))
+	var ret = ast.NewReturn(p.parseExpr(Lowest))
 
-	if p.peek.Is(item.SEMICOLON) {
+	if p.peek.Is(item.Semicolon) {
 		p.next()
 	}
 	return ret
@@ -188,7 +188,7 @@ func (p *Parser) parseExpr(precedence int) ast.Node {
 	if prefixFn, ok := p.prefixParsers[p.cur.Typ]; ok {
 		leftExp := prefixFn()
 
-		for !p.peek.Is(item.SEMICOLON) && precedence < p.peekPrecedence() {
+		for !p.peek.Is(item.Semicolon) && precedence < p.peekPrecedence() {
 			if infixFn, ok := p.infixParsers[p.peek.Typ]; ok {
 				p.next()
 				leftExp = infixFn(leftExp)
@@ -197,7 +197,7 @@ func (p *Parser) parseExpr(precedence int) ast.Node {
 			}
 		}
 
-		if p.peek.Is(item.SEMICOLON) {
+		if p.peek.Is(item.Semicolon) {
 			p.next()
 		}
 		return leftExp
@@ -209,8 +209,8 @@ func (p *Parser) parseExpr(precedence int) ast.Node {
 // Returns the node representing an expression enclosed in parentheses.
 func (p *Parser) parseGroupedExpr() ast.Node {
 	p.next()
-	exp := p.parseExpr(LOWEST)
-	if !p.expectPeek(item.RPAREN) {
+	exp := p.parseExpr(Lowest)
+	if !p.expectPeek(item.RParen) {
 		return nil
 	}
 	return exp
@@ -221,7 +221,7 @@ func (p *Parser) parseBlock() ast.Node {
 	var block ast.Block
 	p.next()
 
-	for !p.cur.Is(item.RBRACE) && !p.cur.Is(item.EOF) {
+	for !p.cur.Is(item.RBrace) && !p.cur.Is(item.EOF) {
 		if s := p.parseStatement(); s != nil {
 			block.Add(s)
 		}
@@ -232,23 +232,23 @@ func (p *Parser) parseBlock() ast.Node {
 
 func (p *Parser) parseIfExpr() ast.Node {
 	p.next()
-	cond := p.parseExpr(LOWEST)
+	cond := p.parseExpr(Lowest)
 
-	if !p.expectPeek(item.LBRACE) {
+	if !p.expectPeek(item.LBrace) {
 		return nil
 	}
 
 	body := p.parseBlock()
 
 	var alt ast.Node
-	if p.peek.Is(item.ELSE) {
+	if p.peek.Is(item.Else) {
 		p.next()
 
-		if p.peek.Is(item.IF) {
+		if p.peek.Is(item.If) {
 			p.next()
 			alt = p.parseIfExpr()
 		} else {
-			if !p.expectPeek(item.LBRACE) {
+			if !p.expectPeek(item.LBrace) {
 				return nil
 			}
 			alt = p.parseBlock()
@@ -259,22 +259,22 @@ func (p *Parser) parseIfExpr() ast.Node {
 }
 
 func (p *Parser) parseList() ast.Node {
-	nodes := p.parseNodeList(item.RBRACKET)
+	nodes := p.parseNodeList(item.RBracket)
 	return ast.NewList(nodes...)
 }
 
 func (p *Parser) parseMap() ast.Node {
-	couples := p.parseNodePairs(item.RBRACE)
+	couples := p.parseNodePairs(item.RBrace)
 	return ast.NewMap(couples...)
 }
 
 func (p *Parser) parseFunction() ast.Node {
-	if !p.expectPeek(item.LPAREN) {
+	if !p.expectPeek(item.LParen) {
 		return nil
 	}
 
 	params := p.parseFunctionParams()
-	if !p.expectPeek(item.LBRACE) {
+	if !p.expectPeek(item.LBrace) {
 		return nil
 	}
 
@@ -285,7 +285,7 @@ func (p *Parser) parseFunction() ast.Node {
 func (p *Parser) parseFunctionParams() []ast.Identifier {
 	var ret []ast.Identifier
 
-	if p.peek.Is(item.RPAREN) {
+	if p.peek.Is(item.RParen) {
 		p.next()
 		return ret
 	}
@@ -293,13 +293,13 @@ func (p *Parser) parseFunctionParams() []ast.Identifier {
 	p.next()
 	ret = append(ret, ast.Identifier(p.cur.Val))
 
-	for p.peek.Is(item.COMMA) {
+	for p.peek.Is(item.Comma) {
 		p.next()
 		p.next()
 		ret = append(ret, ast.Identifier(p.cur.Val))
 	}
 
-	if !p.expectPeek(item.RPAREN) {
+	if !p.expectPeek(item.RParen) {
 		return nil
 	}
 	return ret
@@ -342,35 +342,35 @@ func (p *Parser) parseString() ast.Node {
 
 // Returns a boolean node.
 func (p *Parser) parseBoolean() ast.Node {
-	return ast.NewBoolean(p.cur.Is(item.TRUE))
+	return ast.NewBoolean(p.cur.Is(item.True))
 }
 
 // Returns a node of type PrefixMinus.
 func (p *Parser) parsePrefixMinus() ast.Node {
 	p.next()
-	return ast.NewPrefixMinus(p.parseExpr(PREFIX))
+	return ast.NewPrefixMinus(p.parseExpr(Prefix))
 }
 
 func (p *Parser) parsePlusPlus() ast.Node {
 	p.next()
-	return ast.NewPlusPlus(p.parseExpr(PREFIX))
+	return ast.NewPlusPlus(p.parseExpr(Prefix))
 }
 
 func (p *Parser) parseMinusMinus() ast.Node {
 	p.next()
-	return ast.NewMinusMinus(p.parseExpr(PREFIX))
+	return ast.NewMinusMinus(p.parseExpr(Prefix))
 }
 
 func (p *Parser) parseFor() ast.Node {
 	var arg []ast.Node
 
 	p.next()
-	if p.cur.Is(item.LBRACE) {
+	if p.cur.Is(item.LBrace) {
 		return ast.NewFor(ast.NewBoolean(true), p.parseBlock(), nil, nil)
 	}
 
-	for !p.cur.Is(item.LBRACE) {
-		arg = append(arg, p.parseExpr(LOWEST))
+	for !p.cur.Is(item.LBrace) {
+		arg = append(arg, p.parseExpr(Lowest))
 		p.next()
 	}
 
@@ -391,7 +391,7 @@ func (p *Parser) parseFor() ast.Node {
 // Returns a node of type Bang.
 func (p *Parser) parseBang() ast.Node {
 	p.next()
-	return ast.NewBang(p.parseExpr(PREFIX))
+	return ast.NewBang(p.parseExpr(Prefix))
 }
 
 func (p *Parser) parsePlus(left ast.Node) ast.Node {
@@ -577,13 +577,13 @@ func (p *Parser) parseRShiftAssign(left ast.Node) ast.Node {
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {
-	return ast.NewCall(fn, p.parseNodeList(item.RPAREN))
+	return ast.NewCall(fn, p.parseNodeList(item.RParen))
 }
 
 func (p *Parser) parseIndex(list ast.Node) ast.Node {
 	p.next()
-	expr := p.parseExpr(LOWEST)
-	if !p.expectPeek(item.RBRACKET) {
+	expr := p.parseExpr(Lowest)
+	if !p.expectPeek(item.RBracket) {
 		return nil
 	}
 	return ast.NewIndex(list, expr)
@@ -596,12 +596,12 @@ func (p *Parser) parseDot(left ast.Node) ast.Node {
 }
 
 func (p *Parser) parsePair() [2]ast.Node {
-	l := p.parseExpr(LOWEST)
-	if !p.expectPeek(item.COLON) {
+	l := p.parseExpr(Lowest)
+	if !p.expectPeek(item.Colon) {
 		return [2]ast.Node{}
 	}
 	p.next()
-	r := p.parseExpr(LOWEST)
+	r := p.parseExpr(Lowest)
 
 	return [2]ast.Node{l, r}
 }
@@ -615,7 +615,7 @@ func (p *Parser) parseNodePairs(end item.Type) [][2]ast.Node {
 	}
 
 	pairs = append(pairs, p.parsePair())
-	for p.peek.Is(item.COMMA) {
+	for p.peek.Is(item.Comma) {
 		p.next()
 		p.next()
 		pairs = append(pairs, p.parsePair())
@@ -629,7 +629,7 @@ func (p *Parser) parseNodePairs(end item.Type) [][2]ast.Node {
 }
 
 func (p *Parser) parseNodeList(end item.Type) []ast.Node {
-	return p.parseNodeSequence(item.COMMA, end)
+	return p.parseNodeSequence(item.Comma, end)
 }
 
 // Returns a slice of expressions separated by 'separator'.
@@ -641,12 +641,12 @@ func (p *Parser) parseNodeSequence(sep, end item.Type) []ast.Node {
 		return seq
 	}
 
-	seq = append(seq, p.parseExpr(LOWEST))
+	seq = append(seq, p.parseExpr(Lowest))
 
 	for p.peek.Is(sep) {
 		p.next()
 		p.next()
-		seq = append(seq, p.parseExpr(LOWEST))
+		seq = append(seq, p.parseExpr(Lowest))
 	}
 
 	if !p.expectPeek(end) {
@@ -679,7 +679,7 @@ func (p *Parser) peekPrecedence() int {
 	if prec, ok := precedences[p.peek.Typ]; ok {
 		return prec
 	}
-	return LOWEST
+	return Lowest
 }
 
 // Returns the precedence value of the type of the current item.
@@ -687,7 +687,7 @@ func (p *Parser) precedence() int {
 	if prec, ok := precedences[p.cur.Typ]; ok {
 		return prec
 	}
-	return LOWEST
+	return Lowest
 }
 
 // Adds fn to the prefix parsers table with key 'typ'.

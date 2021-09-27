@@ -36,15 +36,15 @@ func (m MinusAssign) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.INT, obj.FLOAT) {
+	if !assertTypes(left, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '-=' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.INT, obj.FLOAT) {
+	if !assertTypes(right, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '-=' for type %v", right.Type())
 	}
 
 	switch {
-	case assertTypes(left, obj.INT) && assertTypes(right, obj.INT):
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		l := unwrap(left).(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
 
@@ -53,7 +53,7 @@ func (m MinusAssign) Eval(env *obj.Env) obj.Object {
 		}
 		return env.Set(name, obj.NewInteger(l-r))
 
-	case assertTypes(left, obj.FLOAT, obj.INT) && assertTypes(right, obj.FLOAT, obj.INT):
+	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
 		leftFl, rightFl := toFloat(unwrap(left), right)
 		l := leftFl.(*obj.Float).Val()
 		r := rightFl.(*obj.Float).Val()

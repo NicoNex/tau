@@ -14,7 +14,7 @@ func (b Boolean) String() string {
 }
 
 func (b Boolean) Type() Type {
-	return BOOL
+	return BoolType
 }
 
 func (b Boolean) Val() bool {
@@ -23,7 +23,7 @@ func (b Boolean) Val() bool {
 
 func (b Boolean) KeyHash() KeyHash {
 	if b {
-		return KeyHash{Type: BOOL, Value: 1}
+		return KeyHash{Type: BoolType, Value: 1}
 	}
-	return KeyHash{Type: BOOL, Value: 0}
+	return KeyHash{Type: BoolType, Value: 0}
 }

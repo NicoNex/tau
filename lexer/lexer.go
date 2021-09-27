@@ -89,7 +89,7 @@ func (l *lexer) ignoreSpaces() {
 
 func (l *lexer) errorf(format string, args ...interface{}) {
 	l.items <- item.Item{
-		Typ: item.ERROR,
+		Typ: item.Error,
 		Val: fmt.Sprintf(format, args...),
 		Pos: l.start,
 	}
@@ -113,7 +113,7 @@ func lexIdentifier(l *lexer) stateFn {
 }
 
 func lexNumber(l *lexer) stateFn {
-	var typ = item.INT
+	var typ = item.Int
 	var digits = "0123456789"
 
 	// Optional leading sign
@@ -126,12 +126,12 @@ func lexNumber(l *lexer) stateFn {
 
 	l.acceptRun(digits)
 	if l.accept(".") {
-		typ = item.FLOAT
+		typ = item.Float
 		l.acceptRun(digits)
 	}
 
 	if l.accept("eE") {
-		typ = item.FLOAT
+		typ = item.Float
 		l.accept("+-")
 		l.accept("0123456789")
 	}
@@ -142,7 +142,7 @@ func lexNumber(l *lexer) stateFn {
 
 func lexString(l *lexer) stateFn {
 	if l.peek() == '"' {
-		l.emit(item.STRING)
+		l.emit(item.String)
 		l.next()
 		l.ignore()
 		return lexExpression
@@ -154,14 +154,14 @@ func lexString(l *lexer) stateFn {
 func lexPlus(l *lexer) stateFn {
 	switch l.next() {
 	case '=':
-		l.emit(item.PLUS_ASSIGN)
+		l.emit(item.PlusAssign)
 
 	case '+':
-		l.emit(item.PLUSPLUS)
+		l.emit(item.PlusPlus)
 
 	default:
 		l.backup()
-		l.emit(item.PLUS)
+		l.emit(item.Plus)
 	}
 	return lexExpression
 }
@@ -169,14 +169,14 @@ func lexPlus(l *lexer) stateFn {
 func lexMinus(l *lexer) stateFn {
 	switch l.next() {
 	case '=':
-		l.emit(item.MINUS_ASSIGN)
+		l.emit(item.MinusAssign)
 
 	case '-':
-		l.emit(item.MINUSMINUS)
+		l.emit(item.MinusMinus)
 
 	default:
 		l.backup()
-		l.emit(item.MINUS)
+		l.emit(item.Minus)
 	}
 	return lexExpression
 }
@@ -184,14 +184,14 @@ func lexMinus(l *lexer) stateFn {
 func lexTimes(l *lexer) stateFn {
 	switch l.next() {
 	case '=':
-		l.emit(item.ASTERISK_ASSIGN)
+		l.emit(item.AsteriskAssign)
 
 	case '*':
-		l.emit(item.POWER)
+		l.emit(item.Power)
 
 	default:
 		l.backup()
-		l.emit(item.ASTERISK)
+		l.emit(item.Asterisk)
 	}
 	return lexExpression
 }
@@ -199,11 +199,11 @@ func lexTimes(l *lexer) stateFn {
 func lexSlash(l *lexer) stateFn {
 	switch l.next() {
 	case '=':
-		l.emit(item.SLASH_ASSIGN)
+		l.emit(item.SlashAssign)
 
 	default:
 		l.backup()
-		l.emit(item.SLASH)
+		l.emit(item.Slash)
 	}
 	return lexExpression
 }
@@ -211,11 +211,11 @@ func lexSlash(l *lexer) stateFn {
 func lexMod(l *lexer) stateFn {
 	switch l.next() {
 	case '=':
-		l.emit(item.MODULUS_ASSIGN)
+		l.emit(item.ModulusAssign)
 
 	default:
 		l.backup()
-		l.emit(item.MODULUS)
+		l.emit(item.Modulus)
 	}
 	return lexExpression
 }
@@ -231,7 +231,7 @@ func lexExpression(l *lexer) stateFn {
 		return lexIdentifier
 
 	case r == '\n':
-		l.emit(item.SEMICOLON)
+		l.emit(item.Semicolon)
 		l.ignoreSpaces()
 
 	case r == '"':
@@ -239,39 +239,39 @@ func lexExpression(l *lexer) stateFn {
 		return lexString
 
 	case r == ';':
-		l.emit(item.SEMICOLON)
+		l.emit(item.Semicolon)
 		l.ignoreSpaces()
 
 	case r == ':':
-		l.emit(item.COLON)
+		l.emit(item.Colon)
 		// l.ignoreSpaces()
 
 	case r == '(':
-		l.emit(item.LPAREN)
+		l.emit(item.LParen)
 
 	case r == ')':
-		l.emit(item.RPAREN)
+		l.emit(item.RParen)
 
 	case r == '[':
-		l.emit(item.LBRACKET)
+		l.emit(item.LBracket)
 
 	case r == ']':
-		l.emit(item.RBRACKET)
+		l.emit(item.RBracket)
 
 	case r == ',':
-		l.emit(item.COMMA)
+		l.emit(item.Comma)
 		l.ignoreSpaces()
 
 	case r == '.':
-		l.emit(item.DOT)
+		l.emit(item.Dot)
 		l.ignoreSpaces()
 
 	case r == '{':
-		l.emit(item.LBRACE)
+		l.emit(item.LBrace)
 		l.ignoreSpaces()
 
 	case r == '}':
-		l.emit(item.RBRACE)
+		l.emit(item.RBrace)
 
 	case r == '+':
 		return lexPlus
@@ -290,30 +290,30 @@ func lexExpression(l *lexer) stateFn {
 
 	case r == '=':
 		if l.next() == '=' {
-			l.emit(item.EQ)
+			l.emit(item.Equals)
 		} else {
 			l.backup()
-			l.emit(item.ASSIGN)
+			l.emit(item.Assign)
 		}
 
 	case r == '!':
 		if l.next() == '=' {
-			l.emit(item.NOT_EQ)
+			l.emit(item.NotEquals)
 		} else {
 			l.backup()
-			l.emit(item.BANG)
+			l.emit(item.Bang)
 		}
 
 	case r == '<':
 		next := l.next()
 		if next == '=' {
-			l.emit(item.LT_EQ)
+			l.emit(item.LTEQ)
 		} else if next == '<' {
 			if l.next() == '=' {
-				l.emit(item.LSHIFT_ASSIGN)
+				l.emit(item.LShiftAssign)
 			} else {
 				l.backup()
-				l.emit(item.LSHIFT)
+				l.emit(item.LShift)
 			}
 		} else {
 			l.backup()
@@ -323,13 +323,13 @@ func lexExpression(l *lexer) stateFn {
 	case r == '>':
 		next := l.next()
 		if next == '=' {
-			l.emit(item.GT_EQ)
+			l.emit(item.GTEQ)
 		} else if next == '>' {
 			if l.next() == '=' {
-				l.emit(item.RSHIFT_ASSIGN)
+				l.emit(item.RShiftAssign)
 			} else {
 				l.backup()
-				l.emit(item.RSHIFT)
+				l.emit(item.RShift)
 			}
 		} else {
 			l.backup()
@@ -339,30 +339,30 @@ func lexExpression(l *lexer) stateFn {
 	case r == '&':
 		next := l.next()
 		if next == '&' {
-			l.emit(item.AND)
+			l.emit(item.And)
 		} else if next == '=' {
-			l.emit(item.BWAND_ASSIGN)
+			l.emit(item.BwAndAssign)
 		} else {
 			l.backup()
-			l.emit(item.BWAND)
+			l.emit(item.BwAnd)
 		}
 
 	case r == '|':
 		next := l.next()
 		if next == '|' {
-			l.emit(item.OR)
+			l.emit(item.Or)
 		} else if next == '=' {
-			l.emit(item.BWOR_ASSIGN)
+			l.emit(item.BwOrAssign)
 		} else {
 			l.backup()
-			l.emit(item.BWOR)
+			l.emit(item.BwOr)
 		}
 
 	case r == '^':
 		if l.next() == '=' {
-			l.emit(item.BWXOR_ASSIGN)
+			l.emit(item.BwXorAssign)
 		} else {
-			l.emit(item.BWXOR)
+			l.emit(item.BwXor)
 		}
 
 	case r == '#':

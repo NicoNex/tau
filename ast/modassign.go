@@ -36,10 +36,10 @@ func (m ModAssign) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.INT) {
+	if !assertTypes(left, obj.IntType) {
 		return obj.NewError("unsupported operator '%%=' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.INT) {
+	if !assertTypes(right, obj.IntType) {
 		return obj.NewError("unsupported operator '%%=' for type %v", right.Type())
 	}
 

@@ -21,7 +21,7 @@ func (d Dot) Eval(env *obj.Env) obj.Object {
 		return left
 	}
 
-	if assertTypes(left, obj.CLASS) {
+	if assertTypes(left, obj.ClassType) {
 		l := left.(obj.Class)
 		o, ok := l.Get(d.r.String())
 		if !ok {

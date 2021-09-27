@@ -20,7 +20,7 @@ func (b Block) Eval(env *obj.Env) obj.Object {
 
 		if res != nil {
 			typ := res.Type()
-			if typ == obj.RETURN || typ == obj.ERROR {
+			if typ == obj.ReturnType || typ == obj.ErrorType {
 				return res
 			}
 		}

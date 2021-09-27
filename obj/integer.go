@@ -14,7 +14,7 @@ func (i Integer) String() string {
 }
 
 func (i Integer) Type() Type {
-	return INT
+	return IntType
 }
 
 func (i Integer) Val() int64 {
@@ -22,5 +22,5 @@ func (i Integer) Val() int64 {
 }
 
 func (i Integer) KeyHash() KeyHash {
-	return KeyHash{Type: INT, Value: uint64(i)}
+	return KeyHash{Type: IntType, Value: uint64(i)}
 }

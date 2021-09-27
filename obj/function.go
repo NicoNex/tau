@@ -16,7 +16,7 @@ func NewFunction(params []string, env *Env, body interface{}) Object {
 }
 
 func (f Function) Type() Type {
-	return FUNCTION
+	return FunctionType
 }
 
 func (f Function) String() string {

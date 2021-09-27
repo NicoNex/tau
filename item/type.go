@@ -4,146 +4,152 @@ type Type int
 
 const (
 	EOF Type = iota
-	ERROR
-	NULL
+	Error
+	Null
 
-	IDENT
-	INT
-	FLOAT
-	STRING
+	Ident
+	Int
+	Float
+	String
 
-	ASSIGN
-	PLUS
-	MINUS
-	SLASH
-	ASTERISK
-	MODULUS
-	PLUS_ASSIGN
-	MINUS_ASSIGN
-	ASTERISK_ASSIGN
-	SLASH_ASSIGN
-	MODULUS_ASSIGN
-	BWAND_ASSIGN
-	BWOR_ASSIGN
-	BWXOR_ASSIGN
-	LSHIFT_ASSIGN
-	RSHIFT_ASSIGN
-	POWER
-	EQ
-	NOT_EQ
-	BANG
+	Assign
+	Plus
+	Minus
+	Slash
+	Asterisk
+	Modulus
+	PlusAssign
+	MinusAssign
+	AsteriskAssign
+	SlashAssign
+	ModulusAssign
+	BwAndAssign
+	BwOrAssign
+	BwXorAssign
+	LShiftAssign
+	RShiftAssign
+	Power
+	Equals
+	NotEquals
+	Bang
 	LT
 	GT
-	LT_EQ
-	GT_EQ
-	AND
-	OR
-	IN
-	BWAND
-	BWOR
-	BWXOR
-	LSHIFT
-	RSHIFT
-	PLUSPLUS
-	MINUSMINUS
+	LTEQ
+	GTEQ
+	And
+	Or
+	In
+	BwAnd
+	BwOr
+	BwXor
+	LShift
+	RShift
+	PlusPlus
+	MinusMinus
 
-	DOT
-	COMMA
-	COLON
-	SEMICOLON
-	NEW_LINE
+	Dot
+	Comma
+	Colon
+	Semicolon
+	NewLine
 
-	LPAREN
-	RPAREN
+	LParen
+	RParen
 
-	LBRACE
-	RBRACE
+	LBrace
+	RBrace
 
-	LBRACKET
-	RBRACKET
+	LBracket
+	RBracket
 
-	FUNCTION
-	FOR
-	IF
-	ELSE
-	TRUE
-	FALSE
-	RETURN
+	Function
+	For
+	If
+	Else
+	True
+	False
+	Return
 )
 
 var typemap = map[Type]string{
 	EOF:   "eof",
-	ERROR: "error",
-	NULL:  "null",
+	Error: "error",
+	Null:  "null",
 
-	IDENT:  "IDENT",
-	INT:    "int",
-	FLOAT:  "float",
-	STRING: "string",
+	Ident:  "IDENT",
+	Int:    "int",
+	Float:  "float",
+	String: "string",
 
-	ASSIGN:          "=",
-	PLUS:            "+",
-	MINUS:           "*",
-	SLASH:           "/",
-	ASTERISK:        "*",
-	MODULUS:         "%",
-	POWER:           "**",
-	EQ:              "==",
-	NOT_EQ:          "!=",
-	BANG:            "!",
-	LT:              "<",
-	GT:              ">",
-	LT_EQ:           "<=",
-	GT_EQ:           ">=",
-	AND:             "&&",
-	OR:              "||",
-	IN:              "in",
-	PLUS_ASSIGN:     "+=",
-	MINUS_ASSIGN:    "-=",
-	ASTERISK_ASSIGN: "*=",
-	SLASH_ASSIGN:    "/=",
-	PLUSPLUS:        "++",
-	MINUSMINUS:      "--",
-	BWAND:           "&",
-	BWOR:            "|",
-	BWXOR:           "^",
-	LSHIFT:          "<<",
-	RSHIFT:          ">>",
+	Assign:         "=",
+	Plus:           "+",
+	Minus:          "*",
+	Slash:          "/",
+	Asterisk:       "*",
+	Modulus:        "%",
+	Power:          "**",
+	Equals:         "==",
+	NotEquals:      "!=",
+	Bang:           "!",
+	LT:             "<",
+	GT:             ">",
+	LTEQ:           "<=",
+	GTEQ:           ">=",
+	And:            "&&",
+	Or:             "||",
+	In:             "in",
+	PlusAssign:     "+=",
+	MinusAssign:    "-=",
+	AsteriskAssign: "*=",
+	SlashAssign:    "/=",
+	ModulusAssign:  "%=",
+	BwAndAssign:    "&=",
+	BwOrAssign:     "|=",
+	BwXorAssign:    "^=",
+	LShiftAssign:   "<<=",
+	RShiftAssign:   ">>=",
+	PlusPlus:       "++",
+	MinusMinus:     "--",
+	BwAnd:          "&",
+	BwOr:           "|",
+	BwXor:          "^",
+	LShift:         "<<",
+	RShift:         ">>",
 
-	DOT:       ".",
-	COMMA:     ",",
-	COLON:     ":",
-	SEMICOLON: ";",
-	NEW_LINE:  "new line",
+	Dot:       ".",
+	Comma:     ",",
+	Colon:     ":",
+	Semicolon: ";",
+	NewLine:   "new line",
 
-	LPAREN: "(",
-	RPAREN: ")",
+	LParen: "(",
+	RParen: ")",
 
-	LBRACE: "{",
-	RBRACE: "}",
+	LBrace: "{",
+	RBrace: "}",
 
-	LBRACKET: "[",
-	RBRACKET: "]",
+	LBracket: "[",
+	RBracket: "]",
 
-	FUNCTION: "function",
-	FOR:      "for",
-	IF:       "if",
-	ELSE:     "else",
-	TRUE:     "true",
-	FALSE:    "false",
-	RETURN:   "return",
+	Function: "function",
+	For:      "for",
+	If:       "if",
+	Else:     "else",
+	True:     "true",
+	False:    "false",
+	Return:   "return",
 }
 
 var keywords = map[string]Type{
-	"in":     IN,
-	"fn":     FUNCTION,
-	"for":    FOR,
-	"if":     IF,
-	"else":   ELSE,
-	"true":   TRUE,
-	"false":  FALSE,
-	"return": RETURN,
-	"null":   NULL,
+	"in":     In,
+	"fn":     Function,
+	"for":    For,
+	"if":     If,
+	"else":   Else,
+	"true":   True,
+	"false":  False,
+	"return": Return,
+	"null":   Null,
 }
 
 func (t Type) String() string {
@@ -154,5 +160,5 @@ func Lookup(ident string) Type {
 	if t, ok := keywords[ident]; ok {
 		return t
 	}
-	return IDENT
+	return Ident
 }

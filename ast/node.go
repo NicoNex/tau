@@ -7,9 +7,9 @@ type Node interface {
 	String() string
 }
 
-// Checks whether o is of type obj.ERROR.
+// Checks whether o is of type obj.ErrorType.
 func isError(o obj.Object) bool {
-	return o.Type() == obj.ERROR
+	return o.Type() == obj.ErrorType
 }
 
 func isTruthy(o obj.Object) bool {

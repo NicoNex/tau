@@ -13,7 +13,7 @@ func (i Item) Is(t Type) bool {
 }
 
 func (i Item) String() string {
-	if i.Is(ERROR) {
+	if i.Is(Error) {
 		return i.Val
 	}
 	if len(i.Val) > 10 {

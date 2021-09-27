@@ -29,7 +29,7 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 	}
 
 	switch {
-	case assertTypes(lft, obj.LIST) && assertTypes(idx, obj.INT):
+	case assertTypes(lft, obj.ListType) && assertTypes(idx, obj.IntType):
 		l := lft.(obj.List)
 		i := idx.(*obj.Integer).Val()
 
@@ -38,7 +38,7 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		}
 		return l[i]
 
-	case assertTypes(lft, obj.STRING) && assertTypes(idx, obj.INT):
+	case assertTypes(lft, obj.StringType) && assertTypes(idx, obj.IntType):
 		s := lft.(*obj.String)
 		i := idx.(*obj.Integer).Val()
 
@@ -47,7 +47,7 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		}
 		return obj.NewString(string(string(*s)[i]))
 
-	case assertTypes(lft, obj.MAP) && assertTypes(idx, obj.INT, obj.FLOAT, obj.STRING, obj.BOOL):
+	case assertTypes(lft, obj.MapType) && assertTypes(idx, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType):
 		m := lft.(obj.Map)
 		k := idx.(obj.Hashable)
 		return m.Get(k.KeyHash()).Value

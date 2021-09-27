@@ -10,7 +10,7 @@ func NewError(f string, a ...interface{}) Object {
 }
 
 func (e Error) Type() Type {
-	return ERROR
+	return ErrorType
 }
 
 func (e Error) String() string {

@@ -31,11 +31,11 @@ func (p PlusPlus) Eval(env *obj.Env) obj.Object {
 		_, isContainer = right.(*obj.Container)
 	}
 
-	if !assertTypes(right, obj.INT, obj.FLOAT) {
+	if !assertTypes(right, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '++' for type %v", right.Type())
 	}
 
-	if assertTypes(right, obj.INT) {
+	if assertTypes(right, obj.IntType) {
 		r := unwrap(right).(*obj.Integer).Val()
 
 		if isContainer {

@@ -15,7 +15,7 @@ func (r Return) String() string {
 }
 
 func (r Return) Type() Type {
-	return RETURN
+	return ReturnType
 }
 
 func (r Return) Val() Object {

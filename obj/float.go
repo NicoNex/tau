@@ -14,7 +14,7 @@ func (f Float) String() string {
 }
 
 func (f Float) Type() Type {
-	return FLOAT
+	return FloatType
 }
 
 func (f Float) Val() float64 {
@@ -22,5 +22,5 @@ func (f Float) Val() float64 {
 }
 
 func (f Float) KeyHash() KeyHash {
-	return KeyHash{Type: FLOAT, Value: uint64(f)}
+	return KeyHash{Type: FloatType, Value: uint64(f)}
 }

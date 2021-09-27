@@ -13,7 +13,7 @@ func NewString(s string) Object {
 }
 
 func (s String) Type() Type {
-	return STRING
+	return StringType
 }
 
 func (s String) String() string {
@@ -28,5 +28,5 @@ func (s String) KeyHash() KeyHash {
 	var h = fnv.New64a()
 	h.Write([]byte(s))
 
-	return KeyHash{Type: STRING, Value: h.Sum64()}
+	return KeyHash{Type: StringType, Value: h.Sum64()}
 }

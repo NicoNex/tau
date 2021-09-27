@@ -28,7 +28,7 @@ func (m Map) Get(k KeyHash) MapPair {
 }
 
 func (m Map) Type() Type {
-	return MAP
+	return MapType
 }
 
 func (m Map) String() string {

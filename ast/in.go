@@ -29,25 +29,25 @@ func (i In) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.INT, obj.FLOAT, obj.STRING, obj.BOOL, obj.NULL) {
+	if !assertTypes(left, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
 		return obj.NewError("unsupported operator 'in' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.LIST, obj.STRING) {
+	if !assertTypes(right, obj.ListType, obj.StringType) {
 		return obj.NewError("unsupported operator 'in' for type %v", right.Type())
 	}
 
 	switch {
-	case assertTypes(left, obj.STRING) && assertTypes(right, obj.STRING):
+	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
 		l := left.(*obj.String).Val()
 		r := right.(*obj.String).Val()
 		return obj.ParseBool(strings.Contains(r, l))
 
-	case assertTypes(right, obj.LIST):
+	case assertTypes(right, obj.ListType):
 		for _, o := range right.(obj.List).Val() {
 			if !assertTypes(left, o.Type()) {
 				continue
 			}
-			if assertTypes(left, obj.BOOL, obj.NULL) && left == o {
+			if assertTypes(left, obj.BoolType, obj.NullType) && left == o {
 				return obj.True
 			}
 

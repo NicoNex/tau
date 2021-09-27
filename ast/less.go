@@ -28,14 +28,14 @@ func (l Less) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.INT, obj.FLOAT) {
+	if !assertTypes(left, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '<' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.INT, obj.FLOAT) {
+	if !assertTypes(right, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '<' for type %v", right.Type())
 	}
 
-	if assertTypes(left, obj.INT) && assertTypes(right, obj.INT) {
+	if assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType) {
 		le := left.(*obj.Integer).Val()
 		ri := right.(*obj.Integer).Val()
 		return obj.ParseBool(le < ri)

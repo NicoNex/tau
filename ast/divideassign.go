@@ -36,10 +36,10 @@ func (d DivideAssign) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.INT, obj.FLOAT) {
+	if !assertTypes(left, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '/=' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.INT, obj.FLOAT) {
+	if !assertTypes(right, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '/=' for type %v", right.Type())
 	}
 

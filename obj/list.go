@@ -12,7 +12,7 @@ func NewList(elems ...Object) Object {
 }
 
 func (l List) Type() Type {
-	return LIST
+	return ListType
 }
 
 func (l List) String() string {

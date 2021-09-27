@@ -106,6 +106,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.MINUSMINUS, p.parseMinusMinus)
 	p.registerPrefix(item.FOR, p.parseFor)
 	p.registerPrefix(item.LBRACE, p.parseMap)
+	p.registerPrefix(item.NULL, p.parseNull)
 
 	p.registerInfix(item.EQ, p.parseEquals)
 	p.registerInfix(item.NOT_EQ, p.parseNotEquals)
@@ -306,6 +307,10 @@ func (p *Parser) parseFunctionParams() []ast.Identifier {
 // Returns an identifier node.
 func (p *Parser) parseIdentifier() ast.Node {
 	return ast.NewIdentifier(p.cur.Val)
+}
+
+func (p *Parser) parseNull() ast.Node {
+	return ast.NewNull()
 }
 
 // Returns an integer node.

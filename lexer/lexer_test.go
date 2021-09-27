@@ -36,6 +36,7 @@ fn mul(x, y) {
 }
 
 10.5 == 10.45;
+n = null
 
 `
 
@@ -156,6 +157,11 @@ fn mul(x, y) {
 		{item.EQ, "=="},
 		{item.FLOAT, "10.45"},
 		{item.SEMICOLON, ";"},
+
+		{item.IDENT, "n"},
+		{item.ASSIGN, "="},
+		{item.NULL, "null"},
+		{item.SEMICOLON, "\n"},
 
 		// {item.LBRACE, "{"},
 		// {item.STRING, "foo"},

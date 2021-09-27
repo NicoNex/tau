@@ -5,6 +5,7 @@ type Type int
 const (
 	EOF Type = iota
 	ERROR
+	NULL
 
 	IDENT
 	INT
@@ -72,6 +73,7 @@ const (
 var typemap = map[Type]string{
 	EOF:   "eof",
 	ERROR: "error",
+	NULL:  "null",
 
 	IDENT:  "IDENT",
 	INT:    "int",
@@ -138,6 +140,7 @@ var keywords = map[string]Type{
 	"true":   TRUE,
 	"false":  FALSE,
 	"return": RETURN,
+	"null":   NULL,
 }
 
 func (t Type) String() string {

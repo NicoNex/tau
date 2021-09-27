@@ -36,7 +36,7 @@ func (e Equals) Eval(env *obj.Env) obj.Object {
 	}
 
 	switch {
-	case assertTypes(left, obj.NULL) || assertTypes(right, obj.NULL):
+	case assertTypes(left, obj.BOOL, obj.NULL) || assertTypes(right, obj.BOOL, obj.NULL):
 		return obj.ParseBool(left == right)
 
 	case assertTypes(left, obj.STRING) && assertTypes(right, obj.STRING):
@@ -53,11 +53,6 @@ func (e Equals) Eval(env *obj.Env) obj.Object {
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
-		return obj.ParseBool(l == r)
-
-	case assertTypes(left, obj.BOOL) && assertTypes(right, obj.BOOL):
-		l := left.(*obj.Boolean).Val()
-		r := right.(*obj.Boolean).Val()
 		return obj.ParseBool(l == r)
 
 	default:

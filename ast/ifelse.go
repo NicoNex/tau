@@ -19,6 +19,10 @@ func NewIfExpr(cond, body, alt Node) Node {
 func (i IfExpr) Eval(env *obj.Env) obj.Object {
 	var cond = i.cond.Eval(env)
 
+	if isError(cond) {
+		return cond
+	}
+
 	switch c := cond.(type) {
 	case *obj.Boolean:
 		if c.Val() {

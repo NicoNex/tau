@@ -40,6 +40,7 @@ const (
 	Or
 	In
 	BwAnd
+	BwNot
 	BwOr
 	BwXor
 	LShift
@@ -111,6 +112,7 @@ var typemap = map[Type]string{
 	PlusPlus:       "++",
 	MinusMinus:     "--",
 	BwAnd:          "&",
+	BwNot:          "~",
 	BwOr:           "|",
 	BwXor:          "^",
 	LShift:         "<<",

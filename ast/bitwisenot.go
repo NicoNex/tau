@@ -1,0 +1,33 @@
+package ast
+
+import (
+	"fmt"
+
+	"github.com/NicoNex/tau/obj"
+)
+
+type BitwiseNot struct {
+	n Node
+}
+
+func NewBitwiseNot(n Node) Node {
+	return BitwiseNot{n}
+}
+
+func (b BitwiseNot) Eval(env *obj.Env) obj.Object {
+	var value = unwrap(b.n.Eval(env))
+
+	if isError(value) {
+		return value
+	}
+
+	if !assertTypes(value, obj.IntType) {
+		return obj.NewError("unsupported operator '~' for type %v", value.Type())
+	}
+	n := value.(*obj.Integer).Val()
+	return obj.NewInteger(^n)
+}
+
+func (b BitwiseNot) String() string {
+	return fmt.Sprintf("~%v", b.n)
+}

@@ -304,6 +304,9 @@ func lexExpression(l *lexer) stateFn {
 			l.emit(item.Bang)
 		}
 
+	case r == '~':
+		l.emit(item.BwNot)
+
 	case r == '<':
 		next := l.next()
 		if next == '=' {

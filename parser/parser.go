@@ -107,6 +107,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.For, p.parseFor)
 	p.registerPrefix(item.LBrace, p.parseMap)
 	p.registerPrefix(item.Null, p.parseNull)
+	p.registerPrefix(item.BwNot, p.parseBwNot)
 
 	p.registerInfix(item.Equals, p.parseEquals)
 	p.registerInfix(item.NotEquals, p.parseNotEquals)
@@ -427,6 +428,11 @@ func (p *Parser) parseBwAnd(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewBitwiseAnd(left, p.parseExpr(prec))
+}
+
+func (p *Parser) parseBwNot() ast.Node {
+	p.next()
+	return ast.NewBitwiseNot(p.parseExpr(Prefix))
 }
 
 func (p *Parser) parseBwOr(left ast.Node) ast.Node {

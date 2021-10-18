@@ -27,7 +27,6 @@ type (
 const (
 	Lowest int = iota
 	Assignment
-	LogicalIn
 	LogicalOr
 	LogicalAnd
 	BitwiseOr
@@ -57,11 +56,11 @@ var precedences = map[item.Type]int{
 	item.BwXorAssign:    Assignment,
 	item.LShiftAssign:   Assignment,
 	item.RShiftAssign:   Assignment,
-	item.In:             LogicalIn,
 	item.Or:             LogicalOr,
 	item.And:            LogicalAnd,
 	item.Equals:         Equality,
 	item.NotEquals:      Equality,
+	item.In:             Relational,
 	item.LT:             Relational,
 	item.GT:             Relational,
 	item.LTEQ:           Relational,

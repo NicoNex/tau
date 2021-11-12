@@ -177,7 +177,6 @@ stuff = {"Hello": "World", 123: true}
 ```
 
 #### Loop
-Loops are WIP since they are missing the `continue` and `break` control flow statements.
 ```
 for i = 0; i < 10; ++i {
 	println("hello world", i)

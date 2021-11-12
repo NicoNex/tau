@@ -21,10 +21,10 @@ func (e Equals) Eval(env *obj.Env) obj.Object {
 		right = unwrap(e.r.Eval(env))
 	)
 
-	if isError(left) {
+	if takesPrecedence(left) {
 		return left
 	}
-	if isError(right) {
+	if takesPrecedence(right) {
 		return right
 	}
 

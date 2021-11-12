@@ -23,7 +23,7 @@ func (l List) Eval(env *obj.Env) obj.Object {
 
 	for _, e := range l {
 		v := e.Eval(env)
-		if isError(v) {
+		if takesPrecedence(v) {
 			return v
 		}
 		elements = append(elements, v)

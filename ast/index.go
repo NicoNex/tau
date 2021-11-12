@@ -21,10 +21,10 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		idx = i.index.Eval(env)
 	)
 
-	if isError(lft) {
+	if takesPrecedence(lft) {
 		return lft
 	}
-	if isError(idx) {
+	if takesPrecedence(idx) {
 		return idx
 	}
 

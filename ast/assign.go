@@ -18,7 +18,7 @@ func NewAssign(l, r Node) Node {
 func (a Assign) Eval(env *obj.Env) obj.Object {
 	if left, ok := a.l.(Identifier); ok {
 		right := a.r.Eval(env)
-		if isError(right) {
+		if takesPrecedence(right) {
 			return right
 		}
 		return env.Set(left.String(), right)
@@ -27,7 +27,7 @@ func (a Assign) Eval(env *obj.Env) obj.Object {
 	left := a.l.Eval(env)
 	if c, ok := left.(*obj.Container); ok {
 		right := a.r.Eval(env)
-		if isError(right) {
+		if takesPrecedence(right) {
 			return right
 		}
 		return c.Set(right)

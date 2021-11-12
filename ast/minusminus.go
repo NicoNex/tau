@@ -21,7 +21,7 @@ func (m MinusMinus) Eval(env *obj.Env) obj.Object {
 		right       = m.r.Eval(env)
 	)
 
-	if isError(right) {
+	if takesPrecedence(right) {
 		return right
 	}
 

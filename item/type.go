@@ -65,6 +65,8 @@ const (
 
 	Function
 	For
+	Continue
+	Break
 	If
 	Else
 	True
@@ -135,6 +137,8 @@ var typemap = map[Type]string{
 
 	Function: "function",
 	For:      "for",
+	Continue: "continue",
+	Break:    "break",
 	If:       "if",
 	Else:     "else",
 	True:     "true",
@@ -143,15 +147,17 @@ var typemap = map[Type]string{
 }
 
 var keywords = map[string]Type{
-	"in":     In,
-	"fn":     Function,
-	"for":    For,
-	"if":     If,
-	"else":   Else,
-	"true":   True,
-	"false":  False,
-	"return": Return,
-	"null":   Null,
+	"in":       In,
+	"fn":       Function,
+	"for":      For,
+	"continue": Continue,
+	"break":    Break,
+	"if":       If,
+	"else":     Else,
+	"true":     True,
+	"false":    False,
+	"return":   Return,
+	"null":     Null,
 }
 
 func (t Type) String() string {

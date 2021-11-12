@@ -29,10 +29,10 @@ func (b BitwiseAndAssign) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("cannot assign to literal")
 	}
 
-	if isError(left) {
+	if takesPrecedence(left) {
 		return left
 	}
-	if isError(right) {
+	if takesPrecedence(right) {
 		return right
 	}
 

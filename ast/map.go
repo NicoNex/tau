@@ -22,7 +22,7 @@ func (m Map) Eval(env *obj.Env) obj.Object {
 
 	for key, val := range m {
 		k := key.Eval(env)
-		if isError(k) {
+		if takesPrecedence(k) {
 			return k
 		}
 
@@ -32,7 +32,7 @@ func (m Map) Eval(env *obj.Env) obj.Object {
 		}
 
 		v := val.Eval(env)
-		if isError(v) {
+		if takesPrecedence(v) {
 			return v
 		}
 

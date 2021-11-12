@@ -21,10 +21,19 @@ func (f For) Eval(env *obj.Env) obj.Object {
 	if f.before != nil {
 		f.before.Eval(env)
 	}
+loop:
 	for isTruthy(f.cond.Eval(env)) {
-		if o := f.body.Eval(env); isError(o) {
+		switch o := f.body.Eval(env); {
+		case o == nil:
+			break
+
+		case isError(o) || isReturn(o):
 			return o
+
+		case isBreak(o):
+			break loop
 		}
+
 		if f.after != nil {
 			f.after.Eval(env)
 		}

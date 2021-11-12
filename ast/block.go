@@ -17,13 +17,16 @@ func (b Block) Eval(env *obj.Env) obj.Object {
 
 	for _, n := range b {
 		res = n.Eval(env)
-
-		if res != nil {
-			typ := res.Type()
-			if typ == obj.ReturnType || typ == obj.ErrorType {
-				return res
-			}
+		if res != nil && takesPrecedence(res) {
+			return res
 		}
+
+		// if res != nil {
+		// 	typ := res.Type()
+		// 	if typ == obj.ReturnType || typ == obj.ErrorType {
+		// 		return res
+		// 	}
+		// }
 	}
 	return res
 }

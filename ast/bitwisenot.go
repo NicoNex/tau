@@ -17,7 +17,7 @@ func NewBitwiseNot(n Node) Node {
 func (b BitwiseNot) Eval(env *obj.Env) obj.Object {
 	var value = unwrap(b.n.Eval(env))
 
-	if isError(value) {
+	if takesPrecedence(value) {
 		return value
 	}
 

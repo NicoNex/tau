@@ -29,12 +29,16 @@ const (
 	BuiltinType
 	ListType
 	MapType
+	ContinueType
+	BreakType
 )
 
 var (
-	NullObj = NewNull()
-	True    = NewBoolean(true)
-	False   = NewBoolean(false)
+	NullObj     = NewNull()
+	True        = NewBoolean(true)
+	False       = NewBoolean(false)
+	ContinueObj = NewContinue()
+	BreakObj    = NewBreak()
 )
 
 var typrepr = map[Type]string{
@@ -50,6 +54,8 @@ var typrepr = map[Type]string{
 	BuiltinType:  "builtin",
 	ListType:     "list",
 	MapType:      "map",
+	ContinueType: "continue",
+	BreakType:    "break",
 }
 
 func (t Type) String() string {

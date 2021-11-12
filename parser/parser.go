@@ -14,6 +14,7 @@ type Parser struct {
 	peek          item.Item
 	items         chan item.Item
 	errs          []string
+	nestedLoops   uint
 	prefixParsers map[item.Type]parsePrefixFn
 	infixParsers  map[item.Type]parseInfixFn
 }
@@ -108,6 +109,8 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.LBrace, p.parseMap)
 	p.registerPrefix(item.Null, p.parseNull)
 	p.registerPrefix(item.BwNot, p.parseBwNot)
+	p.registerPrefix(item.Continue, p.parseContinue)
+	p.registerPrefix(item.Break, p.parseBreak)
 
 	p.registerInfix(item.Equals, p.parseEquals)
 	p.registerInfix(item.NotEquals, p.parseNotEquals)
@@ -144,6 +147,18 @@ func newParser(items chan item.Item) *Parser {
 	p.registerInfix(item.Dot, p.parseDot)
 
 	return p
+}
+
+func (p *Parser) enterLoop() {
+	p.nestedLoops += 1
+}
+
+func (p *Parser) exitLoop() {
+	p.nestedLoops -= 1
+}
+
+func (p *Parser) isInsideLoop() bool {
+	return p.nestedLoops > 0
 }
 
 func (p *Parser) next() {
@@ -314,6 +329,24 @@ func (p *Parser) parseNull() ast.Node {
 	return ast.NewNull()
 }
 
+func (p *Parser) parseContinue() ast.Node {
+	if !p.isInsideLoop() {
+		e := fmt.Sprintf(`continue statement not inside "for" block`)
+		p.errs = append(p.errs, e)
+		return nil
+	}
+	return ast.NewContinue()
+}
+
+func (p *Parser) parseBreak() ast.Node {
+	if !p.isInsideLoop() {
+		e := fmt.Sprintf(`break statement not inside "for" block`)
+		p.errs = append(p.errs, e)
+		return nil
+	}
+	return ast.NewBreak()
+}
+
 // Returns an integer node.
 func (p *Parser) parseInteger() ast.Node {
 	i, err := strconv.ParseInt(p.cur.Val, 0, 64)
@@ -363,6 +396,8 @@ func (p *Parser) parseMinusMinus() ast.Node {
 
 func (p *Parser) parseFor() ast.Node {
 	var arg []ast.Node
+	p.enterLoop()
+	defer p.exitLoop()
 
 	p.next()
 	if p.cur.Is(item.LBrace) {

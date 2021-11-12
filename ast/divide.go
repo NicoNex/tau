@@ -21,10 +21,10 @@ func (d Divide) Eval(env *obj.Env) obj.Object {
 		right = unwrap(d.r.Eval(env))
 	)
 
-	if isError(left) {
+	if takesPrecedence(left) {
 		return left
 	}
-	if isError(right) {
+	if takesPrecedence(right) {
 		return right
 	}
 

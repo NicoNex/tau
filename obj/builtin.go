@@ -276,7 +276,7 @@ var Builtins = map[string]Builtin{
 			s := string(*o)
 			return NewString(string(s[len(s)-1]))
 		default:
-			return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
+			return NewError("last: wrong argument type, expected list, got %s", args[0].Type())
 		}
 	},
 	"tail": func(args ...Object) Object {
@@ -291,7 +291,7 @@ var Builtins = map[string]Builtin{
 			s := string(*o)
 			return NewString(s[1:])
 		default:
-			return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
+			return NewError("tail: wrong argument type, expected list, got %s", args[0].Type())
 		}
 	},
 	"new": func(args ...Object) Object {

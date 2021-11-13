@@ -35,7 +35,11 @@ func (l List) String() string {
 	var elements []string
 
 	for _, e := range l {
-		elements = append(elements, e.String())
+		if s, ok := e.(String); ok {
+			elements = append(elements, s.Quoted())
+		} else {
+			elements = append(elements, e.String())
+		}
 	}
 	return fmt.Sprintf("[%s]", strings.Join(elements, ", "))
 }

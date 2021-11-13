@@ -28,12 +28,7 @@ var Builtins = map[string]Builtin{
 		var arguments []interface{}
 
 		for _, a := range args {
-			if a.Type() == StringType {
-				s := a.(*String)
-				arguments = append(arguments, s.Val())
-			} else {
-				arguments = append(arguments, a.String())
-			}
+			arguments = append(arguments, a.String())
 		}
 		fmt.Fprintln(Stdout, arguments...)
 		return NullObj
@@ -42,12 +37,7 @@ var Builtins = map[string]Builtin{
 		var arguments []interface{}
 
 		for _, a := range args {
-			if a.Type() == StringType {
-				s := a.(*String)
-				arguments = append(arguments, s.Val())
-			} else {
-				arguments = append(arguments, a.String())
-			}
+			arguments = append(arguments, a.String())
 		}
 		fmt.Fprint(Stdout, arguments...)
 		return NullObj

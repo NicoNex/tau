@@ -48,7 +48,21 @@ func (m Map) String() string {
 
 	buf.WriteString("{")
 	for k, v := range m {
-		buf.WriteString(fmt.Sprintf("%v: %v", k, v))
+		var key, val string
+
+		if s, ok := k.(String); ok {
+			key = s.Quoted()
+		} else {
+			key = k.String()
+		}
+
+		if s, ok := v.(String); ok {
+			val = s.Quoted()
+		} else {
+			val = v.String()
+		}
+
+		buf.WriteString(fmt.Sprintf("%s: %s", key, val))
 
 		if i < len(m) {
 			buf.WriteString(", ")

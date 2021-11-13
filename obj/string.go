@@ -17,11 +17,15 @@ func (s String) Type() Type {
 }
 
 func (s String) String() string {
-	return strconv.Quote(string(s))
+	return string(s)
 }
 
 func (s String) Val() string {
 	return string(s)
+}
+
+func (s String) Quoted() string {
+	return strconv.Quote(string(s))
 }
 
 func (s String) KeyHash() KeyHash {

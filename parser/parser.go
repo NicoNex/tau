@@ -404,7 +404,7 @@ func (p *Parser) parseFor() ast.Node {
 		return ast.NewFor(ast.NewBoolean(true), p.parseBlock(), nil, nil)
 	}
 
-	for !p.cur.Is(item.LBrace) {
+	for !p.cur.Is(item.LBrace) && !p.cur.Is(item.EOF) {
 		arg = append(arg, p.parseExpr(Lowest))
 		p.next()
 	}

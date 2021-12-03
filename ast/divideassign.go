@@ -17,16 +17,13 @@ func NewDivideAssign(l, r Node) Node {
 
 func (d DivideAssign) Eval(env *obj.Env) obj.Object {
 	var (
-		name        string
-		isContainer bool
-		left        = d.l.Eval(env)
-		right       = unwrap(d.r.Eval(env))
+		name  string
+		left  = d.l.Eval(env)
+		right = d.r.Eval(env)
 	)
 
 	if ident, ok := d.l.(Identifier); ok {
 		name = ident.String()
-	} else if _, isContainer = left.(*obj.Container); !isContainer {
-		return obj.NewError("cannot assign to literal")
 	}
 
 	if takesPrecedence(left) {
@@ -43,13 +40,9 @@ func (d DivideAssign) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("unsupported operator '/=' for type %v", right.Type())
 	}
 
-	leftFl, rightFl := toFloat(unwrap(left), right)
+	leftFl, rightFl := toFloat(left, right)
 	l := leftFl.(*obj.Float).Val()
 	r := rightFl.(*obj.Float).Val()
-
-	if isContainer {
-		return left.(*obj.Container).Set(obj.NewFloat(l / r))
-	}
 	return env.Set(name, obj.NewFloat(l/r))
 }
 

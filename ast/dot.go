@@ -15,7 +15,7 @@ func NewDot(l, r Node) Node {
 }
 
 func (d Dot) Eval(env *obj.Env) obj.Object {
-	var left = unwrap(d.l.Eval(env))
+	var left = d.l.Eval(env)
 
 	if takesPrecedence(left) {
 		return left
@@ -25,10 +25,11 @@ func (d Dot) Eval(env *obj.Env) obj.Object {
 		l := left.(obj.Class)
 		o, ok := l.Get(d.r.String())
 		if !ok {
-			return l.Set(d.r.String(), obj.NullObj)
+			return obj.NewUndefined(l, d.r.String())
 		}
 		return o
 	}
+
 	return obj.NewError("%v object has no attribute %s", left.Type(), d.r)
 }
 

@@ -17,8 +17,8 @@ func NewEquals(l, r Node) Node {
 
 func (e Equals) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = unwrap(e.l.Eval(env))
-		right = unwrap(e.r.Eval(env))
+		left  = e.l.Eval(env)
+		right = e.r.Eval(env)
 	)
 
 	if takesPrecedence(left) {

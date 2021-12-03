@@ -17,7 +17,7 @@ func NewCall(fn Node, args []Node) Node {
 }
 
 func (c Call) Eval(env *obj.Env) obj.Object {
-	var fnObj = unwrap(c.fn.Eval(env))
+	var fnObj = c.fn.Eval(env)
 
 	if takesPrecedence(fnObj) {
 		return fnObj

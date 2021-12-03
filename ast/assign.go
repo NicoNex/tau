@@ -11,6 +11,10 @@ type Assign struct {
 	r Node
 }
 
+type setter interface {
+	Set(obj.Object) obj.Object
+}
+
 func NewAssign(l, r Node) Node {
 	return Assign{l, r}
 }
@@ -25,12 +29,12 @@ func (a Assign) Eval(env *obj.Env) obj.Object {
 	}
 
 	left := a.l.Eval(env)
-	if c, ok := left.(*obj.Container); ok {
+	if s, ok := left.(setter); ok {
 		right := a.r.Eval(env)
 		if takesPrecedence(right) {
 			return right
 		}
-		return c.Set(right)
+		return s.Set(right)
 	}
 
 	return obj.NewError("cannot assign to literal")

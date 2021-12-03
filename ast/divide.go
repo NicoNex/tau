@@ -17,8 +17,8 @@ func NewDivide(l, r Node) Node {
 
 func (d Divide) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = unwrap(d.l.Eval(env))
-		right = unwrap(d.r.Eval(env))
+		left  = d.l.Eval(env)
+		right = d.r.Eval(env)
 	)
 
 	if takesPrecedence(left) {

@@ -17,18 +17,14 @@ func NewBitwiseOrAssign(l, r Node) Node {
 
 func (b BitwiseOrAssign) Eval(env *obj.Env) obj.Object {
 	var (
-		name        string
-		isContainer bool
-		left        = b.l.Eval(env)
-		right       = unwrap(b.r.Eval(env))
+		name  string
+		left  = b.l.Eval(env)
+		right = b.r.Eval(env)
 	)
 
 	if ident, ok := b.l.(Identifier); ok {
 		name = ident.String()
-	} else if _, isContainer = left.(*obj.Container); !isContainer {
-		return obj.NewError("cannot assign to literal")
 	}
-
 	if takesPrecedence(left) {
 		return left
 	}
@@ -42,12 +38,9 @@ func (b BitwiseOrAssign) Eval(env *obj.Env) obj.Object {
 	if !assertTypes(right, obj.IntType) {
 		return obj.NewError("unsupported operator '|=' for type %v", right.Type())
 	}
-	l := unwrap(left).(*obj.Integer).Val()
-	r := right.(*obj.Integer).Val()
 
-	if isContainer {
-		return left.(*obj.Container).Set(obj.NewInteger(l | r))
-	}
+	l := left.(*obj.Integer).Val()
+	r := right.(*obj.Integer).Val()
 	return env.Set(name, obj.NewInteger(l|r))
 }
 

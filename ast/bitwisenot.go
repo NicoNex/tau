@@ -15,7 +15,7 @@ func NewBitwiseNot(n Node) Node {
 }
 
 func (b BitwiseNot) Eval(env *obj.Env) obj.Object {
-	var value = unwrap(b.n.Eval(env))
+	var value = b.n.Eval(env)
 
 	if takesPrecedence(value) {
 		return value
@@ -24,6 +24,7 @@ func (b BitwiseNot) Eval(env *obj.Env) obj.Object {
 	if !assertTypes(value, obj.IntType) {
 		return obj.NewError("unsupported operator '~' for type %v", value.Type())
 	}
+
 	n := value.(*obj.Integer).Val()
 	return obj.NewInteger(^n)
 }

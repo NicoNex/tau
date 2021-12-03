@@ -17,8 +17,8 @@ func NewPlus(l, r Node) Node {
 
 func (p Plus) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = unwrap(p.l.Eval(env))
-		right = unwrap(p.r.Eval(env))
+		left  = p.l.Eval(env)
+		right = p.r.Eval(env)
 	)
 
 	if takesPrecedence(left) {

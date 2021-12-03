@@ -17,8 +17,8 @@ func NewNotEquals(l, r Node) Node {
 
 func (n NotEquals) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = unwrap(n.l.Eval(env))
-		right = unwrap(n.r.Eval(env))
+		left  = n.l.Eval(env)
+		right = n.r.Eval(env)
 	)
 
 	if takesPrecedence(left) {

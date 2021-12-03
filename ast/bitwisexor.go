@@ -17,8 +17,8 @@ func NewBitwiseXor(l, r Node) Node {
 
 func (b BitwiseXor) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = unwrap(b.l.Eval(env))
-		right = unwrap(b.r.Eval(env))
+		left  = b.l.Eval(env)
+		right = b.r.Eval(env)
 	)
 
 	if takesPrecedence(left) {
@@ -34,6 +34,7 @@ func (b BitwiseXor) Eval(env *obj.Env) obj.Object {
 	if !assertTypes(right, obj.IntType) {
 		return obj.NewError("unsupported operator '^' for type %v", right.Type())
 	}
+
 	l := left.(*obj.Integer).Val()
 	r := right.(*obj.Integer).Val()
 	return obj.NewInteger(l ^ r)

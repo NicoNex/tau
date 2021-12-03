@@ -10,7 +10,7 @@ func NewIdentifier(name string) Node {
 
 func (i Identifier) Eval(env *obj.Env) obj.Object {
 	if c, ok := env.Get(string(i)); ok {
-		return c.Object()
+		return c //.Object()
 	} else if o, ok := obj.Builtins[string(i)]; ok {
 		return o
 	}

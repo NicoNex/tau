@@ -17,8 +17,8 @@ func NewOr(l, r Node) Node {
 
 func (o Or) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = unwrap(o.l.Eval(env))
-		right = unwrap(o.r.Eval(env))
+		left  = o.l.Eval(env)
+		right = o.r.Eval(env)
 	)
 
 	if takesPrecedence(left) {

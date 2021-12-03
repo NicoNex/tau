@@ -18,8 +18,8 @@ func NewIn(l, r Node) Node {
 
 func (i In) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = unwrap(i.l.Eval(env))
-		right = unwrap(i.r.Eval(env))
+		left  = i.l.Eval(env)
+		right = i.r.Eval(env)
 	)
 
 	if takesPrecedence(left) {

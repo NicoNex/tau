@@ -15,7 +15,7 @@ func NewReturn(n Node) Node {
 }
 
 func (r Return) Eval(env *obj.Env) obj.Object {
-	return obj.NewReturn(unwrap(r.v.Eval(env)))
+	return obj.NewReturn(r.v.Eval(env))
 }
 
 func (r Return) String() string {

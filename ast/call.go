@@ -27,20 +27,20 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 	case *obj.Function:
 		var args []obj.Object
 
+		if len(c.args) != len(fn.Params) {
+			return obj.NewError(
+				"wrong number of arguments, expected %d, got %d",
+				len(fn.Params),
+				len(c.args),
+			)
+		}
+
 		for _, a := range c.args {
 			o := a.Eval(env)
 			if takesPrecedence(o) {
 				return o
 			}
 			args = append(args, o)
-		}
-
-		if len(args) != len(fn.Params) {
-			return obj.NewError(
-				"wrong number of arguments, expected %d, got %d",
-				len(fn.Params),
-				len(args),
-			)
 		}
 
 		extEnv := extendEnv(fn, args)

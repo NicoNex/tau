@@ -38,6 +38,9 @@ func (b *Block) Add(n Node) {
 	*b = append(*b, n)
 }
 
-func (b Block) Compile(c *compiler.Compiler) int {
-	return 0
+func (b Block) Compile(c *compiler.Compiler) (position int) {
+	for _, n := range b {
+		position = n.Compile(c)
+	}
+	return
 }

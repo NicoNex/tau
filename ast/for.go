@@ -46,6 +46,6 @@ func (f For) String() string {
 	return fmt.Sprintf("for %v { %v }", f.cond, f.body)
 }
 
-func (f For) Compile(c *compiler.Compiler) int {
+func (f For) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

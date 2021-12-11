@@ -45,6 +45,6 @@ func (b BitwiseAnd) String() string {
 	return fmt.Sprintf("(%v & %v)", b.l, b.r)
 }
 
-func (b BitwiseAnd) Compile(c *compiler.Compiler) int {
+func (b BitwiseAnd) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

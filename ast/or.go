@@ -36,6 +36,6 @@ func (o Or) String() string {
 	return fmt.Sprintf("(%v || %v)", o.l, o.r)
 }
 
-func (o Or) Compile(c *compiler.Compiler) int {
+func (o Or) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

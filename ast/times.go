@@ -52,6 +52,6 @@ func (t Times) String() string {
 	return fmt.Sprintf("(%v * %v)", t.l, t.r)
 }
 
-func (t Times) Compile(c *compiler.Compiler) int {
+func (t Times) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

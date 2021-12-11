@@ -39,6 +39,6 @@ func (p PrefixMinus) String() string {
 	return fmt.Sprintf("-%v", p.n)
 }
 
-func (p PrefixMinus) Compile(c *compiler.Compiler) int {
+func (p PrefixMinus) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

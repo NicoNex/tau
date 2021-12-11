@@ -22,6 +22,6 @@ func (b Boolean) String() string {
 	return "false"
 }
 
-func (b Boolean) Compile(c *compiler.Compiler) int {
+func (b Boolean) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

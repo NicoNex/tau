@@ -49,6 +49,6 @@ func (m Mod) String() string {
 	return fmt.Sprintf("(%v %% %v)", m.l, m.r)
 }
 
-func (m Mod) Compile(c *compiler.Compiler) int {
+func (m Mod) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

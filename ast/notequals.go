@@ -68,6 +68,6 @@ func (n NotEquals) String() string {
 	return fmt.Sprintf("(%v != %v)", n.l, n.r)
 }
 
-func (n NotEquals) Compile(c *compiler.Compiler) int {
+func (n NotEquals) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

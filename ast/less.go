@@ -52,6 +52,6 @@ func (l Less) String() string {
 	return fmt.Sprintf("(%v < %v)", l.l, l.r)
 }
 
-func (l Less) Compile(c *compiler.Compiler) int {
+func (l Less) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

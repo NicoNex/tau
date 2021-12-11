@@ -38,6 +38,6 @@ func (b Bang) String() string {
 	return fmt.Sprintf("!%v", b.n)
 }
 
-func (b Bang) Compile(c *compiler.Compiler) int {
+func (b Bang) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

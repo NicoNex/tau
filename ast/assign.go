@@ -45,6 +45,6 @@ func (a Assign) String() string {
 	return fmt.Sprintf("(%v = %v)", a.l, a.r)
 }
 
-func (a Assign) Compile(c *compiler.Compiler) int {
+func (a Assign) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

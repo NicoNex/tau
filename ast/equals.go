@@ -68,6 +68,6 @@ func (e Equals) String() string {
 	return fmt.Sprintf("(%v == %v)", e.l, e.r)
 }
 
-func (e Equals) Compile(c *compiler.Compiler) int {
+func (e Equals) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

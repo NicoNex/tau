@@ -19,6 +19,6 @@ func (n Null) String() string {
 	return "null"
 }
 
-func (n Null) Compile(c *compiler.Compiler) int {
+func (n Null) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

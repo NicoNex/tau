@@ -86,6 +86,6 @@ func (i In) String() string {
 	return fmt.Sprintf("(%v in %v)", i.l, i.r)
 }
 
-func (i In) Compile(c *compiler.Compiler) int {
+func (i In) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

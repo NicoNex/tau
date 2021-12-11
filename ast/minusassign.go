@@ -65,6 +65,6 @@ func (m MinusAssign) String() string {
 	return fmt.Sprintf("(%v -= %v)", m.l, m.r)
 }
 
-func (m MinusAssign) Compile(c *compiler.Compiler) int {
+func (m MinusAssign) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

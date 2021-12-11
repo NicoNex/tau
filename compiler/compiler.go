@@ -1,7 +1,6 @@
 package compiler
 
 import (
-	// "github.com/NicoNex/tau/ast"
 	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/obj"
 )

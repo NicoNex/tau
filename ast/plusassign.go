@@ -70,6 +70,6 @@ func (p PlusAssign) String() string {
 	return fmt.Sprintf("(%v += %v)", p.l, p.r)
 }
 
-func (p PlusAssign) Compile(c *compiler.Compiler) int {
+func (p PlusAssign) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

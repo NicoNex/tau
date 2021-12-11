@@ -49,6 +49,6 @@ func (b BitwiseOrAssign) String() string {
 	return fmt.Sprintf("(%v |= %v)", b.l, b.r)
 }
 
-func (b BitwiseOrAssign) Compile(c *compiler.Compiler) int {
+func (b BitwiseOrAssign) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

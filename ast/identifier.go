@@ -25,6 +25,6 @@ func (i Identifier) String() string {
 	return string(i)
 }
 
-func (i Identifier) Compile(c *compiler.Compiler) int {
+func (i Identifier) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

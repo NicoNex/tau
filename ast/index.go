@@ -66,6 +66,6 @@ func (i Index) String() string {
 	return fmt.Sprintf("%v[%v]", i.left, i.index)
 }
 
-func (i Index) Compile(c *compiler.Compiler) int {
+func (i Index) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

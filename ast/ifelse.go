@@ -53,6 +53,6 @@ func (i IfExpr) alternative(env *obj.Env) obj.Object {
 	return obj.NullObj
 }
 
-func (i IfExpr) Compile(c *compiler.Compiler) int {
+func (i IfExpr) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

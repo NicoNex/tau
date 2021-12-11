@@ -69,7 +69,7 @@ func (c Call) String() string {
 	return fmt.Sprintf("%v(%s)", c.fn, strings.Join(args, ", "))
 }
 
-func (c Call) Compile(comp *compiler.Compiler) int {
+func (c Call) Compile(comp *compiler.Compiler) (position int) {
 	return 0
 }
 

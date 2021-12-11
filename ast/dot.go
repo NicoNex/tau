@@ -38,6 +38,6 @@ func (d Dot) String() string {
 	return fmt.Sprintf("%v.%v", d.l, d.r)
 }
 
-func (d Dot) Compile(c *compiler.Compiler) int {
+func (d Dot) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

@@ -51,6 +51,6 @@ func (d DivideAssign) String() string {
 	return fmt.Sprintf("(%v /= %v)", d.l, d.r)
 }
 
-func (d DivideAssign) Compile(c *compiler.Compiler) int {
+func (d DivideAssign) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

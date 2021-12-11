@@ -52,6 +52,6 @@ func (g Greater) String() string {
 	return fmt.Sprintf("(%v > %v)", g.l, g.r)
 }
 
-func (g Greater) Compile(c *compiler.Compiler) int {
+func (g Greater) Compile(c *compiler.Compiler) (position int) {
 	return 0
 }

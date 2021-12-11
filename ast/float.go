@@ -3,6 +3,7 @@ package ast
 import (
 	"strconv"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -18,4 +19,8 @@ func (f Float) Eval(env *obj.Env) obj.Object {
 
 func (f Float) String() string {
 	return strconv.FormatFloat(float64(f), 'f', -1, 64)
+}
+
+func (f Float) Compile(c *compiler.Compiler) int {
+	return 0
 }

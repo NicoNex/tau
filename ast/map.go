@@ -2,8 +2,10 @@ package ast
 
 import (
 	"fmt"
-	"github.com/NicoNex/tau/obj"
 	"strings"
+
+	"github.com/NicoNex/tau/compiler"
+	"github.com/NicoNex/tau/obj"
 )
 
 type Map map[Node]Node
@@ -71,4 +73,8 @@ func (m Map) String() string {
 	}
 	buf.WriteString("}")
 	return buf.String()
+}
+
+func (m Map) Compile(c *compiler.Compiler) int {
+	return 0
 }

@@ -1,10 +1,14 @@
 package ast
 
-import "github.com/NicoNex/tau/obj"
+import (
+	"github.com/NicoNex/tau/compiler"
+	"github.com/NicoNex/tau/obj"
+)
 
 type Node interface {
 	Eval(*obj.Env) obj.Object
 	String() string
+	compiler.Compilable
 }
 
 // Returns true if o needs to stop the execution flow.

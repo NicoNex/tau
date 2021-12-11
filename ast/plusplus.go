@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -44,4 +45,8 @@ func (p PlusPlus) Eval(env *obj.Env) obj.Object {
 
 func (p PlusPlus) String() string {
 	return fmt.Sprintf("++%v", p.r)
+}
+
+func (p PlusPlus) Compile(c *compiler.Compiler) int {
+	return 0
 }

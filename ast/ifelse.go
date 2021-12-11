@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -50,4 +51,8 @@ func (i IfExpr) alternative(env *obj.Env) obj.Object {
 		return i.altern.Eval(env)
 	}
 	return obj.NullObj
+}
+
+func (i IfExpr) Compile(c *compiler.Compiler) int {
+	return 0
 }

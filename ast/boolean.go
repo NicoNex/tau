@@ -1,6 +1,9 @@
 package ast
 
-import "github.com/NicoNex/tau/obj"
+import (
+	"github.com/NicoNex/tau/compiler"
+	"github.com/NicoNex/tau/obj"
+)
 
 type Boolean bool
 
@@ -17,4 +20,8 @@ func (b Boolean) String() string {
 		return "true"
 	}
 	return "false"
+}
+
+func (b Boolean) Compile(c *compiler.Compiler) int {
+	return 0
 }

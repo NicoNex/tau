@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -33,4 +34,8 @@ func (f Function) String() string {
 		params = append(params, p.String())
 	}
 	return fmt.Sprintf("fn(%s) { %v }", strings.Join(params, ", "), f.body)
+}
+
+func (f Function) Compile(c *compiler.Compiler) int {
+	return 0
 }

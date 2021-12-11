@@ -1,6 +1,9 @@
 package ast
 
-import "github.com/NicoNex/tau/obj"
+import (
+	"github.com/NicoNex/tau/compiler"
+	"github.com/NicoNex/tau/obj"
+)
 
 type Identifier string
 
@@ -20,4 +23,8 @@ func (i Identifier) Eval(env *obj.Env) obj.Object {
 
 func (i Identifier) String() string {
 	return string(i)
+}
+
+func (i Identifier) Compile(c *compiler.Compiler) int {
+	return 0
 }

@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -42,4 +43,8 @@ func (b BitwiseXor) Eval(env *obj.Env) obj.Object {
 
 func (b BitwiseXor) String() string {
 	return fmt.Sprintf("(%v ^ %v)", b.l, b.r)
+}
+
+func (b BitwiseXor) Compile(c *compiler.Compiler) int {
+	return 0
 }

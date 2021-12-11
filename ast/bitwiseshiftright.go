@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -42,4 +43,8 @@ func (b BitwiseRightShift) Eval(env *obj.Env) obj.Object {
 
 func (b BitwiseRightShift) String() string {
 	return fmt.Sprintf("(%v >> %v)", b.l, b.r)
+}
+
+func (b BitwiseRightShift) Compile(c *compiler.Compiler) int {
+	return 0
 }

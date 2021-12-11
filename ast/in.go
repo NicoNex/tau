@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -83,4 +84,8 @@ func (i In) Eval(env *obj.Env) obj.Object {
 
 func (i In) String() string {
 	return fmt.Sprintf("(%v in %v)", i.l, i.r)
+}
+
+func (i In) Compile(c *compiler.Compiler) int {
+	return 0
 }

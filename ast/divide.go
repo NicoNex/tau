@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -43,4 +44,8 @@ func (d Divide) Eval(env *obj.Env) obj.Object {
 
 func (d Divide) String() string {
 	return fmt.Sprintf("(%v / %v)", d.l, d.r)
+}
+
+func (d Divide) Compile(c *compiler.Compiler) int {
+	return 0
 }

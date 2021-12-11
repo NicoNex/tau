@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -66,6 +67,10 @@ func (c Call) String() string {
 		args = append(args, a.String())
 	}
 	return fmt.Sprintf("%v(%s)", c.fn, strings.Join(args, ", "))
+}
+
+func (c Call) Compile(comp *compiler.Compiler) int {
+	return 0
 }
 
 func extendEnv(fn *obj.Function, args []obj.Object) *obj.Env {

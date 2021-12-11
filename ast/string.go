@@ -1,8 +1,10 @@
 package ast
 
 import (
-	"github.com/NicoNex/tau/obj"
 	"strconv"
+
+	"github.com/NicoNex/tau/compiler"
+	"github.com/NicoNex/tau/obj"
 )
 
 type String string
@@ -21,4 +23,8 @@ func (s String) String() string {
 
 func (s String) Quoted() string {
 	return strconv.Quote(string(s))
+}
+
+func (s String) Compile(c *compiler.Compiler) int {
+	return 0
 }

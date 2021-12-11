@@ -3,6 +3,7 @@ package ast
 import (
 	"strings"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -35,4 +36,8 @@ func (b Block) String() string {
 
 func (b *Block) Add(n Node) {
 	*b = append(*b, n)
+}
+
+func (b Block) Compile(c *compiler.Compiler) int {
+	return 0
 }

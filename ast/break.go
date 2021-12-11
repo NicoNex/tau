@@ -1,6 +1,9 @@
 package ast
 
-import "github.com/NicoNex/tau/obj"
+import (
+	"github.com/NicoNex/tau/compiler"
+	"github.com/NicoNex/tau/obj"
+)
 
 type Break struct{}
 
@@ -14,4 +17,8 @@ func (b Break) Eval(_ *obj.Env) obj.Object {
 
 func (b Break) String() string {
 	return "break"
+}
+
+func (b Break) Compile(c *compiler.Compiler) int {
+	return 0
 }

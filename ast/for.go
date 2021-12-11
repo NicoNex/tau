@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
 
@@ -43,4 +44,8 @@ loop:
 
 func (f For) String() string {
 	return fmt.Sprintf("for %v { %v }", f.cond, f.body)
+}
+
+func (f For) Compile(c *compiler.Compiler) int {
+	return 0
 }

@@ -1,6 +1,9 @@
 package ast
 
-import "github.com/NicoNex/tau/obj"
+import (
+	"github.com/NicoNex/tau/compiler"
+	"github.com/NicoNex/tau/obj"
+)
 
 type Null struct{}
 
@@ -14,4 +17,8 @@ func (n Null) Eval(_ *obj.Env) obj.Object {
 
 func (n Null) String() string {
 	return "null"
+}
+
+func (n Null) Compile(c *compiler.Compiler) int {
+	return 0
 }

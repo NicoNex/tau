@@ -1,6 +1,9 @@
 package ast
 
-import "github.com/NicoNex/tau/obj"
+import (
+	"github.com/NicoNex/tau/compiler"
+	"github.com/NicoNex/tau/obj"
+)
 
 type Continue struct{}
 
@@ -14,4 +17,8 @@ func (c Continue) Eval(_ *obj.Env) obj.Object {
 
 func (c Continue) String() string {
 	return "break"
+}
+
+func (c Continue) Compile(comp *compiler.Compiler) int {
+	return 0
 }

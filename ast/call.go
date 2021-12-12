@@ -69,8 +69,8 @@ func (c Call) String() string {
 	return fmt.Sprintf("%v(%s)", c.fn, strings.Join(args, ", "))
 }
 
-func (c Call) Compile(comp *compiler.Compiler) (position int) {
-	return 0
+func (c Call) Compile(comp *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }
 
 func extendEnv(fn *obj.Function, args []obj.Object) *obj.Env {

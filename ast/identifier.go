@@ -1,6 +1,9 @@
 package ast
 
 import (
+	"fmt"
+
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -25,6 +28,9 @@ func (i Identifier) String() string {
 	return string(i)
 }
 
-func (i Identifier) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (i Identifier) Compile(c *compiler.Compiler) (position int, err error) {
+	if symbol, ok := c.Resolve(string(i)); ok {
+		return c.Emit(code.OpGetGlobal, symbol.Index), nil
+	}
+	return 0, fmt.Errorf("undefined variable %s", string(i))
 }

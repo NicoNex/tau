@@ -40,7 +40,7 @@ func (p PrefixMinus) String() string {
 	return fmt.Sprintf("-%v", p.n)
 }
 
-func (p PrefixMinus) Compile(c *compiler.Compiler) (position int) {
+func (p PrefixMinus) Compile(c *compiler.Compiler) (position int, err error) {
 	p.n.Compile(c)
-	return c.Emit(code.OpMinus)
+	return c.Emit(code.OpMinus), nil
 }

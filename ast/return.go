@@ -23,6 +23,6 @@ func (r Return) String() string {
 	return fmt.Sprintf("return %v", r.v)
 }
 
-func (r Return) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (r Return) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

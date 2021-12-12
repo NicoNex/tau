@@ -19,6 +19,6 @@ func (c Continue) String() string {
 	return "break"
 }
 
-func (c Continue) Compile(comp *compiler.Compiler) (position int) {
-	return 0
+func (c Continue) Compile(comp *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

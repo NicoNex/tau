@@ -54,7 +54,7 @@ func (i IfExpr) alternative(env *obj.Env) obj.Object {
 	return obj.NullObj
 }
 
-func (i IfExpr) Compile(c *compiler.Compiler) (position int) {
+func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {
 	i.cond.Compile(c)
 	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, 9999)
 	i.body.Compile(c)
@@ -77,5 +77,5 @@ func (i IfExpr) Compile(c *compiler.Compiler) (position int) {
 	}
 
 	c.ReplaceOperand(jumpPos, c.Pos())
-	return c.Pos()
+	return c.Pos(), nil
 }

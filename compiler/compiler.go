@@ -6,7 +6,7 @@ import (
 )
 
 type Compilable interface {
-	Compile(c *Compiler) int
+	Compile(c *Compiler) (int, error)
 }
 
 type EmittedInst struct {
@@ -19,6 +19,7 @@ type Compiler struct {
 	constants    []obj.Object
 	lastInst     EmittedInst
 	prevInst     EmittedInst
+	*SymbolTable
 }
 
 type Bytecode struct {
@@ -27,9 +28,13 @@ type Bytecode struct {
 }
 
 func New() *Compiler {
+	return &Compiler{SymbolTable: NewSymbolTable()}
+}
+
+func NewWithState(s *SymbolTable, constants []obj.Object) *Compiler {
 	return &Compiler{
-		instructions: code.Instructions{},
-		constants:    []obj.Object{},
+		SymbolTable: s,
+		constants:   constants,
 	}
 }
 
@@ -85,8 +90,8 @@ func (c *Compiler) Pos() int {
 }
 
 func (c *Compiler) Compile(node Compilable) error {
-	node.Compile(c)
-	return nil
+	_, err := node.Compile(c)
+	return err
 }
 
 func (c *Compiler) Bytecode() *Bytecode {

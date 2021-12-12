@@ -53,8 +53,8 @@ func (l LessEq) String() string {
 	return fmt.Sprintf("(%v <= %v)", l.l, l.r)
 }
 
-func (l LessEq) Compile(c *compiler.Compiler) (position int) {
+func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
 	l.r.Compile(c)
 	l.l.Compile(c)
-	return c.Emit(code.OpGreaterThanEqual)
+	return c.Emit(code.OpGreaterThanEqual), nil
 }

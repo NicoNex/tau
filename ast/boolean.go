@@ -23,12 +23,12 @@ func (b Boolean) String() string {
 	return "false"
 }
 
-func (b Boolean) Compile(c *compiler.Compiler) (position int) {
+func (b Boolean) Compile(c *compiler.Compiler) (position int, err error) {
 	isTrue := bool(b)
 
 	if isTrue {
-		return c.Emit(code.OpTrue)
+		return c.Emit(code.OpTrue), nil
 	} else {
-		return c.Emit(code.OpFalse)
+		return c.Emit(code.OpFalse), nil
 	}
 }

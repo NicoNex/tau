@@ -25,6 +25,6 @@ func (s String) Quoted() string {
 	return strconv.Quote(string(s))
 }
 
-func (s String) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (s String) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

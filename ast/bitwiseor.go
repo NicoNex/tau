@@ -45,6 +45,6 @@ func (b BitwiseOr) String() string {
 	return fmt.Sprintf("(%v | %v)", b.l, b.r)
 }
 
-func (b BitwiseOr) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (b BitwiseOr) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

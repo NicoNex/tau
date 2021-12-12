@@ -39,7 +39,7 @@ func (b Bang) String() string {
 	return fmt.Sprintf("!%v", b.n)
 }
 
-func (b Bang) Compile(c *compiler.Compiler) (position int) {
+func (b Bang) Compile(c *compiler.Compiler) (position int, err error) {
 	b.n.Compile(c)
-	return c.Emit(code.OpBang)
+	return c.Emit(code.OpBang), nil
 }

@@ -12,10 +12,14 @@ type VM struct {
 	consts       []obj.Object
 	instructions code.Instructions
 	stack        []obj.Object
+	globals      []obj.Object
 	sp           int
 }
 
-const StackSize = 2048
+const (
+	StackSize  = 2048
+	GlobalSize = 65536
+)
 
 var (
 	True  = obj.True
@@ -62,6 +66,16 @@ func New(bytecode *compiler.Bytecode) *VM {
 		instructions: bytecode.Instructions,
 		consts:       bytecode.Constants,
 		stack:        make([]obj.Object, StackSize),
+		globals:      make([]obj.Object, GlobalSize),
+	}
+}
+
+func NewWithGlobalStore(bytecode *compiler.Bytecode, s []obj.Object) *VM {
+	return &VM{
+		instructions: bytecode.Instructions,
+		consts:       bytecode.Constants,
+		stack:        make([]obj.Object, StackSize),
+		globals:      s,
 	}
 }
 
@@ -366,6 +380,16 @@ func (vm *VM) Run() (err error) {
 			if cond := vm.pop(); !isTruthy(cond) {
 				ip = pos - 1
 			}
+
+		case code.OpSetGlobal:
+			globalIndex := code.ReadUint16(vm.instructions[ip+1:])
+			ip += 2
+			vm.globals[globalIndex] = vm.pop()
+
+		case code.OpGetGlobal:
+			globalIndex := code.ReadUint16(vm.instructions[ip+1:])
+			ip += 2
+			err = vm.push(vm.globals[globalIndex])
 
 		case code.OpNull:
 			err = vm.push(Null)

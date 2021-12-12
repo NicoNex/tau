@@ -47,6 +47,6 @@ func (m MinusMinus) String() string {
 	return fmt.Sprintf("--%v", m.r)
 }
 
-func (m MinusMinus) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (m MinusMinus) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

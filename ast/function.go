@@ -36,6 +36,6 @@ func (f Function) String() string {
 	return fmt.Sprintf("fn(%s) { %v }", strings.Join(params, ", "), f.body)
 }
 
-func (f Function) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (f Function) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

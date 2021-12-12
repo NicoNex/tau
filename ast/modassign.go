@@ -54,6 +54,6 @@ func (m ModAssign) String() string {
 	return fmt.Sprintf("(%v %%= %v)", m.l, m.r)
 }
 
-func (m ModAssign) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (m ModAssign) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

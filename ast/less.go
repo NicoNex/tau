@@ -53,10 +53,10 @@ func (l Less) String() string {
 	return fmt.Sprintf("(%v < %v)", l.l, l.r)
 }
 
-func (l Less) Compile(c *compiler.Compiler) (position int) {
+func (l Less) Compile(c *compiler.Compiler) (position int, err error) {
 	// the order of the compilation of the operands is inverted because we reuse
 	// the code.OpGreaterThan OpCode.
 	l.r.Compile(c)
 	l.l.Compile(c)
-	return c.Emit(code.OpGreaterThan)
+	return c.Emit(code.OpGreaterThan), nil
 }

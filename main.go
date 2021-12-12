@@ -20,9 +20,17 @@ import (
 var useVM bool
 
 func repl() {
-	var env *obj.Env
+	var (
+		env         *obj.Env
+		consts      []obj.Object
+		globals     []obj.Object
+		symbolTable *compiler.SymbolTable
+	)
 
-	if !useVM {
+	if useVM {
+		globals = make([]obj.Object, vm.GlobalSize)
+		symbolTable = compiler.NewSymbolTable()
+	} else {
 		env = obj.NewEnv()
 	}
 
@@ -54,16 +62,16 @@ func repl() {
 		}
 
 		if useVM {
-			c := compiler.New()
+			c := compiler.NewWithState(symbolTable, consts)
 			c.Compile(res)
-			vm := vm.New(c.Bytecode())
+			tvm := vm.NewWithGlobalStore(c.Bytecode(), globals)
 
-			if err := vm.Run(); err != nil {
+			if err := tvm.Run(); err != nil {
 				fmt.Fprintf(t, "runtime error: %v\n", err)
 				continue
 			}
 
-			fmt.Fprintln(t, vm.LastPoppedStackElem())
+			fmt.Fprintln(t, tvm.LastPoppedStackElem())
 			continue
 		}
 

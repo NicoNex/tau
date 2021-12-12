@@ -53,8 +53,8 @@ func (g Greater) String() string {
 	return fmt.Sprintf("(%v > %v)", g.l, g.r)
 }
 
-func (g Greater) Compile(c *compiler.Compiler) (position int) {
+func (g Greater) Compile(c *compiler.Compiler) (position int, err error) {
 	g.l.Compile(c)
 	g.r.Compile(c)
-	return c.Emit(code.OpGreaterThan)
+	return c.Emit(code.OpGreaterThan), nil
 }

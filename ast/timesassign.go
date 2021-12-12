@@ -65,6 +65,6 @@ func (t TimesAssign) String() string {
 	return fmt.Sprintf("(%v *= %v)", t.l, t.r)
 }
 
-func (t TimesAssign) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (t TimesAssign) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

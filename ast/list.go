@@ -45,6 +45,6 @@ func (l List) String() string {
 	return fmt.Sprintf("[%s]", strings.Join(elements, ", "))
 }
 
-func (l List) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (l List) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

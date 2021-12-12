@@ -34,6 +34,6 @@ func (b BitwiseNot) String() string {
 	return fmt.Sprintf("~%v", b.n)
 }
 
-func (b BitwiseNot) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (b BitwiseNot) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

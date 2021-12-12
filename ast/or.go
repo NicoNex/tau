@@ -37,8 +37,8 @@ func (o Or) String() string {
 	return fmt.Sprintf("(%v || %v)", o.l, o.r)
 }
 
-func (o Or) Compile(c *compiler.Compiler) (position int) {
+func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
 	o.l.Compile(c)
 	o.r.Compile(c)
-	return c.Emit(code.OpOr)
+	return c.Emit(code.OpOr), nil
 }

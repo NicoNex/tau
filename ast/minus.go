@@ -53,8 +53,8 @@ func (m Minus) String() string {
 	return fmt.Sprintf("(%v - %v)", m.l, m.r)
 }
 
-func (m Minus) Compile(c *compiler.Compiler) (position int) {
+func (m Minus) Compile(c *compiler.Compiler) (position int, err error) {
 	m.l.Compile(c)
 	m.r.Compile(c)
-	return c.Emit(code.OpSub)
+	return c.Emit(code.OpSub), nil
 }

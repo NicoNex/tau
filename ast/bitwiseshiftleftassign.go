@@ -50,6 +50,6 @@ func (b BitwiseShiftLeftAssign) String() string {
 	return fmt.Sprintf("(%v << %v)", b.l, b.r)
 }
 
-func (b BitwiseShiftLeftAssign) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (b BitwiseShiftLeftAssign) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

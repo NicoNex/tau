@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -45,6 +46,11 @@ func (a Assign) String() string {
 	return fmt.Sprintf("(%v = %v)", a.l, a.r)
 }
 
-func (a Assign) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
+	if left, ok := a.l.(Identifier); ok {
+		a.r.Compile(c)
+		symbol := c.Define(string(left))
+		return c.Emit(code.OpSetGlobal, symbol.Index), nil
+	}
+	return 0, fmt.Errorf("cannot assign to literal")
 }

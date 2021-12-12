@@ -39,10 +39,14 @@ func (b *Block) Add(n Node) {
 	*b = append(*b, n)
 }
 
-func (b Block) Compile(c *compiler.Compiler) (position int) {
+func (b Block) Compile(c *compiler.Compiler) (position int, err error) {
 	for _, n := range b {
-		n.Compile(c)
-		position = c.Emit(code.OpPop)
+		if position, err = n.Compile(c); err != nil {
+			return
+		}
+		if _, isAssign := n.(Assign); !isAssign {
+			position = c.Emit(code.OpPop)
+		}
 	}
 	return
 }

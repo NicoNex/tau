@@ -47,6 +47,6 @@ func (p PlusPlus) String() string {
 	return fmt.Sprintf("++%v", p.r)
 }
 
-func (p PlusPlus) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (p PlusPlus) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

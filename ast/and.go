@@ -37,8 +37,8 @@ func (a And) String() string {
 	return fmt.Sprintf("(%v && %v)", a.l, a.r)
 }
 
-func (a And) Compile(c *compiler.Compiler) (position int) {
+func (a And) Compile(c *compiler.Compiler) (position int, err error) {
 	a.l.Compile(c)
 	a.r.Compile(c)
-	return c.Emit(code.OpAnd)
+	return c.Emit(code.OpAnd), nil
 }

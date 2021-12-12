@@ -53,8 +53,8 @@ func (t Times) String() string {
 	return fmt.Sprintf("(%v * %v)", t.l, t.r)
 }
 
-func (t Times) Compile(c *compiler.Compiler) (position int) {
+func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
 	t.l.Compile(c)
 	t.r.Compile(c)
-	return c.Emit(code.OpMul)
+	return c.Emit(code.OpMul), nil
 }

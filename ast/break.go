@@ -19,6 +19,6 @@ func (b Break) String() string {
 	return "break"
 }
 
-func (b Break) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (b Break) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

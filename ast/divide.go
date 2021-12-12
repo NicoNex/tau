@@ -47,8 +47,8 @@ func (d Divide) String() string {
 	return fmt.Sprintf("(%v / %v)", d.l, d.r)
 }
 
-func (d Divide) Compile(c *compiler.Compiler) (position int) {
+func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
 	d.l.Compile(c)
 	d.r.Compile(c)
-	return c.Emit(code.OpDiv)
+	return c.Emit(code.OpDiv), nil
 }

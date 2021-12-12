@@ -66,8 +66,8 @@ func (p Plus) String() string {
 	return fmt.Sprintf("(%v + %v)", p.l, p.r)
 }
 
-func (p Plus) Compile(c *compiler.Compiler) (position int) {
+func (p Plus) Compile(c *compiler.Compiler) (position int, err error) {
 	p.l.Compile(c)
 	p.r.Compile(c)
-	return c.Emit(code.OpAdd)
+	return c.Emit(code.OpAdd), nil
 }

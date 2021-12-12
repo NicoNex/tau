@@ -75,6 +75,6 @@ func (m Map) String() string {
 	return buf.String()
 }
 
-func (m Map) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (m Map) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

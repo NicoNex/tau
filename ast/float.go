@@ -21,6 +21,6 @@ func (f Float) String() string {
 	return strconv.FormatFloat(float64(f), 'f', -1, 64)
 }
 
-func (f Float) Compile(c *compiler.Compiler) (position int) {
-	return 0
+func (f Float) Compile(c *compiler.Compiler) (position int, err error) {
+	return 0, nil
 }

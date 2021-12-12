@@ -41,38 +41,42 @@ const (
 	OpJump
 	OpJumpNotTruthy
 
+	OpGetGlobal
+	OpSetGlobal
+
 	OpPop
 )
 
-var (
-	definitions = map[Opcode]*Definition{
-		OpConstant: {"OpConstant", []int{2}},
-		OpTrue:     {"OpTrue", []int{}},
-		OpFalse:    {"OpFalse", []int{}},
-		OpNull:     {"OpNull", []int{}},
+var definitions = map[Opcode]*Definition{
+	OpConstant: {"OpConstant", []int{2}},
+	OpTrue:     {"OpTrue", []int{}},
+	OpFalse:    {"OpFalse", []int{}},
+	OpNull:     {"OpNull", []int{}},
 
-		OpAdd: {"OpAdd", []int{}},
-		OpSub: {"OpSub", []int{}},
-		OpMul: {"OpMul", []int{}},
-		OpDiv: {"OpDiv", []int{}},
-		OpMod: {"OpDiv", []int{}},
+	OpAdd: {"OpAdd", []int{}},
+	OpSub: {"OpSub", []int{}},
+	OpMul: {"OpMul", []int{}},
+	OpDiv: {"OpDiv", []int{}},
+	OpMod: {"OpDiv", []int{}},
 
-		OpAnd:              {"OpAnd", []int{}},
-		OpOr:               {"OpOr", []int{}},
-		OpEqual:            {"OpEqual", []int{}},
-		OpNotEqual:         {"OpNotEqual", []int{}},
-		OpGreaterThan:      {"OpGreaterThan", []int{}},
-		OpGreaterThanEqual: {"OpGreaterThanEqual", []int{}},
+	OpAnd:              {"OpAnd", []int{}},
+	OpOr:               {"OpOr", []int{}},
+	OpEqual:            {"OpEqual", []int{}},
+	OpNotEqual:         {"OpNotEqual", []int{}},
+	OpGreaterThan:      {"OpGreaterThan", []int{}},
+	OpGreaterThanEqual: {"OpGreaterThanEqual", []int{}},
 
-		OpMinus: {"OpMinus", []int{}},
-		OpBang:  {"OpBang", []int{}},
+	OpMinus: {"OpMinus", []int{}},
+	OpBang:  {"OpBang", []int{}},
 
-		OpJump:          {"OpJump", []int{2}},
-		OpJumpNotTruthy: {"OpJumpNotTruthy", []int{2}},
+	OpJump:          {"OpJump", []int{2}},
+	OpJumpNotTruthy: {"OpJumpNotTruthy", []int{2}},
 
-		OpPop: {"OpPop", []int{}},
-	}
-)
+	OpGetGlobal: {"OpGetGlobal", []int{2}},
+	OpSetGlobal: {"OpSetGlobal", []int{2}},
+
+	OpPop: {"OpPop", []int{}},
+}
 
 func (ins Instructions) String() string {
 	var out bytes.Buffer

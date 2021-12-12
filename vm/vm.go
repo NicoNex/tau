@@ -158,6 +158,97 @@ func (vm *VM) execDiv() error {
 	return nil
 }
 
+func (vm *VM) execEqual() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	switch {
+	case assertTypes(left, obj.BoolType, obj.NullType) || assertTypes(right, obj.BoolType, obj.NullType):
+		vm.push(obj.ParseBool(left == right))
+
+	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
+		l := left.(*obj.String).Val()
+		r := right.(*obj.String).Val()
+		vm.push(obj.ParseBool(l == r))
+
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		vm.push(obj.ParseBool(l == r))
+
+	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
+		left, right = toFloat(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		vm.push(obj.ParseBool(l == r))
+
+	default:
+		return fmt.Errorf("unsupported operator '==' for types %v and %v", left.Type(), right.Type())
+	}
+
+	return nil
+}
+
+func (vm *VM) execNotEqual() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	switch {
+	case assertTypes(left, obj.BoolType, obj.NullType) || assertTypes(right, obj.BoolType, obj.NullType):
+		vm.push(obj.ParseBool(left != right))
+
+	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
+		l := left.(*obj.String).Val()
+		r := right.(*obj.String).Val()
+		vm.push(obj.ParseBool(l != r))
+
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		vm.push(obj.ParseBool(l != r))
+
+	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
+		left, right = toFloat(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		vm.push(obj.ParseBool(l != r))
+
+	default:
+		return fmt.Errorf("unsupported operator '!=' for types %v and %v", left.Type(), right.Type())
+	}
+
+	return nil
+}
+
+func (vm *VM) execGreaterThan() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	switch {
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		vm.push(obj.ParseBool(l > r))
+
+	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
+		left, right = toFloat(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		vm.push(obj.ParseBool(l > r))
+
+	default:
+		return fmt.Errorf("unsupported operator '>' for types %v and %v", left.Type(), right.Type())
+	}
+
+	return nil
+}
+
 // TODO: optimise this function with map[OpCode]func() error
 func (vm *VM) Run() error {
 	for ip := 0; ip < len(vm.instructions); ip++ {
@@ -199,6 +290,21 @@ func (vm *VM) Run() error {
 
 		case code.OpDiv:
 			if err := vm.execDiv(); err != nil {
+				return err
+			}
+
+		case code.OpEqual:
+			if err := vm.execEqual(); err != nil {
+				return err
+			}
+
+		case code.OpNotEqual:
+			if err := vm.execNotEqual(); err != nil {
+				return err
+			}
+
+		case code.OpGreaterThan:
+			if err := vm.execGreaterThan(); err != nil {
 				return err
 			}
 

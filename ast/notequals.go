@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -69,5 +70,7 @@ func (n NotEquals) String() string {
 }
 
 func (n NotEquals) Compile(c *compiler.Compiler) (position int) {
-	return 0
+	n.l.Compile(c)
+	n.r.Compile(c)
+	return c.Emit(code.OpNotEqual)
 }

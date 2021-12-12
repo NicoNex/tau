@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -53,5 +54,9 @@ func (l Less) String() string {
 }
 
 func (l Less) Compile(c *compiler.Compiler) (position int) {
-	return 0
+	// the order of the compilation of the operands is inverted because we reuse
+	// the code.OpGreaterThan OpCode.
+	l.r.Compile(c)
+	l.l.Compile(c)
+	return c.Emit(code.OpGreaterThan)
 }

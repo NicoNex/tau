@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -53,5 +54,7 @@ func (t Times) String() string {
 }
 
 func (t Times) Compile(c *compiler.Compiler) (position int) {
-	return 0
+	t.l.Compile(c)
+	t.r.Compile(c)
+	return c.Emit(code.OpMul)
 }

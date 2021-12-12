@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -47,5 +48,7 @@ func (d Divide) String() string {
 }
 
 func (d Divide) Compile(c *compiler.Compiler) (position int) {
-	return 0
+	d.l.Compile(c)
+	d.r.Compile(c)
+	return c.Emit(code.OpDiv)
 }

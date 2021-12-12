@@ -17,6 +17,25 @@ type VM struct {
 	sp           int
 }
 
+func assertTypes(o obj.Object, types ...obj.Type) bool {
+	for _, t := range types {
+		if t == o.Type() {
+			return true
+		}
+	}
+	return false
+}
+
+func toFloat(l, r obj.Object) (obj.Object, obj.Object) {
+	if i, ok := l.(*obj.Integer); ok {
+		l = obj.NewFloat(float64(*i))
+	}
+	if i, ok := r.(*obj.Integer); ok {
+		r = obj.NewFloat(float64(*i))
+	}
+	return l, r
+}
+
 func New(bytecode *compiler.Bytecode) *VM {
 	return &VM{
 		instructions: bytecode.Instructions,
@@ -27,6 +46,111 @@ func New(bytecode *compiler.Bytecode) *VM {
 
 func (vm *VM) LastPoppedStackElem() obj.Object {
 	return vm.stack[vm.sp]
+}
+
+func (vm *VM) execAdd() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	switch {
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		vm.push(obj.NewInteger(l + r))
+
+	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
+		l := left.(*obj.String).Val()
+		r := right.(*obj.String).Val()
+		vm.push(obj.NewString(l + r))
+
+	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
+		left, right = toFloat(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		vm.push(obj.NewFloat(l + r))
+
+	default:
+		return fmt.Errorf("unsupported operator '+' for types %v and %v", left.Type(), right.Type())
+	}
+
+	return nil
+}
+
+func (vm *VM) execSub() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	switch {
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		vm.push(obj.NewInteger(l - r))
+
+	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
+		left, right = toFloat(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		vm.push(obj.NewFloat(l - r))
+
+	default:
+		return fmt.Errorf("unsupported operator '-' for types %v and %v", left.Type(), right.Type())
+	}
+
+	return nil
+}
+
+func (vm *VM) execMul() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	switch {
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		vm.push(obj.NewInteger(l * r))
+
+	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
+		left, right = toFloat(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		vm.push(obj.NewFloat(l * r))
+
+	default:
+		return fmt.Errorf("unsupported operator '*' for types %v and %v", left.Type(), right.Type())
+	}
+
+	return nil
+}
+
+func (vm *VM) execDiv() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	switch {
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		vm.push(obj.NewInteger(l / r))
+
+	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
+		left, right = toFloat(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		vm.push(obj.NewFloat(l / r))
+
+	default:
+		return fmt.Errorf("unsupported operator '/' for types %v and %v", left.Type(), right.Type())
+	}
+
+	return nil
 }
 
 func (vm *VM) Run() error {
@@ -43,11 +167,24 @@ func (vm *VM) Run() error {
 			}
 
 		case code.OpAdd:
-			right := vm.pop()
-			left := vm.pop()
-			lVal := left.(*obj.Integer).Val()
-			rVal := right.(*obj.Integer).Val()
-			vm.push(obj.NewInteger(lVal + rVal))
+			if err := vm.execAdd(); err != nil {
+				return err
+			}
+
+		case code.OpSub:
+			if err := vm.execSub(); err != nil {
+				return err
+			}
+
+		case code.OpMul:
+			if err := vm.execMul(); err != nil {
+				return err
+			}
+
+		case code.OpDiv:
+			if err := vm.execDiv(); err != nil {
+				return err
+			}
 
 		case code.OpPop:
 			vm.pop()

@@ -8,14 +8,19 @@ import (
 	"github.com/NicoNex/tau/obj"
 )
 
-const StackSize = 2048
-
 type VM struct {
 	consts       []obj.Object
 	instructions code.Instructions
 	stack        []obj.Object
 	sp           int
 }
+
+const StackSize = 2048
+
+var (
+	True  = obj.True
+	False = obj.False
+)
 
 func assertTypes(o obj.Object, types ...obj.Type) bool {
 	for _, t := range types {
@@ -153,6 +158,7 @@ func (vm *VM) execDiv() error {
 	return nil
 }
 
+// TODO: optimise this function with map[OpCode]func() error
 func (vm *VM) Run() error {
 	for ip := 0; ip < len(vm.instructions); ip++ {
 		op := code.Opcode(vm.instructions[ip])
@@ -163,6 +169,16 @@ func (vm *VM) Run() error {
 			ip += 2
 
 			if err := vm.push(vm.consts[constIndex]); err != nil {
+				return err
+			}
+
+		case code.OpTrue:
+			if err := vm.push(True); err != nil {
+				return err
+			}
+
+		case code.OpFalse:
+			if err := vm.push(False); err != nil {
 				return err
 			}
 

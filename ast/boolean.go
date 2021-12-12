@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -23,5 +24,11 @@ func (b Boolean) String() string {
 }
 
 func (b Boolean) Compile(c *compiler.Compiler) (position int) {
-	return 0
+	isTrue := bool(b)
+
+	if isTrue {
+		return c.Emit(code.OpTrue)
+	} else {
+		return c.Emit(code.OpFalse)
+	}
 }

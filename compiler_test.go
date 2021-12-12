@@ -153,3 +153,26 @@ func testIntegerObject(expected int64, actual obj.Object) error {
 	}
 	return nil
 }
+
+func TestCompilerBooleanExpressions(t *testing.T) {
+	tests := []compilerTestCase{
+		{
+			input:          "true",
+			expectedConsts: []interface{}{},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpTrue),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:          "false",
+			expectedConsts: []interface{}{},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpFalse),
+				code.Make(code.OpPop),
+			},
+		},
+	}
+
+	runCompilerTests(t, tests)
+}

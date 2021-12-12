@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -54,5 +55,27 @@ func (i IfExpr) alternative(env *obj.Env) obj.Object {
 }
 
 func (i IfExpr) Compile(c *compiler.Compiler) (position int) {
-	return 0
+	i.cond.Compile(c)
+	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, 9999)
+	i.body.Compile(c)
+
+	if c.LastIsPop() {
+		c.RemoveLast()
+	}
+
+	jumpPos := c.Emit(code.OpJump, 9999)
+	c.ReplaceOperand(jumpNotTruthyPos, c.Pos())
+
+	if i.altern == nil {
+		c.Emit(code.OpNull)
+	} else {
+		i.altern.Compile(c)
+
+		if c.LastIsPop() {
+			c.RemoveLast()
+		}
+	}
+
+	c.ReplaceOperand(jumpPos, c.Pos())
+	return c.Pos()
 }

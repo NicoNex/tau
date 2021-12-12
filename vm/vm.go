@@ -20,6 +20,7 @@ const StackSize = 2048
 var (
 	True  = obj.True
 	False = obj.False
+	Null  = obj.NullObj
 )
 
 func assertTypes(o obj.Object, types ...obj.Type) bool {
@@ -353,6 +354,21 @@ func (vm *VM) Run() (err error) {
 			if err := vm.push(vm.consts[constIndex]); err != nil {
 				return err
 			}
+
+		case code.OpJump:
+			pos := int(code.ReadUint16(vm.instructions[ip+1:]))
+			ip = pos - 1
+
+		case code.OpJumpNotTruthy:
+			pos := int(code.ReadUint16(vm.instructions[ip+1:]))
+			ip += 2
+
+			if cond := vm.pop(); !isTruthy(cond) {
+				ip = pos - 1
+			}
+
+		case code.OpNull:
+			err = vm.push(Null)
 
 		case code.OpTrue:
 			err = vm.push(True)

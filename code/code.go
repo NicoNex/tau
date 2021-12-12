@@ -20,6 +20,7 @@ const (
 	OpConstant Opcode = iota
 	OpTrue
 	OpFalse
+	OpNull
 
 	OpAdd
 	OpSub
@@ -37,6 +38,9 @@ const (
 	OpMinus
 	OpBang
 
+	OpJump
+	OpJumpNotTruthy
+
 	OpPop
 )
 
@@ -45,6 +49,7 @@ var (
 		OpConstant: {"OpConstant", []int{2}},
 		OpTrue:     {"OpTrue", []int{}},
 		OpFalse:    {"OpFalse", []int{}},
+		OpNull:     {"OpNull", []int{}},
 
 		OpAdd: {"OpAdd", []int{}},
 		OpSub: {"OpSub", []int{}},
@@ -61,6 +66,9 @@ var (
 
 		OpMinus: {"OpMinus", []int{}},
 		OpBang:  {"OpBang", []int{}},
+
+		OpJump:          {"OpJump", []int{2}},
+		OpJumpNotTruthy: {"OpJumpNotTruthy", []int{2}},
 
 		OpPop: {"OpPop", []int{}},
 	}

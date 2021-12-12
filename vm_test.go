@@ -102,6 +102,8 @@ func TestVMBooleanExpression(t *testing.T) {
 		{"true == false", false},
 		{"true != false", true},
 		{"false != true", true},
+		{"true && false", false},
+		{"true || false", true},
 		{"(1 < 2) == true", true},
 		{"(1 < 2) == false", false},
 		{"(1 > 2) == true", false},
@@ -112,6 +114,10 @@ func TestVMBooleanExpression(t *testing.T) {
 		{"!!true", true},
 		{"!!false", false},
 		{"!!5", true},
+		{"1 <= 1", true},
+		{"1 >= 1", true},
+		{"2 <= 1", false},
+		{"2 >= 1", true},
 	}
 
 	runVmTests(t, tests)

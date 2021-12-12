@@ -25,10 +25,14 @@ const (
 	OpSub
 	OpMul
 	OpDiv
+	OpMod
 
+	OpAnd
+	OpOr
 	OpEqual
 	OpNotEqual
 	OpGreaterThan
+	OpGreaterThanEqual
 
 	OpMinus
 	OpBang
@@ -46,10 +50,14 @@ var (
 		OpSub: {"OpSub", []int{}},
 		OpMul: {"OpMul", []int{}},
 		OpDiv: {"OpDiv", []int{}},
+		OpMod: {"OpDiv", []int{}},
 
-		OpEqual:       {"OpEqual", []int{}},
-		OpNotEqual:    {"OpNotEqual", []int{}},
-		OpGreaterThan: {"OpGreaterThan", []int{}},
+		OpAnd:              {"OpAnd", []int{}},
+		OpOr:               {"OpOr", []int{}},
+		OpEqual:            {"OpEqual", []int{}},
+		OpNotEqual:         {"OpNotEqual", []int{}},
+		OpGreaterThan:      {"OpGreaterThan", []int{}},
+		OpGreaterThanEqual: {"OpGreaterThanEqual", []int{}},
 
 		OpMinus: {"OpMinus", []int{}},
 		OpBang:  {"OpBang", []int{}},

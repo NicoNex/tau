@@ -87,6 +87,16 @@ func TestCompilerIntegerArithmetic(t *testing.T) {
 			},
 		},
 		{
+			input:          "4 % 2",
+			expectedConsts: []interface{}{4, 2},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpMod),
+				code.Make(code.OpPop),
+			},
+		},
+		{
 			input:          "1; 2",
 			expectedConsts: []interface{}{1, 2},
 			expectedInstructions: []code.Instructions{
@@ -209,6 +219,26 @@ func TestBooleanExpressions(t *testing.T) {
 			},
 		},
 		{
+			input:          "1 >= 2",
+			expectedConsts: []interface{}{1, 2},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpGreaterThanEqual),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:          "1 <= 2",
+			expectedConsts: []interface{}{2, 1},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpGreaterThanEqual),
+				code.Make(code.OpPop),
+			},
+		},
+		{
 			input:          "1 == 2",
 			expectedConsts: []interface{}{1, 2},
 			expectedInstructions: []code.Instructions{
@@ -242,8 +272,29 @@ func TestBooleanExpressions(t *testing.T) {
 			input:          "true != false",
 			expectedConsts: []interface{}{},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpTrue), code.Make(code.OpFalse),
+				code.Make(code.OpTrue),
+				code.Make(code.OpFalse),
 				code.Make(code.OpNotEqual),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:          "true && false",
+			expectedConsts: []interface{}{},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpTrue),
+				code.Make(code.OpFalse),
+				code.Make(code.OpAnd),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:          "true || false",
+			expectedConsts: []interface{}{},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpTrue),
+				code.Make(code.OpFalse),
+				code.Make(code.OpOr),
 				code.Make(code.OpPop),
 			},
 		},

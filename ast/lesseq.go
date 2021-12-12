@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -53,5 +54,7 @@ func (l LessEq) String() string {
 }
 
 func (l LessEq) Compile(c *compiler.Compiler) (position int) {
-	return 0
+	l.r.Compile(c)
+	l.l.Compile(c)
+	return c.Emit(code.OpGreaterThanEqual)
 }

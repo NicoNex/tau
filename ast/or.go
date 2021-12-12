@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -37,5 +38,7 @@ func (o Or) String() string {
 }
 
 func (o Or) Compile(c *compiler.Compiler) (position int) {
-	return 0
+	o.l.Compile(c)
+	o.r.Compile(c)
+	return c.Emit(code.OpOr)
 }

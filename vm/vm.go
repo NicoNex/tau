@@ -41,6 +41,21 @@ func toFloat(l, r obj.Object) (obj.Object, obj.Object) {
 	return l, r
 }
 
+func isTruthy(o obj.Object) bool {
+	switch val := o.(type) {
+	case *obj.Boolean:
+		return o == obj.True
+	case *obj.Integer:
+		return val.Val() != 0
+	case *obj.Float:
+		return val.Val() != 0
+	case *obj.Null:
+		return false
+	default:
+		return true
+	}
+}
+
 func New(bytecode *compiler.Bytecode) *VM {
 	return &VM{
 		instructions: bytecode.Instructions,
@@ -150,6 +165,25 @@ func (vm *VM) execDiv() error {
 	}
 }
 
+func (vm *VM) execMod() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+		return fmt.Errorf("unsupported operator '%%' for types %v and %v", left.Type(), right.Type())
+	}
+
+	l := left.(*obj.Integer).Val()
+	r := right.(*obj.Integer).Val()
+
+	if r == 0 {
+		return fmt.Errorf("can't divide by 0")
+	}
+	return vm.push(obj.NewInteger(l % r))
+}
+
 func (vm *VM) execEqual() error {
 	var (
 		right = vm.pop()
@@ -212,6 +246,24 @@ func (vm *VM) execNotEqual() error {
 	}
 }
 
+func (vm *VM) execAnd() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	return vm.push(obj.ParseBool(isTruthy(left) && isTruthy(right)))
+}
+
+func (vm *VM) execOr() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	return vm.push(obj.ParseBool(isTruthy(left) || isTruthy(right)))
+}
+
 func (vm *VM) execGreaterThan() error {
 	var (
 		right = vm.pop()
@@ -232,6 +284,29 @@ func (vm *VM) execGreaterThan() error {
 
 	default:
 		return fmt.Errorf("unsupported operator '>' for types %v and %v", left.Type(), right.Type())
+	}
+}
+
+func (vm *VM) execGreaterThanEqual() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	switch {
+	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+		l := left.(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		return vm.push(obj.ParseBool(l >= r))
+
+	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
+		left, right = toFloat(left, right)
+		l := left.(*obj.Float).Val()
+		r := right.(*obj.Float).Val()
+		return vm.push(obj.ParseBool(l >= r))
+
+	default:
+		return fmt.Errorf("unsupported operator '>=' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -266,8 +341,8 @@ func (vm *VM) execMinus() error {
 }
 
 // TODO: optimise this function with map[OpCode]func() error
-func (vm *VM) Run() error {
-	for ip := 0; ip < len(vm.instructions); ip++ {
+func (vm *VM) Run() (err error) {
+	for ip := 0; ip < len(vm.instructions) && err == nil; ip++ {
 		op := code.Opcode(vm.instructions[ip])
 
 		switch op {
@@ -280,67 +355,56 @@ func (vm *VM) Run() error {
 			}
 
 		case code.OpTrue:
-			if err := vm.push(True); err != nil {
-				return err
-			}
+			err = vm.push(True)
 
 		case code.OpFalse:
-			if err := vm.push(False); err != nil {
-				return err
-			}
+			err = vm.push(False)
 
 		case code.OpAdd:
-			if err := vm.execAdd(); err != nil {
-				return err
-			}
+			err = vm.execAdd()
 
 		case code.OpSub:
-			if err := vm.execSub(); err != nil {
-				return err
-			}
+			err = vm.execSub()
 
 		case code.OpMul:
-			if err := vm.execMul(); err != nil {
-				return err
-			}
+			err = vm.execMul()
 
 		case code.OpDiv:
-			if err := vm.execDiv(); err != nil {
-				return err
-			}
+			err = vm.execDiv()
+
+		case code.OpMod:
+			err = vm.execMod()
 
 		case code.OpEqual:
-			if err := vm.execEqual(); err != nil {
-				return err
-			}
+			err = vm.execEqual()
 
 		case code.OpNotEqual:
-			if err := vm.execNotEqual(); err != nil {
-				return err
-			}
+			err = vm.execNotEqual()
 
 		case code.OpGreaterThan:
-			if err := vm.execGreaterThan(); err != nil {
-				return err
-			}
+			err = vm.execGreaterThan()
+
+		case code.OpGreaterThanEqual:
+			err = vm.execGreaterThanEqual()
+
+		case code.OpAnd:
+			err = vm.execAnd()
+
+		case code.OpOr:
+			err = vm.execOr()
 
 		case code.OpBang:
-			if err := vm.execBang(); err != nil {
-				return err
-			}
+			err = vm.execBang()
 
 		case code.OpMinus:
-			if err := vm.execMinus(); err != nil {
-				return err
-			}
+			err = vm.execMinus()
 
 		case code.OpPop:
 			vm.pop()
 		}
 
 	}
-
-	return nil
+	return
 }
 
 func (vm *VM) push(o obj.Object) error {

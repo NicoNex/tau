@@ -4,18 +4,27 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"os"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 	"github.com/NicoNex/tau/parser"
+	"github.com/NicoNex/tau/vm"
 	"golang.org/x/term"
 )
 
+var useVM bool
+
 func repl() {
-	var env = obj.NewEnv()
+	var env *obj.Env
+
+	if !useVM {
+		env = obj.NewEnv()
+	}
 
 	initState, err := term.MakeRaw(0)
 	if err != nil {
@@ -43,6 +52,21 @@ func repl() {
 			}
 			continue
 		}
+
+		if useVM {
+			c := compiler.New()
+			c.Compile(res)
+			vm := vm.New(c.Bytecode())
+
+			if err := vm.Run(); err != nil {
+				fmt.Fprintf(t, "runtime error: %v\n", err)
+				continue
+			}
+
+			fmt.Fprintln(t, vm.LastPoppedStackElem())
+			continue
+		}
+
 		if val := res.Eval(env); val != nil && val != obj.NullObj {
 			fmt.Fprintln(t, val)
 		}
@@ -50,10 +74,13 @@ func repl() {
 }
 
 func main() {
-	if len(os.Args) > 1 {
+	flag.BoolVar(&useVM, "vm", false, "Use the Tau VM instead of eval method.")
+	flag.Parse()
+
+	if flag.NArg() > 0 {
 		var env = obj.NewEnv()
 
-		b, err := ioutil.ReadFile(os.Args[1])
+		b, err := ioutil.ReadFile(flag.Arg(0))
 		if err != nil {
 			fmt.Println(err)
 			return
@@ -67,6 +94,7 @@ func main() {
 			return
 		}
 
+		// TODO: use vm when specified instead of eval.
 		val := res.Eval(env)
 		if val != obj.NullObj && val != nil {
 			fmt.Println(val)

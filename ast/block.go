@@ -3,6 +3,7 @@ package ast
 import (
 	"strings"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -40,7 +41,8 @@ func (b *Block) Add(n Node) {
 
 func (b Block) Compile(c *compiler.Compiler) (position int) {
 	for _, n := range b {
-		position = n.Compile(c)
+		n.Compile(c)
+		position = c.Emit(code.OpPop)
 	}
 	return
 }

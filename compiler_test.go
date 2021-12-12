@@ -44,7 +44,7 @@ func testInstructions(expected []code.Instructions, actual code.Instructions) er
 	return nil
 }
 
-func TestIntegerArithmetic(t *testing.T) {
+func TestCompilerIntegerArithmetic(t *testing.T) {
 	tests := []compilerTestCase{
 		{
 			input:          "1 + 2",
@@ -52,6 +52,18 @@ func TestIntegerArithmetic(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpConstant, 1),
+				code.Make(code.OpAdd),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:          "1; 2",
+			expectedConsts: []interface{}{1, 2},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpPop),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpPop),
 			},
 		},
 	}

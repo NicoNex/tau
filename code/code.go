@@ -30,6 +30,9 @@ const (
 	OpNotEqual
 	OpGreaterThan
 
+	OpMinus
+	OpBang
+
 	OpPop
 )
 
@@ -47,6 +50,9 @@ var (
 		OpEqual:       {"OpEqual", []int{}},
 		OpNotEqual:    {"OpNotEqual", []int{}},
 		OpGreaterThan: {"OpGreaterThan", []int{}},
+
+		OpMinus: {"OpMinus", []int{}},
+		OpBang:  {"OpBang", []int{}},
 
 		OpPop: {"OpPop", []int{}},
 	}

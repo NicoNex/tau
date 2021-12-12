@@ -63,24 +63,22 @@ func (vm *VM) execAdd() error {
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		l := left.(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
-		vm.push(obj.NewInteger(l + r))
+		return vm.push(obj.NewInteger(l + r))
 
 	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
 		l := left.(*obj.String).Val()
 		r := right.(*obj.String).Val()
-		vm.push(obj.NewString(l + r))
+		return vm.push(obj.NewString(l + r))
 
 	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
-		vm.push(obj.NewFloat(l + r))
+		return vm.push(obj.NewFloat(l + r))
 
 	default:
 		return fmt.Errorf("unsupported operator '+' for types %v and %v", left.Type(), right.Type())
 	}
-
-	return nil
 }
 
 func (vm *VM) execSub() error {
@@ -93,19 +91,17 @@ func (vm *VM) execSub() error {
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		l := left.(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
-		vm.push(obj.NewInteger(l - r))
+		return vm.push(obj.NewInteger(l - r))
 
 	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
-		vm.push(obj.NewFloat(l - r))
+		return vm.push(obj.NewFloat(l - r))
 
 	default:
 		return fmt.Errorf("unsupported operator '-' for types %v and %v", left.Type(), right.Type())
 	}
-
-	return nil
 }
 
 func (vm *VM) execMul() error {
@@ -118,19 +114,17 @@ func (vm *VM) execMul() error {
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		l := left.(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
-		vm.push(obj.NewInteger(l * r))
+		return vm.push(obj.NewInteger(l * r))
 
 	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
-		vm.push(obj.NewFloat(l * r))
+		return vm.push(obj.NewFloat(l * r))
 
 	default:
 		return fmt.Errorf("unsupported operator '*' for types %v and %v", left.Type(), right.Type())
 	}
-
-	return nil
 }
 
 func (vm *VM) execDiv() error {
@@ -143,19 +137,17 @@ func (vm *VM) execDiv() error {
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		l := left.(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
-		vm.push(obj.NewInteger(l / r))
+		return vm.push(obj.NewInteger(l / r))
 
 	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
-		vm.push(obj.NewFloat(l / r))
+		return vm.push(obj.NewFloat(l / r))
 
 	default:
 		return fmt.Errorf("unsupported operator '/' for types %v and %v", left.Type(), right.Type())
 	}
-
-	return nil
 }
 
 func (vm *VM) execEqual() error {
@@ -166,29 +158,27 @@ func (vm *VM) execEqual() error {
 
 	switch {
 	case assertTypes(left, obj.BoolType, obj.NullType) || assertTypes(right, obj.BoolType, obj.NullType):
-		vm.push(obj.ParseBool(left == right))
+		return vm.push(obj.ParseBool(left == right))
 
 	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
 		l := left.(*obj.String).Val()
 		r := right.(*obj.String).Val()
-		vm.push(obj.ParseBool(l == r))
+		return vm.push(obj.ParseBool(l == r))
 
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		l := left.(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
-		vm.push(obj.ParseBool(l == r))
+		return vm.push(obj.ParseBool(l == r))
 
 	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
-		vm.push(obj.ParseBool(l == r))
+		return vm.push(obj.ParseBool(l == r))
 
 	default:
 		return fmt.Errorf("unsupported operator '==' for types %v and %v", left.Type(), right.Type())
 	}
-
-	return nil
 }
 
 func (vm *VM) execNotEqual() error {
@@ -199,29 +189,27 @@ func (vm *VM) execNotEqual() error {
 
 	switch {
 	case assertTypes(left, obj.BoolType, obj.NullType) || assertTypes(right, obj.BoolType, obj.NullType):
-		vm.push(obj.ParseBool(left != right))
+		return vm.push(obj.ParseBool(left != right))
 
 	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
 		l := left.(*obj.String).Val()
 		r := right.(*obj.String).Val()
-		vm.push(obj.ParseBool(l != r))
+		return vm.push(obj.ParseBool(l != r))
 
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		l := left.(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
-		vm.push(obj.ParseBool(l != r))
+		return vm.push(obj.ParseBool(l != r))
 
 	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
-		vm.push(obj.ParseBool(l != r))
+		return vm.push(obj.ParseBool(l != r))
 
 	default:
 		return fmt.Errorf("unsupported operator '!=' for types %v and %v", left.Type(), right.Type())
 	}
-
-	return nil
 }
 
 func (vm *VM) execGreaterThan() error {
@@ -234,19 +222,47 @@ func (vm *VM) execGreaterThan() error {
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		l := left.(*obj.Integer).Val()
 		r := right.(*obj.Integer).Val()
-		vm.push(obj.ParseBool(l > r))
+		return vm.push(obj.ParseBool(l > r))
 
 	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
 		left, right = toFloat(left, right)
 		l := left.(*obj.Float).Val()
 		r := right.(*obj.Float).Val()
-		vm.push(obj.ParseBool(l > r))
+		return vm.push(obj.ParseBool(l > r))
 
 	default:
 		return fmt.Errorf("unsupported operator '>' for types %v and %v", left.Type(), right.Type())
 	}
+}
 
-	return nil
+func (vm *VM) execBang() error {
+	var right = vm.pop()
+
+	switch b := right.(type) {
+	case *obj.Boolean:
+		return vm.push(obj.ParseBool(!b.Val()))
+
+	case *obj.Null:
+		return vm.push(True)
+
+	default:
+		return vm.push(False)
+	}
+}
+
+func (vm *VM) execMinus() error {
+	var right = vm.pop()
+
+	switch r := right.(type) {
+	case *obj.Integer:
+		return vm.push(obj.NewInteger(-r.Val()))
+
+	case *obj.Float:
+		return vm.push(obj.NewFloat(-r.Val()))
+
+	default:
+		return fmt.Errorf("unsupported prefix operator '-' for type %v", r.Type())
+	}
 }
 
 // TODO: optimise this function with map[OpCode]func() error
@@ -305,6 +321,16 @@ func (vm *VM) Run() error {
 
 		case code.OpGreaterThan:
 			if err := vm.execGreaterThan(); err != nil {
+				return err
+			}
+
+		case code.OpBang:
+			if err := vm.execBang(); err != nil {
+				return err
+			}
+
+		case code.OpMinus:
+			if err := vm.execMinus(); err != nil {
 				return err
 			}
 

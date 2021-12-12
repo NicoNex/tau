@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -39,5 +40,6 @@ func (b Bang) String() string {
 }
 
 func (b Bang) Compile(c *compiler.Compiler) (position int) {
-	return 0
+	b.n.Compile(c)
+	return c.Emit(code.OpBang)
 }

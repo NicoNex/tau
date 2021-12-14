@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -46,5 +47,11 @@ func (l List) String() string {
 }
 
 func (l List) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	for _, n := range l {
+		if position, err = n.Compile(c); err != nil {
+			return
+		}
+	}
+	position = c.Emit(code.OpList, len(l))
+	return
 }

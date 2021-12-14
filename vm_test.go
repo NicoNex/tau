@@ -58,6 +58,25 @@ func testExpectedObject(t *testing.T, expected interface{}, actual obj.Object) {
 		if err != nil {
 			t.Errorf("testStringObject failed: %s", err)
 		}
+
+	case []int:
+		l, ok := actual.(obj.List)
+		list := l.Val()
+		if !ok {
+			t.Errorf("object not list: %T (%+v)", actual, actual)
+			return
+		}
+
+		if len(list) != len(expected) {
+			t.Errorf("wrong num of elements. want=%d, got=%d", len(expected), len(list))
+			return
+		}
+		for i, expectedElem := range expected {
+			err := testIntegerObject(int64(expectedElem), list[i])
+			if err != nil {
+				t.Errorf("testIntegerObject failed: %s", err)
+			}
+		}
 	}
 }
 
@@ -178,6 +197,16 @@ func TestVMStringExpressions(t *testing.T) {
 		{`"tau"`, "tau"},
 		{`"tau" + "rocks"`, "taurocks"},
 		{`"t" + "a" + "u"`, "tau"},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestVMListLiterals(t *testing.T) {
+	tests := []vmTestCase{
+		{"[]", []int{}},
+		{"[1, 2, 3]", []int{1, 2, 3}},
+		{"[1 + 2, 3 * 4, 5 + 6]", []int{3, 12, 11}},
 	}
 
 	runVmTests(t, tests)

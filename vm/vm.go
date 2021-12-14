@@ -355,6 +355,15 @@ func (vm *VM) execMinus() error {
 	}
 }
 
+func (vm *VM) buildList(start, end int) obj.Object {
+	var elements = make([]obj.Object, end-start)
+
+	for i := start; i < end; i++ {
+		elements[i-start] = vm.stack[i]
+	}
+	return obj.NewList(elements...)
+}
+
 // TODO: optimise this function with map[OpCode]func() error
 func (vm *VM) Run() (err error) {
 	for ip := 0; ip < len(vm.instructions) && err == nil; ip++ {
@@ -390,6 +399,14 @@ func (vm *VM) Run() (err error) {
 			globalIndex := code.ReadUint16(vm.instructions[ip+1:])
 			ip += 2
 			err = vm.push(vm.globals[globalIndex])
+
+		case code.OpList:
+			nElements := int(code.ReadUint16(vm.instructions[ip+1:]))
+			ip += 2
+
+			list := vm.buildList(vm.sp-nElements, vm.sp)
+			vm.sp = vm.sp - nElements
+			err = vm.push(list)
 
 		case code.OpNull:
 			err = vm.push(Null)

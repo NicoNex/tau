@@ -44,6 +44,17 @@ func testInstructions(expected []code.Instructions, actual code.Instructions) er
 	return nil
 }
 
+func testStringObject(expected string, actual obj.Object) error {
+	result, ok := actual.(*obj.String)
+	if !ok {
+		return fmt.Errorf("object is not string. got=%T (%+v)", actual, actual)
+	}
+	if result.Val() != expected {
+		return fmt.Errorf("object has wrong value. got=%q, want=%q", result.Val(), expected)
+	}
+	return nil
+}
+
 func TestCompilerIntegerArithmetic(t *testing.T) {
 	tests := []compilerTestCase{
 		{
@@ -155,6 +166,11 @@ func testConstants(t *testing.T, expected []interface{}, actual []obj.Object) er
 			if err != nil {
 				return fmt.Errorf("constant %d - testIntegerObject failed: %s",
 					i, err)
+			}
+
+		case string:
+			if err := testStringObject(constant, actual[i]); err != nil {
+				return fmt.Errorf("constant %d - testStringObject failed: %s", i, err)
 			}
 		}
 	}
@@ -397,5 +413,29 @@ func TestGlobalAssignments(t *testing.T) {
 		},
 	}
 
+	runCompilerTests(t, tests)
+}
+
+func TestCompilerStringExpressions(t *testing.T) {
+	tests := []compilerTestCase{
+		{
+			input:          `"tau"`,
+			expectedConsts: []interface{}{"tau"},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpPop),
+			},
+		},
+		{
+			input:          `"tau" + "rocks"`,
+			expectedConsts: []interface{}{"tau", "rocks"},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpAdd),
+				code.Make(code.OpPop),
+			},
+		},
+	}
 	runCompilerTests(t, tests)
 }

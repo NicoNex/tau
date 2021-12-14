@@ -52,7 +52,24 @@ func testExpectedObject(t *testing.T, expected interface{}, actual obj.Object) {
 		if actual != obj.NullObj {
 			t.Errorf("object is not Null: %T (%+v)", actual, actual)
 		}
+
+	case string:
+		err := testCompilerStringObject(expected, actual)
+		if err != nil {
+			t.Errorf("testStringObject failed: %s", err)
+		}
 	}
+}
+
+func testCompilerStringObject(expected string, actual obj.Object) error {
+	result, ok := actual.(*obj.String)
+	if !ok {
+		return fmt.Errorf("object is not string. got=%T (%+v)", actual, actual)
+	}
+	if result.Val() != expected {
+		return fmt.Errorf("object has wrong value. got=%q, want=%q", result.Val(), expected)
+	}
+	return nil
 }
 
 func testBooleanObject(expected bool, actual obj.Object) error {
@@ -151,6 +168,16 @@ func TestVMGlobalAssignments(t *testing.T) {
 		{"one = 1; one", 1},
 		{"one = 1; two = 2; one + two", 3},
 		{"one = 1; two = one + one; one + two", 3},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestVMStringExpressions(t *testing.T) {
+	tests := []vmTestCase{
+		{`"tau"`, "tau"},
+		{`"tau" + "rocks"`, "taurocks"},
+		{`"t" + "a" + "u"`, "tau"},
 	}
 
 	runVmTests(t, tests)

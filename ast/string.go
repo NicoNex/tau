@@ -3,6 +3,7 @@ package ast
 import (
 	"strconv"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -26,5 +27,5 @@ func (s String) Quoted() string {
 }
 
 func (s String) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	return c.Emit(code.OpConstant, c.AddConstant(obj.NewString(string(s)))), nil
 }

@@ -5,19 +5,34 @@ package main
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
 	"io/ioutil"
 	"os"
 
+	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 	"github.com/NicoNex/tau/parser"
+	"github.com/NicoNex/tau/vm"
 )
+
+var useVM bool
 
 func repl() {
 	var (
-		env    = obj.NewEnv()
-		reader = bufio.NewReader(os.Stdin)
+		env         *obj.Env
+		consts      []obj.Object
+		globals     []obj.Object
+		symbolTable *compiler.SymbolTable
+		reader      = bufio.NewReader(os.Stdin)
 	)
+
+	if useVM {
+		globals = make([]obj.Object, vm.GlobalSize)
+		symbolTable = compiler.NewSymbolTable()
+	} else {
+		env = obj.NewEnv()
+	}
 
 	for {
 		fmt.Print(">>> ")
@@ -35,6 +50,20 @@ func repl() {
 			continue
 		}
 
+		if useVM {
+			c := compiler.NewWithState(symbolTable, consts)
+			c.Compile(res)
+			tvm := vm.NewWithGlobalStore(c.Bytecode(), globals)
+
+			if err := tvm.Run(); err != nil {
+				fmt.Printf("runtime error: %v\n", err)
+				continue
+			}
+
+			fmt.Println(tvm.LastPoppedStackElem())
+			continue
+		}
+
 		val := res.Eval(env)
 		if val != obj.NullObj && val != nil {
 			fmt.Println(val)
@@ -43,10 +72,13 @@ func repl() {
 }
 
 func main() {
-	if len(os.Args) > 1 {
+	flag.BoolVar(&useVM, "vm", false, "Use the Tau VM instead of eval method.")
+	flag.Parse()
+
+	if flag.NArg() > 0 {
 		var env = obj.NewEnv()
 
-		b, err := ioutil.ReadFile(os.Args[1])
+		b, err := ioutil.ReadFile(flag.Arg(0))
 		if err != nil {
 			fmt.Println(err)
 			return

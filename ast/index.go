@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -67,5 +68,11 @@ func (i Index) String() string {
 }
 
 func (i Index) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	if position, err = i.left.Compile(c); err != nil {
+		return
+	}
+	if position, err = i.index.Compile(c); err != nil {
+		return
+	}
+	return c.Emit(code.OpIndex), nil
 }

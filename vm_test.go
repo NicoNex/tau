@@ -258,3 +258,20 @@ func TestVMMapLiterals(t *testing.T) {
 	}
 	runVmTests(t, tests)
 }
+
+func TestVMIndexExpressions(t *testing.T) {
+	tests := []vmTestCase{
+		{"[1, 2, 3][1]", 2},
+		{"[1, 2, 3][0 + 2]", 3},
+		{"[[1, 1, 1]][0][0]", 1},
+		// {"[][0]", obj.NullObj},
+		// {"[1, 2, 3][99]", obj.NullObj},
+		// {"[1][-1]", obj.NullObj},
+		{"{1: 1, 2: 2}[1]", 1},
+		{"{1: 1, 2: 2}[2]", 2},
+		// {"{1: 1}[0]", obj.NullObj},
+		// {"{}[0]", obj.NullObj},
+	}
+
+	runVmTests(t, tests)
+}

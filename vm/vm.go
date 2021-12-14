@@ -325,6 +325,41 @@ func (vm *VM) execGreaterThanEqual() error {
 	}
 }
 
+func (vm *VM) execIndex() error {
+	var (
+		index = vm.pop()
+		left  = vm.pop()
+	)
+
+	switch {
+	case assertTypes(left, obj.ListType) && assertTypes(index, obj.IntType):
+		l := left.(obj.List)
+		i := int(index.(*obj.Integer).Val())
+
+		if i < 0 || i >= len(l) {
+			return fmt.Errorf("index out of range")
+		}
+		return vm.push(l[i])
+
+	case assertTypes(left, obj.StringType) && assertTypes(index, obj.IntType):
+		s := left.(*obj.String).Val()
+		i := int(index.(*obj.Integer).Val())
+
+		if i < 0 || i >= len(s) {
+			return fmt.Errorf("index out of range")
+		}
+		return vm.push(obj.NewString(string(s[i])))
+
+	case assertTypes(left, obj.MapType) && assertTypes(index, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType):
+		m := left.(obj.Map)
+		k := index.(obj.Hashable)
+		return vm.push(m.Get(k.KeyHash()).Value)
+
+	default:
+		return fmt.Errorf("invalid index operator for types %v and %v", left.Type(), index.Type())
+	}
+}
+
 func (vm *VM) execBang() error {
 	var right = vm.pop()
 
@@ -439,6 +474,9 @@ func (vm *VM) Run() (err error) {
 
 		case code.OpNull:
 			err = vm.push(Null)
+
+		case code.OpIndex:
+			err = vm.execIndex()
 
 		case code.OpTrue:
 			err = vm.push(True)

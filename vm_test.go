@@ -42,6 +42,12 @@ func testExpectedObject(t *testing.T, expected interface{}, actual obj.Object) {
 			t.Errorf("testIntegerObject failed: %s", err)
 		}
 
+	case float64:
+		err := testFloatObject(float64(expected), actual)
+		if err != nil {
+			t.Errorf("testFloatObject failed: %s", err)
+		}
+
 	case bool:
 		err := testBooleanObject(bool(expected), actual)
 		if err != nil {
@@ -145,6 +151,19 @@ func TestVMIntegerArithmetic(t *testing.T) {
 		{"-10", -10},
 		{"-50 + 100 + -50", 0},
 		{"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestVMFloatArithmetic(t *testing.T) {
+	tests := []vmTestCase{
+		{"1.5", 1.5},
+		{"2.8", 2.8},
+		{"1.5 + 2.7", 4.2},
+		{"1.5 - 2", -0.5},
+		{"1.5 * 2", 3.0},
+		{"5.0 / 2", 2.5},
 	}
 
 	runVmTests(t, tests)

@@ -77,6 +77,30 @@ func testExpectedObject(t *testing.T, expected interface{}, actual obj.Object) {
 				t.Errorf("testIntegerObject failed: %s", err)
 			}
 		}
+
+	case map[obj.KeyHash]int64:
+		m, ok := actual.(obj.Map)
+		if !ok {
+			t.Errorf("object is not Hash. got=%T (%+v)", actual, actual)
+			return
+		}
+		mapObj := map[obj.KeyHash]obj.MapPair(m)
+
+		if len(mapObj) != len(expected) {
+			t.Errorf("hash has wrong number of Pairs. want=%d, got=%d", len(expected), len(mapObj))
+			return
+		}
+
+		for expectedKey, expectedValue := range expected {
+			pair, ok := mapObj[expectedKey]
+			if !ok {
+				t.Errorf("no pair for given key in Pairs")
+			}
+			err := testIntegerObject(expectedValue, pair.Value)
+			if err != nil {
+				t.Errorf("testIntegerObject failed: %s", err)
+			}
+		}
 	}
 }
 
@@ -209,5 +233,28 @@ func TestVMListLiterals(t *testing.T) {
 		{"[1 + 2, 3 * 4, 5 + 6]", []int{3, 12, 11}},
 	}
 
+	runVmTests(t, tests)
+}
+
+func TestVMMapLiterals(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			"{}", map[obj.KeyHash]int64{},
+		},
+		{
+			"{1: 2, 2: 3}",
+			map[obj.KeyHash]int64{
+				obj.NewInteger(1).(*obj.Integer).KeyHash(): 2,
+				obj.NewInteger(2).(*obj.Integer).KeyHash(): 3,
+			},
+		},
+		{
+			"{1 + 1: 2 * 2, 3 + 3: 4 * 4}",
+			map[obj.KeyHash]int64{
+				obj.NewInteger(2).(*obj.Integer).KeyHash(): 4,
+				obj.NewInteger(6).(*obj.Integer).KeyHash(): 16,
+			},
+		},
+	}
 	runVmTests(t, tests)
 }

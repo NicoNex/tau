@@ -2,8 +2,10 @@ package ast
 
 import (
 	"fmt"
+	"sort"
 	"strings"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -76,5 +78,24 @@ func (m Map) String() string {
 }
 
 func (m Map) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	var keys []Node
+
+	for k := range m {
+		keys = append(keys, k)
+	}
+	sort.Slice(keys, func(i, j int) bool {
+		return keys[i].String() < keys[j].String()
+	})
+
+	for _, k := range keys {
+		if position, err = k.Compile(c); err != nil {
+			return
+		}
+
+		if position, err = m[k].Compile(c); err != nil {
+			return
+		}
+	}
+
+	return c.Emit(code.OpMap, len(m)*2), nil
 }

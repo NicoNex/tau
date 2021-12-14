@@ -364,6 +364,24 @@ func (vm *VM) buildList(start, end int) obj.Object {
 	return obj.NewList(elements...)
 }
 
+func (vm *VM) buildMap(start, end int) (obj.Object, error) {
+	var m = obj.NewMap()
+
+	for i := start; i < end; i += 2 {
+		key := vm.stack[i]
+		val := vm.stack[i+1]
+
+		pair := obj.MapPair{key, val}
+		mapKey, ok := key.(obj.Hashable)
+		if !ok {
+			return nil, fmt.Errorf("invalid map key type %v", key.Type())
+		}
+		m.Set(mapKey.KeyHash(), pair)
+	}
+
+	return m, nil
+}
+
 // TODO: optimise this function with map[OpCode]func() error
 func (vm *VM) Run() (err error) {
 	for ip := 0; ip < len(vm.instructions) && err == nil; ip++ {
@@ -407,6 +425,17 @@ func (vm *VM) Run() (err error) {
 			list := vm.buildList(vm.sp-nElements, vm.sp)
 			vm.sp = vm.sp - nElements
 			err = vm.push(list)
+
+		case code.OpMap:
+			nElements := int(code.ReadUint16(vm.instructions[ip+1:]))
+			ip += 2
+
+			mapObj, err := vm.buildMap(vm.sp-nElements, vm.sp)
+			if err != nil {
+				return err
+			}
+			vm.sp = vm.sp - nElements
+			err = vm.push(mapObj)
 
 		case code.OpNull:
 			err = vm.push(Null)

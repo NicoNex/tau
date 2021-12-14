@@ -22,6 +22,7 @@ const (
 	OpFalse
 	OpNull
 	OpList
+	OpMap
 
 	OpAdd
 	OpSub
@@ -54,6 +55,7 @@ var definitions = map[Opcode]*Definition{
 	OpFalse:    {"OpFalse", []int{}},
 	OpNull:     {"OpNull", []int{}},
 	OpList:     {"OpList", []int{2}},
+	OpMap:      {"OpMap", []int{2}},
 
 	OpAdd: {"OpAdd", []int{}},
 	OpSub: {"OpSub", []int{}},

@@ -283,14 +283,90 @@ func TestVMIndexExpressions(t *testing.T) {
 		{"[1, 2, 3][1]", 2},
 		{"[1, 2, 3][0 + 2]", 3},
 		{"[[1, 1, 1]][0][0]", 1},
-		// {"[][0]", obj.NullObj},
-		// {"[1, 2, 3][99]", obj.NullObj},
-		// {"[1][-1]", obj.NullObj},
 		{"{1: 1, 2: 2}[1]", 1},
 		{"{1: 1, 2: 2}[2]", 2},
-		// {"{1: 1}[0]", obj.NullObj},
-		// {"{}[0]", obj.NullObj},
 	}
 
+	runVmTests(t, tests)
+}
+
+func TestVMCallingFunctionsWithoutArguments(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+fivePlusTen = fn() { 5 + 10 }
+fivePlusTen()
+`,
+			expected: 15,
+		},
+		{
+			input: `
+one = fn() { 1 }
+two = fn() { 2 }
+one() + two()
+`,
+			expected: 3,
+		},
+		{
+			input: `
+a = fn() { 1 }
+b = fn() { a() + 1 }
+c = fn() { b() + 1 }
+c()
+`,
+			expected: 3,
+		},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestVMFunctionsWithReturnStatement(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+earlyExit = fn() { return 99; 100; }
+earlyExit()
+`,
+			expected: 99,
+		},
+		{
+			input: `
+earlyExit = fn() { return 99; return 100; }
+earlyExit()
+`,
+			expected: 99,
+		},
+		{
+			input: `
+noReturn = fn() { }
+noReturn()
+`,
+			expected: obj.NullObj,
+		},
+		{
+			input: `
+noReturn = fn() { }
+noReturnTwo = fn() { noReturn() }
+noReturn()
+noReturnTwo()
+`,
+			expected: obj.NullObj,
+		},
+	}
+	runVmTests(t, tests)
+}
+
+func TestVMFirstClassFunctions(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+returnsOne = fn() { 1 }
+returnsOneReturner = fn() { returnsOne }
+returnsOneReturner()()
+`,
+			expected: 1,
+		},
+	}
 	runVmTests(t, tests)
 }

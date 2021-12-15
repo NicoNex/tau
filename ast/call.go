@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -69,10 +70,6 @@ func (c Call) String() string {
 	return fmt.Sprintf("%v(%s)", c.fn, strings.Join(args, ", "))
 }
 
-func (c Call) Compile(comp *compiler.Compiler) (position int, err error) {
-	return 0, nil
-}
-
 func extendEnv(fn *obj.Function, args []obj.Object) *obj.Env {
 	var env = obj.NewEnvWrap(fn.Env)
 
@@ -87,4 +84,11 @@ func unwrapReturn(o obj.Object) obj.Object {
 		return ret.Val()
 	}
 	return o
+}
+
+func (c Call) Compile(comp *compiler.Compiler) (position int, err error) {
+	if position, err = c.fn.Compile(comp); err != nil {
+		return
+	}
+	return comp.Emit(code.OpCall), nil
 }

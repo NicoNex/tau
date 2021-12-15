@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -37,5 +38,19 @@ func (f Function) String() string {
 }
 
 func (f Function) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	c.EnterScope()
+	if position, err = f.body.Compile(c); err != nil {
+		return
+	}
+
+	if c.LastIs(code.OpPop) {
+		c.ReplaceLastPopWithReturn()
+	}
+	if !c.LastIs(code.OpReturnValue) {
+		c.Emit(code.OpReturn)
+	}
+
+	ins := c.LeaveScope()
+
+	return c.Emit(code.OpConstant, c.AddConstant(obj.NewFunctionCompiled(ins))), nil
 }

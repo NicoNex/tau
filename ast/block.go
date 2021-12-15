@@ -44,7 +44,11 @@ func (b Block) Compile(c *compiler.Compiler) (position int, err error) {
 		if position, err = n.Compile(c); err != nil {
 			return
 		}
-		if _, isAssign := n.(Assign); !isAssign {
+
+		_, isAssign := n.(Assign)
+		_, isReturn := n.(Return)
+
+		if !isAssign && !isReturn {
 			position = c.Emit(code.OpPop)
 		}
 	}

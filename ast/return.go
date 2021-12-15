@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -24,5 +25,8 @@ func (r Return) String() string {
 }
 
 func (r Return) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	if position, err = r.v.Compile(c); err != nil {
+		return
+	}
+	return c.Emit(code.OpReturnValue), nil
 }

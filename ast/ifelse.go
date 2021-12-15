@@ -59,7 +59,7 @@ func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {
 	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, 9999)
 	i.body.Compile(c)
 
-	if c.LastIsPop() {
+	if c.LastIs(code.OpPop) {
 		c.RemoveLast()
 	}
 
@@ -71,7 +71,7 @@ func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {
 	} else {
 		i.altern.Compile(c)
 
-		if c.LastIsPop() {
+		if c.LastIs(code.OpPop) {
 			c.RemoveLast()
 		}
 	}

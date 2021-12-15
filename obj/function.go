@@ -3,16 +3,23 @@ package obj
 import (
 	"fmt"
 	"strings"
+
+	"github.com/NicoNex/tau/code"
 )
 
 type Function struct {
-	Params []string
-	Body   interface{}
-	Env    *Env
+	Params       []string
+	Body         interface{}
+	Env          *Env
+	Instructions code.Instructions
 }
 
 func NewFunction(params []string, env *Env, body interface{}) Object {
-	return &Function{params, body, env}
+	return &Function{Params: params, Body: body, Env: env}
+}
+
+func NewFunctionCompiled(i code.Instructions) Object {
+	return &Function{Instructions: i}
 }
 
 func (f Function) Type() Type {

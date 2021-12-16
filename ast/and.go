@@ -38,7 +38,11 @@ func (a And) String() string {
 }
 
 func (a And) Compile(c *compiler.Compiler) (position int, err error) {
-	a.l.Compile(c)
-	a.r.Compile(c)
+	if position, err = a.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = a.r.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpAnd), nil
 }

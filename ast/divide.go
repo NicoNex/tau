@@ -48,7 +48,11 @@ func (d Divide) String() string {
 }
 
 func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
-	d.l.Compile(c)
-	d.r.Compile(c)
+	if position, err = d.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = d.r.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpDiv), nil
 }

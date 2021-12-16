@@ -70,7 +70,11 @@ func (e Equals) String() string {
 }
 
 func (e Equals) Compile(c *compiler.Compiler) (position int, err error) {
-	e.l.Compile(c)
-	e.r.Compile(c)
+	if position, err = e.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = e.r.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpEqual), nil
 }

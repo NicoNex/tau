@@ -54,7 +54,11 @@ func (t Times) String() string {
 }
 
 func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
-	t.l.Compile(c)
-	t.r.Compile(c)
+	if position, err = t.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = t.r.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpMul), nil
 }

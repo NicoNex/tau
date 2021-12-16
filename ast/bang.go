@@ -40,6 +40,8 @@ func (b Bang) String() string {
 }
 
 func (b Bang) Compile(c *compiler.Compiler) (position int, err error) {
-	b.n.Compile(c)
+	if position, err = b.n.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpBang), nil
 }

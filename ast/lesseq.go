@@ -54,7 +54,11 @@ func (l LessEq) String() string {
 }
 
 func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
-	l.r.Compile(c)
-	l.l.Compile(c)
+	if position, err = l.r.Compile(c); err != nil {
+		return
+	}
+	if position, err = l.l.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpGreaterThanEqual), nil
 }

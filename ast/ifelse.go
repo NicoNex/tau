@@ -55,9 +55,13 @@ func (i IfExpr) alternative(env *obj.Env) obj.Object {
 }
 
 func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {
-	i.cond.Compile(c)
+	if position, err = i.cond.Compile(c); err != nil {
+		return
+	}
 	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, 9999)
-	i.body.Compile(c)
+	if position, err = i.body.Compile(c); err != nil {
+		return
+	}
 
 	if c.LastIs(code.OpPop) {
 		c.RemoveLast()
@@ -69,7 +73,9 @@ func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {
 	if i.altern == nil {
 		c.Emit(code.OpNull)
 	} else {
-		i.altern.Compile(c)
+		if position, err = i.altern.Compile(c); err != nil {
+			return
+		}
 
 		if c.LastIs(code.OpPop) {
 			c.RemoveLast()

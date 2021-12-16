@@ -54,7 +54,11 @@ func (g Greater) String() string {
 }
 
 func (g Greater) Compile(c *compiler.Compiler) (position int, err error) {
-	g.l.Compile(c)
-	g.r.Compile(c)
+	if position, err = g.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = g.r.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpGreaterThan), nil
 }

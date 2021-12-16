@@ -67,7 +67,11 @@ func (p Plus) String() string {
 }
 
 func (p Plus) Compile(c *compiler.Compiler) (position int, err error) {
-	p.l.Compile(c)
-	p.r.Compile(c)
+	if position, err = p.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = p.r.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpAdd), nil
 }

@@ -38,7 +38,11 @@ func (o Or) String() string {
 }
 
 func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
-	o.l.Compile(c)
-	o.r.Compile(c)
+	if position, err = o.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = o.r.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpOr), nil
 }

@@ -54,7 +54,11 @@ func (m Minus) String() string {
 }
 
 func (m Minus) Compile(c *compiler.Compiler) (position int, err error) {
-	m.l.Compile(c)
-	m.r.Compile(c)
+	if position, err = m.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = m.r.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpSub), nil
 }

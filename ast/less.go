@@ -56,7 +56,11 @@ func (l Less) String() string {
 func (l Less) Compile(c *compiler.Compiler) (position int, err error) {
 	// the order of the compilation of the operands is inverted because we reuse
 	// the code.OpGreaterThan OpCode.
-	l.r.Compile(c)
-	l.l.Compile(c)
+	if position, err = l.r.Compile(c); err != nil {
+		return
+	}
+	if position, err = l.l.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpGreaterThan), nil
 }

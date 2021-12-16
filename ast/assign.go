@@ -48,7 +48,9 @@ func (a Assign) String() string {
 
 func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 	if left, ok := a.l.(Identifier); ok {
-		a.r.Compile(c)
+		if position, err = a.r.Compile(c); err != nil {
+			return
+		}
 		symbol := c.Define(string(left))
 		return c.Emit(code.OpSetGlobal, symbol.Index), nil
 	}

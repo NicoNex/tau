@@ -70,7 +70,11 @@ func (n NotEquals) String() string {
 }
 
 func (n NotEquals) Compile(c *compiler.Compiler) (position int, err error) {
-	n.l.Compile(c)
-	n.r.Compile(c)
+	if position, err = n.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = n.r.Compile(c); err != nil {
+		return
+	}
 	return c.Emit(code.OpNotEqual), nil
 }

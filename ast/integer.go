@@ -23,6 +23,5 @@ func (i Integer) String() string {
 }
 
 func (i Integer) Compile(c *compiler.Compiler) (position int, err error) {
-	integer := obj.NewInteger(int64(i))
-	return c.Emit(code.OpConstant, c.AddConstant(integer)), nil
+	return c.Emit(code.OpConstant, c.AddConstant(obj.NewInteger(int64(i)))), nil
 }

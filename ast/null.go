@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -20,5 +21,5 @@ func (n Null) String() string {
 }
 
 func (n Null) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	return c.Emit(code.OpConstant, c.AddConstant(obj.NullObj)), nil
 }

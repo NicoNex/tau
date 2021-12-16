@@ -51,8 +51,13 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 		if position, err = a.r.Compile(c); err != nil {
 			return
 		}
+
 		symbol := c.Define(string(left))
-		return c.Emit(code.OpSetGlobal, symbol.Index), nil
+		if symbol.Scope == compiler.GlobalScope {
+			return c.Emit(code.OpSetGlobal, symbol.Index), nil
+		} else {
+			return c.Emit(code.OpSetLocal, symbol.Index), nil
+		}
 	}
 	return 0, fmt.Errorf("cannot assign to literal")
 }

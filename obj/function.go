@@ -12,14 +12,20 @@ type Function struct {
 	Body         interface{}
 	Env          *Env
 	Instructions code.Instructions
+	NumLocals    int
+	NumParams    int
 }
 
 func NewFunction(params []string, env *Env, body interface{}) Object {
 	return &Function{Params: params, Body: body, Env: env}
 }
 
-func NewFunctionCompiled(i code.Instructions) Object {
-	return &Function{Instructions: i}
+func NewFunctionCompiled(i code.Instructions, nLocals, nParams int) Object {
+	return &Function{
+		Instructions: i,
+		NumLocals:    nLocals,
+		NumParams:    nParams,
+	}
 }
 
 func (f Function) Type() Type {

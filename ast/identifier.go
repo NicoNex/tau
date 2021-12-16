@@ -30,7 +30,12 @@ func (i Identifier) String() string {
 
 func (i Identifier) Compile(c *compiler.Compiler) (position int, err error) {
 	if symbol, ok := c.Resolve(string(i)); ok {
-		return c.Emit(code.OpGetGlobal, symbol.Index), nil
+
+		if symbol.Scope == compiler.GlobalScope {
+			return c.Emit(code.OpGetGlobal, symbol.Index), nil
+		} else {
+			return c.Emit(code.OpGetLocal, symbol.Index), nil
+		}
 	}
 	return 0, fmt.Errorf("undefined variable %s", string(i))
 }

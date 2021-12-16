@@ -31,7 +31,7 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 
 		if len(c.args) != len(fn.Params) {
 			return obj.NewError(
-				"wrong number of arguments, expected %d, got %d",
+				"wrong number of arguments: expected %d, got %d",
 				len(fn.Params),
 				len(c.args),
 			)
@@ -90,5 +90,12 @@ func (c Call) Compile(comp *compiler.Compiler) (position int, err error) {
 	if position, err = c.fn.Compile(comp); err != nil {
 		return
 	}
-	return comp.Emit(code.OpCall), nil
+
+	for _, a := range c.args {
+		if position, err = a.Compile(comp); err != nil {
+			return
+		}
+	}
+
+	return comp.Emit(code.OpCall, len(c.args)), nil
 }

@@ -114,12 +114,14 @@ func (c *Compiler) ReplaceLastPopWithReturn() {
 func (c *Compiler) EnterScope() {
 	c.scopes = append(c.scopes, CompilationScope{})
 	c.scopeIndex++
+	c.SymbolTable = NewEnclosedSymbolTable(c.SymbolTable)
 }
 
 func (c *Compiler) LeaveScope() code.Instructions {
 	ins := c.scopes[c.scopeIndex].instructions
 	c.scopes = c.scopes[:len(c.scopes)-1]
 	c.scopeIndex--
+	c.SymbolTable = c.SymbolTable.outer
 
 	return ins
 }

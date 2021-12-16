@@ -4,6 +4,7 @@ type SymbolScope string
 
 const (
 	GlobalScope SymbolScope = "GLOBAL"
+	LocalScope              = "LOCAL"
 )
 
 type Symbol struct {
@@ -13,26 +14,44 @@ type Symbol struct {
 }
 
 type SymbolTable struct {
+	outer   *SymbolTable
 	store   map[string]Symbol
-	numDefs int
+	NumDefs int
 }
 
 func NewSymbolTable() *SymbolTable {
 	return &SymbolTable{store: make(map[string]Symbol)}
 }
 
+func NewEnclosedSymbolTable(outer *SymbolTable) *SymbolTable {
+	return &SymbolTable{
+		outer: outer,
+		store: make(map[string]Symbol),
+	}
+}
+
 func (s *SymbolTable) Define(name string) Symbol {
 	symbol := Symbol{
 		Name:  name,
-		Index: s.numDefs,
+		Index: s.NumDefs,
 		Scope: GlobalScope,
 	}
+
+	if s.outer != nil {
+		symbol.Scope = LocalScope
+	}
+
 	s.store[name] = symbol
-	s.numDefs++
+	s.NumDefs++
 	return symbol
 }
 
 func (s *SymbolTable) Resolve(name string) (Symbol, bool) {
 	obj, ok := s.store[name]
+
+	if !ok && s.outer != nil {
+		return s.outer.Resolve(name)
+	}
+
 	return obj, ok
 }

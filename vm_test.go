@@ -367,6 +367,171 @@ returnsOneReturner()()
 `,
 			expected: 1,
 		},
+		{
+			input: `
+returnsOneReturner = fn() {
+	returnsOne = fn() { 1 }
+	returnsOne
+};
+returnsOneReturner()();
+`,
+			expected: 1,
+		},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestVMCallingFunctionsWithBindings(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+one = fn() { one = 1; one };
+one();
+`,
+			expected: 1,
+		},
+		{
+			input: `
+oneAndTwo = fn() { one = 1; two = 2; one + two; };
+oneAndTwo();
+`,
+			expected: 3,
+		}, {
+			input: `
+oneAndTwo = fn() { one = 1; two = 2; one + two; };
+threeAndFour = fn() { three = 3; four = 4; three + four; };
+oneAndTwo() + threeAndFour();
+`,
+			expected: 10,
+		},
+		{
+			input: `
+firstFoobar = fn() { foobar = 50; foobar; };
+secondFoobar = fn() { foobar = 100; foobar; };
+firstFoobar() + secondFoobar();
+`,
+			expected: 150,
+		},
+		{
+			input: `
+globalSeed = 50;
+minusOne = fn() {
+num = 1;
+globalSeed - num;
+}
+minusTwo = fn() {
+num = 2;
+globalSeed - num;
+}
+minusOne() + minusTwo();
+`,
+			expected: 97,
+		},
 	}
 	runVmTests(t, tests)
+}
+
+func TestVMCallingFunctionsWithArgumentsAndBindings(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+identity = fn(a) { a; }
+identity(4)
+`,
+			expected: 4,
+		},
+		{
+			input: `
+sum = fn(a, b) { a + b; }
+sum(1, 2)
+`,
+			expected: 3,
+		},
+		{
+			input: `
+sum = fn(a, b) {
+	c = a + b
+	c
+}
+sum(1, 2)
+`,
+			expected: 3,
+		},
+		{
+			input: `
+sum = fn(a, b) {
+	c = a + b
+	c
+}
+sum(1, 2) + sum(3, 4)`,
+			expected: 10,
+		},
+		{
+			input: `
+sum = fn(a, b) {
+	c = a + b
+	c
+}
+outer = fn() {
+	sum(1, 2) + sum(3, 4)
+}
+outer()
+`,
+			expected: 10,
+		},
+		{
+			input: `
+globalNum = 10
+
+sum = fn(a, b) {
+	c = a + b
+	c + globalNum
+}
+
+outer = fn() {
+	sum(1, 2) + sum(3, 4) + globalNum
+}
+
+outer() + globalNum
+`,
+			expected: 50,
+		},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestCallingFunctionsWithWrongArguments(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `fn() { 1 }(1);`,
+			expected: `wrong number of arguments: expected 0, got 1`,
+		},
+		{
+			input: `fn(a) { a }();`,
+			expected: `wrong number of arguments: expected 1, got 0`,
+		},
+		{
+			input: `fn(a, b) { a + b; }(1);`,
+			expected: `wrong number of arguments: expected 2, got 1`,
+		},
+	}
+
+	for _, tt := range tests {
+		program := parse(tt.input)
+		comp := compiler.New()
+		err := comp.Compile(program)
+		if err != nil {
+			t.Fatalf("compiler error: %s", err)
+		}
+		vm := vm.New(comp.Bytecode())
+		err = vm.Run()
+		if err == nil {
+			t.Fatalf("expected VM error but resulted in none.")
+		}
+		if err.Error() != tt.expected {
+			t.Fatalf("wrong VM error: want=%q, got=%q", tt.expected, err)
+		}
+	}
 }

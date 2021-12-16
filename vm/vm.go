@@ -72,7 +72,7 @@ func New(bytecode *compiler.Bytecode) *VM {
 		frameIndex: 1,
 	}
 
-	vm.frames[0] = NewFrame(&obj.Function{Instructions: bytecode.Instructions})
+	vm.frames[0] = NewFrame(&obj.Function{Instructions: bytecode.Instructions}, 0)
 	return vm
 }
 
@@ -84,7 +84,7 @@ func NewWithGlobalStore(bytecode *compiler.Bytecode, s []obj.Object) *VM {
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
 	}
-	vm.frames[0] = NewFrame(&obj.Function{Instructions: bytecode.Instructions})
+	vm.frames[0] = NewFrame(&obj.Function{Instructions: bytecode.Instructions}, 0)
 	return vm
 }
 
@@ -413,26 +413,31 @@ func (vm *VM) execMinus() error {
 	}
 }
 
-func (vm *VM) execCall() error {
-	fn, ok := vm.stack[vm.sp-1].(*obj.Function)
-	if !ok {
-		return fmt.Errorf("calling non-function")
-	}
-	vm.pushFrame(NewFrame(fn))
-	return nil
-}
+// func (vm *VM) execCall(ins code.Instructions) error {
+// 	numArgs := code.ReadUint8(ins[])
+// 	vm.currentFrame().ip += 1
+// 	fn, ok := vm.stack[vm.sp-1].(*obj.Function)
+// 	if !ok {
+// 		return fmt.Errorf("calling non-function")
+// 	}
+
+// 	frame := NewFrame(fn, vm.sp)
+// 	vm.pushFrame(frame)
+// 	vm.sp = frame.basePointer + fn.NumLocals
+// 	return nil
+// }
 
 func (vm *VM) execReturnValue() error {
 	retVal := vm.pop()
-	vm.popFrame()
-	vm.pop()
+	frame := vm.popFrame()
+	vm.sp = frame.basePointer - 1
 
 	return vm.push(retVal)
 }
 
 func (vm *VM) execReturn() error {
-	vm.popFrame()
-	vm.pop()
+	frame := vm.popFrame()
+	vm.sp = frame.basePointer - 1
 
 	return vm.push(Null)
 }
@@ -453,7 +458,7 @@ func (vm *VM) buildMap(start, end int) (obj.Object, error) {
 		key := vm.stack[i]
 		val := vm.stack[i+1]
 
-		pair := obj.MapPair{key, val}
+		pair := obj.MapPair{Key: key, Value: val}
 		mapKey, ok := key.(obj.Hashable)
 		if !ok {
 			return nil, fmt.Errorf("invalid map key type %v", key.Type())
@@ -462,6 +467,23 @@ func (vm *VM) buildMap(start, end int) (obj.Object, error) {
 	}
 
 	return m, nil
+}
+
+func (vm *VM) callFunction(numArgs int) error {
+	fn, ok := vm.stack[vm.sp-1-numArgs].(*obj.Function)
+	if !ok {
+		return fmt.Errorf("calling non-function")
+	}
+
+	if numArgs != fn.NumParams {
+		return fmt.Errorf("wrong number of arguments: expected %d, got %d", fn.NumParams, numArgs)
+	}
+
+	frame := NewFrame(fn, vm.sp-numArgs)
+	vm.pushFrame(frame)
+	vm.sp = frame.basePointer + fn.NumLocals
+
+	return nil
 }
 
 // TODO: optimise this function with map[OpCode]func() error
@@ -510,6 +532,20 @@ func (vm *VM) Run() (err error) {
 			vm.currentFrame().ip += 2
 			err = vm.push(vm.globals[globalIndex])
 
+		case code.OpSetLocal:
+			localIndex := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+
+			frame := vm.currentFrame()
+			vm.stack[frame.basePointer+int(localIndex)] = vm.pop()
+
+		case code.OpGetLocal:
+			localIndex := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+
+			frame := vm.currentFrame()
+			err = vm.push(vm.stack[frame.basePointer+int(localIndex)])
+
 		case code.OpList:
 			nElements := int(code.ReadUint16(ins[ip+1:]))
 			vm.currentFrame().ip += 2
@@ -530,7 +566,9 @@ func (vm *VM) Run() (err error) {
 			err = vm.push(mapObj)
 
 		case code.OpCall:
-			err = vm.execCall()
+			numArgs := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+			err = vm.callFunction(int(numArgs))
 
 		case code.OpReturn:
 			err = vm.execReturn()

@@ -39,6 +39,11 @@ func (f Function) String() string {
 
 func (f Function) Compile(c *compiler.Compiler) (position int, err error) {
 	c.EnterScope()
+
+	for _, p := range f.params {
+		c.Define(p.String())
+	}
+
 	if position, err = f.body.Compile(c); err != nil {
 		return
 	}
@@ -50,7 +55,8 @@ func (f Function) Compile(c *compiler.Compiler) (position int, err error) {
 		c.Emit(code.OpReturn)
 	}
 
+	nLocals := c.NumDefs
 	ins := c.LeaveScope()
-
-	return c.Emit(code.OpConstant, c.AddConstant(obj.NewFunctionCompiled(ins))), nil
+	fn := obj.NewFunctionCompiled(ins, nLocals, len(f.params))
+	return c.Emit(code.OpConstant, c.AddConstant(fn)), nil
 }

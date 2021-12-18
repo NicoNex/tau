@@ -48,11 +48,11 @@ func (a Assign) String() string {
 
 func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 	if left, ok := a.l.(Identifier); ok {
+		symbol := c.Define(string(left))
 		if position, err = a.r.Compile(c); err != nil {
 			return
 		}
 
-		symbol := c.Define(string(left))
 		if symbol.Scope == compiler.GlobalScope {
 			return c.Emit(code.OpSetGlobal, symbol.Index), nil
 		} else {

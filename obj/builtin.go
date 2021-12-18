@@ -24,7 +24,7 @@ func (b Builtin) String() string {
 }
 
 var Builtins = []struct {
-	Name string
+	Name    string
 	Builtin Builtin
 }{
 	{

@@ -26,6 +26,7 @@ const (
 	ClassType
 	ReturnType
 	FunctionType
+	ClosureType
 	BuiltinType
 	ListType
 	MapType
@@ -51,6 +52,7 @@ var typrepr = map[Type]string{
 	ClassType:    "class",
 	ReturnType:   "return",
 	FunctionType: "function",
+	ClosureType:  "closure",
 	BuiltinType:  "builtin",
 	ListType:     "list",
 	MapType:      "map",

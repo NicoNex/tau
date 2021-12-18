@@ -157,6 +157,10 @@ func (c *Compiler) LoadSymbol(s Symbol) int {
 		return c.Emit(code.OpGetLocal, s.Index)
 	case BuiltinScope:
 		return c.Emit(code.OpGetBuiltin, s.Index)
+	case FreeScope:
+		return c.Emit(code.OpGetFree, s.Index)
+	case FunctionScope:
+		return c.Emit(code.OpCurrentClosure)
 	default:
 		return 0
 	}

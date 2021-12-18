@@ -590,3 +590,101 @@ func TestBuiltinFunctions(t *testing.T) {
 
 	runVmTests(t, tests)
 }
+
+func TestVMClosures(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+newClosure = fn(a) {
+	fn() { a }
+}
+closure = newClosure(99)
+closure()
+`,
+			expected: 99,
+		},
+		{
+			input: `
+newAdder = fn(a, b) {
+	fn(c) { a + b + c }
+};
+adder = newAdder(1, 2)
+adder(8)
+`,
+			expected: 11,
+		},
+		{
+			input: `
+newAdder = fn(a, b) {
+	c = a + b
+	fn(d) { c + d }
+};
+adder = newAdder(1, 2)
+adder(8)
+`,
+			expected: 11,
+		},
+		{
+			input: `
+newAdderOuter = fn(a, b) {
+	c = a + b
+	fn(d) {
+		e = d + c
+		fn(f) { e + f }
+	}
+}
+newAdderInner = newAdderOuter(1, 2)
+adder = newAdderInner(3)
+adder(8)
+`,
+			expected: 14,
+		},
+		{
+			input: `
+a = 1
+newAdderOuter = fn(b) {
+	fn(c) {
+		fn(d) { a + b + c + d }
+	}
+}
+newAdderInner = newAdderOuter(2)
+adder = newAdderInner(3)
+adder(8)
+`,
+			expected: 14,
+		},
+		{
+			input: `
+newClosure = fn(a, b) {
+	one = fn() { a }
+	two = fn() { b }
+	fn() { one() + two() }
+}
+closure = newClosure(9, 90)
+closure()
+`,
+			expected: 99,
+		},
+	}
+	runVmTests(t, tests)
+}
+
+func TestVMRecursiveClosures(t *testing.T) {
+	tests := []vmTestCase{
+		{
+			input: `
+countDown = fn(x) {
+	if x == 0 {
+		return 0;
+	}
+	countDown(x-1)
+}
+
+countDown(3)
+`,
+			expected: 0,
+		},
+	}
+
+	runVmTests(t, tests)
+}

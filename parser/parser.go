@@ -553,7 +553,16 @@ func (p *Parser) parseIn(left ast.Node) ast.Node {
 func (p *Parser) parseAssign(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
-	return ast.NewAssign(left, p.parseExpr(prec))
+	right := p.parseExpr(prec)
+
+	i, leftIsIdentifier := left.(ast.Identifier)
+	fn, rightIsFunction := right.(ast.Function)
+
+	if leftIsIdentifier && rightIsFunction {
+		fn.Name = i.String()
+	}
+
+	return ast.NewAssign(left, right)
 }
 
 func (p *Parser) parsePlusAssign(left ast.Node) ast.Node {

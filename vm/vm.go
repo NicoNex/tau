@@ -72,7 +72,8 @@ func New(bytecode *compiler.Bytecode) *VM {
 		frameIndex: 1,
 	}
 
-	vm.frames[0] = NewFrame(&obj.Function{Instructions: bytecode.Instructions}, 0)
+	fn := &obj.Function{Instructions: bytecode.Instructions}
+	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
 
@@ -84,7 +85,8 @@ func NewWithGlobalStore(bytecode *compiler.Bytecode, s []obj.Object) *VM {
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
 	}
-	vm.frames[0] = NewFrame(&obj.Function{Instructions: bytecode.Instructions}, 0)
+	fn := &obj.Function{Instructions: bytecode.Instructions}
+	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
 
@@ -428,12 +430,16 @@ func (vm *VM) execReturn() error {
 	return vm.push(Null)
 }
 
+func (vm *VM) execCurrentClosure() error {
+	return vm.push(vm.currentFrame().cl)
+}
+
 func (vm *VM) execCall(nargs int) error {
 	callee := vm.stack[vm.sp-1-nargs]
 
 	switch callee := callee.(type) {
-	case *obj.Function:
-		return vm.callFunction(callee, nargs)
+	case *obj.Closure:
+		return vm.callClosure(callee, nargs)
 	case obj.Builtin:
 		return vm.callBuiltin(callee, nargs)
 	default:
@@ -468,19 +474,14 @@ func (vm *VM) buildMap(start, end int) (obj.Object, error) {
 	return m, nil
 }
 
-func (vm *VM) callFunction(fn *obj.Function, numArgs int) error {
-	fn, ok := vm.stack[vm.sp-1-numArgs].(*obj.Function)
-	if !ok {
-		return fmt.Errorf("calling non-function")
+func (vm *VM) callClosure(cl *obj.Closure, nargs int) error {
+	if nargs != cl.Fn.NumParams {
+		return fmt.Errorf("wrong number of arguments: expected %d, got %d", cl.Fn.NumParams, nargs)
 	}
 
-	if numArgs != fn.NumParams {
-		return fmt.Errorf("wrong number of arguments: expected %d, got %d", fn.NumParams, numArgs)
-	}
-
-	frame := NewFrame(fn, vm.sp-numArgs)
+	frame := NewFrame(cl, vm.sp-nargs)
 	vm.pushFrame(frame)
-	vm.sp = frame.basePointer + fn.NumLocals
+	vm.sp = frame.basePointer + cl.Fn.NumLocals
 	return nil
 }
 
@@ -495,7 +496,21 @@ func (vm *VM) callBuiltin(fn obj.Builtin, nargs int) error {
 	return vm.push(res)
 }
 
-// TODO: optimise this function with map[OpCode]func() error
+func (vm *VM) pushClosure(constIdx, numFree int) error {
+	constant := vm.consts[constIdx]
+	fn, ok := constant.(*obj.Function)
+	if !ok {
+		return fmt.Errorf("not a function: %+v", constant)
+	}
+
+	free := make([]obj.Object, numFree)
+	for i := 0; i < numFree; i++ {
+		free[i] = vm.stack[vm.sp-numFree+i]
+	}
+	vm.sp = vm.sp - numFree
+	return vm.push(&obj.Closure{Fn: fn, Free: free})
+}
+
 func (vm *VM) Run() (err error) {
 	var (
 		ip  int
@@ -584,6 +599,22 @@ func (vm *VM) Run() (err error) {
 			vm.currentFrame().ip += 1
 			def := obj.Builtins[idx]
 			err = vm.push(def.Builtin)
+
+		case code.OpClosure:
+			constIdx := code.ReadUint16(ins[ip+1:])
+			numFree := code.ReadUint8(ins[ip+3:])
+			vm.currentFrame().ip += 3
+			err = vm.pushClosure(int(constIdx), int(numFree))
+
+		case code.OpGetFree:
+			freeIdx := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+
+			closure := vm.currentFrame().cl
+			err = vm.push(closure.Free[freeIdx])
+
+		case code.OpCurrentClosure:
+			err = vm.execCurrentClosure()
 
 		case code.OpReturn:
 			err = vm.execReturn()

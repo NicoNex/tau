@@ -23,6 +23,8 @@ const (
 	OpNull
 	OpList
 	OpMap
+	OpClosure
+	OpCurrentClosure
 
 	OpAdd
 	OpSub
@@ -53,17 +55,20 @@ const (
 	OpGetLocal
 	OpSetLocal
 	OpGetBuiltin
+	OpGetFree
 
 	OpPop
 )
 
 var definitions = map[Opcode]*Definition{
-	OpConstant: {"OpConstant", []int{2}},
-	OpTrue:     {"OpTrue", []int{}},
-	OpFalse:    {"OpFalse", []int{}},
-	OpNull:     {"OpNull", []int{}},
-	OpList:     {"OpList", []int{2}},
-	OpMap:      {"OpMap", []int{2}},
+	OpConstant:       {"OpConstant", []int{2}},
+	OpTrue:           {"OpTrue", []int{}},
+	OpFalse:          {"OpFalse", []int{}},
+	OpNull:           {"OpNull", []int{}},
+	OpList:           {"OpList", []int{2}},
+	OpMap:            {"OpMap", []int{2}},
+	OpClosure:        {"OpClosure", []int{2, 1}},
+	OpCurrentClosure: {"OpCurrentClosure", []int{}},
 
 	OpAdd: {"OpAdd", []int{}},
 	OpSub: {"OpSub", []int{}},
@@ -94,6 +99,7 @@ var definitions = map[Opcode]*Definition{
 	OpGetLocal:   {"OpGetLocal", []int{1}},
 	OpSetLocal:   {"OpSetLocal", []int{1}},
 	OpGetBuiltin: {"OpGetBuiltin", []int{1}},
+	OpGetFree:    {"OpGetFree", []int{1}},
 
 	OpPop: {"OpPop", []int{}},
 }
@@ -129,6 +135,9 @@ func (ins Instructions) fmtInstruction(def *Definition, operands []int) string {
 
 	case 1:
 		return fmt.Sprintf("%s %d", def.Name, operands[0])
+
+	case 2:
+		return fmt.Sprintf("%s %d %d", def.Name, operands[0], operands[1])
 
 	default:
 		return fmt.Sprintf("error: unhandled operand count for %s\n", def.Name)

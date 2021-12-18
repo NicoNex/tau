@@ -413,20 +413,6 @@ func (vm *VM) execMinus() error {
 	}
 }
 
-// func (vm *VM) execCall(ins code.Instructions) error {
-// 	numArgs := code.ReadUint8(ins[])
-// 	vm.currentFrame().ip += 1
-// 	fn, ok := vm.stack[vm.sp-1].(*obj.Function)
-// 	if !ok {
-// 		return fmt.Errorf("calling non-function")
-// 	}
-
-// 	frame := NewFrame(fn, vm.sp)
-// 	vm.pushFrame(frame)
-// 	vm.sp = frame.basePointer + fn.NumLocals
-// 	return nil
-// }
-
 func (vm *VM) execReturnValue() error {
 	retVal := vm.pop()
 	frame := vm.popFrame()
@@ -440,6 +426,19 @@ func (vm *VM) execReturn() error {
 	vm.sp = frame.basePointer - 1
 
 	return vm.push(Null)
+}
+
+func (vm *VM) execCall(nargs int) error {
+	callee := vm.stack[vm.sp-1-nargs]
+
+	switch callee := callee.(type) {
+	case *obj.Function:
+		return vm.callFunction(callee, nargs)
+	case obj.Builtin:
+		return vm.callBuiltin(callee, nargs)
+	default:
+		return fmt.Errorf("calling non-function")
+	}
 }
 
 func (vm *VM) buildList(start, end int) obj.Object {
@@ -469,7 +468,7 @@ func (vm *VM) buildMap(start, end int) (obj.Object, error) {
 	return m, nil
 }
 
-func (vm *VM) callFunction(numArgs int) error {
+func (vm *VM) callFunction(fn *obj.Function, numArgs int) error {
 	fn, ok := vm.stack[vm.sp-1-numArgs].(*obj.Function)
 	if !ok {
 		return fmt.Errorf("calling non-function")
@@ -482,8 +481,18 @@ func (vm *VM) callFunction(numArgs int) error {
 	frame := NewFrame(fn, vm.sp-numArgs)
 	vm.pushFrame(frame)
 	vm.sp = frame.basePointer + fn.NumLocals
-
 	return nil
+}
+
+func (vm *VM) callBuiltin(fn obj.Builtin, nargs int) error {
+	args := vm.stack[vm.sp-nargs : vm.sp]
+	res := fn(args...)
+	vm.sp = vm.sp - nargs - 1
+
+	if res == nil {
+		return vm.push(Null)
+	}
+	return vm.push(res)
 }
 
 // TODO: optimise this function with map[OpCode]func() error
@@ -568,7 +577,13 @@ func (vm *VM) Run() (err error) {
 		case code.OpCall:
 			numArgs := code.ReadUint8(ins[ip+1:])
 			vm.currentFrame().ip += 1
-			err = vm.callFunction(int(numArgs))
+			err = vm.execCall(int(numArgs))
+
+		case code.OpGetBuiltin:
+			idx := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+			def := obj.Builtins[idx]
+			err = vm.push(def.Builtin)
 
 		case code.OpReturn:
 			err = vm.execReturn()

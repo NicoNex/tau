@@ -3,7 +3,6 @@ package ast
 import (
 	"fmt"
 
-	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -16,8 +15,8 @@ func NewIdentifier(name string) Node {
 
 func (i Identifier) Eval(env *obj.Env) obj.Object {
 	if c, ok := env.Get(string(i)); ok {
-		return c //.Object()
-	} else if o, ok := obj.Builtins[string(i)]; ok {
+		return c
+	} else if o, ok := obj.ResolveBuiltin(string(i)); ok {
 		return o
 	}
 
@@ -30,12 +29,7 @@ func (i Identifier) String() string {
 
 func (i Identifier) Compile(c *compiler.Compiler) (position int, err error) {
 	if symbol, ok := c.Resolve(string(i)); ok {
-
-		if symbol.Scope == compiler.GlobalScope {
-			return c.Emit(code.OpGetGlobal, symbol.Index), nil
-		} else {
-			return c.Emit(code.OpGetLocal, symbol.Index), nil
-		}
+		return c.LoadSymbol(symbol), nil
 	}
 	return 0, fmt.Errorf("undefined variable %s", string(i))
 }

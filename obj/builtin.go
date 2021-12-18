@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
-	"strings"
+	// "strconv"
+	// "strings"
 )
 
 var (
@@ -23,7 +23,51 @@ func (b Builtin) String() string {
 	return "<builtin function>"
 }
 
-var Builtins = map[string]Builtin{
+var Builtins = []struct {
+	Name string
+	Builtin Builtin
+}{
+	{
+		"len",
+		func(args ...Object) Object {
+			if l := len(args); l != 1 {
+				return NewError("len: wrong number of arguments, expected 1, got %d", l)
+			}
+
+			switch o := args[0].(type) {
+			case List:
+				return NewInteger(int64(len(o)))
+			case *String:
+				return NewInteger(int64(len(*o)))
+			default:
+				return NewError("len: object of type %q has no length", o.Type())
+			}
+		},
+	},
+	{
+		"println",
+		func(args ...Object) Object {
+			var arguments []interface{}
+
+			for _, a := range args {
+				arguments = append(arguments, a.String())
+			}
+			fmt.Fprintln(Stdout, arguments...)
+			return NullObj
+		},
+	},
+}
+
+func ResolveBuiltin(name string) (Builtin, bool) {
+	for _, b := range Builtins {
+		if name == b.Name {
+			return b.Builtin, true
+		}
+	}
+	return nil, false
+}
+
+/*var Builtins = map[string]Builtin{
 	"println": func(args ...Object) Object {
 		var arguments []interface{}
 
@@ -299,4 +343,4 @@ func listify(start, stop, step int) List {
 		l = append(l, NewInteger(int64(i)))
 	}
 	return l
-}
+}*/

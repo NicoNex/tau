@@ -33,8 +33,14 @@ type Bytecode struct {
 }
 
 func New() *Compiler {
+	var st = NewSymbolTable()
+
+	for i, b := range obj.Builtins {
+		st.DefineBuiltin(i, b.Name)
+	}
+
 	return &Compiler{
-		SymbolTable: NewSymbolTable(),
+		SymbolTable: st,
 		scopes:      []CompilationScope{{}},
 	}
 }
@@ -140,5 +146,18 @@ func (c *Compiler) Bytecode() *Bytecode {
 	return &Bytecode{
 		Instructions: c.scopes[c.scopeIndex].instructions,
 		Constants:    c.constants,
+	}
+}
+
+func (c *Compiler) LoadSymbol(s Symbol) int {
+	switch s.Scope {
+	case GlobalScope:
+		return c.Emit(code.OpGetGlobal, s.Index)
+	case LocalScope:
+		return c.Emit(code.OpGetLocal, s.Index)
+	case BuiltinScope:
+		return c.Emit(code.OpGetBuiltin, s.Index)
+	default:
+		return 0
 	}
 }

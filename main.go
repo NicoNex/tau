@@ -30,6 +30,10 @@ func repl() {
 	if useVM {
 		globals = make([]obj.Object, vm.GlobalSize)
 		symbolTable = compiler.NewSymbolTable()
+
+		for i, b := range obj.Builtins {
+			symbolTable.DefineBuiltin(i, b.Name)
+		}
 	} else {
 		env = obj.NewEnv()
 	}
@@ -86,7 +90,19 @@ func main() {
 	flag.Parse()
 
 	if flag.NArg() > 0 {
-		var env = obj.NewEnv()
+		var (
+			env         *obj.Env
+			consts      []obj.Object
+			globals     []obj.Object
+			symbolTable *compiler.SymbolTable
+		)
+
+		if useVM {
+			globals = make([]obj.Object, vm.GlobalSize)
+			symbolTable = compiler.NewSymbolTable()
+		} else {
+			env = obj.NewEnv()
+		}
 
 		b, err := ioutil.ReadFile(flag.Arg(0))
 		if err != nil {
@@ -102,7 +118,20 @@ func main() {
 			return
 		}
 
-		// TODO: use vm when specified instead of eval.
+		if useVM {
+			c := compiler.NewWithState(symbolTable, consts)
+			c.Compile(res)
+			tvm := vm.NewWithGlobalStore(c.Bytecode(), globals)
+
+			if err := tvm.Run(); err != nil {
+				fmt.Printf("runtime error: %v\n", err)
+				return
+			}
+
+			fmt.Println(tvm.LastPoppedStackElem())
+			return
+		}
+
 		val := res.Eval(env)
 		if val != obj.NullObj && val != nil {
 			fmt.Println(val)

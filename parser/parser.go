@@ -551,9 +551,8 @@ func (p *Parser) parseIn(left ast.Node) ast.Node {
 }
 
 func (p *Parser) parseAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	right := p.parseExpr(prec)
+	right := p.parseExpr(Lowest)
 
 	i, leftIsIdentifier := left.(ast.Identifier)
 	fn, rightIsFunction := right.(ast.Function)
@@ -566,63 +565,53 @@ func (p *Parser) parseAssign(left ast.Node) ast.Node {
 }
 
 func (p *Parser) parsePlusAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewPlusAssign(left, p.parseExpr(prec))
+	return ast.NewPlusAssign(left, p.parseExpr(Lowest))
 }
 
 func (p *Parser) parseMinusAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewMinusAssign(left, p.parseExpr(prec))
+	return ast.NewMinusAssign(left, p.parseExpr(Lowest))
 }
 
 func (p *Parser) parseSlashAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewDivideAssign(left, p.parseExpr(prec))
+	return ast.NewDivideAssign(left, p.parseExpr(Lowest))
 }
 
 func (p *Parser) parseAsteriskAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewTimesAssign(left, p.parseExpr(prec))
+	return ast.NewTimesAssign(left, p.parseExpr(Lowest))
 }
 
 func (p *Parser) parseModulusAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewModAssign(left, p.parseExpr(prec))
+	return ast.NewModAssign(left, p.parseExpr(Lowest))
 }
 
 func (p *Parser) parseBwAndAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewBitwiseAndAssign(left, p.parseExpr(prec))
+	return ast.NewBitwiseAndAssign(left, p.parseExpr(Lowest))
 }
 
 func (p *Parser) parseBwOrAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewBitwiseOrAssign(left, p.parseExpr(prec))
+	return ast.NewBitwiseOrAssign(left, p.parseExpr(Lowest))
 }
 
 func (p *Parser) parseBwXorAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewBitwiseXorAssign(left, p.parseExpr(prec))
+	return ast.NewBitwiseXorAssign(left, p.parseExpr(Lowest))
 }
 
 func (p *Parser) parseLShiftAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewBitwiseShiftLeftAssign(left, p.parseExpr(prec))
+	return ast.NewBitwiseShiftLeftAssign(left, p.parseExpr(Lowest))
 }
 
 func (p *Parser) parseRShiftAssign(left ast.Node) ast.Node {
-	prec := p.precedence()
 	p.next()
-	return ast.NewBitwiseShiftRightAssign(left, p.parseExpr(prec))
+	return ast.NewBitwiseShiftRightAssign(left, p.parseExpr(Lowest))
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {

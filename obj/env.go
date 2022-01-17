@@ -22,7 +22,6 @@ func (e *Env) Get(n string) (Object, bool) {
 }
 
 func (e *Env) Set(n string, o Object) Object {
-	// c := &Container{o}
 	e.store[n] = o
 	return o
 }

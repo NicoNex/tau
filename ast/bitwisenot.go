@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -35,5 +36,8 @@ func (b BitwiseNot) String() string {
 }
 
 func (b BitwiseNot) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	if position, err = b.n.Compile(c); err != nil {
+		return
+	}
+	return c.Emit(code.OpBwNot), nil
 }

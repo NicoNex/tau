@@ -48,5 +48,6 @@ func (p PlusPlus) String() string {
 }
 
 func (p PlusPlus) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{p.r, Plus{p.r, Integer(1)}}
+	return n.Compile(c)
 }

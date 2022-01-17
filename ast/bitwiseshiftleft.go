@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -46,5 +47,11 @@ func (b BitwiseLeftShift) String() string {
 }
 
 func (b BitwiseLeftShift) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	if position, err = b.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = b.r.Compile(c); err != nil {
+		return
+	}
+	return c.Emit(code.OpBwLShift), nil
 }

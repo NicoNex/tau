@@ -55,5 +55,6 @@ func (m ModAssign) String() string {
 }
 
 func (m ModAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{m.l, Mod{m.l, m.r}}
+	return n.Compile(c)
 }

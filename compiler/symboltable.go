@@ -35,6 +35,10 @@ func NewEnclosedSymbolTable(outer *SymbolTable) *SymbolTable {
 }
 
 func (s *SymbolTable) Define(name string) Symbol {
+	if symbol, ok := s.store[name]; ok {
+		return symbol
+	}
+
 	symbol := Symbol{
 		Name:  name,
 		Index: s.NumDefs,

@@ -71,5 +71,6 @@ func (p PlusAssign) String() string {
 }
 
 func (p PlusAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{p.l, Plus{p.l, p.r}}
+	return n.Compile(c)
 }

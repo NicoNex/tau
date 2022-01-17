@@ -45,12 +45,31 @@ func (b Block) Compile(c *compiler.Compiler) (position int, err error) {
 			return
 		}
 
-		_, isAssign := n.(Assign)
-		_, isReturn := n.(Return)
-
-		if !isAssign && !isReturn {
+		if canPop(n) {
 			position = c.Emit(code.OpPop)
 		}
 	}
 	return
+}
+
+func canPop(n Node) bool {
+	switch n.(type) {
+	case Assign,
+		BitwiseAndAssign,
+		BitwiseOrAssign,
+		BitwiseShiftLeftAssign,
+		BitwiseShiftRightAssign,
+		BitwiseXorAssign,
+		DivideAssign,
+		MinusAssign,
+		PlusAssign,
+		PlusPlus,
+		MinusMinus,
+		TimesAssign,
+		Return:
+		return false
+
+	default:
+		return true
+	}
 }

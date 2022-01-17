@@ -52,5 +52,6 @@ func (b BitwiseXorAssign) String() string {
 }
 
 func (b BitwiseXorAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{b.l, BitwiseXor{b.l, b.r}}
+	return n.Compile(c)
 }

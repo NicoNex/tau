@@ -66,5 +66,6 @@ func (t TimesAssign) String() string {
 }
 
 func (t TimesAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{t.l, Times{t.l, t.r}}
+	return n.Compile(c)
 }

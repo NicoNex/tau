@@ -51,5 +51,6 @@ func (b BitwiseShiftLeftAssign) String() string {
 }
 
 func (b BitwiseShiftLeftAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{b.l, BitwiseLeftShift{b.l, b.r}}
+	return n.Compile(c)
 }

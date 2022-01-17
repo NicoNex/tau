@@ -48,5 +48,6 @@ func (m MinusMinus) String() string {
 }
 
 func (m MinusMinus) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{m.r, Minus{m.r, Integer(1)}}
+	return n.Compile(c)
 }

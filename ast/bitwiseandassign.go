@@ -51,5 +51,6 @@ func (b BitwiseAndAssign) String() string {
 }
 
 func (b BitwiseAndAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{b.l, BitwiseAnd{b.l, b.r}}
+	return n.Compile(c)
 }

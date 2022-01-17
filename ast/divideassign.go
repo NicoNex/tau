@@ -52,5 +52,6 @@ func (d DivideAssign) String() string {
 }
 
 func (d DivideAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{d.l, Divide{d.l, d.r}}
+	return n.Compile(c)
 }

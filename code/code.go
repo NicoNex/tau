@@ -32,6 +32,13 @@ const (
 	OpDiv
 	OpMod
 
+	OpBwAnd
+	OpBwOr
+	OpBwXor
+	OpBwNot
+	OpBwLShift
+	OpBwRShift
+
 	OpAnd
 	OpOr
 	OpEqual
@@ -74,7 +81,14 @@ var definitions = map[Opcode]*Definition{
 	OpSub: {"OpSub", []int{}},
 	OpMul: {"OpMul", []int{}},
 	OpDiv: {"OpDiv", []int{}},
-	OpMod: {"OpDiv", []int{}},
+	OpMod: {"OpMod", []int{}},
+
+	OpBwAnd:    {"OpBwAnd", []int{}},
+	OpBwOr:     {"OpBwOr", []int{}},
+	OpBwXor:    {"OpBwXor", []int{}},
+	OpBwNot:    {"OpBwNot", []int{}},
+	OpBwLShift: {"OpBwLShift", []int{}},
+	OpBwRShift: {"OpBwRshift", []int{}},
 
 	OpAnd:              {"OpAnd", []int{}},
 	OpOr:               {"OpOr", []int{}},

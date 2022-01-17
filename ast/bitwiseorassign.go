@@ -50,5 +50,6 @@ func (b BitwiseOrAssign) String() string {
 }
 
 func (b BitwiseOrAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{b.l, BitwiseOr{b.l, b.r}}
+	return n.Compile(c)
 }

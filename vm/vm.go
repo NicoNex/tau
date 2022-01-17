@@ -224,6 +224,92 @@ func (vm *VM) execMod() error {
 	return vm.push(obj.NewInteger(l % r))
 }
 
+func (vm *VM) execBwAnd() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+		return fmt.Errorf("unsupported operator '&' for types %v and %v", left.Type(), right.Type())
+	}
+
+	l := left.(*obj.Integer).Val()
+	r := right.(*obj.Integer).Val()
+	return vm.push(obj.NewInteger(l & r))
+}
+
+func (vm *VM) execBwOr() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+		return fmt.Errorf("unsupported operator '|' for types %v and %v", left.Type(), right.Type())
+	}
+
+	l := left.(*obj.Integer).Val()
+	r := right.(*obj.Integer).Val()
+	return vm.push(obj.NewInteger(l | r))
+}
+
+func (vm *VM) execBwXor() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+		return fmt.Errorf("unsupported operator '^' for types %v and %v", left.Type(), right.Type())
+	}
+
+	l := left.(*obj.Integer).Val()
+	r := right.(*obj.Integer).Val()
+	return vm.push(obj.NewInteger(l ^ r))
+}
+
+func (vm *VM) execBwNot() error {
+	var left = vm.pop()
+
+	if !assertTypes(left, obj.IntType) {
+		return fmt.Errorf("unsupported operator '~' for type %v", left.Type())
+	}
+
+	l := left.(*obj.Integer).Val()
+	return vm.push(obj.NewInteger(^l))
+}
+
+func (vm *VM) execBwLShift() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+		return fmt.Errorf("unsupported operator '<<' for types %v and %v", left.Type(), right.Type())
+	}
+
+	l := left.(*obj.Integer).Val()
+	r := right.(*obj.Integer).Val()
+	return vm.push(obj.NewInteger(l << r))
+}
+
+func (vm *VM) execBwRShift() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+		return fmt.Errorf("unsupported operator '>>' for types %v and %v", left.Type(), right.Type())
+	}
+
+	l := left.(*obj.Integer).Val()
+	r := right.(*obj.Integer).Val()
+	return vm.push(obj.NewInteger(l >> r))
+}
+
 func (vm *VM) execEqual() error {
 	var (
 		right = vm.pop()
@@ -648,6 +734,21 @@ func (vm *VM) Run() (err error) {
 
 		case code.OpMod:
 			err = vm.execMod()
+
+		case code.OpBwAnd:
+			err = vm.execBwAnd()
+
+		case code.OpBwOr:
+			err = vm.execBwOr()
+
+		case code.OpBwXor:
+			err = vm.execBwXor()
+
+		case code.OpBwLShift:
+			err = vm.execBwLShift()
+
+		case code.OpBwRShift:
+			err = vm.execBwRShift()
 
 		case code.OpEqual:
 			err = vm.execEqual()

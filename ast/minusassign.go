@@ -66,5 +66,6 @@ func (m MinusAssign) String() string {
 }
 
 func (m MinusAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	n := Assign{m.l, Minus{m.l, m.r}}
+	return n.Compile(c)
 }

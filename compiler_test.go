@@ -498,6 +498,40 @@ func TestGlobalAssignments(t *testing.T) {
 				code.Make(code.OpPop),
 			},
 		},
+		{
+			input:             `three = 1 + 2`,
+			expectedConstants: []interface{}{1, 2},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpAdd),
+				code.Make(code.OpSetGlobal, 0),
+			},
+		},
+		{
+			input:             `three = 4; three = three - 1`,
+			expectedConstants: []interface{}{4, 1},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpSetGlobal, 0),
+				code.Make(code.OpGetGlobal, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpSub),
+				code.Make(code.OpSetGlobal, 0),
+			},
+		},
+		{
+			input:             `three = 2; three += 1`,
+			expectedConstants: []interface{}{2, 1},
+			expectedInstructions: []code.Instructions{
+				code.Make(code.OpConstant, 0),
+				code.Make(code.OpSetGlobal, 0),
+				code.Make(code.OpGetGlobal, 0),
+				code.Make(code.OpConstant, 1),
+				code.Make(code.OpSub),
+				code.Make(code.OpSetGlobal, 0),
+			},
+		},
 	}
 
 	runCompilerTests(t, tests)
@@ -921,9 +955,7 @@ fn() {
 func TestCompilerBuiltins(t *testing.T) {
 	tests := []compilerTestCase{
 		{
-			input: `
-len([])
-`,
+			input:             `len([])`,
 			expectedConstants: []interface{}{},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpGetBuiltin, 0),

@@ -695,6 +695,18 @@ func TestCompilerIndexExpressions(t *testing.T) {
 	runCompilerTests(t, tests)
 }
 
+func TestCompilerDotExpressions(t *testing.T) {
+	tests := []compilerTestCase{
+		{
+			input:                "a = new(); a.test = 123",
+			expectedConstants:    []interface{}{123},
+			expectedInstructions: []code.Instructions{},
+		},
+	}
+
+	runCompilerTests(t, tests)
+}
+
 func TestCompilerFunctions(t *testing.T) {
 	tests := []compilerTestCase{
 		{

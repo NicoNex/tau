@@ -1,15 +1,11 @@
 package obj
 
-type Setter interface {
-	Set(string, Object) Object
-}
-
 type Undefined struct {
-	s Setter
+	s setter
 	n string
 }
 
-func NewUndefined(s Setter, n string) Object {
+func NewUndefined(s setter, n string) Object {
 	return &Undefined{s, n}
 }
 

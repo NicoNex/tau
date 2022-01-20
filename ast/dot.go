@@ -2,6 +2,8 @@ package ast
 
 import (
 	"fmt"
+
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -39,5 +41,11 @@ func (d Dot) String() string {
 }
 
 func (d Dot) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	if position, err = d.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = d.r.Compile(c); err != nil {
+		return
+	}
+	return c.Emit(code.OpDot), nil
 }

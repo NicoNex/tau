@@ -108,6 +108,24 @@ func (vm *VM) LastPoppedStackElem() obj.Object {
 	return vm.stack[vm.sp]
 }
 
+func (vm *VM) execDot() error {
+	var (
+		right = vm.pop()
+		left  = vm.pop()
+	)
+
+	if !assertTypes(left, obj.ClassType) {
+		return fmt.Errorf("%v object has no attribute %s", left.Type(), right)
+	}
+
+	l := left.(obj.Class)
+	o, ok := l.Get(right.String())
+	if !ok {
+		return vm.push(obj.NewUndefined(l, right.String()))
+	}
+	return vm.push(o)
+}
+
 func (vm *VM) execAdd() error {
 	var (
 		right = vm.pop()
@@ -698,6 +716,9 @@ func (vm *VM) Run() (err error) {
 
 			closure := vm.currentFrame().cl
 			err = vm.push(closure.Free[freeIdx])
+
+		case code.OpDot:
+			err = vm.execDot()
 
 		case code.OpCurrentClosure:
 			err = vm.execCurrentClosure()

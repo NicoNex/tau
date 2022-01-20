@@ -13,10 +13,6 @@ type Assign struct {
 	r Node
 }
 
-type setter interface {
-	Set(obj.Object) obj.Object
-}
-
 func NewAssign(l, r Node) Node {
 	return Assign{l, r}
 }
@@ -31,7 +27,7 @@ func (a Assign) Eval(env *obj.Env) obj.Object {
 	}
 
 	left := a.l.Eval(env)
-	if s, ok := left.(setter); ok {
+	if s, ok := left.(obj.Setter); ok {
 		right := a.r.Eval(env)
 		if takesPrecedence(right) {
 			return right
@@ -46,8 +42,10 @@ func (a Assign) String() string {
 	return fmt.Sprintf("(%v = %v)", a.l, a.r)
 }
 
+// TODO: fix assignment for index and dot expressions.
 func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
-	if left, ok := a.l.(Identifier); ok {
+	switch left := a.l.(type) {
+	case Identifier:
 		symbol := c.Define(string(left))
 		if position, err = a.r.Compile(c); err != nil {
 			return
@@ -58,6 +56,8 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 		} else {
 			return c.Emit(code.OpSetLocal, symbol.Index), nil
 		}
+
+	default:
+		return 0, fmt.Errorf("cannot assign to literal")
 	}
-	return 0, fmt.Errorf("cannot assign to literal")
 }

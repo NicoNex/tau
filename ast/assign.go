@@ -11,9 +11,9 @@ type Assign struct {
 	r Node
 }
 
-type setter interface {
-	Set(obj.Object) obj.Object
-}
+// type setter interface {
+// 	Set(obj.Object) obj.Object
+// }
 
 func NewAssign(l, r Node) Node {
 	return Assign{l, r}
@@ -29,7 +29,7 @@ func (a Assign) Eval(env *obj.Env) obj.Object {
 	}
 
 	left := a.l.Eval(env)
-	if s, ok := left.(setter); ok {
+	if s, ok := left.(obj.Setter); ok {
 		right := a.r.Eval(env)
 		if takesPrecedence(right) {
 			return right

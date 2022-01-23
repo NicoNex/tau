@@ -5,6 +5,32 @@ type Object interface {
 	String() string
 }
 
+type MapGetter interface {
+	Get(string) (Object, bool)
+}
+
+type MapSetter interface {
+	Set(string, Object) Object
+}
+
+type MapGetSetter interface {
+	MapGetter
+	MapSetter
+}
+
+type Getter interface {
+	Object() Object
+}
+
+type Setter interface {
+	Set(Object) Object
+}
+
+type GetSetter interface {
+	Getter
+	Setter
+}
+
 type KeyHash struct {
 	Type  Type
 	Value uint64

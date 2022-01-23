@@ -26,11 +26,7 @@ func (d Dot) Eval(env *obj.Env) obj.Object {
 
 	if assertTypes(left, obj.ClassType) {
 		l := left.(obj.Class)
-		o, ok := l.Get(d.r.String())
-		if !ok {
-			return obj.NewUndefined(l, d.r.String())
-		}
-		return o
+		return obj.NewGetSetter(l, d.r.String())
 	}
 
 	return obj.NewError("%v object has no attribute %s", left.Type(), d.r)

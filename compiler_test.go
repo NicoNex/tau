@@ -698,7 +698,12 @@ func TestCompilerIndexExpressions(t *testing.T) {
 func TestCompilerDotExpressions(t *testing.T) {
 	tests := []compilerTestCase{
 		{
-			input:                "a = new(); a.test = 123",
+			input:                `
+a = new();
+a.a = 2
+a.b = 3
+a.sum = fn() { a.a + a.b }
+a.sum()`,
 			expectedConstants:    []interface{}{123},
 			expectedInstructions: []code.Instructions{},
 		},
@@ -989,7 +994,7 @@ func TestCompilerBuiltins(t *testing.T) {
 			input:             `len([])`,
 			expectedConstants: []interface{}{},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpGetBuiltin, 0),
+				code.Make(code.OpGetBuiltin, 10),
 				code.Make(code.OpList, 0),
 				code.Make(code.OpCall, 1),
 				code.Make(code.OpPop),
@@ -999,7 +1004,7 @@ func TestCompilerBuiltins(t *testing.T) {
 			input: `fn() { len([]) }`,
 			expectedConstants: []interface{}{
 				[]code.Instructions{
-					code.Make(code.OpGetBuiltin, 0),
+					code.Make(code.OpGetBuiltin, 10),
 					code.Make(code.OpList, 0),
 					code.Make(code.OpCall, 1),
 					code.Make(code.OpReturnValue),

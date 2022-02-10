@@ -57,6 +57,15 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 			return c.Emit(code.OpSetLocal, symbol.Index), nil
 		}
 
+	case Dot:
+		if position, err = a.l.Compile(c); err != nil {
+			return
+		}
+		if position, err = a.r.Compile(c); err != nil {
+			return
+		}
+		return c.Emit(code.OpDefine), nil
+
 	default:
 		return 0, fmt.Errorf("cannot assign to literal")
 	}

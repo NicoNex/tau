@@ -30,6 +30,9 @@ func repl() {
 	if useVM {
 		globals = make([]obj.Object, vm.GlobalSize)
 		symbolTable = compiler.NewSymbolTable()
+		for i, b := range obj.Builtins {
+			symbolTable.DefineBuiltin(i, b.Name)
+		}
 	} else {
 		env = obj.NewEnv()
 	}
@@ -52,7 +55,10 @@ func repl() {
 
 		if useVM {
 			c := compiler.NewWithState(symbolTable, consts)
-			c.Compile(res)
+			if err := c.Compile(res); err != nil {
+				fmt.Println(err)
+				continue
+			}
 			tvm := vm.NewWithGlobalStore(c.Bytecode(), globals)
 
 			if err := tvm.Run(); err != nil {

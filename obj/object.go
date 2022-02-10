@@ -44,10 +44,6 @@ type setter interface {
 	Set(string, Object) Object
 }
 
-type Setter interface {
-	Set(Object) Object
-}
-
 type Type int
 
 const (

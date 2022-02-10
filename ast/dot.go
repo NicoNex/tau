@@ -40,8 +40,9 @@ func (d Dot) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = d.l.Compile(c); err != nil {
 		return
 	}
-	if position, err = d.r.Compile(c); err != nil {
-		return
+	if _, ok := d.r.(Identifier) ;!ok {
+		return position, fmt.Errorf("expected identifier with dot operator, got %T", d.r)
 	}
+	position = c.Emit(code.OpConstant, c.AddConstant(obj.NewString(d.r.String())))
 	return c.Emit(code.OpDot), nil
 }

@@ -119,11 +119,20 @@ func (vm *VM) execDot() error {
 	}
 
 	l := left.(obj.Class)
-	o, ok := l.Get(right.String())
+	return vm.push(obj.NewGetSetter(l, right.String()))
+}
+
+func (vm *VM) execDefine() error {
+	var (
+		right = vm.pop()
+		left = vm.pop()
+	)
+
+	l, ok := left.(obj.Setter)
 	if !ok {
-		return vm.push(obj.NewUndefined(l, right.String()))
+		return fmt.Errorf("cannot assign to type %v", left.Type())
 	}
-	return vm.push(o)
+	return vm.push(l.Set(right))
 }
 
 func (vm *VM) execAdd() error {
@@ -546,6 +555,13 @@ func (vm *VM) execCall(nargs int) error {
 		return vm.callClosure(callee, nargs)
 	case obj.Builtin:
 		return vm.callBuiltin(callee, nargs)
+	case obj.GetSetter:
+		o := callee.Object()
+		fn, ok := o.(*obj.Closure)
+		if !ok {
+			return fmt.Errorf("calling non-function")
+		}
+		return vm.callClosure(fn, nargs)
 	default:
 		return fmt.Errorf("calling non-function")
 	}
@@ -719,6 +735,9 @@ func (vm *VM) Run() (err error) {
 
 		case code.OpDot:
 			err = vm.execDot()
+
+		case code.OpDefine:
+			err = vm.execDefine()
 
 		case code.OpCurrentClosure:
 			err = vm.execCurrentClosure()

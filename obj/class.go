@@ -22,8 +22,8 @@ func (c Class) String() string {
 	buf.WriteString("{")
 
 	i := 0
-	for k, v := range c.Env.store {
-		if i < len(c.Env.store)-1 {
+	for k, v := range c.Env.Store {
+		if i < len(c.Env.Store)-1 {
 			buf.WriteString(fmt.Sprintf("%s: %s, ", k, v))
 		} else {
 			buf.WriteString(fmt.Sprintf("%s: %s", k, v))

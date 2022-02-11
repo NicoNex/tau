@@ -1,8 +1,8 @@
 package obj
 
 type Env struct {
-	outer *Env
-	store map[string]Object
+	Outer *Env
+	Store map[string]Object
 }
 
 func NewEnv() *Env {
@@ -14,14 +14,14 @@ func NewEnvWrap(e *Env) *Env {
 }
 
 func (e *Env) Get(n string) (Object, bool) {
-	ret, ok := e.store[n]
-	if !ok && e.outer != nil {
-		return e.outer.Get(n)
+	ret, ok := e.Store[n]
+	if !ok && e.Outer != nil {
+		return e.Outer.Get(n)
 	}
 	return ret, ok
 }
 
 func (e *Env) Set(n string, o Object) Object {
-	e.store[n] = o
+	e.Store[n] = o
 	return o
 }

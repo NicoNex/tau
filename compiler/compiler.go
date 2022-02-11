@@ -149,6 +149,11 @@ func (c *Compiler) Bytecode() *Bytecode {
 	}
 }
 
+func (c *Compiler) SetBytecode(b *Bytecode) {
+	c.scopes[c.scopeIndex].instructions = b.Instructions
+	c.constants = b.Constants
+}
+
 func (c *Compiler) LoadSymbol(s Symbol) int {
 	switch s.Scope {
 	case GlobalScope:

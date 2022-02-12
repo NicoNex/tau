@@ -63,13 +63,6 @@ func isTruthy(o obj.Object) bool {
 	}
 }
 
-func unwrap(o obj.Object) obj.Object {
-	if g, ok := o.(obj.Getter); ok {
-		return g.Object()
-	}
-	return o
-}
-
 func New(bytecode *compiler.Bytecode) *VM {
 	vm := &VM{
 		consts:     bytecode.Constants,
@@ -144,8 +137,8 @@ func (vm *VM) execDefine() error {
 
 func (vm *VM) execAdd() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	switch {
@@ -172,8 +165,8 @@ func (vm *VM) execAdd() error {
 
 func (vm *VM) execSub() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	switch {
@@ -195,8 +188,8 @@ func (vm *VM) execSub() error {
 
 func (vm *VM) execMul() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	switch {
@@ -218,8 +211,8 @@ func (vm *VM) execMul() error {
 
 func (vm *VM) execDiv() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	switch {
@@ -241,8 +234,8 @@ func (vm *VM) execDiv() error {
 
 func (vm *VM) execMod() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
@@ -260,8 +253,8 @@ func (vm *VM) execMod() error {
 
 func (vm *VM) execBwAnd() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
@@ -275,8 +268,8 @@ func (vm *VM) execBwAnd() error {
 
 func (vm *VM) execBwOr() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
@@ -290,8 +283,8 @@ func (vm *VM) execBwOr() error {
 
 func (vm *VM) execBwXor() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
@@ -304,7 +297,7 @@ func (vm *VM) execBwXor() error {
 }
 
 func (vm *VM) execBwNot() error {
-	var left = unwrap(vm.pop())
+	var left = obj.Unwrap(vm.pop())
 
 	if !assertTypes(left, obj.IntType) {
 		return fmt.Errorf("unsupported operator '~' for type %v", left.Type())
@@ -316,8 +309,8 @@ func (vm *VM) execBwNot() error {
 
 func (vm *VM) execBwLShift() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
@@ -331,8 +324,8 @@ func (vm *VM) execBwLShift() error {
 
 func (vm *VM) execBwRShift() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
@@ -346,8 +339,8 @@ func (vm *VM) execBwRShift() error {
 
 func (vm *VM) execEqual() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	switch {
@@ -377,8 +370,8 @@ func (vm *VM) execEqual() error {
 
 func (vm *VM) execNotEqual() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	switch {
@@ -408,8 +401,8 @@ func (vm *VM) execNotEqual() error {
 
 func (vm *VM) execAnd() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	return vm.push(obj.ParseBool(isTruthy(left) && isTruthy(right)))
@@ -417,8 +410,8 @@ func (vm *VM) execAnd() error {
 
 func (vm *VM) execOr() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	return vm.push(obj.ParseBool(isTruthy(left) || isTruthy(right)))
@@ -426,8 +419,8 @@ func (vm *VM) execOr() error {
 
 func (vm *VM) execGreaterThan() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	switch {
@@ -449,8 +442,8 @@ func (vm *VM) execGreaterThan() error {
 
 func (vm *VM) execGreaterThanEqual() error {
 	var (
-		right = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	switch {
@@ -472,8 +465,8 @@ func (vm *VM) execGreaterThanEqual() error {
 
 func (vm *VM) execIndex() error {
 	var (
-		index = unwrap(vm.pop())
-		left  = unwrap(vm.pop())
+		index = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
 	)
 
 	switch {
@@ -506,7 +499,7 @@ func (vm *VM) execIndex() error {
 }
 
 func (vm *VM) execBang() error {
-	var right = unwrap(vm.pop())
+	var right = obj.Unwrap(vm.pop())
 
 	switch b := right.(type) {
 	case *obj.Boolean:
@@ -521,7 +514,7 @@ func (vm *VM) execBang() error {
 }
 
 func (vm *VM) execMinus() error {
-	var right = unwrap(vm.pop())
+	var right = obj.Unwrap(vm.pop())
 
 	switch r := right.(type) {
 	case *obj.Integer:
@@ -536,7 +529,7 @@ func (vm *VM) execMinus() error {
 }
 
 func (vm *VM) execReturnValue() error {
-	retVal := unwrap(vm.pop())
+	retVal := obj.Unwrap(vm.pop())
 	frame := vm.popFrame()
 	vm.sp = frame.basePointer - 1
 
@@ -669,7 +662,7 @@ func (vm *VM) Run() (err error) {
 			pos := int(code.ReadUint16(ins[ip+1:]))
 			vm.currentFrame().ip += 2
 
-			if cond := unwrap(vm.pop()); !isTruthy(cond) {
+			if cond := obj.Unwrap(vm.pop()); !isTruthy(cond) {
 				vm.currentFrame().ip = pos - 1
 			}
 

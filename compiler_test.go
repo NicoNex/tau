@@ -698,7 +698,7 @@ func TestCompilerIndexExpressions(t *testing.T) {
 func TestCompilerDotExpressions(t *testing.T) {
 	tests := []compilerTestCase{
 		{
-			input:                `
+			input: `
 a = new();
 a.a = 2
 a.b = 3

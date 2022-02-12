@@ -56,7 +56,7 @@ func decode(r io.Reader) (*compiler.Bytecode, error) {
 	gob.Register(obj.NewError(""))
 	gob.Register(obj.NewClosure(nil, []obj.Object{}))
 	gob.Register(obj.Builtin(func(arg ...obj.Object) obj.Object { return nil }))
-	gob.Register(obj.NewFunction([]string{}, obj.NewEnv(), interface{}(nil)))
+	gob.Register(obj.NewFunction([]string{}, obj.NewEnv(), nil))
 
 	return b, dec.Decode(&b)
 }

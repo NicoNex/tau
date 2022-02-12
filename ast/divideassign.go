@@ -19,7 +19,7 @@ func (d DivideAssign) Eval(env *obj.Env) obj.Object {
 	var (
 		name  string
 		left  = d.l.Eval(env)
-		right = d.r.Eval(env)
+		right = obj.Unwrap(d.r.Eval(env))
 	)
 
 	if ident, ok := d.l.(Identifier); ok {
@@ -38,6 +38,13 @@ func (d DivideAssign) Eval(env *obj.Env) obj.Object {
 	}
 	if !assertTypes(right, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '/=' for type %v", right.Type())
+	}
+
+	if gs, ok := left.(obj.GetSetter); ok {
+		leftFl, rightFl := toFloat(gs.Object(), right)
+		l := leftFl.(*obj.Float).Val()
+		r := rightFl.(*obj.Float).Val()
+		return gs.Set(obj.NewFloat(l / r))
 	}
 
 	leftFl, rightFl := toFloat(left, right)

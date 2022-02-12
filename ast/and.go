@@ -17,8 +17,8 @@ func NewAnd(l, r Node) Node {
 
 func (a And) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = a.l.Eval(env)
-		right = a.r.Eval(env)
+		left  = obj.Unwrap(a.l.Eval(env))
+		right = obj.Unwrap(a.r.Eval(env))
 	)
 
 	if takesPrecedence(left) {

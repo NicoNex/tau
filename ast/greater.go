@@ -17,8 +17,8 @@ func NewGreater(l, r Node) Node {
 
 func (g Greater) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = g.l.Eval(env)
-		right = g.r.Eval(env)
+		left  = obj.Unwrap(g.l.Eval(env))
+		right = obj.Unwrap(g.r.Eval(env))
 	)
 
 	if takesPrecedence(left) {

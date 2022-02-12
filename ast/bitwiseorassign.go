@@ -19,7 +19,7 @@ func (b BitwiseOrAssign) Eval(env *obj.Env) obj.Object {
 	var (
 		name  string
 		left  = b.l.Eval(env)
-		right = b.r.Eval(env)
+		right = obj.Unwrap(b.r.Eval(env))
 	)
 
 	if ident, ok := b.l.(Identifier); ok {
@@ -37,6 +37,12 @@ func (b BitwiseOrAssign) Eval(env *obj.Env) obj.Object {
 	}
 	if !assertTypes(right, obj.IntType) {
 		return obj.NewError("unsupported operator '|=' for type %v", right.Type())
+	}
+
+	if gs, ok := left.(obj.GetSetter); ok {
+		l := gs.Object().(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		return gs.Set(obj.NewInteger(l | r))
 	}
 
 	l := left.(*obj.Integer).Val()

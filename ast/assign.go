@@ -11,17 +11,13 @@ type Assign struct {
 	r Node
 }
 
-// type setter interface {
-// 	Set(obj.Object) obj.Object
-// }
-
 func NewAssign(l, r Node) Node {
 	return Assign{l, r}
 }
 
 func (a Assign) Eval(env *obj.Env) obj.Object {
 	if left, ok := a.l.(Identifier); ok {
-		right := a.r.Eval(env)
+		right := obj.Unwrap(a.r.Eval(env))
 		if takesPrecedence(right) {
 			return right
 		}
@@ -30,7 +26,7 @@ func (a Assign) Eval(env *obj.Env) obj.Object {
 
 	left := a.l.Eval(env)
 	if s, ok := left.(obj.Setter); ok {
-		right := a.r.Eval(env)
+		right := obj.Unwrap(a.r.Eval(env))
 		if takesPrecedence(right) {
 			return right
 		}

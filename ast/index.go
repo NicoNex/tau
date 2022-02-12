@@ -17,8 +17,8 @@ func NewIndex(l, i Node) Node {
 
 func (i Index) Eval(env *obj.Env) obj.Object {
 	var (
-		lft = i.left.Eval(env)
-		idx = i.index.Eval(env)
+		lft = obj.Unwrap(i.left.Eval(env))
+		idx = obj.Unwrap(i.index.Eval(env))
 	)
 
 	if takesPrecedence(lft) {

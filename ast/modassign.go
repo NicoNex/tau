@@ -20,7 +20,7 @@ func (m ModAssign) Eval(env *obj.Env) obj.Object {
 	var (
 		name  string
 		left  = m.l.Eval(env)
-		right = m.r.Eval(env)
+		right = obj.Unwrap(m.r.Eval(env))
 	)
 
 	if ident, ok := m.l.(Identifier); ok {
@@ -39,6 +39,15 @@ func (m ModAssign) Eval(env *obj.Env) obj.Object {
 	}
 	if !assertTypes(right, obj.IntType) {
 		return obj.NewError("unsupported operator '%%=' for type %v", right.Type())
+	}
+
+	if gs, ok := left.(obj.GetSetter); ok {
+		l := gs.Object().(*obj.Integer).Val()
+		r := right.(*obj.Integer).Val()
+		if r == 0 {
+			return obj.NewError("can't divide by 0")
+		}
+		return gs.Set(obj.NewInteger(l % r))
 	}
 
 	l := left.(*obj.Integer).Val()

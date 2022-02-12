@@ -19,7 +19,7 @@ func NewCall(fn Node, args []Node) Node {
 }
 
 func (c Call) Eval(env *obj.Env) obj.Object {
-	var fnObj = c.fn.Eval(env)
+	var fnObj = obj.Unwrap(c.fn.Eval(env))
 
 	if takesPrecedence(fnObj) {
 		return fnObj
@@ -38,7 +38,7 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 		}
 
 		for _, a := range c.args {
-			o := a.Eval(env)
+			o := obj.Unwrap(a.Eval(env))
 			if takesPrecedence(o) {
 				return o
 			}
@@ -52,7 +52,7 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 		var args []obj.Object
 
 		for _, a := range c.args {
-			args = append(args, a.Eval(env))
+			args = append(args, obj.Unwrap(a.Eval(env)))
 		}
 		return fn(args...)
 

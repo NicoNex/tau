@@ -19,8 +19,8 @@ func NewBitwiseXor(l, r Node) Node {
 
 func (b BitwiseXor) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = b.l.Eval(env)
-		right = b.r.Eval(env)
+		left  = obj.Unwrap(b.l.Eval(env))
+		right = obj.Unwrap(b.r.Eval(env))
 	)
 
 	if takesPrecedence(left) {

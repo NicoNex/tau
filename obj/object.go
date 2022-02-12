@@ -100,3 +100,10 @@ func ParseBool(b bool) Object {
 	}
 	return False
 }
+
+func Unwrap(o Object) Object {
+	if g, ok := o.(Getter); ok {
+		return g.Object()
+	}
+	return o
+}

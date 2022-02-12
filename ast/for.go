@@ -20,11 +20,12 @@ func NewFor(cond, body, before, after Node) Node {
 
 func (f For) Eval(env *obj.Env) obj.Object {
 	if f.before != nil {
-		f.before.Eval(env)
+		obj.Unwrap(f.before.Eval(env))
 	}
+
 loop:
-	for isTruthy(f.cond.Eval(env)) {
-		switch o := f.body.Eval(env); {
+	for isTruthy(obj.Unwrap(f.cond.Eval(env))) {
+		switch o := obj.Unwrap(f.body.Eval(env)); {
 		case o == nil:
 			break
 
@@ -36,7 +37,7 @@ loop:
 		}
 
 		if f.after != nil {
-			f.after.Eval(env)
+			obj.Unwrap(f.after.Eval(env))
 		}
 	}
 	return obj.NullObj

@@ -19,8 +19,8 @@ func NewTimes(l, r Node) Node {
 
 func (t Times) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = t.l.Eval(env)
-		right = t.r.Eval(env)
+		left  = obj.Unwrap(t.l.Eval(env))
+		right = obj.Unwrap(t.r.Eval(env))
 	)
 
 	if takesPrecedence(left) {

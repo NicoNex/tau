@@ -24,7 +24,7 @@ func (l List) Eval(env *obj.Env) obj.Object {
 	var elements []obj.Object
 
 	for _, e := range l {
-		v := e.Eval(env)
+		v := obj.Unwrap(e.Eval(env))
 		if takesPrecedence(v) {
 			return v
 		}

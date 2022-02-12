@@ -17,7 +17,7 @@ func NewBang(n Node) Node {
 }
 
 func (b Bang) Eval(env *obj.Env) obj.Object {
-	var value = b.n.Eval(env)
+	var value = obj.Unwrap(b.n.Eval(env))
 
 	if takesPrecedence(value) {
 		return value

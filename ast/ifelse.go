@@ -19,7 +19,7 @@ func NewIfExpr(cond, body, alt Node) Node {
 }
 
 func (i IfExpr) Eval(env *obj.Env) obj.Object {
-	var cond = i.cond.Eval(env)
+	var cond = obj.Unwrap(i.cond.Eval(env))
 
 	if takesPrecedence(cond) {
 		return cond
@@ -28,7 +28,7 @@ func (i IfExpr) Eval(env *obj.Env) obj.Object {
 	switch c := cond.(type) {
 	case *obj.Boolean:
 		if c.Val() {
-			return i.body.Eval(env)
+			return obj.Unwrap(i.body.Eval(env))
 		}
 		return i.alternative(env)
 
@@ -36,7 +36,7 @@ func (i IfExpr) Eval(env *obj.Env) obj.Object {
 		return i.alternative(env)
 
 	default:
-		return i.body.Eval(env)
+		return obj.Unwrap(i.body.Eval(env))
 	}
 }
 
@@ -49,7 +49,7 @@ func (i IfExpr) String() string {
 
 func (i IfExpr) alternative(env *obj.Env) obj.Object {
 	if i.altern != nil {
-		return i.altern.Eval(env)
+		return obj.Unwrap(i.altern.Eval(env))
 	}
 	return obj.NullObj
 }

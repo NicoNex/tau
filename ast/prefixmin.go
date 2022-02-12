@@ -17,7 +17,7 @@ func NewPrefixMinus(n Node) Node {
 }
 
 func (p PrefixMinus) Eval(env *obj.Env) obj.Object {
-	var value = p.n.Eval(env)
+	var value = obj.Unwrap(p.n.Eval(env))
 
 	if takesPrecedence(value) {
 		return value

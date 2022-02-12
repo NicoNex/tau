@@ -25,7 +25,7 @@ func (m Map) Eval(env *obj.Env) obj.Object {
 	var ret = obj.NewMap()
 
 	for key, val := range m {
-		k := key.Eval(env)
+		k := obj.Unwrap(key.Eval(env))
 		if takesPrecedence(k) {
 			return k
 		}
@@ -35,7 +35,7 @@ func (m Map) Eval(env *obj.Env) obj.Object {
 			return obj.NewError("invalid map key type %v", k.Type())
 		}
 
-		v := val.Eval(env)
+		v := obj.Unwrap(val.Eval(env))
 		if takesPrecedence(v) {
 			return v
 		}

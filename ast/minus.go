@@ -19,8 +19,8 @@ func NewMinus(l, r Node) Node {
 
 func (m Minus) Eval(env *obj.Env) obj.Object {
 	var (
-		left  = m.l.Eval(env)
-		right = m.r.Eval(env)
+		left  = obj.Unwrap(m.l.Eval(env))
+		right = obj.Unwrap(m.r.Eval(env))
 	)
 
 	if takesPrecedence(left) {

@@ -18,7 +18,7 @@ func (b Block) Eval(env *obj.Env) obj.Object {
 	var res obj.Object
 
 	for _, n := range b {
-		res = n.Eval(env)
+		res = obj.Unwrap(n.Eval(env))
 		if res != nil && takesPrecedence(res) {
 			return res
 		}

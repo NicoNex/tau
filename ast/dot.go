@@ -18,7 +18,7 @@ func NewDot(l, r Node) Node {
 }
 
 func (d Dot) Eval(env *obj.Env) obj.Object {
-	var left = d.l.Eval(env)
+	var left = obj.Unwrap(d.l.Eval(env))
 
 	if takesPrecedence(left) {
 		return left

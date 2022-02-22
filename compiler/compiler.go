@@ -21,7 +21,7 @@ type CompilationScope struct {
 }
 
 type Compiler struct {
-	constants  []obj.Object
+	constants  *[]obj.Object
 	scopes     []CompilationScope
 	scopeIndex int
 	*SymbolTable
@@ -45,7 +45,7 @@ func New() *Compiler {
 	}
 }
 
-func NewWithState(s *SymbolTable, constants []obj.Object) *Compiler {
+func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
 	return &Compiler{
 		SymbolTable: s,
 		scopes:      []CompilationScope{{}},
@@ -54,8 +54,8 @@ func NewWithState(s *SymbolTable, constants []obj.Object) *Compiler {
 }
 
 func (c *Compiler) AddConstant(o obj.Object) int {
-	c.constants = append(c.constants, o)
-	return len(c.constants) - 1
+	*c.constants = append(*c.constants, o)
+	return len(*c.constants) - 1
 }
 
 func (c *Compiler) AddInstruction(ins []byte) int {
@@ -145,13 +145,13 @@ func (c *Compiler) Compile(node Compilable) error {
 func (c *Compiler) Bytecode() *Bytecode {
 	return &Bytecode{
 		Instructions: c.scopes[c.scopeIndex].instructions,
-		Constants:    c.constants,
+		Constants:    *c.constants,
 	}
 }
 
 func (c *Compiler) SetBytecode(b *Bytecode) {
 	c.scopes[c.scopeIndex].instructions = b.Instructions
-	c.constants = b.Constants
+	*c.constants = b.Constants
 }
 
 func (c *Compiler) LoadSymbol(s Symbol) int {

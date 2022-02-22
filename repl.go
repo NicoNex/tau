@@ -94,7 +94,7 @@ func vmREPL() {
 			continue
 		}
 
-		c := compiler.NewWithState(symbolTable, consts)
+		c := compiler.NewWithState(symbolTable, &consts)
 		if err := c.Compile(res); err != nil {
 			fmt.Println(err)
 			continue

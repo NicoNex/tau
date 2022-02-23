@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -48,5 +49,31 @@ func (f For) String() string {
 }
 
 func (f For) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	if f.before != nil {
+		if position, err = f.before.Compile(c); err != nil {
+			return
+		}
+	}
+
+	startPos := c.Pos()
+	if position, err = f.cond.Compile(c); err != nil {
+		return
+	}
+
+	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, 9999)
+
+	if position, err = f.body.Compile(c); err != nil {
+		return
+	}
+
+	if f.after != nil {
+		if position, err = f.after.Compile(c); err != nil {
+			return
+		}
+		c.Emit(code.OpPop)
+	}
+
+	c.Emit(code.OpJump, startPos)
+	c.ReplaceOperand(jumpNotTruthyPos, c.Pos())
+	return c.Pos(), nil
 }

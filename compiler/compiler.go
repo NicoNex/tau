@@ -42,6 +42,7 @@ func New() *Compiler {
 	return &Compiler{
 		SymbolTable: st,
 		scopes:      []CompilationScope{{}},
+		constants:   &[]obj.Object{},
 	}
 }
 

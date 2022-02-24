@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -20,5 +21,5 @@ func (b Break) String() string {
 }
 
 func (b Break) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	return c.Emit(code.OpJump, compiler.BreakPlaceholder), nil
 }

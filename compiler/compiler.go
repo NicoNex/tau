@@ -1,6 +1,8 @@
 package compiler
 
 import (
+	"errors"
+
 	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/obj"
 )
@@ -31,6 +33,11 @@ type Bytecode struct {
 	Instructions code.Instructions
 	Constants    []obj.Object
 }
+
+const (
+	ContinuePlaceholder = 9998
+	BreakPlaceholder    = 9997
+)
 
 func New() *Compiler {
 	var st = NewSymbolTable()
@@ -110,6 +117,58 @@ func (c *Compiler) ReplaceOperand(opPos, operand int) {
 	op := code.Opcode(c.scopes[c.scopeIndex].instructions[opPos])
 	newInst := code.Make(op, operand)
 	c.replaceInstruction(opPos, newInst)
+}
+
+func (c *Compiler) ReplaceContinueOperands(startBody, endBody, operand int) error {
+	ins := c.scopes[c.scopeIndex].instructions
+	l := len(ins)
+
+	if startBody > l || endBody > l {
+		return errors.New("compiler error: startBody or endBody positions out of range")
+	}
+
+	for i := startBody; i < endBody && i < l; {
+		def, err := code.Lookup(ins[i])
+		if err != nil {
+			return err
+		}
+
+		operands, read := code.ReadOperands(def, ins[i+1:])
+		opcode := code.Opcode(ins[i])
+
+		if opcode == code.OpJump && operands[0] == ContinuePlaceholder {
+			c.ReplaceOperand(i, operand)
+		}
+
+		i += read + 1
+	}
+	return nil
+}
+
+func (c *Compiler) ReplaceBreakOperands(startBody, endBody, operand int) error {
+	ins := c.scopes[c.scopeIndex].instructions
+	l := len(ins)
+
+	if startBody > l || endBody > l {
+		return errors.New("compiler error: startBody or endBody positions out of range")
+	}
+
+	for i := startBody; i < endBody && i < l; {
+		def, err := code.Lookup(ins[i])
+		if err != nil {
+			return err
+		}
+
+		operands, read := code.ReadOperands(def, ins[i+1:])
+		opcode := code.Opcode(ins[i])
+
+		if opcode == code.OpJump && operands[0] == BreakPlaceholder {
+			c.ReplaceOperand(i, operand)
+		}
+
+		i += read + 1
+	}
+	return nil
 }
 
 func (c *Compiler) ReplaceLastPopWithReturn() {

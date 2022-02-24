@@ -62,9 +62,11 @@ func (f For) Compile(c *compiler.Compiler) (position int, err error) {
 
 	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, 9999)
 
+	startBody := c.Pos()
 	if position, err = f.body.Compile(c); err != nil {
 		return
 	}
+	endBody := c.Pos()
 
 	if f.after != nil {
 		if position, err = f.after.Compile(c); err != nil {
@@ -74,6 +76,17 @@ func (f For) Compile(c *compiler.Compiler) (position int, err error) {
 	}
 
 	c.Emit(code.OpJump, startPos)
-	c.ReplaceOperand(jumpNotTruthyPos, c.Pos())
-	return c.Pos(), nil
+	endPos := c.Pos()
+	c.ReplaceOperand(jumpNotTruthyPos, endPos)
+
+	err = c.ReplaceContinueOperands(startBody, endBody, endBody)
+	if err != nil {
+		return
+	}
+	err = c.ReplaceBreakOperands(startBody, endBody, endPos)
+	if err != nil {
+		return
+	}
+
+	return endPos, nil
 }

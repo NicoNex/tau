@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -20,5 +21,5 @@ func (c Continue) String() string {
 }
 
 func (c Continue) Compile(comp *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	return comp.Emit(code.OpJump, compiler.ContinuePlaceholder), nil
 }

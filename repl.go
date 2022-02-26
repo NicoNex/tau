@@ -33,7 +33,7 @@ func evalREPL() {
 		if err != nil {
 			// Quit without error on Ctrl^D.
 			if err != io.EOF {
-				fmt.Println(err)
+				fmt.Fprintln(t, err)
 			}
 			return
 		}
@@ -81,7 +81,7 @@ func vmREPL() {
 		if err != nil {
 			// Quit without error on Ctrl^D.
 			if err != io.EOF {
-				fmt.Println(err)
+				fmt.Fprintln(t, err)
 			}
 			return
 		}
@@ -96,7 +96,7 @@ func vmREPL() {
 
 		c := compiler.NewWithState(symbolTable, &consts)
 		if err := c.Compile(res); err != nil {
-			fmt.Println(err)
+			fmt.Fprintln(t, err)
 			continue
 		}
 		tvm := vm.NewWithGlobalStore(c.Bytecode(), globals)

@@ -7,8 +7,12 @@ In order to install Tau, you'll need [Go](https://golang.org/).
 
 Once done, running the following command will successfully install the tau interpreter:
 ```bash
-go install github.com/NicoNex/tau
+go install github.com/NicoNex/tau@latest
 ```
+
+You can try it out in the terminal by simply running `$ tau`, alternatively to take advantage of the builtin virtual machine and gain a lot of performance run it with `$ tau -vm`.
+The flag `-vm` works when executing files too.
+For additional info run `$ tau --help`.
 
 ## Syntax
 
@@ -202,4 +206,25 @@ obj.sum_values = fn() {
 
 obj.child = new()
 obj.child.value = obj.sum_values()
+```
+
+##### Recommended usage
+```
+newdog = fn(name, age) {
+	dog = new()
+
+	dog.name = name
+	dog.age = age
+
+	dog.humanage = fn() {
+		dog.age * 7
+	}
+
+	return dog
+}
+
+snuffles = newdog("Snuffles", 8)
+println(snuffles.humanage())
+
+>>> 56
 ```

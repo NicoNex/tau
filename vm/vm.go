@@ -2,6 +2,7 @@ package vm
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
@@ -408,6 +409,64 @@ func (vm *VM) execAnd() error {
 	return vm.push(obj.ParseBool(isTruthy(left) && isTruthy(right)))
 }
 
+func (vm *VM) execIn() error {
+	var (
+		right = obj.Unwrap(vm.pop())
+		left  = obj.Unwrap(vm.pop())
+	)
+
+	if !assertTypes(left, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
+		return fmt.Errorf("unsupported operator 'in' for type %v", left.Type())
+	}
+	if !assertTypes(right, obj.ListType, obj.StringType) {
+		return fmt.Errorf("unsupported operator 'in' for type %v", right.Type())
+	}
+
+	switch {
+	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
+		l := left.(*obj.String).Val()
+		r := right.(*obj.String).Val()
+		return vm.push(obj.ParseBool(strings.Contains(r, l)))
+
+	case assertTypes(right, obj.ListType):
+		for _, o := range right.(obj.List).Val() {
+			if !assertTypes(left, o.Type()) {
+				continue
+			}
+			if assertTypes(left, obj.BoolType, obj.NullType) && left == o {
+				return vm.push(obj.True)
+			}
+
+			switch l := left.(type) {
+			case *obj.String:
+				r := o.(*obj.String)
+				if l.Val() == r.Val() {
+					return vm.push(obj.True)
+				}
+
+			case *obj.Integer:
+				r := o.(*obj.Integer)
+				if l.Val() == r.Val() {
+					return vm.push(obj.True)
+				}
+
+			case *obj.Float:
+				r := o.(*obj.Float)
+				if l.Val() == r.Val() {
+					return vm.push(obj.True)
+				}
+			}
+		}
+		return vm.push(obj.False)
+
+	default:
+		return fmt.Errorf(
+			"invalid operation %v in %v (wrong types %v and %v)",
+			left, right, left.Type(), right.Type(),
+		)
+	}
+}
+
 func (vm *VM) execOr() error {
 	var (
 		right = obj.Unwrap(vm.pop())
@@ -804,6 +863,9 @@ func (vm *VM) Run() (err error) {
 
 		case code.OpAnd:
 			err = vm.execAnd()
+
+		case code.OpIn:
+			err = vm.execIn()
 
 		case code.OpOr:
 			err = vm.execOr()

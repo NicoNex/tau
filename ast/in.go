@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -87,5 +88,11 @@ func (i In) String() string {
 }
 
 func (i In) Compile(c *compiler.Compiler) (position int, err error) {
-	return 0, nil
+	if position, err = i.l.Compile(c); err != nil {
+		return
+	}
+	if position, err = i.r.Compile(c); err != nil {
+		return
+	}
+	return c.Emit(code.OpIn), nil
 }

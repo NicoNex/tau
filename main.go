@@ -172,8 +172,8 @@ func main() {
 		compile bool
 	)
 
-	flag.BoolVar(&useVM, "vm", false, "Use the Tau VM instead of eval method.")
-	flag.BoolVar(&compile, "c", false, "Compile the tau file.")
+	flag.BoolVar(&useVM, "vm", false, "Use the Tau VM instead of eval method. (faster)")
+	flag.BoolVar(&compile, "c", false, "Compile a tau file into a '.tauc' bytecode file.")
 	flag.Parse()
 
 	if compile {

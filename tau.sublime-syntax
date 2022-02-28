@@ -1,0 +1,295 @@
+%YAML 1.2
+---
+# See http://www.sublimetext.com/docs/3/syntax.html
+name: Tau
+file_extensions: [tau]
+scope: source.tau
+
+first_line_match: |-
+  (?xi:
+    ^ \#! .* \btau(?:\d(?:\.\d+)?)?\b   # shebang
+  )
+
+variables:
+  ident: \b(?!{{keyword}})[[:alpha:]_][[:alnum:]_]*\b
+  keyword: '\b(if|else|for|return|continue|break)\b'
+  dec_exponent: (?:[eE][-+]??{{dec_digits}})
+  hex_exponent: (?:[pP][-+]??{{dec_digits}})
+  # Matches a digit with any number of numeric separators, while
+  # not allowing a numeric separator as the last or first character.
+  dec_digits: (?:\d+(?:_\d+)*)
+  # Hexadecimal counterpart to dec_digits.
+  hex_digits: (?:_?\h+(?:_\h+)*)
+  # Octal counterpart to dec_digits.
+  oct_digits: (?:_?[0-7]+(?:_[0-7]+)*)
+  # Binary counterpart to dec_digits.
+  bin_digits: (?:_?[01]+(?:_[01]+)*)
+  char_escape: \\x\h{2}|\\u\h{4}|\\U\h{8}|\\[0-7]{3}|\\.
+  noise: (?:\s)*
+  predeclared_func: \b(?:print|println|len|input|string|int|float|exit|new|append|push|range|first|last|tail|new)\b
+
+contexts:
+  main:
+    - include: match-any
+
+  match-any:
+    - include: first_line_match
+    - include: match-comments
+    - include: match-tokens
+
+  match-tokens:
+    - include: match-comments
+    - include: match-keywords
+    - include: match-functions
+    - include: match-constants
+    - include: match-literals
+    - include: match-identifiers
+    - include: match-operators
+    - include: match-punctuation
+
+  match-identifiers:
+    - include: match-call
+    - match: \b_\b
+      scope: variable.language.blank.tau
+    - match: '{{ident}}'
+      scope: variable.other.tau
+
+  match-call:
+    - match: '{{predeclared_func}}(?=(?:{{noise}}\))*{{noise}}\()'
+      scope: variable.function.tau support.function.builtin.tau
+
+    - match: '{{ident}}(?=(?:{{noise}}\))*{{noise}}\()'
+      scope: variable.function.tau
+
+  match-comments:
+    - match: '#'
+      scope: punctuation.definition.comment.tau
+      push: match-line-comment
+
+  match-line-comment:
+    - meta_scope: comment.line.tau
+    - match: $
+      pop: true
+
+  match-constants:
+    - match: '\b(true|false|null)\b'
+      scope: constant.language.tau
+
+  match-operators:
+    - match: '<<=|>>=|&\^=|&=|\^=|\|=|%=|\+=|-=|\*=|/=|\+\+|--'
+      scope: keyword.operator.assignment.augmented.tau
+    - match: '&\^|<<|>>'
+      scope: keyword.operator.bitwise.tau
+    - match: '==|!=|<=|>=|<|>'
+      scope: keyword.operator.comparison.tau
+    - match: '='
+      scope: keyword.operator.assignment.tau
+    - match: '&&|\|\||!'
+      scope: keyword.operator.logical.tau
+    - match: '[|^]'
+      scope: keyword.operator.bitwise.tau
+    - match: '[-+/%]'
+      scope: keyword.operator.arithmetic.tau
+
+  match-functions:
+    - match: '\bfn\b'
+      scope: keyword.declaration.function.tau
+
+  match-keywords:
+    - match: '\b(if|else|for|return|continue|break)\b'
+      scope: keyword.control.tau
+
+  match-punctuation:
+    - include: match-comma
+    - include: match-colon
+    - include: match-semicolon
+    - include: match-selector
+    - include: match-parens
+    - include: match-brackets
+    - include: match-braces
+
+  match-comma:
+    - match: \,
+      scope: punctuation.separator.tau
+
+  match-colon:
+    - match: ':'
+      scope: punctuation.separator.tau
+
+  match-semicolon:
+    - match: ;
+      scope: punctuation.terminator.tau
+
+  match-selector:
+    - match: \.
+      scope: punctuation.accessor.dot.tau
+
+  match-parens:
+    - match: \(
+      scope: punctuation.section.parens.begin.tau
+      push:
+        - match: \)
+          scope: punctuation.section.parens.end.tau
+          pop: true
+        - include: match-any
+    - match: \)
+      scope: punctuation.section.parens.end.tau
+
+  match-braces:
+    - match: \{
+      scope: punctuation.section.braces.begin.tau
+      push:
+        - meta_scope: meta.block.tau
+        - match: \}
+          scope: punctuation.section.braces.end.tau
+          pop: true
+        - include: match-any
+    - match: \}
+      scope: punctuation.section.braces.end.tau
+
+  match-literals:
+    - include: match-strings
+    - include: match-imaginary
+    - include: match-floats
+    - include: match-integers
+    - include: match-runes
+
+  match-strings:
+    - include: match-single-quoted-strings
+    - include: match-double-quoted-strings
+
+  match-fmt:
+    - match: \%(?:\[\d+\])?[ .\d*#+-]*[A-Za-z]
+      scope: constant.other.placeholder.tau
+
+  match-double-quoted-strings:
+    - match: '"'
+      scope: punctuation.definition.string.begin.tau
+      push:
+        - meta_scope: string.quoted.other.tau
+        - match: '"'
+          scope: punctuation.definition.string.end.tau
+          pop: true
+        - match: \%%
+          scope: constant.character.escape.tau
+        - include: match-fmt
+
+  match-single-quoted-strings:
+    - match: "'"
+      scope: punctuation.definition.string.begin.tau
+      push:
+        - meta_scope: string.quoted.other.tau
+        - match: "'"
+          scope: punctuation.definition.string.end.tau
+          pop: true
+        - match: \%%
+          scope: constant.character.escape.tau
+        - include: match-fmt
+
+
+  match-interpreted-string:
+    - match: '"'
+      scope: punctuation.definition.string.begin.tau
+      push:
+        - meta_scope: string.quoted.double.tau
+        - match: '"'
+          scope: punctuation.definition.string.end.tau
+          pop: true
+        - match: '{{char_escape}}'
+          scope: constant.character.escape.tau
+        - match: \%%
+          scope: constant.character.escape.tau
+        - include: match-fmt
+
+  match-imaginary:
+    # Decimal imaginary numbers
+    - match: '({{dec_digits}}(?:(\.){{dec_digits}}?)?{{dec_exponent}}?)(i)'
+      scope: meta.number.imaginary.decimal.tau
+      captures:
+        1: constant.numeric.value.tau
+        2: punctuation.separator.decimal.tau
+        3: constant.numeric.suffix.tau
+    # Hexadecimal imaginary numbers
+    - match: (0[xX])({{hex_digits}}?(?:(\.){{hex_digits}}?)?{{hex_exponent}}?)(i)
+      scope: meta.number.imaginary.hexadecimal.tau
+      captures:
+        1: constant.numeric.base.tau
+        2: constant.numeric.value.tau
+        3: punctuation.separator.decimal.tau
+        4: constant.numeric.suffix.tau
+    # Octal imaginary numbers
+    - match: (0[oO])({{oct_digits}})(i)
+      scope: meta.number.imaginary.octal.tau
+      captures:
+        1: constant.numeric.base.tau
+        2: constant.numeric.value.tau
+        3: constant.numeric.suffix.tau
+    # Binary imaginary numbers
+    - match: (0[bB])({{bin_digits}})(i)
+      scope: meta.number.imaginary.binary.tau
+      captures:
+        1: constant.numeric.base.tau
+        2: constant.numeric.value.tau
+        3: constant.numeric.suffix.tau
+
+  match-floats:
+    # Decimal float literal
+    - match: |-
+        (?x:
+          # 1.1, 1., 1.1e1, 1.e1
+          {{dec_digits}}(\.){{dec_digits}}?{{dec_exponent}}?
+          # 1e1
+          | {{dec_digits}}{{dec_exponent}}
+          # .1, .1e1
+          | (\.){{dec_digits}}{{dec_exponent}}?
+        )
+      scope: meta.number.float.decimal.tau constant.numeric.value.tau
+      captures:
+        1: punctuation.separator.decimal.tau
+        2: punctuation.separator.decimal.tau
+    # Hexadecimal float literal
+    - match: (0[xX])({{hex_digits}}?(?:(\.){{hex_digits}}?)?{{hex_exponent}})
+      scope: meta.number.float.hexadecimal.tau
+      captures:
+        1: constant.numeric.base.tau
+        2: constant.numeric.value.tau
+        3: punctuation.separator.decimal.tau
+
+  match-integers:
+    - include: match-octal-integer
+    - include: match-hex-integer
+    - include: match-binary-integer
+    - include: match-decimal-integer
+
+  match-octal-integer:
+    - match: (0)({{oct_digits}})(?=\D)
+      scope: meta.number.integer.octal.tau
+      captures:
+        1: constant.numeric.base.tau
+        2: constant.numeric.value.tau
+    - match: 0[0-7]*[8-9]+
+      scope: invalid.illegal.tau
+    - match: (0[oO])({{oct_digits}})
+      scope: meta.number.integer.octal.tau
+      captures:
+        1: constant.numeric.base.tau
+        2: constant.numeric.value.tau
+
+  match-hex-integer:
+    - match: (0[xX])({{hex_digits}})
+      scope: meta.number.integer.hexadecimal.tau
+      captures:
+        1: constant.numeric.base.tau
+        2: constant.numeric.value.tau
+
+  match-binary-integer:
+    - match: (0[bB])({{bin_digits}})
+      scope: meta.number.integer.binary.tau
+      captures:
+        1: constant.numeric.base.tau
+        2: constant.numeric.value.tau
+
+  match-decimal-integer:
+    - match: '({{dec_digits}})'
+      scope: meta.number.integer.decimal.tau constant.numeric.value.tau
+

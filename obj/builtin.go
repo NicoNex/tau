@@ -54,6 +54,21 @@ var Builtins = []struct {
 		},
 	},
 	{
+		"import",
+		func(args ...Object) Object {
+			if l := len(args); l != 1 {
+				return NewError("len: wrong number of arguments, expected 1, got %d", l)
+			}
+
+			str, ok := args[0].(*String)
+			if !ok {
+				return NewError("import: first argument must be a string, got %s instead", args[0].Type())
+			}
+
+			return NewModule(str.String())
+		},
+	},
+	{
 		"println",
 		func(args ...Object) Object {
 			var arguments []interface{}

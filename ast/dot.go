@@ -24,8 +24,7 @@ func (d Dot) Eval(env *obj.Env) obj.Object {
 		return left
 	}
 
-	if assertTypes(left, obj.ClassType) {
-		l := left.(obj.Class)
+	if l, ok := left.(obj.MapGetSetter); ok {
 		return obj.NewGetSetter(l, d.r.String())
 	}
 

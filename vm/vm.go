@@ -115,12 +115,10 @@ func (vm *VM) execDot() error {
 		left  = vm.pop()
 	)
 
-	if !assertTypes(left, obj.ClassType) {
-		return fmt.Errorf("%v object has no attribute %s", left.Type(), right)
+	if l, ok := left.(obj.MapGetSetter); ok {
+		return vm.push(obj.NewGetSetter(l, right.String()))
 	}
-
-	l := left.(obj.Class)
-	return vm.push(obj.NewGetSetter(l, right.String()))
+	return fmt.Errorf("%v object has no attribute %s", left.Type(), right)
 }
 
 func (vm *VM) execDefine() error {
@@ -606,24 +604,21 @@ func (vm *VM) execCurrentClosure() error {
 	return vm.push(vm.currentFrame().cl)
 }
 
-func (vm *VM) execCall(nargs int) error {
-	callee := vm.stack[vm.sp-1-nargs]
-
-	switch callee := callee.(type) {
+func (vm *VM) call(o obj.Object, numArgs int) error {
+	switch fn := o.(type) {
 	case *obj.Closure:
-		return vm.callClosure(callee, nargs)
+		return vm.callClosure(fn, numArgs)
 	case obj.Builtin:
-		return vm.callBuiltin(callee, nargs)
+		return vm.callBuiltin(fn, numArgs)
 	case obj.Getter:
-		o := callee.Object()
-		fn, ok := o.(*obj.Closure)
-		if !ok {
-			return fmt.Errorf("calling non-function")
-		}
-		return vm.callClosure(fn, nargs)
+		return vm.call(fn.Object(), numArgs)
 	default:
 		return fmt.Errorf("calling non-function")
 	}
+}
+
+func (vm *VM) execCall(numArgs int) error {
+	return vm.call(vm.stack[vm.sp-1-numArgs], numArgs)
 }
 
 func (vm *VM) buildList(start, end int) obj.Object {

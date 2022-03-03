@@ -65,7 +65,7 @@ var Builtins = []struct {
 				return NewError("import: first argument must be a string, got %s instead", args[0].Type())
 			}
 
-			return NewModule(str.String())
+			return NewNativeModule(str.String())
 		},
 	},
 	{

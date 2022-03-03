@@ -2,119 +2,67 @@ package obj
 
 import (
 	"errors"
-	"fmt"
 	"reflect"
+	"regexp"
 	"strings"
 )
 
-var libs = map[string]map[string]interface{}{
+var NativeLibs = map[string]map[string]interface{}{
 	"strings": {
-		"compare":        strings.Compare,
-		"contains":       strings.Contains,
-		"containsAny":    strings.ContainsAny,
-		"containsRune":   strings.ContainsRune,
-		"count":          strings.Count,
-		"equalFold":      strings.EqualFold,
-		"fields":         strings.Fields,
-		"fieldsFunc":     strings.FieldsFunc,
-		"hasPrefix":      strings.HasPrefix,
-		"hasSuffix":      strings.HasSuffix,
-		"index":          strings.Index,
-		"indexAny":       strings.IndexAny,
-		"indexByte":      strings.IndexByte,
-		"indexFunc":      strings.IndexFunc,
-		"indexRune":      strings.IndexRune,
-		"join":           strings.Join,
-		"lastIndex":      strings.LastIndex,
-		"lastIndexAny":   strings.LastIndexAny,
-		"lastIndexByte":  strings.LastIndexByte,
-		"lastIndexFunc":  strings.LastIndexFunc,
-		"map":            strings.Map,
-		"repeat":         strings.Repeat,
-		"replace":        strings.Replace,
-		"replaceAll":     strings.ReplaceAll,
-		"split":          strings.Split,
-		"splitAfter":     strings.SplitAfter,
+		"Compare":        strings.Compare,
+		"Contains":       strings.Contains,
+		"ContainsAny":    strings.ContainsAny,
+		"ContainsRune":   strings.ContainsRune,
+		"Count":          strings.Count,
+		"EqualFold":      strings.EqualFold,
+		"Fields":         strings.Fields,
+		"FieldsFunc":     strings.FieldsFunc,
+		"HasPrefix":      strings.HasPrefix,
+		"HasSuffix":      strings.HasSuffix,
+		"Index":          strings.Index,
+		"IndexAny":       strings.IndexAny,
+		"IndexByte":      strings.IndexByte,
+		"IndexFunc":      strings.IndexFunc,
+		"IndexRune":      strings.IndexRune,
+		"Join":           strings.Join,
+		"LastIndex":      strings.LastIndex,
+		"LastIndexAny":   strings.LastIndexAny,
+		"LastIndexByte":  strings.LastIndexByte,
+		"LastIndexFunc":  strings.LastIndexFunc,
+		"Map":            strings.Map,
+		"Repeat":         strings.Repeat,
+		"Replace":        strings.Replace,
+		"ReplaceAll":     strings.ReplaceAll,
+		"Split":          strings.Split,
+		"SplitAfter":     strings.SplitAfter,
 		"splitAfterN":    strings.SplitAfterN,
-		"splitN":         strings.SplitN,
-		"title":          strings.Title,
-		"toLower":        strings.ToLower,
-		"toLowerSpecial": strings.ToLowerSpecial,
-		"toTitle":        strings.ToTitle,
-		"toTitleSpecial": strings.ToTitleSpecial,
-		"toUpper":        strings.ToUpper,
-		"toUpperSpecial": strings.ToUpperSpecial,
-		"toValidUTF8":    strings.ToValidUTF8,
-		"trim":           strings.Trim,
-		"trimFunc":       strings.TrimFunc,
-		"trimLeft":       strings.TrimLeft,
-		"trimLeftFunc":   strings.TrimLeftFunc,
-		"trimPrefix":     strings.TrimPrefix,
-		"trimRight":      strings.TrimRight,
-		"trimRightFunc":  strings.TrimRightFunc,
-		"trimSpace":      strings.TrimSpace,
-		"trimSuffix":     strings.TrimSuffix,
+		"SplitN":         strings.SplitN,
+		"Title":          strings.Title,
+		"ToLower":        strings.ToLower,
+		"ToLowerSpecial": strings.ToLowerSpecial,
+		"ToTitle":        strings.ToTitle,
+		"ToTitleSpecial": strings.ToTitleSpecial,
+		"ToUpper":        strings.ToUpper,
+		"ToUpperSpecial": strings.ToUpperSpecial,
+		"ToValidUTF8":    strings.ToValidUTF8,
+		"Trim":           strings.Trim,
+		"TrimFunc":       strings.TrimFunc,
+		"TrimLeft":       strings.TrimLeft,
+		"TrimLeftFunc":   strings.TrimLeftFunc,
+		"TrimPrefix":     strings.TrimPrefix,
+		"TrimRight":      strings.TrimRight,
+		"TrimRightFunc":  strings.TrimRightFunc,
+		"TrimSpace":      strings.TrimSpace,
+		"TrimSuffix":     strings.TrimSuffix,
 	},
-}
-
-type Module struct {
-	name    string
-	methods map[string]interface{}
-}
-
-func NewModule(name string) Object {
-	lib, ok := libs[name]
-	if !ok {
-		return NewError("import error: cannot find module with name %q", name)
-	}
-
-	return &Module{
-		name:    name,
-		methods: lib,
-	}
-}
-
-func (m *Module) Get(n string) (Object, bool) {
-	fn, ok := m.methods[n]
-	if !ok {
-		return NullObj, false
-	}
-
-	return Builtin(func(a ...Object) (o Object) {
-		defer func() {
-			if err := recover(); err != nil {
-				o = NewError("%v", err)
-			}
-		}()
-
-		res := reflect.ValueOf(fn).Call(args(a...))
-		return multiplex(res)
-	}), true
-}
-
-func (m *Module) Set(n string, o Object) Object {
-	return NewError("cannot assign to module")
-}
-
-func (m Module) Type() Type {
-	return ClassType
-}
-
-func (m Module) String() string {
-	var buf strings.Builder
-
-	l := len(m.methods)
-	buf.WriteString("{")
-	i := 0
-	for m, _ := range m.methods {
-		buf.WriteString(fmt.Sprintf("%s: <builtin function>", m))
-		if i < l-1 {
-			buf.WriteString(", ")
-		}
-		i++
-	}
-	buf.WriteString("}")
-	return buf.String()
+	"regexp": {
+		"MatchString":      regexp.MatchString,
+		"QuoteMeta":        regexp.QuoteMeta,
+		"Compile":          regexp.Compile,
+		"CompilePOSIX":     regexp.CompilePOSIX,
+		"MustCompile":      regexp.MustCompile,
+		"MustCompilePOSIX": regexp.MustCompilePOSIX,
+	},
 }
 
 func toStringSlicePrimitive(list List) ([]string, error) {
@@ -229,6 +177,9 @@ func toObject(v reflect.Value) Object {
 
 	case reflect.Slice, reflect.Array:
 		return toList(v)
+
+	case reflect.Struct, reflect.Ptr:
+		return NewNativeStruct(v.Interface())
 
 	case reflect.Interface:
 		err, ok := v.Interface().(error)

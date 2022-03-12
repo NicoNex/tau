@@ -91,7 +91,7 @@ var Builtins = []struct {
 				fmt.Scanln(&tmp)
 
 			default:
-				return NewError("last: wrong number of arguments, expected 1, got %d", l)
+				return NewError("input: wrong number of arguments, expected 1, got %d", l)
 			}
 			return NewString(tmp)
 		},

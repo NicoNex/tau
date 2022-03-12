@@ -55,12 +55,9 @@ func evalREPL() {
 func vmREPL() {
 	var (
 		consts      []obj.Object
-		globals     []obj.Object
-		symbolTable *compiler.SymbolTable
+		globals     = make([]obj.Object, vm.GlobalSize)
+		symbolTable = compiler.NewSymbolTable()
 	)
-
-	globals = make([]obj.Object, vm.GlobalSize)
-	symbolTable = compiler.NewSymbolTable()
 
 	for i, b := range obj.Builtins {
 		symbolTable.DefineBuiltin(i, b.Name)

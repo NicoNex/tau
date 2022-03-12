@@ -244,16 +244,17 @@ func lexExpression(l *lexer) stateFn {
 
 	case r == ':':
 		l.emit(item.Colon)
-		// l.ignoreSpaces()
 
 	case r == '(':
 		l.emit(item.LParen)
+		l.ignoreSpaces()
 
 	case r == ')':
 		l.emit(item.RParen)
 
 	case r == '[':
 		l.emit(item.LBracket)
+		l.ignoreSpaces()
 
 	case r == ']':
 		l.emit(item.RBracket)

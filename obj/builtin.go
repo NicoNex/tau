@@ -54,15 +54,15 @@ var Builtins = []struct {
 		},
 	},
 	{
-		"import",
+		"native",
 		func(args ...Object) Object {
 			if l := len(args); l != 1 {
-				return NewError("len: wrong number of arguments, expected 1, got %d", l)
+				return NewError("native: wrong number of arguments, expected 1, got %d", l)
 			}
 
 			str, ok := args[0].(*String)
 			if !ok {
-				return NewError("import: first argument must be a string, got %s instead", args[0].Type())
+				return NewError("native: first argument must be a string, got %s instead", args[0].Type())
 			}
 
 			return NewNativeModule(str.String())
@@ -106,7 +106,7 @@ var Builtins = []struct {
 				fmt.Scanln(&tmp)
 
 			default:
-				return NewError("last: wrong number of arguments, expected 1, got %d", l)
+				return NewError("input: wrong number of arguments, expected 1, got %d", l)
 			}
 			return NewString(tmp)
 		},

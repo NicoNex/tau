@@ -18,7 +18,7 @@ For additional info run `$ tau --help`.
 
 ### Hello World
 _We all start from here..._
-```
+```python
 println("Hello World")
 ```
 
@@ -27,7 +27,7 @@ println("Hello World")
 #### File
 As every interpreter Tau supports files either by passing the path to the interpreter or by using the shabang.
 
-```
+```python
 # helloworld.tau
 
 println("hello world")
@@ -40,7 +40,7 @@ hello world
 
 #### if-else blocks
 
-```
+```python
 if 1 > 0 {
 	println("yes")
 } else {
@@ -48,7 +48,7 @@ if 1 > 0 {
 }
 ```
 
-```
+```python
 myVar = 10
 
 if myVar > 10 {
@@ -61,9 +61,9 @@ if myVar > 10 {
 ```
 
 #### Declaring a function
-```
+```python
 loop = fn(times, function) {
-	if times != 0 {
+	if times > 0 {
 		function()
 		loop(times-1, function)
 	}
@@ -74,15 +74,17 @@ loop(5, fn() { println("Hello World") })
 
 #### Noteworthy features
 The return value can be implicit:
-```
+```python
 add = fn(x, y) { x + y }
 sum = add(9, 1)
 println(sum)
-10
+```
+```
+>>> 10
 ```
 
 Also you can inline the if expressions:
-```
+```python
 a = 0
 b = 1
 
@@ -90,13 +92,13 @@ minimum = if a < b { a } else { b }
 ```
 
 The semicolon character `;` is implicit on a newline but can be used to separate multiple expressions on a single line.
-```
+```python
 printData = fn(a, b, c) { println(a); println(b); println(c) }
 ```
 
 Functions are first-class and treated as any other data type.
-```
-get_minumum = fn(a, b) {
+```python
+min = fn(a, b) {
 	if a < b {
 		return a
 	}
@@ -106,9 +108,10 @@ get_minumum = fn(a, b) {
 var1 = 1
 var2 = 2
 
-min = get_minimum(var1, var2)
-println(min)
-
+m = min(var1, var2)
+println(m)
+```
+```
 >>> 1
 ```
 
@@ -138,28 +141,28 @@ hello 1
 Tau is a dynamically-typed programming language and it supports the following primitive types:
 
 #### Integer
-```
+```python
 my_var = 10
 ```
 
 #### Float
-```
+```python
 my_var = 2.5
 ```
 
 #### String
-```
+```python
 str = "My string here"
 ```
 
 #### Boolean
-```
+```js
 t = true
 f = false
 ```
 
 #### Function
-```
+```python
 pow = fn(base, exponent) {
 	if exponent > 0 {
 		return base * pow(base, exponent-1)
@@ -169,19 +172,19 @@ pow = fn(base, exponent) {
 ```
 
 #### List
-```
+```js
 empty = []
 stuff = ["Hello World", 1, 2, 3, true]
 ```
 
 #### Map
-```
+```js
 empty = {}
 stuff = {"Hello": "World", 123: true}
 ```
 
 #### Loop
-```
+```python
 for i = 0; i < 10; ++i {
 	println("hello world", i)
 }
@@ -195,7 +198,7 @@ for len(lst) > 0 {
 ```
 
 #### Objects
-```
+```python
 obj = new()
 obj.value1 = 123
 obj.value2 = 456
@@ -209,8 +212,8 @@ obj.child.value = obj.sum_values()
 ```
 
 ##### Recommended usage
-```
-newdog = fn(name, age) {
+```python
+Dog = fn(name, age) {
 	dog = new()
 
 	dog.name = name
@@ -223,8 +226,9 @@ newdog = fn(name, age) {
 	return dog
 }
 
-snuffles = newdog("Snuffles", 8)
+snuffles = Dog("Snuffles", 8)
 println(snuffles.humanage())
-
+```
+```
 >>> 56
 ```

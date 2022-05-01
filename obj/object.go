@@ -27,6 +27,7 @@ type Setter interface {
 }
 
 type GetSetter interface {
+	Object
 	Getter
 	Setter
 }

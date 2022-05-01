@@ -24,12 +24,16 @@ func (d Dot) Eval(env *obj.Env) obj.Object {
 		return left
 	}
 
-	if assertTypes(left, obj.ClassType) {
-		l := left.(obj.Class)
+	switch l := left.(type) {
+	case obj.Class:
 		return obj.NewGetSetter(l, d.r.String())
-	}
 
-	return obj.NewError("%v object has no attribute %s", left.Type(), d.r)
+	case obj.GetSetter:
+		return l
+
+	default:
+		return obj.NewError("%v object has no attribute %s", left.Type(), d.r)
+	}
 }
 
 func (d Dot) String() string {

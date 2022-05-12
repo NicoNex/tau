@@ -115,12 +115,17 @@ func (vm *VM) execDot() error {
 		left  = vm.pop()
 	)
 
-	if !assertTypes(left, obj.ClassType) {
+	switch l := left.(type) {
+	case obj.Class:
+		return vm.push(obj.NewGetSetter(l, right.String()))
+
+	case obj.GetSetter:
+		o := l.Object()
+		return vm.push(obj.NewGetSetter(o.(obj.Class), right.String()))
+
+	default:
 		return fmt.Errorf("%v object has no attribute %s", left.Type(), right)
 	}
-
-	l := left.(obj.Class)
-	return vm.push(obj.NewGetSetter(l, right.String()))
 }
 
 func (vm *VM) execDefine() error {

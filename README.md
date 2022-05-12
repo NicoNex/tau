@@ -84,7 +84,7 @@ println(sum)
 ```
 
 Also you can inline the if expressions:
-```python
+```rust
 a = 0
 b = 1
 

@@ -702,6 +702,12 @@ func (vm *VM) Run() (err error) {
 		op  code.Opcode
 	)
 
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("%v", e)
+		}
+	}()
+
 	for vm.currentFrame().ip < len(vm.currentFrame().Instructions())-1 && err == nil {
 		vm.currentFrame().ip++
 

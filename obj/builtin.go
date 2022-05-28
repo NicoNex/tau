@@ -347,6 +347,16 @@ var Builtins = []struct {
 			return NewClass()
 		},
 	},
+	{
+		"isError",
+		func(args ...Object) Object {
+			if l := len(args); l != 1 {
+				return NewError("isError: wrong number of arguments, expected 1, got %d", l)
+			}
+			_, ok := args[0].(Error)
+			return NewBoolean(ok)
+		},
+	},
 }
 
 func listify(start, stop, step int) List {

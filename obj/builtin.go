@@ -353,7 +353,8 @@ var Builtins = []struct {
 			if l := len(args); l != 1 {
 				return NewError("isError: wrong number of arguments, expected 1, got %d", l)
 			}
-			_, ok := args[0].(Error)
+
+			_, ok := args[0].(*Error)
 			return NewBoolean(ok)
 		},
 	},

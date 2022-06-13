@@ -35,16 +35,29 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		l := lft.(obj.List)
 		i := idx.(*obj.Integer).Val()
 
-		if int(i) >= len(l) {
-			return obj.NewError("intex out of range")
+		return &obj.GetSetterImpl{
+			GetFunc: func() (obj.Object, bool) {
+				if i < 0 || int(i) >= len(l) {
+					return obj.NewError("intex out of range"), false
+				}
+				return l[i], true
+			},
+
+			SetFunc: func(o obj.Object) obj.Object {
+				if i < 0 || int(i) >= len(l) {
+					return obj.NewError("intex out of range")
+				}
+
+				l[i] = o
+				return o
+			},
 		}
-		return l[i]
 
 	case assertTypes(lft, obj.StringType) && assertTypes(idx, obj.IntType):
 		s := lft.(*obj.String)
 		i := idx.(*obj.Integer).Val()
 
-		if int(i) >= len(*s) {
+		if i < 0 || int(i) >= len(*s) {
 			return obj.NewError("intex out of range")
 		}
 		return obj.NewString(string(string(*s)[i]))
@@ -52,7 +65,17 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 	case assertTypes(lft, obj.MapType) && assertTypes(idx, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType):
 		m := lft.(obj.Map)
 		k := idx.(obj.Hashable)
-		return m.Get(k.KeyHash()).Value
+		return &obj.GetSetterImpl{
+			GetFunc: func() (obj.Object, bool) {
+				v := m.Get(k.KeyHash()).Value
+				return v, v != obj.NullObj
+			},
+
+			SetFunc: func(o obj.Object) obj.Object {
+				m.Set(k.KeyHash(), obj.MapPair{Key: idx, Value: o})
+				return o
+			},
+		}
 
 	default:
 		return obj.NewError(

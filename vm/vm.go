@@ -554,10 +554,22 @@ func (vm *VM) execIndex() error {
 		l := left.(obj.List)
 		i := int(index.(*obj.Integer).Val())
 
-		if i < 0 || i >= len(l) {
-			return fmt.Errorf("index out of range")
-		}
-		return vm.push(l[i])
+		return vm.push(&obj.GetSetterImpl{
+			GetFunc: func() (obj.Object, bool) {
+				if i < 0 || i >= len(l) {
+					return obj.NewError("intex out of range"), false
+				}
+				return l[i], true
+			},
+
+			SetFunc: func(o obj.Object) obj.Object {
+				if i < 0 || int(i) >= len(l) {
+					return obj.NewError("intex out of range")
+				}
+				l[i] = o
+				return o
+			},
+		})
 
 	case assertTypes(left, obj.StringType) && assertTypes(index, obj.IntType):
 		s := left.(*obj.String).Val()
@@ -571,7 +583,18 @@ func (vm *VM) execIndex() error {
 	case assertTypes(left, obj.MapType) && assertTypes(index, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType):
 		m := left.(obj.Map)
 		k := index.(obj.Hashable)
-		return vm.push(m.Get(k.KeyHash()).Value)
+
+		return vm.push(&obj.GetSetterImpl{
+			GetFunc: func() (obj.Object, bool) {
+				v := m.Get(k.KeyHash()).Value
+				return v, v != obj.NullObj
+			},
+
+			SetFunc: func(o obj.Object) obj.Object {
+				m.Set(k.KeyHash(), obj.MapPair{Key: index, Value: o})
+				return o
+			},
+		})
 
 	default:
 		return fmt.Errorf("invalid index operator for types %v and %v", left.Type(), index.Type())

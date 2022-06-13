@@ -42,7 +42,6 @@ func (a Assign) String() string {
 	return fmt.Sprintf("(%v = %v)", a.l, a.r)
 }
 
-// TODO: fix assignment for index and dot expressions.
 func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 	switch left := a.l.(type) {
 	case Identifier:
@@ -57,7 +56,7 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 			return c.Emit(code.OpSetLocal, symbol.Index), nil
 		}
 
-	case Dot:
+	case Dot, Index:
 		if position, err = a.l.Compile(c); err != nil {
 			return
 		}

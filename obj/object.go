@@ -5,19 +5,6 @@ type Object interface {
 	String() string
 }
 
-type MapGetter interface {
-	Get(string) (Object, bool)
-}
-
-type MapSetter interface {
-	Set(string, Object) Object
-}
-
-type MapGetSetter interface {
-	MapGetter
-	MapSetter
-}
-
 type Getter interface {
 	Object() Object
 }

@@ -117,11 +117,27 @@ func (vm *VM) execDot() error {
 
 	switch l := left.(type) {
 	case obj.Class:
-		return vm.push(obj.NewGetSetter(l, right.String()))
+		return vm.push(&obj.GetSetterImpl{
+			GetFunc: func() (obj.Object, bool) {
+				return l.Get(right.String())
+			},
+
+			SetFunc: func(o obj.Object) obj.Object {
+				return l.Set(right.String(), o)
+			},
+		})
 
 	case obj.GetSetter:
-		o := l.Object()
-		return vm.push(obj.NewGetSetter(o.(obj.Class), right.String()))
+		c := l.Object().(obj.Class)
+		return vm.push(&obj.GetSetterImpl{
+			GetFunc: func() (obj.Object, bool) {
+				return c.Get(right.String())
+			},
+
+			SetFunc: func(o obj.Object) obj.Object {
+				return c.Set(right.String(), o)
+			},
+		})
 
 	default:
 		return fmt.Errorf("%v object has no attribute %s", left.Type(), right)

@@ -26,7 +26,15 @@ func (d Dot) Eval(env *obj.Env) obj.Object {
 
 	switch l := left.(type) {
 	case obj.Class:
-		return obj.NewGetSetter(l, d.r.String())
+		return &obj.GetSetterImpl{
+			GetFunc: func() (obj.Object, bool) {
+				return l.Get(d.r.String())
+			},
+
+			SetFunc: func(o obj.Object) obj.Object {
+				return l.Set(d.r.String(), o)
+			},
+		}
 
 	case obj.GetSetter:
 		return l

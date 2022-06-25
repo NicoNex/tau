@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"strconv"
-	"strings"
 )
 
 var (
@@ -56,24 +55,14 @@ var Builtins = []struct {
 	{
 		"println",
 		func(args ...Object) Object {
-			var arguments []interface{}
-
-			for _, a := range args {
-				arguments = append(arguments, a.String())
-			}
-			fmt.Fprintln(Stdout, arguments...)
+			fmt.Fprintln(Stdout, toAnySlice(args)...)
 			return NullObj
 		},
 	},
 	{
 		"print",
 		func(args ...Object) Object {
-			var arguments []interface{}
-
-			for _, a := range args {
-				arguments = append(arguments, a.String())
-			}
-			fmt.Fprint(Stdout, arguments...)
+			fmt.Fprint(Stdout, toAnySlice(args)...)
 			return NullObj
 		},
 	},
@@ -99,12 +88,22 @@ var Builtins = []struct {
 	{
 		"string",
 		func(args ...Object) Object {
-			var buf strings.Builder
-
-			for _, a := range args {
-				buf.WriteString(a.String())
+			return NewString(fmt.Sprint(toAnySlice(args)...))
+		},
+	},
+	{
+		"error",
+		func(args ...Object) Object {
+			return NewError(fmt.Sprint(toAnySlice(args)...))
+		},
+	},
+	{
+		"type",
+		func(args ...Object) Object {
+			if l := len(args); l != 1 {
+				return NewError("type: wrong number of arguments, expected 1, got %d", l)
 			}
-			return NewString(buf.String())
+			return NewString(args[0].Type().String())
 		},
 	},
 	{
@@ -367,4 +366,12 @@ func listify(start, stop, step int) List {
 		l = append(l, NewInteger(int64(i)))
 	}
 	return l
+}
+
+func toAnySlice(args []Object) []interface{} {
+	var ret = make([]interface{}, len(args))
+	for i, a := range args {
+		ret[i] = a
+	}
+	return ret
 }

@@ -1,4 +1,6 @@
 tau
 *.exe
-test.tau
+*.tau
+*.tauc
+*.py
 

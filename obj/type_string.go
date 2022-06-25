@@ -14,7 +14,7 @@ func _() {
 	_ = x[FloatType-3]
 	_ = x[BoolType-4]
 	_ = x[StringType-5]
-	_ = x[ClassType-6]
+	_ = x[ObjectType-6]
 	_ = x[ReturnType-7]
 	_ = x[FunctionType-8]
 	_ = x[ClosureType-9]
@@ -25,9 +25,9 @@ func _() {
 	_ = x[BreakType-14]
 }
 
-const _Type_name = "nullerrorintfloatboolstringclassreturnfunctionclosurebuiltinlistmapcontinuebreak"
+const _Type_name = "nullerrorintfloatboolstringobjectreturnfunctionclosurebuiltinlistmapcontinuebreak"
 
-var _Type_index = [...]uint8{0, 4, 9, 12, 17, 21, 27, 32, 38, 46, 53, 60, 64, 67, 75, 80}
+var _Type_index = [...]uint8{0, 4, 9, 12, 17, 21, 27, 33, 39, 47, 54, 61, 65, 68, 76, 81}
 
 func (i Type) String() string {
 	if i < 0 || i >= Type(len(_Type_index)-1) {

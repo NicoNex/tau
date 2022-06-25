@@ -14,7 +14,7 @@ func NewClass() Object {
 }
 
 func (c Class) Type() Type {
-	return ClassType
+	return ObjectType
 }
 
 func (c Class) String() string {

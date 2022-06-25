@@ -42,7 +42,7 @@ const (
 	FloatType                // float
 	BoolType                 // bool
 	StringType               // string
-	ClassType                // class
+	ObjectType               // object
 	ReturnType               // return
 	FunctionType             // function
 	ClosureType              // closure

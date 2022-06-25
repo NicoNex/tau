@@ -32,24 +32,25 @@ type setter interface {
 	Set(string, Object) Object
 }
 
+//go:generate stringer -linecomment -type=Type
 type Type int
 
 const (
-	NullType Type = iota
-	ErrorType
-	IntType
-	FloatType
-	BoolType
-	StringType
-	ClassType
-	ReturnType
-	FunctionType
-	ClosureType
-	BuiltinType
-	ListType
-	MapType
-	ContinueType
-	BreakType
+	NullType     Type = iota // null
+	ErrorType                // error
+	IntType                  // int
+	FloatType                // float
+	BoolType                 // bool
+	StringType               // string
+	ClassType                // class
+	ReturnType               // return
+	FunctionType             // function
+	ClosureType              // closure
+	BuiltinType              // builtin
+	ListType                 // list
+	MapType                  // map
+	ContinueType             // continue
+	BreakType                // break
 )
 
 var (
@@ -59,28 +60,6 @@ var (
 	ContinueObj = NewContinue()
 	BreakObj    = NewBreak()
 )
-
-var typrepr = map[Type]string{
-	NullType:     "null",
-	ErrorType:    "error",
-	IntType:      "int",
-	FloatType:    "float",
-	BoolType:     "bool",
-	StringType:   "string",
-	ClassType:    "class",
-	ReturnType:   "return",
-	FunctionType: "function",
-	ClosureType:  "closure",
-	BuiltinType:  "builtin",
-	ListType:     "list",
-	MapType:      "map",
-	ContinueType: "continue",
-	BreakType:    "break",
-}
-
-func (t Type) String() string {
-	return typrepr[t]
-}
 
 func ParseBool(b bool) Object {
 	if b {

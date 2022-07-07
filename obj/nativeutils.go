@@ -107,9 +107,6 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 	case reflect.Complex128:
 		return reflect.Zero(t), fmt.Errorf("unsupported type 'complex128'")
 
-	case reflect.Array:
-		return reflect.Zero(t), fmt.Errorf("unsupported type 'array'")
-
 	case reflect.Chan:
 		return reflect.Zero(t), fmt.Errorf("unsupported type 'chan'")
 
@@ -136,6 +133,25 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 		default:
 			return reflect.Zero(t), fmt.Errorf("unsupported type 'pointer'")
 		}
+
+	case reflect.Array:
+		l, ok := o.(List)
+		if !ok {
+			return reflect.Zero(t), fmt.Errorf("expected list but %v provided", o.Type())
+		}
+
+		innerType := t.Elem()
+		arrayType := reflect.ArrayOf(t.Len(), innerType)
+		array := reflect.New(arrayType).Elem()
+		for i, e := range l {
+			v, err := toValue(innerType, e)
+			if err != nil {
+				return reflect.Zero(t), fmt.Errorf("expected %s but %v provided", innerType.String(), e.Type())
+			}
+			array.Index(i).Set(v)
+		}
+
+		return array, nil
 
 	case reflect.Slice:
 		l, ok := o.(List)

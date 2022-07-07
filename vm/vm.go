@@ -127,6 +127,16 @@ func (vm *VM) execDot() error {
 			},
 		})
 
+	case obj.MapGetSetter:
+		return vm.push(&obj.GetSetterImpl{
+			GetFunc: func() (obj.Object, bool) {
+				return l.Get(right.String())
+			},
+			SetFunc: func(o obj.Object) obj.Object {
+				return l.Set(right.String(), o)
+			},
+		})
+
 	case obj.GetSetter:
 		c := l.Object().(obj.Class)
 		return vm.push(&obj.GetSetterImpl{

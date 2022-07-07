@@ -19,6 +19,11 @@ type GetSetter interface {
 	Setter
 }
 
+type MapGetSetter interface {
+	Get(string) (Object, bool)
+	Set(string, Object) Object
+}
+
 type KeyHash struct {
 	Type  Type
 	Value uint64

@@ -357,6 +357,21 @@ var Builtins = []struct {
 			return NewBoolean(ok)
 		},
 	},
+	{
+		"plugin",
+		func(args ...Object) Object {
+			if l := len(args); l != 1 {
+				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
+			}
+
+			str, ok := args[0].(*String)
+			if !ok {
+				return NewError("plugin: first argument must be a string, got %s instead", args[0].Type())
+			}
+
+			return NewNativePlugin(str.String())
+		},
+	},
 }
 
 func listify(start, stop, step int) List {

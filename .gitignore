@@ -3,4 +3,5 @@ tau
 *.tau
 *.tauc
 *.py
+*.so
 

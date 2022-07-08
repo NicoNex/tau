@@ -140,6 +140,10 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 			return reflect.Zero(t), fmt.Errorf("expected list but %v provided", o.Type())
 		}
 
+		if len(l) != t.Len() {
+			return reflect.Zero(t), fmt.Errorf("length mismatch: expected %d, got %d", t.Len(), len(l))
+		}
+
 		innerType := t.Elem()
 		arrayType := reflect.ArrayOf(t.Len(), innerType)
 		array := reflect.New(arrayType).Elem()

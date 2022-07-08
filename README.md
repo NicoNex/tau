@@ -232,3 +232,43 @@ println(snuffles.humanage())
 ```
 >>> 56
 ```
+
+#### Modules
+##### Plugin
+Tau plugin system makes it possible to import and use Go plugins in Tau seamlessy.
+To run your Go code in Tau just compile it with:
+```bash
+go build -buildmode=plugin -o myplugin.so
+```
+then you can import it in Tau with the `plugin` builtin function.
+```python
+myplugin = plugin("path/to/myplugin.so")
+```
+###### Example
+Go code:
+```golang
+package main
+
+import "fmt"
+
+func Hello() {
+	fmt.Println("Hello World")
+}
+
+func Sum(a, b int) int {
+	return a + b
+}
+```
+
+Tau code:
+```python
+myplugin = plugin("myplugin.so")
+
+myplugin.Hello()
+println("The sum is", myplugin.Sum(3, 2))
+```
+Output:
+```
+>>> Hello World
+>>> The sum is 5
+```

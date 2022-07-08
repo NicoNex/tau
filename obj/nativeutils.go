@@ -122,9 +122,6 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 			return reflect.Zero(t), fmt.Errorf("unsupported type 'interface'")
 		}
 
-	case reflect.Map:
-		return reflect.Zero(t), fmt.Errorf("unsupported type 'map'")
-
 	case reflect.Pointer:
 		switch o.(type) {
 		case *Null:
@@ -173,6 +170,32 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 		}
 
 		return slice, nil
+
+	case reflect.Map:
+		m, ok := o.(Map)
+		if !ok {
+			return reflect.Zero(t), fmt.Errorf("expected map but %v provided", o.Type())
+		}
+
+		keyType := t.Key()
+		valType := t.Elem()
+		retMap := reflect.MakeMap(t)
+
+		for _, pair := range m {
+			key, err := toValue(keyType, pair.Key)
+			if err != nil {
+				return reflect.Zero(t), fmt.Errorf("expected %s but %v provided", keyType.String(), pair.Key.Type())
+			}
+
+			val, err := toValue(valType, pair.Value)
+			if err != nil {
+				return reflect.Zero(t), fmt.Errorf("expected %s but %v provided", valType.String(), pair.Value.Type())
+			}
+
+			retMap.SetMapIndex(key, val)
+		}
+
+		return retMap, nil
 
 	case reflect.String:
 		s, ok := o.(*String)

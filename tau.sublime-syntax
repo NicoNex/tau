@@ -26,7 +26,7 @@ variables:
   bin_digits: (?:_?[01]+(?:_[01]+)*)
   char_escape: \\x\h{2}|\\u\h{4}|\\U\h{8}|\\[0-7]{3}|\\.
   noise: (?:\s)*
-  predeclared_func: \b(?:print|println|len|input|string|int|float|exit|new|append|push|range|first|last|tail|new|error|type)\b
+  predeclared_func: \b(?:print|println|len|input|string|int|float|exit|new|append|push|range|first|last|tail|new|error|type|isError|plugin)\b
 
 contexts:
   main:

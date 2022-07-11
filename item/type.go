@@ -72,6 +72,7 @@ const (
 	True
 	False
 	Return
+	Import
 )
 
 var typemap = map[Type]string{
@@ -144,6 +145,7 @@ var typemap = map[Type]string{
 	True:     "true",
 	False:    "false",
 	Return:   "return",
+	Import:   "import",
 }
 
 var keywords = map[string]Type{
@@ -158,6 +160,7 @@ var keywords = map[string]Type{
 	"false":    False,
 	"return":   Return,
 	"null":     Null,
+	"import":   Import,
 }
 
 func (t Type) String() string {

@@ -111,6 +111,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.BwNot, p.parseBwNot)
 	p.registerPrefix(item.Continue, p.parseContinue)
 	p.registerPrefix(item.Break, p.parseBreak)
+	p.registerPrefix(item.Import, p.parseImport)
 
 	p.registerInfix(item.Equals, p.parseEquals)
 	p.registerInfix(item.NotEquals, p.parseNotEquals)
@@ -283,6 +284,21 @@ func (p *Parser) parseMap() ast.Node {
 	return ast.NewMap(couples...)
 }
 
+func (p *Parser) parseImport() ast.Node {
+	if !p.expectPeek(item.LParen) {
+		return nil
+	}
+
+	args := p.parseNodeList(item.RParen)
+
+	if l := len(args); l != 1 {
+		p.errs = append(p.errs, fmt.Sprintf("import: expected exactly 1 argument but %d provided", l))
+		return nil
+	}
+
+	return ast.NewImport(args[0])
+}
+
 func (p *Parser) parseFunction() ast.Node {
 	if !p.expectPeek(item.LParen) {
 		return nil
@@ -331,8 +347,7 @@ func (p *Parser) parseNull() ast.Node {
 
 func (p *Parser) parseContinue() ast.Node {
 	if !p.isInsideLoop() {
-		e := fmt.Sprintf(`continue statement not inside "for" block`)
-		p.errs = append(p.errs, e)
+		p.errs = append(p.errs, `continue statement not inside "for" block`)
 		return nil
 	}
 	return ast.NewContinue()
@@ -340,8 +355,7 @@ func (p *Parser) parseContinue() ast.Node {
 
 func (p *Parser) parseBreak() ast.Node {
 	if !p.isInsideLoop() {
-		e := fmt.Sprintf(`break statement not inside "for" block`)
-		p.errs = append(p.errs, e)
+		p.errs = append(p.errs, `break statement not inside "for" block`)
 		return nil
 	}
 	return ast.NewBreak()

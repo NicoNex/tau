@@ -115,6 +115,34 @@ println(m)
 >>> 1
 ```
 
+##### Error handling
+```python
+# errtest.tau
+
+div = fn(n, d) {
+	if d == 0 {
+		return error("zero division error")
+	}
+	n / d
+}
+
+if isError(result1 = div(16, 2)) {
+	exit(result1)
+}
+println("the result of 16 / 2 is", result1)
+
+if isError(result2 = div(32, 0)) {
+	exit(result2)
+}
+println("the result of 32 / 0 is", result2)
+```
+```
+$ tau errtest.tau
+the result of 16 / 2 is 8
+error: zero division error
+$
+```
+
 ##### REPL
 Tau also supports REPL:
 ```

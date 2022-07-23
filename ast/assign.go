@@ -20,7 +20,7 @@ func NewAssign(l, r Node) Node {
 func (a Assign) Eval(env *obj.Env) obj.Object {
 	if left, ok := a.l.(Identifier); ok {
 		right := obj.Unwrap(a.r.Eval(env))
-		if takesPrecedence(right) {
+		if takesPrecedenceNoError(right) {
 			return right
 		}
 		return env.Set(left.String(), right)

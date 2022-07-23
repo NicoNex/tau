@@ -16,6 +16,10 @@ func takesPrecedence(o obj.Object) bool {
 	return isReturn(o) || isError(o) || isContinue(o) || isBreak(o)
 }
 
+func takesPrecedenceNoError(o obj.Object) bool {
+	return isReturn(o) || isContinue(o) || isBreak(o)
+}
+
 // Checks whether o is of type obj.ErrorType.
 func isError(o obj.Object) bool {
 	return o.Type() == obj.ErrorType

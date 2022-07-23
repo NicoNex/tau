@@ -237,7 +237,7 @@ func toObject(v reflect.Value) Object {
 		return NewString(v.String())
 
 	case reflect.Bool:
-		return NewBoolean(v.Bool())
+		return ParseBool(v.Bool())
 
 	case reflect.Int, reflect.Int64, reflect.Int32, reflect.Int16, reflect.Int8:
 		return NewInteger(v.Int())

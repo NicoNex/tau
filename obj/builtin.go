@@ -170,12 +170,12 @@ var Builtins = []struct {
 				case *Integer:
 					os.Exit(int(*o))
 
-				case *String:
+				case *String, *Error:
 					fmt.Fprintln(Stdout, o)
 					os.Exit(0)
 
 				default:
-					return NewError("exit: argument must be an integer or string")
+					return NewError("exit: argument must be an integer, string or error")
 				}
 			}
 
@@ -354,7 +354,7 @@ var Builtins = []struct {
 			}
 
 			_, ok := args[0].(*Error)
-			return NewBoolean(ok)
+			return ParseBool(ok)
 		},
 	},
 	{

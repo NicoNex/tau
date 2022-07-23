@@ -296,7 +296,7 @@ func (p *Parser) parseImport() ast.Node {
 		return nil
 	}
 
-	return ast.NewImport(args[0])
+	return ast.NewImport(args[0], Parse)
 }
 
 func (p *Parser) parseFunction() ast.Node {

@@ -2,19 +2,24 @@ package ast
 
 import (
 	"fmt"
+	"os"
+	"strings"
 
 	// "github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
-	"github.com/NicoNex/tau/tauimport"
 )
 
 type Import struct {
-	name Node
+	name  Node
+	parse func(string) (Node, []string)
 }
 
-func NewImport(name Node) Node {
-	return &Import{name: name}
+func NewImport(name Node, parse func(string) (Node, []string)) Node {
+	return &Import{
+		name:  name,
+		parse: parse,
+	}
 }
 
 func (i Import) Eval(env *obj.Env) obj.Object {
@@ -29,7 +34,23 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("import: expected string but got %v", name.Type())
 	}
 
-	return tauimport.EvalImport(*n)
+	b, err := os.ReadFile(string(*n))
+	if err != nil {
+		return obj.NewError("import error: %w", err.Error())
+	}
+
+	tree, errs := i.parse(string(b))
+	if len(errs) > 0 {
+		return obj.NewError(
+			"import: multiple errors in module %q:\n  %s",
+			name,
+			strings.Join(errs, "\n  "),
+		)
+	}
+
+	modEnv := obj.NewEnv()
+	tree.Eval(modEnv)
+	return &obj.Class{Env: env}
 }
 
 func (i Import) Compile(comp *compiler.Compiler) (position int, err error) {

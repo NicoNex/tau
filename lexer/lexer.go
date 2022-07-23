@@ -370,8 +370,7 @@ func lexExpression(l *lexer) stateFn {
 
 	case r == '#':
 		l.acceptUntil('\n')
-		l.next()
-		l.ignore()
+		l.ignoreSpaces()
 
 	case r == 0:
 		l.emit(item.EOF)

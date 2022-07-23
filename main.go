@@ -73,67 +73,64 @@ func writeFile(fname string, cont []byte) {
 	}
 }
 
-func execFilesVM(files []string) {
-	for _, f := range files {
-		var bytecode *compiler.Bytecode
+func execFileVM(f string) {
+	var bytecode *compiler.Bytecode
 
-		if strings.HasSuffix(f, ".tauc") {
-			file, err := os.Open(f)
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-
-			bytecode, err = decode(bufio.NewReader(file))
-			if err != nil {
-				fmt.Println(err)
-				continue
-			}
-		} else {
-			b := readFile(f)
-			res, errs := parser.Parse(string(b))
-			if len(errs) != 0 {
-				for _, e := range errs {
-					fmt.Println(e)
-				}
-				return
-			}
-
-			c := compiler.New()
-			if err := c.Compile(res); err != nil {
-				fmt.Println(err)
-				return
-			}
-			bytecode = c.Bytecode()
-		}
-
-		tvm := vm.New(bytecode)
-		if err := tvm.Run(); err != nil {
-			fmt.Printf("runtime error: %v\n", err)
+	if strings.HasSuffix(f, ".tauc") {
+		file, err := os.Open(f)
+		if err != nil {
+			fmt.Println(err)
 			return
 		}
+		defer file.Close()
 
-		fmt.Println(tvm.LastPoppedStackElem())
-	}
-}
-
-func execFilesEval(files []string) {
-	for _, f := range files {
-		var env = obj.NewEnv()
-
+		bytecode, err = decode(bufio.NewReader(file))
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+	} else {
 		b := readFile(f)
 		res, errs := parser.Parse(string(b))
 		if len(errs) != 0 {
 			for _, e := range errs {
 				fmt.Println(e)
 			}
-			continue
+			return
 		}
 
-		val := res.Eval(env)
-		if val != obj.NullObj && val != nil {
-			fmt.Println(val)
+		c := compiler.New()
+		if err := c.Compile(res); err != nil {
+			fmt.Println(err)
+			return
 		}
+		bytecode = c.Bytecode()
+	}
+
+	tvm := vm.New(bytecode)
+	if err := tvm.Run(); err != nil {
+		fmt.Printf("runtime error: %v\n", err)
+		return
+	}
+
+	fmt.Println(tvm.LastPoppedStackElem())
+}
+
+func execFileEval(f string) {
+	var env = obj.NewEnv()
+
+	b := readFile(f)
+	res, errs := parser.Parse(string(b))
+	if len(errs) != 0 {
+		for _, e := range errs {
+			fmt.Println(e)
+		}
+		return
+	}
+
+	val := res.Eval(env)
+	if val != obj.NullObj && val != nil {
+		fmt.Println(val)
 	}
 }
 
@@ -167,32 +164,28 @@ func compileFiles(files []string) {
 }
 
 func main() {
-	var (
-		useVM   bool
-		compile bool
-	)
+	var compile, useEval bool
 
-	flag.BoolVar(&useVM, "vm", false, "Use the Tau VM instead of eval method. (faster)")
+	flag.BoolVar(&useEval, "eval", false, "Use the Tau eval function instead of the Tau VM. (slower)")
 	flag.BoolVar(&compile, "c", false, "Compile a tau file into a '.tauc' bytecode file.")
 	flag.Parse()
 
-	if compile {
+	switch {
+	case compile:
 		compileFiles(flag.Args())
-		return
-	}
 
-	if flag.NArg() > 0 {
-		if useVM {
-			execFilesVM(flag.Args())
+	case flag.NArg() > 0:
+		if useEval {
+			execFileEval(flag.Arg(0))
 		} else {
-			execFilesEval(flag.Args())
+			execFileVM(flag.Arg(0))
 		}
-		return
-	}
 
-	if useVM {
-		vmREPL()
-	} else {
-		evalREPL()
+	default:
+		if useEval {
+			evalREPL()
+		} else {
+			vmREPL()
+		}
 	}
 }

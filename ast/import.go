@@ -50,7 +50,7 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 
 	modEnv := obj.NewEnv()
 	tree.Eval(modEnv)
-	return obj.Class{Env: env}
+	return obj.Class{Env: modEnv}
 }
 
 func (i Import) Compile(comp *compiler.Compiler) (position int, err error) {

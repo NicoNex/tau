@@ -5,3 +5,4 @@ tau
 *.py
 *.so
 
+!/examples/*.tau

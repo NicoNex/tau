@@ -1,6 +1,6 @@
 # τ
 
-Tau is a dinamically-typed open source programming language designed to be minimal, fast and efficient.
+Tau is a dynamically-typed open source programming language designed to be minimal, fast and efficient.
 
 ## Installation
 In order to install Tau, you'll need [Go](https://golang.org/).
@@ -25,7 +25,7 @@ println("Hello World")
 ### Examples
 
 #### File
-As every interpreter Tau supports files either by passing the path to the interpreter or by using the shabang.
+As every interpreter Tau supports files either by passing the path to the interpreter or by using the shebang.
 
 ```python
 # helloworld.tau
@@ -263,7 +263,7 @@ println(snuffles.humanage())
 
 #### Modules
 ##### Plugin
-Tau plugin system makes it possible to import and use Go plugins in Tau seamlessy.
+Tau plugin system makes it possible to import and use Go plugins in Tau seamlessly.
 To run your Go code in Tau just compile it with:
 ```bash
 go build -buildmode=plugin -o myplugin.so

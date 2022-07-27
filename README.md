@@ -126,12 +126,12 @@ div = fn(n, d) {
 	n / d
 }
 
-if isError(result1 = div(16, 2)) {
+if failed(result1 = div(16, 2)) {
 	exit(result1)
 }
 println("the result of 16 / 2 is", result1)
 
-if isError(result2 = div(32, 0)) {
+if failed(result2 = div(32, 0)) {
 	exit(result2)
 }
 println("the result of 32 / 0 is", result2)

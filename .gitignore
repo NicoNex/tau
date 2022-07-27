@@ -1,4 +1,5 @@
-tau
+*~
+*.bak
 *.exe
 *.tau
 *.tauc
@@ -6,3 +7,5 @@ tau
 *.so
 
 !/examples/*.tau
+
+/tau

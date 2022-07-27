@@ -60,6 +60,20 @@ var Builtins = []struct {
 		},
 	},
 	{
+		"printf",
+		func(args ...Object) Object {
+			if l := len(args); l != 2 {
+				return NewError("printf: wrong number of arguments, expected 2, got %d", l)
+			}
+			fstr, ok := args[0].(*String)
+			if !ok {
+				return NewError("printf: argument must be a string")
+			}
+			fmt.Fprintf(Stdout, fstr.Val(), toAnySlice(args[1:])...)
+			return NullObj
+		},
+	},
+	{
 		"print",
 		func(args ...Object) Object {
 			fmt.Fprint(Stdout, toAnySlice(args)...)

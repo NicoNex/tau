@@ -28,7 +28,7 @@ println("Hello World")
 As every interpreter Tau supports files either by passing the path to the interpreter or by using the shebang.
 
 ```python
-# helloworld.tau
+#!/path/to/tau
 
 println("hello world")
 ```

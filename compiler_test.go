@@ -703,7 +703,7 @@ a = new();
 a.a = 2`,
 			expectedConstants: []interface{}{"a", 2},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpGetBuiltin, 14),
+				code.Make(code.OpGetBuiltin, 16),
 				code.Make(code.OpCall, 0),
 				code.Make(code.OpSetGlobal, 0),
 				code.Make(code.OpPop),

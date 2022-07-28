@@ -14,6 +14,6 @@ func (n Null) Type() Type {
 	return NullType
 }
 
-func (n Null) Val() interface{} {
+func (n Null) Val() any {
 	return nil
 }

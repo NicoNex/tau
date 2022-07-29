@@ -1,7 +1,7 @@
 //go:build windows
 // +build windows
 
-package tau
+package main
 
 import (
 	"bufio"

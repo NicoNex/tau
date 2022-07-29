@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-package tau
+package main
 
 import (
 	"fmt"
@@ -17,7 +17,7 @@ import (
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-func EvalREPL() error {
+func evalREPL() error {
 	var env = obj.NewEnv()
 
 	initState, err := term.MakeRaw(0)
@@ -54,7 +54,7 @@ func EvalREPL() error {
 	}
 }
 
-func VmREPL() error {
+func vmREPL() error {
 	var (
 		consts      []obj.Object
 		globals     = make([]obj.Object, vm.GlobalSize)

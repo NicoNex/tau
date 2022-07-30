@@ -205,7 +205,12 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 		return reflect.ValueOf(string(*s)), nil
 
 	case reflect.Struct:
-		return reflect.Zero(t), fmt.Errorf("unsupported type 'struct'")
+		object, ok := o.(Class)
+		if !ok {
+			return reflect.Zero(t), fmt.Errorf("expected object but %v provided", o.Type())
+		}
+
+		return objToValue(object, t)
 
 	case reflect.UnsafePointer:
 		return reflect.Zero(t), fmt.Errorf("unsupported type 'unsafeptr'")
@@ -229,6 +234,27 @@ func args(t reflect.Type, a ...Object) (args []reflect.Value, err error) {
 		args[i], err = toValue(t.In(i), a[i])
 	}
 	return
+}
+
+func objToValue(o Class, t reflect.Type) (reflect.Value, error) {
+	s := reflect.New(t).Elem()
+
+	for i := 0; i < t.NumField(); i++ {
+		goField := t.Field(i)
+		tauField, ok := o.Get(goField.Name)
+		if !ok {
+			continue
+		}
+
+		val, err := toValue(goField.Type, tauField)
+		if err != nil {
+			return reflect.Zero(t), err
+		}
+
+		s.Field(i).Set(val)
+	}
+
+	return s, nil
 }
 
 func toObject(v reflect.Value) Object {

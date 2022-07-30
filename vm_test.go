@@ -11,7 +11,7 @@ import (
 
 type vmTestCase struct {
 	input    string
-	expected any
+	expected interface{}
 }
 
 func runVmTests(t *testing.T, tests []vmTestCase) {
@@ -37,7 +37,7 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 	}
 }
 
-func testExpectedObject(t *testing.T, expected any, actual obj.Object) {
+func testExpectedObject(t *testing.T, expected interface{}, actual obj.Object) {
 	t.Helper()
 	switch expected := expected.(type) {
 	case int:

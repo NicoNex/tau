@@ -9,14 +9,14 @@ import (
 
 type Function struct {
 	Params       []string
-	Body         any
+	Body         interface{}
 	Env          *Env
 	Instructions code.Instructions
 	NumLocals    int
 	NumParams    int
 }
 
-func NewFunction(params []string, env *Env, body any) Object {
+func NewFunction(params []string, env *Env, body interface{}) Object {
 	return &Function{Params: params, Body: body, Env: env}
 }
 

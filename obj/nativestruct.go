@@ -3,10 +3,10 @@ package obj
 import "reflect"
 
 type NativeStruct struct {
-	s any
+	s interface{}
 }
 
-func NewNativeStruct(s any) Object {
+func NewNativeStruct(s interface{}) Object {
 	return &NativeStruct{s}
 }
 

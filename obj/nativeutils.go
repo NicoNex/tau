@@ -128,7 +128,13 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 			return reflect.Zero(t), nil
 
 		default:
-			return reflect.Zero(t), fmt.Errorf("unsupported type 'pointer'")
+			ret := reflect.New(t.Elem())
+			v, err := toValue(ret.Elem().Type(), o)
+			if err != nil {
+				return reflect.Zero(t), err
+			}
+			ret.Set(v)
+			return ret, nil
 		}
 
 	case reflect.Array:

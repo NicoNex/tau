@@ -15,8 +15,6 @@ import (
 	"github.com/NicoNex/tau/vm"
 )
 
-const prompt = ">>> "
-
 func evalREPL() {
 	var (
 		env    = obj.NewEnv()

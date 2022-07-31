@@ -24,7 +24,7 @@ func evalREPL() {
 	)
 
 	for {
-		fmt.Print(prompt)
+		fmt.Print(">>> ")
 		input, err := reader.ReadString('\n')
 		check(err)
 
@@ -61,7 +61,7 @@ func vmREPL() {
 	}
 
 	for {
-		fmt.Print(prompt)
+		fmt.Print(">>> ")
 		input, err := reader.ReadString('\n')
 		check(err)
 
@@ -108,7 +108,7 @@ func acceptUntil(r *bufio.Reader, start, end string) (string, error) {
 	buf.WriteString(start)
 	buf.WriteRune('\n')
 	for {
-		fmt.Print(prompt)
+		fmt.Print("... ")
 		line, err := r.ReadString('\n')
 		if err != nil {
 			return "", err

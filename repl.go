@@ -127,6 +127,9 @@ func acceptUntil(t *term.Terminal, start, end string) (string, error) {
 
 	buf.WriteString(start)
 	buf.WriteRune('\n')
+	t.SetPrompt("... ")
+	defer t.SetPrompt(">>> ")
+
 	for {
 		line, err := t.ReadLine()
 		if err != nil {

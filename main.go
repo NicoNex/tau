@@ -112,8 +112,6 @@ func execFileVM(f string) {
 		fmt.Printf("runtime error: %v\n", err)
 		return
 	}
-
-	fmt.Println(tvm.LastPoppedStackElem())
 }
 
 func execFileEval(f string) {
@@ -128,10 +126,7 @@ func execFileEval(f string) {
 		return
 	}
 
-	val := res.Eval(env)
-	if val != obj.NullObj && val != nil {
-		fmt.Println(val)
-	}
+	res.Eval(env)
 }
 
 func compileFiles(files []string) {

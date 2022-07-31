@@ -347,10 +347,10 @@ var Builtins = []struct {
 		},
 	},
 	{
-		"isError",
+		"failed",
 		func(args ...Object) Object {
 			if l := len(args); l != 1 {
-				return NewError("isError: wrong number of arguments, expected 1, got %d", l)
+				return NewError("failed: wrong number of arguments, expected 1, got %d", l)
 			}
 
 			_, ok := args[0].(*Error)

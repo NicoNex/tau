@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
@@ -30,12 +31,12 @@ func evalREPL() {
 
 	for {
 		input, err := t.ReadLine()
-		if err != nil {
-			// Quit without error on Ctrl^D.
-			if err != io.EOF {
-				fmt.Fprintln(t, err)
-			}
-			return
+		check(t, initState, err)
+
+		input = strings.TrimRight(input, " ")
+		if len(input) > 0 && input[len(input)-1] == '{' {
+			input, err = acceptUntil(t, input, "\n\n")
+			check(t, initState, err)
 		}
 
 		res, errs := parser.Parse(input)
@@ -75,12 +76,12 @@ func vmREPL() {
 
 	for {
 		input, err := t.ReadLine()
-		if err != nil {
-			// Quit without error on Ctrl^D.
-			if err != io.EOF {
-				fmt.Fprintln(t, err)
-			}
-			return
+		check(t, initState, err)
+
+		input = strings.TrimRight(input, " ")
+		if len(input) > 0 && input[len(input)-1] == '{' {
+			input, err = acceptUntil(t, input, "\n\n")
+			check(t, initState, err)
 		}
 
 		res, errs := parser.Parse(input)
@@ -103,6 +104,46 @@ func vmREPL() {
 			continue
 		}
 
-		fmt.Fprintln(t, tvm.LastPoppedStackElem())
+		if val := tvm.LastPoppedStackElem(); val != nil && val != obj.NullObj {
+			fmt.Fprintln(t, val)
+		}
 	}
+}
+
+func check(t *term.Terminal, initState *term.State, err error) {
+	if err != nil {
+		// Quit without error on Ctrl^D.
+		if err != io.EOF {
+			fmt.Fprintln(t, err)
+		}
+		term.Restore(0, initState)
+		fmt.Println()
+		os.Exit(0)
+	}
+}
+
+func acceptUntil(t *term.Terminal, start, end string) (string, error) {
+	var buf strings.Builder
+
+	buf.WriteString(start)
+	buf.WriteRune('\n')
+	t.SetPrompt("... ")
+	defer t.SetPrompt(">>> ")
+
+	for {
+		line, err := t.ReadLine()
+		if err != nil {
+			return "", err
+		}
+
+		line = strings.TrimRight(line, " ")
+		buf.WriteString(line)
+		buf.WriteRune('\n')
+
+		if s := buf.String(); len(s) > len(end) && s[len(s)-len(end):] == end {
+			break
+		}
+	}
+
+	return buf.String(), nil
 }

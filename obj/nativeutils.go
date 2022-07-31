@@ -122,13 +122,19 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 			return reflect.Zero(t), fmt.Errorf("unsupported type 'interface'")
 		}
 
-	case reflect.Pointer:
+	case reflect.Ptr:
 		switch o.(type) {
 		case *Null:
 			return reflect.Zero(t), nil
 
 		default:
-			return reflect.Zero(t), fmt.Errorf("unsupported type 'pointer'")
+			ret := reflect.New(t.Elem())
+			v, err := toValue(ret.Elem().Type(), o)
+			if err != nil {
+				return reflect.Zero(t), err
+			}
+			ret.Set(v)
+			return ret, nil
 		}
 
 	case reflect.Array:
@@ -205,7 +211,28 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 		return reflect.ValueOf(string(*s)), nil
 
 	case reflect.Struct:
-		return reflect.Zero(t), fmt.Errorf("unsupported type 'struct'")
+		object, ok := o.(Class)
+		if !ok {
+			return reflect.Zero(t), fmt.Errorf("expected object but %v provided", o.Type())
+		}
+
+		s := reflect.New(t).Elem()
+		for i := 0; i < t.NumField(); i++ {
+			goField := t.Field(i)
+			tauField, ok := object.Get(goField.Name)
+			if !ok {
+				continue
+			}
+
+			val, err := toValue(goField.Type, tauField)
+			if err != nil {
+				return reflect.Zero(t), err
+			}
+
+			s.Field(i).Set(val)
+		}
+
+		return s, nil
 
 	case reflect.UnsafePointer:
 		return reflect.Zero(t), fmt.Errorf("unsupported type 'unsafeptr'")

@@ -765,10 +765,7 @@ func (vm *VM) Run() (err error) {
 		case code.OpConstant:
 			constIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
-
-			if err := vm.push(vm.consts[constIndex]); err != nil {
-				return err
-			}
+			err = vm.push(vm.consts[constIndex])
 
 		case code.OpJump:
 			pos := int(code.ReadUint16(ins[ip+1:]))
@@ -818,9 +815,9 @@ func (vm *VM) Run() (err error) {
 			nElements := int(code.ReadUint16(ins[ip+1:]))
 			vm.currentFrame().ip += 2
 
-			mapObj, err := vm.buildMap(vm.sp-nElements, vm.sp)
-			if err != nil {
-				return err
+			mapObj, e := vm.buildMap(vm.sp-nElements, vm.sp)
+			if e != nil {
+				return e
 			}
 			vm.sp = vm.sp - nElements
 			err = vm.push(mapObj)

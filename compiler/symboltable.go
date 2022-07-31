@@ -18,24 +18,24 @@ type Symbol struct {
 
 type SymbolTable struct {
 	outer       *SymbolTable
-	store       map[string]Symbol
+	Store       map[string]Symbol
 	NumDefs     int
 	FreeSymbols []Symbol
 }
 
 func NewSymbolTable() *SymbolTable {
-	return &SymbolTable{store: make(map[string]Symbol)}
+	return &SymbolTable{Store: make(map[string]Symbol)}
 }
 
 func NewEnclosedSymbolTable(outer *SymbolTable) *SymbolTable {
 	return &SymbolTable{
 		outer: outer,
-		store: make(map[string]Symbol),
+		Store: make(map[string]Symbol),
 	}
 }
 
 func (s *SymbolTable) Define(name string) Symbol {
-	if symbol, ok := s.store[name]; ok {
+	if symbol, ok := s.Store[name]; ok {
 		return symbol
 	}
 
@@ -49,13 +49,13 @@ func (s *SymbolTable) Define(name string) Symbol {
 		symbol.Scope = LocalScope
 	}
 
-	s.store[name] = symbol
+	s.Store[name] = symbol
 	s.NumDefs++
 	return symbol
 }
 
 func (s *SymbolTable) Resolve(name string) (Symbol, bool) {
-	obj, ok := s.store[name]
+	obj, ok := s.Store[name]
 
 	if !ok && s.outer != nil {
 		obj, ok := s.outer.Resolve(name)
@@ -75,7 +75,7 @@ func (s *SymbolTable) Resolve(name string) (Symbol, bool) {
 
 func (s *SymbolTable) DefineBuiltin(index int, name string) Symbol {
 	symbol := Symbol{Name: name, Index: index, Scope: BuiltinScope}
-	s.store[name] = symbol
+	s.Store[name] = symbol
 	return symbol
 }
 
@@ -86,12 +86,12 @@ func (s *SymbolTable) DefineFree(original Symbol) Symbol {
 		Index: len(s.FreeSymbols) - 1,
 		Scope: FreeScope,
 	}
-	s.store[original.Name] = symbol
+	s.Store[original.Name] = symbol
 	return symbol
 }
 
 func (s *SymbolTable) DefineFunctionName(n string) Symbol {
 	symbol := Symbol{Name: n, Index: 0, Scope: FunctionScope}
-	s.store[n] = symbol
+	s.Store[n] = symbol
 	return symbol
 }

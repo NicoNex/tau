@@ -5,7 +5,7 @@ import (
 	"os"
 	"strings"
 
-	// "github.com/NicoNex/tau/code"
+	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
 )
@@ -53,8 +53,11 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 	return obj.Class{Env: modEnv}
 }
 
-func (i Import) Compile(comp *compiler.Compiler) (position int, err error) {
-	return 0, nil
+func (i Import) Compile(c *compiler.Compiler) (position int, err error) {
+	if position, err = i.name.Compile(c); err != nil {
+		return
+	}
+	return c.Emit(code.OpLoadModule), nil
 }
 
 func (i Import) String() string {

@@ -1,12 +1,15 @@
 package vm
 
 import (
+	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/NicoNex/tau/code"
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
+	"github.com/NicoNex/tau/parser"
 )
 
 type VM struct {
@@ -107,6 +110,58 @@ func (vm *VM) popFrame() *Frame {
 
 func (vm *VM) LastPoppedStackElem() obj.Object {
 	return vm.stack[vm.sp]
+}
+
+func (vm *VM) execLoadModule() error {
+	var path = vm.pop()
+
+	pathObj, ok := path.(*obj.String)
+	if !ok {
+		return fmt.Errorf("expected string, got %v", path.Type())
+	}
+	p := string(*pathObj)
+
+	b, err := os.ReadFile(p)
+	if err != nil {
+		return err
+	}
+
+	tree, errs := parser.Parse(string(b))
+	if len(errs) > 0 {
+		var buf strings.Builder
+
+		buf.WriteString(fmt.Sprintf("import: multiple errors in module %s", p))
+		for _, e := range errs {
+			buf.WriteRune('\t')
+			buf.WriteString(e)
+			buf.WriteRune('\n')
+		}
+		return errors.New(buf.String())
+	}
+
+	st := compiler.NewSymbolTable()
+	for i, builtin := range obj.Builtins {
+		st.DefineBuiltin(i, builtin.Name)
+	}
+
+	c := compiler.NewWithState(st, &vm.consts)
+	if err := c.Compile(tree); err != nil {
+		return err
+	}
+
+	tvm := NewWithGlobalStore(c.Bytecode(), vm.globals)
+	if err := tvm.Run(); err != nil {
+		return err
+	}
+
+	object := obj.Class{Env: obj.NewEnv()}
+	for name, symbol := range st.Store {
+		if symbol.Scope == compiler.GlobalScope {
+			object.Set(name, vm.globals[symbol.Index])
+		}
+	}
+
+	return vm.push(object)
 }
 
 func (vm *VM) execDot() error {
@@ -845,6 +900,9 @@ func (vm *VM) Run() (err error) {
 
 			closure := vm.currentFrame().cl
 			err = vm.push(closure.Free[freeIdx])
+
+		case code.OpLoadModule:
+			err = vm.execLoadModule()
 
 		case code.OpDot:
 			err = vm.execDot()

@@ -33,6 +33,7 @@ func evalREPL() {
 		input, err := t.ReadLine()
 		check(t, initState, err)
 
+		input = strings.TrimSpace(input)
 		if len(input) > 0 && input[len(input)-1] == '{' {
 			input, err = acceptUntil(t, input, "\n\n")
 			check(t, initState, err)
@@ -78,6 +79,7 @@ func vmREPL() {
 		input, err := t.ReadLine()
 		check(t, initState, err)
 
+		input = strings.TrimSpace(input)
 		if len(input) > 0 && input[len(input)-1] == '{' {
 			input, err = acceptUntil(t, input, "\n\n")
 			check(t, initState, err)

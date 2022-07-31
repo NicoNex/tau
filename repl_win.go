@@ -28,6 +28,7 @@ func evalREPL() {
 		input, err := reader.ReadString('\n')
 		check(err)
 
+		input = strings.TrimSpace(strings.TrimSuffix(input, "\n"))
 		if len(input) > 0 && input[len(input)-1] == '{' {
 			input, err = acceptUntil(reader, input, "\n\n")
 			check(err)
@@ -64,6 +65,7 @@ func vmREPL() {
 		input, err := reader.ReadString('\n')
 		check(err)
 
+		input = strings.TrimSpace(strings.TrimSuffix(input, "\n"))
 		if len(input) > 0 && input[len(input)-1] == '{' {
 			input, err = acceptUntil(reader, input, "\n\n")
 			check(err)

@@ -33,7 +33,7 @@ func evalREPL() {
 		input, err := t.ReadLine()
 		check(t, initState, err)
 
-		input = strings.TrimSpace(input)
+		input = strings.TrimRight(input, " ")
 		if len(input) > 0 && input[len(input)-1] == '{' {
 			input, err = acceptUntil(t, input, "\n\n")
 			check(t, initState, err)
@@ -52,7 +52,6 @@ func evalREPL() {
 		}
 	}
 }
-
 
 func vmREPL() {
 	var (
@@ -79,7 +78,7 @@ func vmREPL() {
 		input, err := t.ReadLine()
 		check(t, initState, err)
 
-		input = strings.TrimSpace(input)
+		input = strings.TrimRight(input, " ")
 		if len(input) > 0 && input[len(input)-1] == '{' {
 			input, err = acceptUntil(t, input, "\n\n")
 			check(t, initState, err)
@@ -134,6 +133,7 @@ func acceptUntil(t *term.Terminal, start, end string) (string, error) {
 			return "", err
 		}
 
+		line = strings.TrimRight(line, " ")
 		buf.WriteString(line)
 		buf.WriteRune('\n')
 
@@ -144,4 +144,3 @@ func acceptUntil(t *term.Terminal, start, end string) (string, error) {
 
 	return buf.String(), nil
 }
-

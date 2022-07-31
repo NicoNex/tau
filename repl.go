@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/NicoNex/tau/compiler"
 	"github.com/NicoNex/tau/obj"
@@ -38,6 +39,16 @@ func evalREPL() {
 			return
 		}
 
+		if input[len(input)-1] == '{' {
+			if input, err = acceptUntil(t, "\n\n"); err != nil {
+				// Quit without error on Ctrl^D.
+				if err != io.EOF {
+					fmt.Fprintln(t, err)
+				}
+				return
+			}
+		}
+
 		res, errs := parser.Parse(input)
 		if len(errs) != 0 {
 			for _, e := range errs {
@@ -50,6 +61,24 @@ func evalREPL() {
 			fmt.Fprintln(t, val)
 		}
 	}
+}
+
+func acceptUntil(t *term.Terminal, end string) (string, error) {
+	var buf strings.Builder
+
+	for {
+		line, err := t.ReadLine()
+		if err != nil {
+			return "", err
+		}
+
+		buf.WriteString(line)
+		if len(line) > len(end) && line[len(line)-len(end):] == end {
+			break
+		}
+	}
+
+	return buf.String(), nil
 }
 
 func vmREPL() {

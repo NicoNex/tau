@@ -26,9 +26,9 @@ func main() {
 
 	default:
 		if useEval {
-			evalREPL()
+			tau.EvalREPL()
 		} else {
-			vmREPL()
+			tau.VmREPL()
 		}
 	}
 }

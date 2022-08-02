@@ -6,6 +6,10 @@
 *.py
 *.so
 
+**/.DS_store
+
+/tau
+/cmd/tau/tau
 !/examples/*.tau
 
 /tau

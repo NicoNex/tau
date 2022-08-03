@@ -44,6 +44,11 @@ func (l *lexer) peek() rune {
 	return r
 }
 
+func (l *lexer) curr() rune {
+	l.backup()
+	return l.next()
+}
+
 // Consumes the next rune if it's from the valid set.
 func (l *lexer) accept(valid string) bool {
 	if strings.IndexRune(valid, l.next()) >= 0 {
@@ -140,7 +145,7 @@ func lexNumber(l *lexer) stateFn {
 }
 
 func lexString(l *lexer) stateFn {
-	if l.peek() == '"' {
+	if l.peek() == '"' && l.curr() != '\\' {
 		l.emit(item.String)
 		l.next()
 		l.ignore()

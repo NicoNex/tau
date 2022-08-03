@@ -370,7 +370,12 @@ func (p *Parser) parseFloat() ast.Node {
 }
 
 func (p *Parser) parseString() ast.Node {
-	return ast.NewString(p.cur.Val)
+	s, err := ast.NewString(p.cur.Val)
+	if err != nil {
+		p.errs = append(p.errs, err.Error())
+		return nil
+	}
+	return s
 }
 
 // Returns a boolean node.

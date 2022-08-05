@@ -112,6 +112,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.BwNot, p.parseBwNot)
 	p.registerPrefix(item.Continue, p.parseContinue)
 	p.registerPrefix(item.Break, p.parseBreak)
+	p.registerPrefix(item.Error, p.parseError)
 
 	p.registerInfix(item.Equals, p.parseEquals)
 	p.registerInfix(item.NotEquals, p.parseNotEquals)
@@ -346,6 +347,11 @@ func (p *Parser) parseBreak() ast.Node {
 		return nil
 	}
 	return ast.NewBreak()
+}
+
+func (p *Parser) parseError() ast.Node {
+	p.errs = append(p.errs, p.cur.Val)
+	return nil
 }
 
 // Returns an integer node.

@@ -11,6 +11,7 @@ const (
 	Int
 	Float
 	String
+	RawString
 
 	Assign
 	Plus
@@ -79,10 +80,11 @@ var typemap = map[Type]string{
 	Error: "error",
 	Null:  "null",
 
-	Ident:  "IDENT",
-	Int:    "int",
-	Float:  "float",
-	String: "string",
+	Ident:     "IDENT",
+	Int:       "int",
+	Float:     "float",
+	String:    "string",
+	RawString: "rawstring",
 
 	Assign:         "=",
 	Plus:           "+",

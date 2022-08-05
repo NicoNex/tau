@@ -95,6 +95,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.Int, p.parseInteger)
 	p.registerPrefix(item.Float, p.parseFloat)
 	p.registerPrefix(item.String, p.parseString)
+	p.registerPrefix(item.RawString, p.parseRawString)
 	p.registerPrefix(item.Minus, p.parsePrefixMinus)
 	p.registerPrefix(item.Bang, p.parseBang)
 	p.registerPrefix(item.True, p.parseBoolean)
@@ -376,6 +377,10 @@ func (p *Parser) parseString() ast.Node {
 		return nil
 	}
 	return s
+}
+
+func (p *Parser) parseRawString() ast.Node {
+	return ast.NewRawString(p.cur.Val)
 }
 
 // Returns a boolean node.

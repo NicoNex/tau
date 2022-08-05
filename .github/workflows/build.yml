@@ -1,6 +1,6 @@
 ---
 on: [push, pull_request]
-name: Test
+name: Build
 jobs:
   test:
     strategy:
@@ -13,4 +13,5 @@ jobs:
         with:
           go-version: ${{ matrix.go-version }}
       - uses: actions/checkout@v3
-      - run: go test ./...
+      - run: go build ./cmd/tau/...
+      - run: ./tau --help

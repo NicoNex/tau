@@ -1,8 +1,13 @@
-tau
+*~
+*.bak
 *.exe
 *.tau
 *.tauc
 *.py
 *.so
 
+**/.DS_store
+
+/tau
+/cmd/tau/tau
 !/examples/*.tau

@@ -1,7 +1,7 @@
 //go:build !windows
 // +build !windows
 
-package main
+package tau
 
 import (
 	"fmt"
@@ -9,20 +9,21 @@ import (
 	"os"
 	"strings"
 
-	"github.com/NicoNex/tau/compiler"
-	"github.com/NicoNex/tau/obj"
-	"github.com/NicoNex/tau/parser"
-	"github.com/NicoNex/tau/vm"
 	"golang.org/x/term"
+
+	"github.com/NicoNex/tau/internal/compiler"
+	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/parser"
+	"github.com/NicoNex/tau/internal/vm"
 )
 
-func evalREPL() {
+func EvalREPL() error {
 	var env = obj.NewEnv()
 
 	initState, err := term.MakeRaw(0)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return fmt.Errorf("error opening terminal: %w", err)
 	}
 	defer term.Restore(0, initState)
 
@@ -53,7 +54,7 @@ func evalREPL() {
 	}
 }
 
-func vmREPL() {
+func VmREPL() error {
 	var (
 		consts      []obj.Object
 		globals     = make([]obj.Object, vm.GlobalSize)
@@ -67,7 +68,7 @@ func vmREPL() {
 	initState, err := term.MakeRaw(0)
 	if err != nil {
 		fmt.Println(err)
-		return
+		return fmt.Errorf("error opening terminal: %w", err)
 	}
 	defer term.Restore(0, initState)
 

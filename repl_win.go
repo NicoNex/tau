@@ -1,7 +1,7 @@
 //go:build windows
 // +build windows
 
-package main
+package tau
 
 import (
 	"bufio"
@@ -9,13 +9,13 @@ import (
 	"os"
 	"strings"
 
-	"github.com/NicoNex/tau/compiler"
-	"github.com/NicoNex/tau/obj"
-	"github.com/NicoNex/tau/parser"
-	"github.com/NicoNex/tau/vm"
+	"github.com/NicoNex/tau/internal/compiler"
+	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/parser"
+	"github.com/NicoNex/tau/internal/vm"
 )
 
-func evalREPL() {
+func EvalREPL() {
 	var (
 		env    = obj.NewEnv()
 		reader = bufio.NewReader(os.Stdin)
@@ -46,7 +46,7 @@ func evalREPL() {
 	}
 }
 
-func vmREPL() {
+func VmREPL() {
 	var (
 		consts      []obj.Object
 		globals     = make([]obj.Object, vm.GlobalSize)

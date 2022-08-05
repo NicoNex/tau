@@ -155,6 +155,17 @@ func lexString(l *lexer) stateFn {
 	return lexString
 }
 
+func lexRawString(l *lexer) stateFn {
+	if l.peek() == '`' {
+		l.emit(item.RawString)
+		l.next()
+		l.ignore()
+		return lexExpression
+	}
+	l.next()
+	return lexRawString
+}
+
 func lexPlus(l *lexer) stateFn {
 	switch l.next() {
 	case '=':
@@ -241,6 +252,10 @@ func lexExpression(l *lexer) stateFn {
 	case r == '"':
 		l.ignore()
 		return lexString
+
+	case r == '`':
+		l.ignore()
+		return lexRawString
 
 	case r == ';':
 		l.emit(item.Semicolon)

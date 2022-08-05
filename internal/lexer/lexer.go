@@ -19,11 +19,13 @@ type lexer struct {
 
 type stateFn func(*lexer) stateFn
 
+const eof = -1
+
 func (l *lexer) next() rune {
 	var r rune
 	if l.pos >= len(l.input) {
 		l.width = 0
-		return 0
+		return eof
 	}
 	r, l.width = utf8.DecodeRuneInString(l.input[l.pos:])
 	l.pos += l.width
@@ -145,14 +147,28 @@ func lexNumber(l *lexer) stateFn {
 }
 
 func lexString(l *lexer) stateFn {
-	if l.peek() == '"' && l.curr() != '\\' {
-		l.emit(item.String)
-		l.next()
-		l.ignore()
-		return lexExpression
+Loop:
+	for {
+		switch l.next() {
+		case '\\':
+			if r := l.next(); r != eof && r != '\n' {
+				break
+			}
+			fallthrough
+
+		case eof, '\n':
+			l.errorf("unterminated quoted string")
+			return nil
+
+		case '"':
+			l.backup()
+			break Loop
+		}
 	}
+	l.emit(item.String)
 	l.next()
-	return lexString
+	l.ignore()
+	return lexExpression
 }
 
 func lexRawString(l *lexer) stateFn {
@@ -392,7 +408,7 @@ func lexExpression(l *lexer) stateFn {
 		l.acceptUntil('\n')
 		l.ignoreSpaces()
 
-	case r == 0:
+	case r == eof:
 		l.emit(item.EOF)
 		return nil
 

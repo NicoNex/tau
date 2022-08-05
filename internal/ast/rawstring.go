@@ -1,7 +1,7 @@
 package ast
 
 import (
-	"strconv"
+	"strings"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
@@ -23,7 +23,12 @@ func (r RawString) String() string {
 }
 
 func (r RawString) Quoted() string {
-	return strconv.Quote(string(r))
+	var buf strings.Builder
+
+	buf.WriteRune('`')
+	buf.WriteString(string(r))
+	buf.WriteRune('`')
+	return buf.String()
 }
 
 func (r RawString) Compile(c *compiler.Compiler) (position int, err error) {

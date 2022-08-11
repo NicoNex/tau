@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
@@ -12,13 +14,31 @@ import (
 	"github.com/NicoNex/tau/internal/parser"
 )
 
+type State struct {
+	Consts  []obj.Object
+	Globals []obj.Object
+	Symbols *compiler.SymbolTable
+}
+
+func NewState() *State {
+	st := compiler.NewSymbolTable()
+	for i, builtin := range obj.Builtins {
+		st.DefineBuiltin(i, builtin.Name)
+	}
+
+	return &State{
+		Consts:  []obj.Object{},
+		Globals: make([]obj.Object, GlobalSize),
+		Symbols: st,
+	}
+}
+
 type VM struct {
-	consts     []obj.Object
 	stack      []obj.Object
-	globals    []obj.Object
 	sp         int
 	frames     []*Frame
 	frameIndex int
+	*State
 }
 
 const (
@@ -67,13 +87,17 @@ func isTruthy(o obj.Object) bool {
 	}
 }
 
+func isExported(n string) bool {
+	r, _ := utf8.DecodeRuneInString(n)
+	return unicode.IsUpper(r)
+}
+
 func New(bytecode *compiler.Bytecode) *VM {
 	vm := &VM{
-		consts:     bytecode.Constants,
 		stack:      make([]obj.Object, StackSize),
-		globals:    make([]obj.Object, GlobalSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
+		State:      NewState(),
 	}
 
 	fn := &obj.Function{Instructions: bytecode.Instructions}
@@ -81,14 +105,14 @@ func New(bytecode *compiler.Bytecode) *VM {
 	return vm
 }
 
-func NewWithGlobalStore(bytecode *compiler.Bytecode, s []obj.Object) *VM {
+func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 	vm := &VM{
-		consts:     bytecode.Constants,
 		stack:      make([]obj.Object, StackSize),
-		globals:    s,
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
+		State:      state,
 	}
+
 	fn := &obj.Function{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
@@ -112,8 +136,11 @@ func (vm *VM) LastPoppedStackElem() obj.Object {
 	return vm.stack[vm.sp]
 }
 
-func (vm *VM) execLoadModule() error {
-	var path = vm.pop()
+func (vm VM) execLoadModule() error {
+	var (
+		path = vm.pop()
+		defs = vm.Symbols.NumDefs
+	)
 
 	pathObj, ok := path.(*obj.String)
 	if !ok {
@@ -139,25 +166,20 @@ func (vm *VM) execLoadModule() error {
 		return errors.New(buf.String())
 	}
 
-	st := compiler.NewSymbolTable()
-	for i, builtin := range obj.Builtins {
-		st.DefineBuiltin(i, builtin.Name)
-	}
-
-	c := compiler.NewWithState(st, &vm.consts)
+	c := compiler.NewWithState(vm.Symbols, &vm.Consts)
 	if err := c.Compile(tree); err != nil {
 		return err
 	}
 
-	tvm := NewWithGlobalStore(c.Bytecode(), vm.globals)
+	tvm := NewWithState(c.Bytecode(), vm.State)
 	if err := tvm.Run(); err != nil {
 		return err
 	}
 
 	object := obj.Class{Env: obj.NewEnv()}
-	for name, symbol := range st.Store {
-		if symbol.Scope == compiler.GlobalScope {
-			object.Set(name, vm.globals[symbol.Index])
+	for name, symbol := range vm.Symbols.Store {
+		if symbol.Scope == compiler.GlobalScope && symbol.Index >= defs && isExported(name) {
+			object.Set(name, vm.Globals[symbol.Index])
 		}
 	}
 
@@ -782,7 +804,7 @@ func (vm *VM) callBuiltin(fn obj.Builtin, nargs int) error {
 }
 
 func (vm *VM) pushClosure(constIdx, numFree int) error {
-	constant := vm.consts[constIdx]
+	constant := vm.Consts[constIdx]
 	fn, ok := constant.(*obj.Function)
 	if !ok {
 		return fmt.Errorf("not a function: %+v", constant)
@@ -820,7 +842,7 @@ func (vm *VM) Run() (err error) {
 		case code.OpConstant:
 			constIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
-			err = vm.push(vm.consts[constIndex])
+			err = vm.push(vm.Consts[constIndex])
 
 		case code.OpJump:
 			pos := int(code.ReadUint16(ins[ip+1:]))
@@ -837,12 +859,12 @@ func (vm *VM) Run() (err error) {
 		case code.OpSetGlobal:
 			globalIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
-			vm.globals[globalIndex] = vm.peek()
+			vm.Globals[globalIndex] = vm.peek()
 
 		case code.OpGetGlobal:
 			globalIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
-			err = vm.push(vm.globals[globalIndex])
+			err = vm.push(vm.Globals[globalIndex])
 
 		case code.OpSetLocal:
 			localIndex := code.ReadUint8(ins[ip+1:])

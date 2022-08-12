@@ -193,17 +193,6 @@ func (vm *VM) execDot() error {
 	)
 
 	switch l := left.(type) {
-	case obj.Class:
-		return vm.push(&obj.GetSetterImpl{
-			GetFunc: func() (obj.Object, bool) {
-				return l.Get(right.String())
-			},
-
-			SetFunc: func(o obj.Object) obj.Object {
-				return l.Set(right.String(), o)
-			},
-		})
-
 	case obj.MapGetSetter:
 		return vm.push(&obj.GetSetterImpl{
 			GetFunc: func() (obj.Object, bool) {

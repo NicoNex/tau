@@ -138,17 +138,21 @@ func (vm *VM) LastPoppedStackElem() obj.Object {
 
 func (vm VM) execLoadModule() error {
 	var (
-		path = vm.pop()
-		defs = vm.Symbols.NumDefs
+		taupath = vm.pop()
+		defs    = vm.Symbols.NumDefs
 	)
 
-	pathObj, ok := path.(*obj.String)
+	pathObj, ok := taupath.(*obj.String)
 	if !ok {
-		return fmt.Errorf("expected string, got %v", path.Type())
+		return fmt.Errorf("import: expected string, got %v", taupath.Type())
 	}
-	p := string(*pathObj)
 
-	b, err := os.ReadFile(p)
+	path, err := obj.ImportLookup(string(*pathObj))
+	if err != nil {
+		return fmt.Errorf("import: %w", err)
+	}
+
+	b, err := os.ReadFile(path)
 	if err != nil {
 		return err
 	}
@@ -157,7 +161,7 @@ func (vm VM) execLoadModule() error {
 	if len(errs) > 0 {
 		var buf strings.Builder
 
-		buf.WriteString(fmt.Sprintf("import: multiple errors in module %s", p))
+		buf.WriteString(fmt.Sprintf("import: multiple errors in module %s", path))
 		for _, e := range errs {
 			buf.WriteRune('\t')
 			buf.WriteString(e)

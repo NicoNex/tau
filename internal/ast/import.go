@@ -36,9 +36,14 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("import: expected string but got %v", name.Type())
 	}
 
-	b, err := os.ReadFile(string(*n))
+	path, err := obj.ImportLookup(string(*n))
 	if err != nil {
-		return obj.NewError("import error: %v", err)
+		return obj.NewError("import: %v", err)
+	}
+
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return obj.NewError("import: %v", err)
 	}
 
 	tree, errs := i.parse(string(b))

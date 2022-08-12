@@ -1,5 +1,13 @@
 package obj
 
+import (
+	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
+	"strings"
+)
+
 type Object interface {
 	Type() Type
 	String() string
@@ -78,4 +86,32 @@ func Unwrap(o Object) Object {
 		return g.Object()
 	}
 	return o
+}
+
+var (
+	ErrFileNotFound   = errors.New("file not found")
+	ErrNoFileProvided = errors.New("no file provided")
+)
+
+func ImportLookup(taupath string) (string, error) {
+	pslice := strings.Split(taupath, "/")
+	file := pslice[len(pslice)-1]
+
+	if file == "" {
+		return "", ErrNoFileProvided
+	}
+
+	if filepath.Ext(file) == "" {
+		pslice[len(pslice)-1] += ".tau"
+	}
+
+	path := filepath.Join(pslice...)
+	if _, err := os.Stat(path); os.IsNotExist(err) {
+		path = filepath.Join("/lib", "tau", path)
+		if _, err := os.Stat(path); os.IsNotExist(err) {
+			return "", fmt.Errorf("%s: %w", path, err)
+		}
+	}
+
+	return path, nil
 }

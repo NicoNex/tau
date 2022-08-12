@@ -55,13 +55,12 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 		)
 	}
 
-	tmpEnv := obj.NewEnv()
-	tree.Eval(tmpEnv)
 	modEnv := obj.NewEnv()
+	tree.Eval(modEnv)
 
-	for n, o := range tmpEnv.Store {
-		if isExported(n) {
-			modEnv.Set(n, o)
+	for n, _ := range modEnv.Store {
+		if isUnexported(n) {
+			delete(modEnv.Store, n)
 		}
 	}
 
@@ -79,7 +78,7 @@ func (i Import) String() string {
 	return fmt.Sprintf("import(%q)", i.name.String())
 }
 
-func isExported(n string) bool {
+func isUnexported(n string) bool {
 	r, _ := utf8.DecodeRuneInString(n)
-	return unicode.IsUpper(r)
+	return unicode.IsLower(r)
 }

@@ -93,7 +93,7 @@ func (l *lexer) ignoreSpaces() {
 	l.ignore()
 }
 
-func (l *lexer) errorf(format string, args ...interface{}) {
+func (l *lexer) errorf(format string, args ...any) {
 	l.items <- item.Item{
 		Typ: item.Error,
 		Val: fmt.Sprintf(format, args...),

@@ -122,7 +122,7 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 			return reflect.Zero(t), fmt.Errorf("unsupported type 'interface'")
 		}
 
-	case reflect.Ptr:
+	case reflect.Pointer:
 		switch o.(type) {
 		case *Null:
 			return reflect.Zero(t), nil

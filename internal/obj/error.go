@@ -4,7 +4,7 @@ import "fmt"
 
 type Error string
 
-func NewError(f string, a ...interface{}) Object {
+func NewError(f string, a ...any) Object {
 	var ret = Error(fmt.Sprintf(f, a...))
 	return &ret
 }

@@ -1,0 +1,11 @@
+#!/usr/bin/env tau
+
+data = 123
+
+printData = fn() {
+	println(data)
+}
+
+printText = fn() {
+	println("example text")
+}

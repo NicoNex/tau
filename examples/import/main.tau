@@ -1,0 +1,7 @@
+#!/usr/bin/env tau
+
+it = import("import_test")
+
+println(it.data)
+it.printData()
+it.printText()

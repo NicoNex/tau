@@ -262,6 +262,35 @@ println(snuffles.humanage())
 ```
 
 #### Modules
+##### Import
+```python
+# import_test.tau
+
+data = 123
+
+printData = fn() {
+	println(data)
+}
+
+printText = fn() {
+	println("example text")
+}
+```
+
+```python
+it = import("import_test")
+
+println(it.data)
+it.printData()
+it.printText()
+```
+
+```
+>>> 123
+>>> 123
+>>> example text
+```
+
 ##### Plugin
 Tau plugin system makes it possible to import and use Go plugins in Tau seamlessly.
 To run your Go code in Tau just compile it with:

@@ -383,8 +383,8 @@ func listify(start, stop, step int) List {
 	return l
 }
 
-func toAnySlice(args []Object) []interface{} {
-	var ret = make([]interface{}, len(args))
+func toAnySlice(args []Object) []any {
+	var ret = make([]any, len(args))
 	for i, a := range args {
 		ret[i] = a
 	}

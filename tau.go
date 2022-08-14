@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -62,7 +61,7 @@ func decode(r io.Reader) (*compiler.Bytecode, error) {
 }
 
 func readFile(fname string) []byte {
-	b, err := ioutil.ReadFile(fname)
+	b, err := os.ReadFile(fname)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -71,7 +70,7 @@ func readFile(fname string) []byte {
 }
 
 func writeFile(fname string, cont []byte) {
-	if err := ioutil.WriteFile(fname, cont, 0644); err != nil {
+	if err := os.WriteFile(fname, cont, 0644); err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}

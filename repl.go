@@ -28,6 +28,7 @@ func EvalREPL() error {
 	defer term.Restore(0, initState)
 
 	t := term.NewTerminal(os.Stdin, ">>> ")
+	t.AutoCompleteCallback = autoComplete
 	obj.Stdout = t
 
 	for {
@@ -73,6 +74,7 @@ func VmREPL() error {
 	defer term.Restore(0, initState)
 
 	t := term.NewTerminal(os.Stdin, ">>> ")
+	t.AutoCompleteCallback = autoComplete
 	obj.Stdout = t
 
 	for {
@@ -109,6 +111,13 @@ func VmREPL() error {
 			fmt.Fprintln(t, val)
 		}
 	}
+}
+
+func autoComplete(line string, pos int, key rune) (newLine string, newPos int, ok bool) {
+	if key == '\t' {
+		return line + "    ", pos + 4, true
+	}
+	return
 }
 
 func check(t *term.Terminal, initState *term.State, err error) {

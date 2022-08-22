@@ -76,38 +76,57 @@ func writeFile(fname string, cont []byte) {
 	}
 }
 
+func precompiledBytecode(path string) (*compiler.Bytecode, error) {
+	file, err := os.Open(path)
+	if err != nil {
+		fmt.Println(err)
+		return nil, fmt.Errorf("error opening file %q: %w", path, err)
+	}
+	defer file.Close()
+	return decode(bufio.NewReader(file))
+}
+
+func compile(path string) (*compiler.Bytecode, error) {
+	b := readFile(path)
+	res, errs := parser.Parse(string(b))
+	if len(errs) > 0 {
+		var buf strings.Builder
+
+		buf.WriteString("error parsing module ")
+		buf.WriteString(path)
+		buf.WriteRune(':')
+
+		for _, e := range errs {
+			buf.WriteRune('\t')
+			buf.WriteString(e)
+		}
+
+		return nil, errors.New(buf.String())
+	}
+
+	c := compiler.New()
+	if err := c.Compile(res); err != nil {
+		return nil, err
+	}
+
+	return c.Bytecode(), nil
+}
+
 func ExecFileVM(f string) error {
 	var bytecode *compiler.Bytecode
 
-	if strings.HasSuffix(f, ".tauc") {
-		file, err := os.Open(f)
+	if filepath.Ext(f) == ".tauc" {
+		bc, err := precompiledBytecode(f)
 		if err != nil {
-			fmt.Println(err)
-			return fmt.Errorf("error opening file %q: %w", f, err)
+			return err
 		}
-		defer file.Close()
-
-		bytecode, err = decode(bufio.NewReader(file))
-		if err != nil {
-			fmt.Println(err)
-			return fmt.Errorf("error decoding bytecode: %w", err)
-		}
+		bytecode = bc
 	} else {
-		b := readFile(f)
-		res, errs := parser.Parse(string(b))
-		if len(errs) != 0 {
-			for _, e := range errs {
-				fmt.Println(e)
-			}
-			return ErrParseError
+		bc, err := compile(f)
+		if err != nil {
+			return err
 		}
-
-		c := compiler.New()
-		if err := c.Compile(res); err != nil {
-			fmt.Println(err)
-			return fmt.Errorf("error during compilation: %w", err)
-		}
-		bytecode = c.Bytecode()
+		bytecode = bc
 	}
 
 	tvm := vm.New(bytecode)

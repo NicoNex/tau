@@ -2,6 +2,8 @@
 
 it = import("import_test")
 
-println(it.data)
-it.printData()
-it.printText()
+it.TestPrint()
+
+println(it.Snuffles.Name)
+println(it.Snuffles.Age)
+println(it.Snuffles.ID())

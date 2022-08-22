@@ -263,6 +263,8 @@ println(snuffles.humanage())
 
 #### Modules
 ##### Import
+When importing a module only the fields whose name start with an upper-case character will be exported.
+Same thing applies for exported objects, in the example `Snuffles` is exported but the field `id` won't be visible ouside the module.
 ```python
 # import_test.tau
 
@@ -275,20 +277,45 @@ printData = fn() {
 printText = fn() {
 	println("example text")
 }
+
+TestPrint = fn() {
+	printData()
+	printText()
+}
+
+dog = fn(name, age) {
+	d = new()
+	d.Name = name
+	d.Age = age
+	d.id = 123
+
+	d.ID = fn() {
+		d.id
+	}
+
+	return d
+}
+
+Snuffles = dog("Mr Snuffles", 5)
+
 ```
 
 ```python
 it = import("import_test")
 
-println(it.data)
-it.printData()
-it.printText()
+it.TestPrint()
+
+println(it.Snuffles.Name)
+println(it.Snuffles.Age)
+println(it.Snuffles.ID())
 ```
 
 ```
 >>> 123
->>> 123
 >>> example text
+>>> Mr Snuffles
+>>> 5
+>>> 123
 ```
 
 ##### Plugin

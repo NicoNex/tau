@@ -9,3 +9,23 @@ printData = fn() {
 printText = fn() {
 	println("example text")
 }
+
+TestPrint = fn() {
+	printData()
+	printText()
+}
+
+dog = fn(name, age) {
+	d = new()
+	d.Name = name
+	d.Age = age
+	d.id = 123
+
+	d.ID = fn() {
+		d.id
+	}
+
+	return d
+}
+
+Snuffles = dog("Mr Snuffles", 5)

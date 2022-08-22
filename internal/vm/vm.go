@@ -180,14 +180,23 @@ func (vm VM) execLoadModule() error {
 		return err
 	}
 
-	object := obj.Class{Env: obj.NewEnv()}
+	mod := obj.NewModule()
 	for name, symbol := range vm.Symbols.Store {
-		if symbol.Scope == compiler.GlobalScope && symbol.Index >= defs && isExported(name) {
-			object.Set(name, vm.Globals[symbol.Index])
+		if symbol.Scope == compiler.GlobalScope && symbol.Index >= defs {
+			o := vm.Globals[symbol.Index]
+			if m, ok := o.(obj.Moduler); ok {
+				o = m.Module()
+			}
+
+			if isExported(name) {
+				mod.Exported[name] = o
+			} else {
+				mod.Unexported[name] = o
+			}
 		}
 	}
 
-	return vm.push(object)
+	return vm.push(mod)
 }
 
 func (vm *VM) execDot() error {
@@ -208,7 +217,7 @@ func (vm *VM) execDot() error {
 		})
 
 	case obj.GetSetter:
-		c := l.Object().(obj.Class)
+		c := l.Object().(obj.MapGetSetter)
 		return vm.push(&obj.GetSetterImpl{
 			GetFunc: func() (obj.Object, bool) {
 				return c.Get(right.String())

@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"os"
 	"strings"
-	"unicode"
-	"unicode/utf8"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
@@ -57,14 +55,7 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 
 	modEnv := obj.NewEnv()
 	tree.Eval(modEnv)
-
-	for n, _ := range modEnv.Store {
-		if isUnexported(n) {
-			delete(modEnv.Store, n)
-		}
-	}
-
-	return obj.Class{Env: modEnv}
+	return modEnv.Module()
 }
 
 func (i Import) Compile(c *compiler.Compiler) (position int, err error) {
@@ -76,9 +67,4 @@ func (i Import) Compile(c *compiler.Compiler) (position int, err error) {
 
 func (i Import) String() string {
 	return fmt.Sprintf("import(%q)", i.name.String())
-}
-
-func isUnexported(n string) bool {
-	r, _ := utf8.DecodeRuneInString(n)
-	return unicode.IsLower(r)
 }

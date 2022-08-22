@@ -19,7 +19,7 @@ dog = fn(name, age) {
 	d = new()
 	d.Name = name
 	d.Age = age
-	d.id = 123
+	d.id = 456
 
 	d.ID = fn() {
 		d.id

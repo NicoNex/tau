@@ -66,6 +66,7 @@ const (
 	OpSetLocal
 	OpGetBuiltin
 	OpGetFree
+	OpLoadModule
 
 	OpPop
 )
@@ -120,6 +121,7 @@ var definitions = map[Opcode]*Definition{
 	OpSetLocal:   {"OpSetLocal", []int{1}},
 	OpGetBuiltin: {"OpGetBuiltin", []int{1}},
 	OpGetFree:    {"OpGetFree", []int{1}},
+	OpLoadModule: {"OpLoadModule", []int{}},
 
 	OpPop: {"OpPop", []int{}},
 }

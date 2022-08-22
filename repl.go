@@ -56,15 +56,7 @@ func EvalREPL() error {
 }
 
 func VmREPL() error {
-	var (
-		consts      []obj.Object
-		globals     = make([]obj.Object, vm.GlobalSize)
-		symbolTable = compiler.NewSymbolTable()
-	)
-
-	for i, b := range obj.Builtins {
-		symbolTable.DefineBuiltin(i, b.Name)
-	}
+	var state = vm.NewState()
 
 	initState, err := term.MakeRaw(0)
 	if err != nil {
@@ -95,12 +87,12 @@ func VmREPL() error {
 			continue
 		}
 
-		c := compiler.NewWithState(symbolTable, &consts)
+		c := compiler.NewWithState(state.Symbols, &state.Consts)
 		if err := c.Compile(res); err != nil {
 			fmt.Fprintln(t, err)
 			continue
 		}
-		tvm := vm.NewWithGlobalStore(c.Bytecode(), globals)
+		tvm := vm.NewWithState(c.Bytecode(), state)
 
 		if err := tvm.Run(); err != nil {
 			fmt.Fprintf(t, "runtime error: %v\n", err)

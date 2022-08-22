@@ -25,19 +25,26 @@ func (d Dot) Eval(env *obj.Env) obj.Object {
 	}
 
 	switch l := left.(type) {
-	case obj.Class:
+	case obj.MapGetSetter:
 		return &obj.GetSetterImpl{
 			GetFunc: func() (obj.Object, bool) {
 				return l.Get(d.r.String())
 			},
-
 			SetFunc: func(o obj.Object) obj.Object {
 				return l.Set(d.r.String(), o)
 			},
 		}
 
 	case obj.GetSetter:
-		return l
+		m := l.Object().(obj.MapGetSetter)
+		return &obj.GetSetterImpl{
+			GetFunc: func() (obj.Object, bool) {
+				return m.Get(d.r.String())
+			},
+			SetFunc: func(o obj.Object) obj.Object {
+				return m.Set(d.r.String(), o)
+			},
+		}
 
 	default:
 		return obj.NewError("%v object has no attribute %s", left.Type(), d.r)

@@ -1,0 +1,9 @@
+#!/usr/bin/env tau
+
+it = import("import_test")
+
+it.TestPrint()
+
+println(it.Snuffles.Name)
+println(it.Snuffles.Age)
+println(it.Snuffles.ID())

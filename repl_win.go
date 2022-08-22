@@ -48,15 +48,9 @@ func EvalREPL() {
 
 func VmREPL() {
 	var (
-		consts      []obj.Object
-		globals     = make([]obj.Object, vm.GlobalSize)
-		symbolTable = compiler.NewSymbolTable()
-		reader      = bufio.NewReader(os.Stdin)
+		state  = vm.NewState()
+		reader = bufio.NewReader(os.Stdin)
 	)
-
-	for i, b := range obj.Builtins {
-		symbolTable.DefineBuiltin(i, b.Name)
-	}
 
 	for {
 		fmt.Print(">>> ")
@@ -77,12 +71,12 @@ func VmREPL() {
 			continue
 		}
 
-		c := compiler.NewWithState(symbolTable, &consts)
+		c := compiler.NewWithState(state.Symbols, &state.Consts)
 		if err := c.Compile(res); err != nil {
 			fmt.Println(err)
 			continue
 		}
-		tvm := vm.NewWithGlobalStore(c.Bytecode(), globals)
+		tvm := vm.NewWithState(c.Bytecode(), state)
 
 		if err := tvm.Run(); err != nil {
 			fmt.Printf("runtime error: %v\n", err)

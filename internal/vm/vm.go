@@ -100,6 +100,7 @@ func New(bytecode *compiler.Bytecode) *VM {
 		State:      NewState(),
 	}
 
+	vm.Consts = bytecode.Constants
 	fn := &obj.Function{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm

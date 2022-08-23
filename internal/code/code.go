@@ -16,6 +16,7 @@ type Definition struct {
 	OperandWidths []int
 }
 
+//go:generate stringer -type=Opcode
 const (
 	OpConstant Opcode = iota
 	OpTrue

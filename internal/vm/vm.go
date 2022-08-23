@@ -162,7 +162,9 @@ func (vm VM) execLoadModule() error {
 	if len(errs) > 0 {
 		var buf strings.Builder
 
-		buf.WriteString(fmt.Sprintf("import: multiple errors in module %s", path))
+		buf.WriteString("import: multiple errors in module ")
+		buf.WriteString(path)
+		buf.WriteString(":\n")
 		for _, e := range errs {
 			buf.WriteRune('\t')
 			buf.WriteString(e)

@@ -112,30 +112,27 @@ func compile(path string) (*compiler.Bytecode, error) {
 	return c.Bytecode(), nil
 }
 
-func ExecFileVM(f string) error {
+func ExecFileVM(f string) (err error) {
 	var bytecode *compiler.Bytecode
 
 	if filepath.Ext(f) == ".tauc" {
-		bc, err := precompiledBytecode(f)
-		if err != nil {
-			return err
-		}
-		bytecode = bc
+		bytecode, err = precompiledBytecode(f)
 	} else {
-		bc, err := compile(f)
-		if err != nil {
-			return err
-		}
-		bytecode = bc
+		bytecode, err = compile(f)
+	}
+
+	if err != nil {
+		fmt.Println(err)
+		return
 	}
 
 	tvm := vm.New(bytecode)
-	if err := tvm.Run(); err != nil {
-		fmt.Printf("runtime error: %v\n", err)
-		return fmt.Errorf("runtime error: %w", err)
+	if err = tvm.Run(); err != nil {
+		fmt.Println(err)
+		return
 	}
 
-	return nil
+	return
 }
 
 func ExecFileEval(f string) error {

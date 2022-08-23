@@ -20,7 +20,11 @@ func (m *Module) Get(n string) (Object, bool) {
 }
 
 func (m *Module) Set(n string, o Object) Object {
-	return NewError("cannot assign to module")
+	if _, ok := m.Unexported[n]; ok {
+		return NewError("cannot assign to unexported field")
+	}
+	m.Exported[n] = o
+	return o
 }
 
 func (m Module) Type() Type {

@@ -193,8 +193,14 @@ func (p *Parser) parseStatement() ast.Node {
 }
 
 func (p *Parser) parseReturn() ast.Node {
+	var ret ast.Node
+
 	p.next()
-	var ret = ast.NewReturn(p.parseExpr(Lowest))
+	if !p.cur.Is(item.Semicolon) {
+		ret = ast.NewReturn(p.parseExpr(Lowest))
+	} else {
+		ret = ast.NewReturn(ast.NewNull())
+	}
 
 	if p.peek.Is(item.Semicolon) {
 		p.next()
@@ -312,6 +318,11 @@ func (p *Parser) parseFunction() ast.Node {
 	}
 
 	body := p.parseBlock()
+
+	if !p.expect(item.RBrace) {
+		return nil
+	}
+
 	return ast.NewFunction(params, body)
 }
 
@@ -727,6 +738,15 @@ func (p *Parser) parseNodeSequence(sep, end item.Type) []ast.Node {
 // false and appends an error to p.errs.
 func (p *Parser) expectPeek(t item.Type) bool {
 	if p.peek.Is(t) {
+		p.next()
+		return true
+	}
+	p.peekError(t)
+	return false
+}
+
+func (p *Parser) expect(t item.Type) bool {
+	if p.cur.Is(t) {
 		p.next()
 		return true
 	}

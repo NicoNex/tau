@@ -745,15 +745,6 @@ func (p *Parser) expectPeek(t item.Type) bool {
 	return false
 }
 
-func (p *Parser) expect(t item.Type) bool {
-	if p.cur.Is(t) {
-		p.next()
-		return true
-	}
-	p.peekError(t)
-	return false
-}
-
 // Emits an error if the peek item is not of tipe t.
 func (p *Parser) peekError(t item.Type) {
 	p.errs = append(

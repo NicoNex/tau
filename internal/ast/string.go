@@ -161,7 +161,7 @@ func (i *interpolator) insideBlock() bool {
 	return i.nblocks > 0
 }
 
-func (i *interpolator) acceptUntil(end rune) (string, error) {
+func (i *interpolator) acceptUntil(start, end rune) (string, error) {
 	var buf strings.Builder
 
 loop:
@@ -170,7 +170,7 @@ loop:
 		case eof:
 			return "", errors.New("bad interpolation syntax")
 
-		case '{':
+		case start:
 			i.enterBlock()
 			buf.WriteRune(r)
 
@@ -198,42 +198,46 @@ func (i *interpolator) run() (string, error) {
 	for r := i.next(); r != eof; r = i.next() {
 		if r == '{' {
 			if r := i.peek(); r == '{' {
-				i.WriteRune(r)
 				i.next()
-				i.next()
-				continue
+				goto tail
 			}
 
-			// let's get all that's between braces
-			s, err := i.acceptUntil('}')
+			// get the code between braces
+			s, err := i.acceptUntil('{', '}')
 			if err != nil {
 				return "", err
 			}
 
-			// parse and execute the interpolated code
+			// parse the code
 			tree, errs := i.parse(s)
 			if len(errs) > 0 {
-				var buf strings.Builder
-				buf.WriteString("interpolation errors:\n")
-				for _, e := range errs {
-					buf.WriteRune('\t')
-					buf.WriteString(e)
-					buf.WriteRune('\n')
-				}
-				return "", errors.New(buf.String())
+				return "", i.parserError(errs)
 			}
 
+			// execute the code and write the resulting object in the buffer
 			o := tree.Eval(i.env)
 			i.WriteString(o.String())
 			continue
 		} else if p := i.peek(); r == '}' && p == '}' {
-			i.WriteRune(r)
-			i.next()
 			i.next()
 		}
 
+	tail:
 		i.WriteRune(r)
 	}
 
 	return i.String(), nil
+}
+
+func (i *interpolator) parserError(errs []string) error {
+	var buf strings.Builder
+
+	buf.WriteString("interpolation errors:\n")
+	for _, e := range errs {
+		buf.WriteRune('\t')
+		buf.WriteString(e)
+		buf.WriteRune('\n')
+	}
+
+	return errors.New(buf.String())
 }

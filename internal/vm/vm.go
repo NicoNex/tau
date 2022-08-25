@@ -92,6 +92,20 @@ func isExported(n string) bool {
 	return unicode.IsUpper(r)
 }
 
+func parserError(prefix string, errs []string) error {
+	var buf strings.Builder
+
+	buf.WriteString(prefix)
+	buf.WriteRune('\n')
+	for _, e := range errs {
+		buf.WriteRune('\t')
+		buf.WriteString(e)
+		buf.WriteRune('\n')
+	}
+
+	return errors.New(buf.String())
+}
+
 func New(bytecode *compiler.Bytecode) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
@@ -160,17 +174,8 @@ func (vm VM) execLoadModule() error {
 
 	tree, errs := parser.Parse(string(b))
 	if len(errs) > 0 {
-		var buf strings.Builder
-
-		buf.WriteString("import: multiple errors in module ")
-		buf.WriteString(path)
-		buf.WriteString(":\n")
-		for _, e := range errs {
-			buf.WriteRune('\t')
-			buf.WriteString(e)
-			buf.WriteRune('\n')
-		}
-		return errors.New(buf.String())
+		p := fmt.Sprintf("import: multiple errors in module %s:", path)
+		return parserError(p, errs)
 	}
 
 	c := compiler.NewWithState(vm.Symbols, &vm.Consts)
@@ -847,7 +852,7 @@ func (vm *VM) Run() (err error) {
 		case code.OpConstant:
 			constIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
-			err = vm.push(vm.Consts[constIndex])
+			err = vm.push(vm.interpolate(vm.Consts[constIndex]))
 
 		case code.OpJump:
 			pos := int(code.ReadUint16(ins[ip+1:]))
@@ -1041,4 +1046,18 @@ func (vm *VM) pop() obj.Object {
 
 func (vm *VM) peek() obj.Object {
 	return vm.stack[vm.sp-1]
+}
+
+func (vm *VM) interpolate(o obj.Object) obj.Object {
+	s, ok := o.(*obj.String)
+	if !ok {
+		return o
+	}
+
+	i := newInterpolator(string(*s), vm.State)
+	str, err := i.run()
+	if err != nil {
+		return obj.NewError(err.Error())
+	}
+	return obj.NewString(str)
 }

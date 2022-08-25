@@ -251,6 +251,12 @@ func (p *Parser) parseBlock() ast.Node {
 		}
 		p.next()
 	}
+
+	if !p.cur.Is(item.RBrace) {
+		p.peekError(item.RBrace)
+		return nil
+	}
+
 	return block
 }
 
@@ -317,13 +323,7 @@ func (p *Parser) parseFunction() ast.Node {
 		return nil
 	}
 
-	body := p.parseBlock()
-
-	if !p.expect(item.RBrace) {
-		return nil
-	}
-
-	return ast.NewFunction(params, body)
+	return ast.NewFunction(params, p.parseBlock())
 }
 
 func (p *Parser) parseFunctionParams() []ast.Identifier {

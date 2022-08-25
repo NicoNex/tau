@@ -10,21 +10,18 @@ import (
 	"github.com/NicoNex/tau/internal/obj"
 )
 
-type Map map[Node]Node
+type Map [][2]Node
 
 func NewMap(pairs ...[2]Node) Node {
-	var m = make(map[Node]Node)
-
-	for _, p := range pairs {
-		m[p[0]] = p[1]
-	}
-	return Map(m)
+	return Map(pairs)
 }
 
 func (m Map) Eval(env *obj.Env) obj.Object {
 	var ret = obj.NewMap()
 
-	for key, val := range m {
+	for _, pair := range m {
+		var key, val = pair[0], pair[1]
+
 		k := obj.Unwrap(key.Eval(env))
 		if takesPrecedence(k) {
 			return k
@@ -47,12 +44,19 @@ func (m Map) Eval(env *obj.Env) obj.Object {
 }
 
 func (m Map) String() string {
-	var buf strings.Builder
-	var i = 1
+	var (
+		buf strings.Builder
+		i   = 1
+	)
 
 	buf.WriteString("{")
-	for k, v := range m {
-		var key, val string
+	for _, pair := range m {
+		var (
+			k   = pair[0]
+			v   = pair[1]
+			key string
+			val string
+		)
 
 		if s, ok := k.(String); ok {
 			key = s.Quoted()
@@ -78,21 +82,16 @@ func (m Map) String() string {
 }
 
 func (m Map) Compile(c *compiler.Compiler) (position int, err error) {
-	var keys []Node
-
-	for k := range m {
-		keys = append(keys, k)
-	}
-	sort.Slice(keys, func(i, j int) bool {
-		return keys[i].String() < keys[j].String()
+	sort.Slice(m, func(i, j int) bool {
+		return m[i][0].String() < m[j][0].String()
 	})
 
-	for _, k := range keys {
-		if position, err = k.Compile(c); err != nil {
+	for _, pair := range m {
+		if position, err = pair[0].Compile(c); err != nil {
 			return
 		}
 
-		if position, err = m[k].Compile(c); err != nil {
+		if position, err = pair[1].Compile(c); err != nil {
 			return
 		}
 	}

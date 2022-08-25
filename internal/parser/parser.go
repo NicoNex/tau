@@ -402,7 +402,7 @@ func (p *Parser) parseFloat() ast.Node {
 }
 
 func (p *Parser) parseString() ast.Node {
-	s, err := ast.NewString(p.cur.Val)
+	s, err := ast.NewString(p.cur.Val, Parse)
 	if err != nil {
 		p.errs = append(p.errs, err.Error())
 		return nil

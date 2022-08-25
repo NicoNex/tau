@@ -12,27 +12,37 @@ import (
 	"github.com/NicoNex/tau/internal/obj"
 )
 
-type String string
+type parseFn func(string) (Node, []string)
 
-func NewString(s string) (Node, error) {
+type String struct {
+	s     string
+	parse parseFn
+}
+
+func NewString(s string, parse parseFn) (Node, error) {
 	str, err := escape(s)
-	return String(str), err
+	return String{s: str, parse: parse}, err
 }
 
 func (s String) Eval(env *obj.Env) obj.Object {
-	return obj.NewString(string(s))
+	i := newInterpolator(s.s, env, s.parse)
+	str, err := i.run()
+	if err != nil {
+		return obj.NewError(err.Error())
+	}
+	return obj.NewString(str)
 }
 
 func (s String) String() string {
-	return string(s)
+	return s.s
 }
 
 func (s String) Quoted() string {
-	return strconv.Quote(string(s))
+	return strconv.Quote(s.s)
 }
 
 func (s String) Compile(c *compiler.Compiler) (position int, err error) {
-	return c.Emit(code.OpConstant, c.AddConstant(obj.NewString(string(s)))), nil
+	return c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s))), nil
 }
 
 func escape(s string) (string, error) {
@@ -100,4 +110,130 @@ func escapeRune(r rune) (rune, error) {
 	default:
 		return r, fmt.Errorf(`unknown escape "\%c"`, r)
 	}
+}
+
+const eof = -1
+
+type interpolator struct {
+	s       string
+	pos     int
+	width   int
+	nblocks int
+	env     *obj.Env
+	parse   parseFn
+	strings.Builder
+}
+
+func newInterpolator(s string, env *obj.Env, parse parseFn) interpolator {
+	return interpolator{s: s, env: env, parse: parse}
+}
+
+func (i *interpolator) next() (r rune) {
+	if i.pos >= len(i.s) {
+		i.width = 0
+		return eof
+	}
+
+	r, i.width = utf8.DecodeRuneInString(i.s[i.pos:])
+	i.pos += i.width
+	return
+}
+
+func (i *interpolator) backup() {
+	i.pos -= i.width
+}
+
+func (i *interpolator) peek() rune {
+	r := i.next()
+	i.backup()
+	return r
+}
+
+func (i *interpolator) enterBlock() {
+	i.nblocks++
+}
+
+func (i *interpolator) exitBlock() {
+	i.nblocks--
+}
+
+func (i *interpolator) insideBlock() bool {
+	return i.nblocks > 0
+}
+
+func (i *interpolator) acceptUntil(end rune) (string, error) {
+	var buf strings.Builder
+
+loop:
+	for r := i.next(); ; r = i.next() {
+		switch r {
+		case eof:
+			return "", errors.New("bad interpolation syntax")
+
+		case '{':
+			i.enterBlock()
+			buf.WriteRune(r)
+
+		case end:
+			if !i.insideBlock() {
+				if p := i.peek(); p == end {
+					buf.WriteRune(end)
+					i.next()
+					continue loop
+				}
+				break loop
+			}
+			i.exitBlock()
+			fallthrough
+
+		default:
+			buf.WriteRune(r)
+		}
+	}
+
+	return buf.String(), nil
+}
+
+func (i *interpolator) run() (string, error) {
+	for r := i.next(); r != eof; r = i.next() {
+		if r == '{' {
+			if r := i.peek(); r == '{' {
+				i.WriteRune(r)
+				i.next()
+				i.next()
+				continue
+			}
+
+			// let's get all that's between braces
+			s, err := i.acceptUntil('}')
+			if err != nil {
+				return "", err
+			}
+
+			// parse and execute the interpolated code
+			tree, errs := i.parse(s)
+			if len(errs) > 0 {
+				var buf strings.Builder
+				buf.WriteString("interpolation errors:\n")
+				for _, e := range errs {
+					buf.WriteRune('\t')
+					buf.WriteString(e)
+					buf.WriteRune('\n')
+				}
+				return "", errors.New(buf.String())
+			}
+
+			o := tree.Eval(i.env)
+			i.WriteString(o.String())
+			continue
+		} else if p := i.peek(); r == '}' && p == '}' {
+			i.WriteRune(r)
+			i.next()
+			i.next()
+		}
+
+		i.WriteRune(r)
+	}
+
+	return i.String(), nil
 }

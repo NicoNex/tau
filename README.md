@@ -180,7 +180,16 @@ my_var = 2.5
 
 #### String
 ```python
-str = "My string here"
+myString = "My string here"
+```
+Tau also supports strings interpolation.
+```python
+temp = 25
+myString = "The temperature is { if temp > 20 { \"hot\" } else { \"cold\" } }"
+println(myString)
+```
+```
+>>> The temperature is hot
 ```
 
 #### Boolean

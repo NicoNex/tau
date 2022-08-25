@@ -151,8 +151,8 @@ Tau also supports REPL:
 fn(a, b) { (a + b) }
 >>> string(21)
 21
->>> recursive_loop = fn(n, func) { if n != 0 { func(n); recursive_loop(n-1, func) } }
->>> recursive_loop(10, fn(n) { println("hello", n) })
+>>> recursiveLoop = fn(n, func) { if n != 0 { func(n); recursiveLoop(n-1, func) } }
+>>> recursiveLoop(10, fn(n) { println("hello", n) })
 hello 10
 hello 9
 hello 8
@@ -170,12 +170,12 @@ Tau is a dynamically-typed programming language and it supports the following pr
 
 #### Integer
 ```python
-my_var = 10
+myVar = 10
 ```
 
 #### Float
 ```python
-my_var = 2.5
+myVar = 2.5
 ```
 
 #### String
@@ -240,12 +240,12 @@ obj = new()
 obj.value1 = 123
 obj.value2 = 456
 
-obj.sum_values = fn() {
+obj.sumValues = fn() {
 	obj.value1 + obj.value2
 }
 
 obj.child = new()
-obj.child.value = obj.sum_values()
+obj.child.value = obj.sumValues()
 ```
 
 ##### Recommended usage

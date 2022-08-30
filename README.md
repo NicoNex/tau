@@ -7,7 +7,7 @@ In order to install Tau, you'll need [Go](https://golang.org/).
 
 Once done, running the following command will successfully install the tau interpreter:
 ```bash
-go install github.com/NicoNex/tau@latest
+go install github.com/NicoNex/tau/cmd/tau@latest
 ```
 
 You can try it out in the terminal by simply running `$ tau`, alternatively to take advantage of the builtin virtual machine and gain a lot of performance run it with `$ tau -vm`.

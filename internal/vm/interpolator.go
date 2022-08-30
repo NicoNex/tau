@@ -102,6 +102,8 @@ func (i *interpolator) run() (string, error) {
 			s, err := i.acceptUntil('{', '}')
 			if err != nil {
 				return "", err
+			} else if s == "" {
+				continue
 			}
 
 			// parse the code

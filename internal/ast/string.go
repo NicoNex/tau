@@ -32,12 +32,16 @@ func NewString(s string, parse parseFn) (Node, error) {
 }
 
 func (s String) Eval(env *obj.Env) obj.Object {
-	i := newInterpolator(s.s, s.parse)
-	str, err := i.run(env)
-	if err != nil {
-		return obj.NewError(err.Error())
+	if len(s.substr) == 0 {
+		return obj.NewString(s.s)
 	}
-	return obj.NewString(str)
+
+	var subs = make([]any, len(s.substr))
+	for i, sub := range s.substr {
+		subs[i] = sub.Eval(env)
+	}
+
+	return obj.NewString(fmt.Sprintf(s.s, subs...))
 }
 
 func (s String) String() string {
@@ -132,6 +136,14 @@ func escapeRune(r rune) (rune, error) {
 	}
 }
 
+func toAnySlice(args []obj.Object) []any {
+	var ret = make([]any, len(args))
+	for i, a := range args {
+		ret[i] = a
+	}
+	return ret
+}
+
 const eof = -1
 
 type interpolator struct {
@@ -211,43 +223,6 @@ loop:
 	}
 
 	return buf.String(), nil
-}
-
-func (i *interpolator) run(env *obj.Env) (string, error) {
-	for r := i.next(); r != eof; r = i.next() {
-		if r == '{' {
-			if r := i.peek(); r == '{' {
-				i.next()
-				goto tail
-			}
-
-			// get the code between braces
-			s, err := i.acceptUntil('{', '}')
-			if err != nil {
-				return "", err
-			} else if s == "" {
-				continue
-			}
-
-			// parse the code
-			tree, errs := i.parse(s)
-			if len(errs) > 0 {
-				return "", i.parserError(errs)
-			}
-
-			// execute the code and write the resulting object in the buffer
-			o := tree.Eval(env)
-			i.WriteString(o.String())
-			continue
-		} else if p := i.peek(); r == '}' && p == '}' {
-			i.next()
-		}
-
-	tail:
-		i.WriteRune(r)
-	}
-
-	return i.String(), nil
 }
 
 func (i *interpolator) nodes() ([]Node, string, error) {

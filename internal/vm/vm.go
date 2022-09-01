@@ -106,14 +106,6 @@ func parserError(prefix string, errs []string) error {
 	return errors.New(buf.String())
 }
 
-func toAnySlice(args []obj.Object) []any {
-	var ret = make([]any, len(args))
-	for i, a := range args {
-		ret[i] = a
-	}
-	return ret
-}
-
 func New(bytecode *compiler.Bytecode) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
@@ -219,14 +211,14 @@ func (vm *VM) execInterpolate() error {
 	var (
 		str    = vm.pop().(*obj.String).Val()
 		nSub   = vm.pop().(*obj.Integer).Val()
-		substr = make([]obj.Object, nSub)
+		substr = make([]any, nSub)
 	)
 
 	for i := nSub - 1; i >= 0; i-- {
 		substr[i] = vm.pop()
 	}
 
-	str = fmt.Sprintf(str, toAnySlice(substr)...)
+	str = fmt.Sprintf(str, substr...)
 	return vm.push(obj.NewString(str))
 }
 

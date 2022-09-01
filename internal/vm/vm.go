@@ -106,6 +106,14 @@ func parserError(prefix string, errs []string) error {
 	return errors.New(buf.String())
 }
 
+func toAnySlice(args []obj.Object) []any {
+	var ret = make([]any, len(args))
+	for i, a := range args {
+		ret[i] = a
+	}
+	return ret
+}
+
 func New(bytecode *compiler.Bytecode) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
@@ -205,6 +213,21 @@ func (vm VM) execLoadModule() error {
 	}
 
 	return vm.push(mod)
+}
+
+func (vm *VM) execInterpolate() error {
+	var (
+		str    = vm.pop().(*obj.String).Val()
+		nSub   = vm.pop().(*obj.Integer).Val()
+		substr = make([]obj.Object, nSub)
+	)
+
+	for i := nSub - 1; i >= 0; i-- {
+		substr[i] = vm.pop()
+	}
+
+	str = fmt.Sprintf(str, toAnySlice(substr)...)
+	return vm.push(obj.NewString(str))
 }
 
 func (vm *VM) execDot() error {
@@ -852,7 +875,7 @@ func (vm *VM) Run() (err error) {
 		case code.OpConstant:
 			constIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
-			err = vm.push(vm.interpolate(vm.Consts[constIndex]))
+			err = vm.push(vm.Consts[constIndex])
 
 		case code.OpJump:
 			pos := int(code.ReadUint16(ins[ip+1:]))
@@ -935,6 +958,9 @@ func (vm *VM) Run() (err error) {
 
 		case code.OpLoadModule:
 			err = vm.execLoadModule()
+
+		case code.OpInterpolate:
+			err = vm.execInterpolate()
 
 		case code.OpDot:
 			err = vm.execDot()
@@ -1046,18 +1072,4 @@ func (vm *VM) pop() obj.Object {
 
 func (vm *VM) peek() obj.Object {
 	return vm.stack[vm.sp-1]
-}
-
-func (vm *VM) interpolate(o obj.Object) obj.Object {
-	s, ok := o.(*obj.String)
-	if !ok {
-		return o
-	}
-
-	i := newInterpolator(string(*s), vm.State)
-	str, err := i.run()
-	if err != nil {
-		return obj.NewError(err.Error())
-	}
-	return obj.NewString(str)
 }

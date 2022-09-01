@@ -68,6 +68,7 @@ const (
 	OpGetBuiltin
 	OpGetFree
 	OpLoadModule
+	OpInterpolate
 
 	OpPop
 )
@@ -114,15 +115,16 @@ var definitions = map[Opcode]*Definition{
 	OpJump:          {"OpJump", []int{2}},
 	OpJumpNotTruthy: {"OpJumpNotTruthy", []int{2}},
 
-	OpDot:        {"OpDot", []int{}},
-	OpDefine:     {"OpDefine", []int{}},
-	OpGetGlobal:  {"OpGetGlobal", []int{2}},
-	OpSetGlobal:  {"OpSetGlobal", []int{2}},
-	OpGetLocal:   {"OpGetLocal", []int{1}},
-	OpSetLocal:   {"OpSetLocal", []int{1}},
-	OpGetBuiltin: {"OpGetBuiltin", []int{1}},
-	OpGetFree:    {"OpGetFree", []int{1}},
-	OpLoadModule: {"OpLoadModule", []int{}},
+	OpDot:         {"OpDot", []int{}},
+	OpDefine:      {"OpDefine", []int{}},
+	OpGetGlobal:   {"OpGetGlobal", []int{2}},
+	OpSetGlobal:   {"OpSetGlobal", []int{2}},
+	OpGetLocal:    {"OpGetLocal", []int{1}},
+	OpSetLocal:    {"OpSetLocal", []int{1}},
+	OpGetBuiltin:  {"OpGetBuiltin", []int{1}},
+	OpGetFree:     {"OpGetFree", []int{1}},
+	OpLoadModule:  {"OpLoadModule", []int{}},
+	OpInterpolate: {"OpInterpolate", []int{}},
 
 	OpPop: {"OpPop", []int{}},
 }

@@ -51,12 +51,13 @@ func _() {
 	_ = x[OpGetBuiltin-40]
 	_ = x[OpGetFree-41]
 	_ = x[OpLoadModule-42]
-	_ = x[OpPop-43]
+	_ = x[OpInterpolate-43]
+	_ = x[OpPop-44]
 }
 
-const _Opcode_name = "OpConstantOpTrueOpFalseOpNullOpListOpMapOpClosureOpCurrentClosureOpAddOpSubOpMulOpDivOpModOpBwAndOpBwOrOpBwXorOpBwNotOpBwLShiftOpBwRShiftOpAndOpOrOpEqualOpNotEqualOpGreaterThanOpGreaterThanEqualOpInOpMinusOpBangOpIndexOpCallOpReturnOpReturnValueOpJumpOpJumpNotTruthyOpDotOpDefineOpGetGlobalOpSetGlobalOpGetLocalOpSetLocalOpGetBuiltinOpGetFreeOpLoadModuleOpPop"
+const _Opcode_name = "OpConstantOpTrueOpFalseOpNullOpListOpMapOpClosureOpCurrentClosureOpAddOpSubOpMulOpDivOpModOpBwAndOpBwOrOpBwXorOpBwNotOpBwLShiftOpBwRShiftOpAndOpOrOpEqualOpNotEqualOpGreaterThanOpGreaterThanEqualOpInOpMinusOpBangOpIndexOpCallOpReturnOpReturnValueOpJumpOpJumpNotTruthyOpDotOpDefineOpGetGlobalOpSetGlobalOpGetLocalOpSetLocalOpGetBuiltinOpGetFreeOpLoadModuleOpInterpolateOpPop"
 
-var _Opcode_index = [...]uint16{0, 10, 16, 23, 29, 35, 40, 49, 65, 70, 75, 80, 85, 90, 97, 103, 110, 117, 127, 137, 142, 146, 153, 163, 176, 194, 198, 205, 211, 218, 224, 232, 245, 251, 266, 271, 279, 290, 301, 311, 321, 333, 342, 354, 359}
+var _Opcode_index = [...]uint16{0, 10, 16, 23, 29, 35, 40, 49, 65, 70, 75, 80, 85, 90, 97, 103, 110, 117, 127, 137, 142, 146, 153, 163, 176, 194, 198, 205, 211, 218, 224, 232, 245, 251, 266, 271, 279, 290, 301, 311, 321, 333, 342, 354, 367, 372}
 
 func (i Opcode) String() string {
 	if i >= Opcode(len(_Opcode_index)-1) {

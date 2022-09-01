@@ -15,18 +15,25 @@ import (
 type parseFn func(string) (Node, []string)
 
 type String struct {
-	s     string
-	parse parseFn
+	s      string
+	parse  parseFn
+	substr []Node
 }
 
 func NewString(s string, parse parseFn) (Node, error) {
 	str, err := escape(s)
-	return String{s: str, parse: parse}, err
+	if err != nil {
+		return nil, err
+	}
+
+	i := newInterpolator(str, parse)
+	nodes, str, err := i.nodes()
+	return String{s: str, parse: parse, substr: nodes}, err
 }
 
 func (s String) Eval(env *obj.Env) obj.Object {
-	i := newInterpolator(s.s, env, s.parse)
-	str, err := i.run()
+	i := newInterpolator(s.s, s.parse)
+	str, err := i.run(env)
 	if err != nil {
 		return obj.NewError(err.Error())
 	}
@@ -42,7 +49,20 @@ func (s String) Quoted() string {
 }
 
 func (s String) Compile(c *compiler.Compiler) (position int, err error) {
-	return c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s))), nil
+	if len(s.substr) == 0 {
+		return c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s))), nil
+	}
+
+	for _, sub := range s.substr {
+		if position, err = sub.Compile(c); err != nil {
+			return
+		}
+		c.RemoveLast()
+	}
+
+	c.Emit(code.OpConstant, c.AddConstant(obj.NewInteger(int64(len(s.substr)))))
+	c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s)))
+	return c.Emit(code.OpInterpolate), nil
 }
 
 func escape(s string) (string, error) {
@@ -119,13 +139,12 @@ type interpolator struct {
 	pos     int
 	width   int
 	nblocks int
-	env     *obj.Env
 	parse   parseFn
 	strings.Builder
 }
 
-func newInterpolator(s string, env *obj.Env, parse parseFn) interpolator {
-	return interpolator{s: s, env: env, parse: parse}
+func newInterpolator(s string, parse parseFn) interpolator {
+	return interpolator{s: s, parse: parse}
 }
 
 func (i *interpolator) next() (r rune) {
@@ -194,7 +213,7 @@ loop:
 	return buf.String(), nil
 }
 
-func (i *interpolator) run() (string, error) {
+func (i *interpolator) run(env *obj.Env) (string, error) {
 	for r := i.next(); r != eof; r = i.next() {
 		if r == '{' {
 			if r := i.peek(); r == '{' {
@@ -217,7 +236,7 @@ func (i *interpolator) run() (string, error) {
 			}
 
 			// execute the code and write the resulting object in the buffer
-			o := tree.Eval(i.env)
+			o := tree.Eval(env)
 			i.WriteString(o.String())
 			continue
 		} else if p := i.peek(); r == '}' && p == '}' {
@@ -229,6 +248,44 @@ func (i *interpolator) run() (string, error) {
 	}
 
 	return i.String(), nil
+}
+
+func (i *interpolator) nodes() ([]Node, string, error) {
+	var nodes []Node
+
+	for r := i.next(); r != eof; r = i.next() {
+		if r == '{' {
+			if r := i.peek(); r == '{' {
+				i.next()
+				goto tail
+			}
+
+			// get the code between braces
+			s, err := i.acceptUntil('{', '}')
+			if err != nil {
+				return []Node{}, "", err
+			} else if s == "" {
+				continue
+			}
+
+			// parse the code
+			tree, errs := i.parse(s)
+			if len(errs) > 0 {
+				return []Node{}, "", i.parserError(errs)
+			}
+
+			nodes = append(nodes, tree)
+			i.WriteString("%v")
+			continue
+		} else if p := i.peek(); r == '}' && p == '}' {
+			i.next()
+		}
+
+	tail:
+		i.WriteRune(r)
+	}
+
+	return nodes, i.String(), nil
 }
 
 func (i *interpolator) parserError(errs []string) error {

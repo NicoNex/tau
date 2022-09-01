@@ -21,6 +21,7 @@ func EvalREPL() {
 		reader = bufio.NewReader(os.Stdin)
 	)
 
+	PrintVersionInfo(os.Stdout)
 	for {
 		fmt.Print(">>> ")
 		input, err := reader.ReadString('\n')
@@ -52,6 +53,7 @@ func VmREPL() {
 		reader = bufio.NewReader(os.Stdin)
 	)
 
+	PrintVersionInfo(os.Stdout)
 	for {
 		fmt.Print(">>> ")
 		input, err := reader.ReadString('\n')

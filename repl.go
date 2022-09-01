@@ -31,6 +31,7 @@ func EvalREPL() error {
 	t.AutoCompleteCallback = autoComplete
 	obj.Stdout = t
 
+	PrintVersionInfo(t)
 	for {
 		input, err := t.ReadLine()
 		check(t, initState, err)
@@ -69,6 +70,7 @@ func VmREPL() error {
 	t.AutoCompleteCallback = autoComplete
 	obj.Stdout = t
 
+	PrintVersionInfo(t)
 	for {
 		input, err := t.ReadLine()
 		check(t, initState, err)

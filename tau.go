@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/NicoNex/tau/internal/compiler"
@@ -18,6 +19,8 @@ import (
 )
 
 var (
+	Version       string
+	GoVersion     string
 	ErrParseError = errors.New("error: parse error")
 )
 
@@ -181,4 +184,8 @@ func CompileFiles(files []string) error {
 	}
 
 	return nil
+}
+
+func PrintVersionInfo(w io.Writer) {
+	fmt.Fprintf(w, "Tau %s [%s] on %s\n", Version, GoVersion, runtime.GOOS)
 }

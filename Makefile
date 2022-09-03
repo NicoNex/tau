@@ -17,3 +17,6 @@ darwin:
 
 install: all
 	mv tau /usr/bin
+
+run: all
+	./tau

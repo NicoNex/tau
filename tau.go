@@ -18,11 +18,9 @@ import (
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-var (
-	Version       string
-	GoVersion     string
-	ErrParseError = errors.New("error: parse error")
-)
+//go:generate go run gen.go
+
+var ErrParseError = errors.New("error: parse error")
 
 func encode(bcode *compiler.Bytecode) ([]byte, error) {
 	var (
@@ -187,5 +185,5 @@ func CompileFiles(files []string) error {
 }
 
 func PrintVersionInfo(w io.Writer) {
-	fmt.Fprintf(w, "Tau %s [%s] on %s\n", Version, GoVersion, runtime.GOOS)
+	fmt.Fprintf(w, "Tau %s [%s] on %s\n", TauVersion, GoVersion, runtime.GOOS)
 }

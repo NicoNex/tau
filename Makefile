@@ -8,3 +8,12 @@ all:
 
 windows:
 	cd cmd/tau && GOOS=windows go build -o ../../tau -ldflags="-X 'github.com/NicoNex/tau.Version=$(version)' -X 'github.com/NicoNex/tau.GoVersion=$(goversion)'"
+
+linux:
+	cd cmd/tau && GOOS=linux go build -o ../../tau -ldflags="-X 'github.com/NicoNex/tau.Version=$(version)' -X 'github.com/NicoNex/tau.GoVersion=$(goversion)'"
+
+darwin:
+	cd cmd/tau && GOOS=darwin go build -o ../../tau -ldflags="-X 'github.com/NicoNex/tau.Version=$(version)' -X 'github.com/NicoNex/tau.GoVersion=$(goversion)'"
+
+install: all
+	mv tau /usr/bin

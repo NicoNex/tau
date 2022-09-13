@@ -114,6 +114,7 @@ func newParser(items chan item.Item) *Parser {
 	p.registerPrefix(item.Break, p.parseBreak)
 	p.registerPrefix(item.Import, p.parseImport)
 	p.registerPrefix(item.Error, p.parseError)
+	p.registerPrefix(item.Tau, p.parseTauCall)
 
 	p.registerInfix(item.Equals, p.parseEquals)
 	p.registerInfix(item.NotEquals, p.parseNotEquals)
@@ -653,6 +654,19 @@ func (p *Parser) parseLShiftAssign(left ast.Node) ast.Node {
 func (p *Parser) parseRShiftAssign(left ast.Node) ast.Node {
 	p.next()
 	return ast.NewBitwiseShiftRightAssign(left, p.parseExpr(Lowest))
+}
+
+func (p *Parser) parseTauCall() ast.Node {
+	p.next()
+
+	n := p.parseExpr(Lowest)
+	c, ok := n.(ast.Call)
+	if !ok {
+		p.errs = append(p.errs, "expected function call after tau")
+		return nil
+	}
+
+	return ast.NewConcurrentCall(c.Fn, c.Args)
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {

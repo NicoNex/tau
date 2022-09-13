@@ -133,6 +133,11 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 	return vm
 }
 
+func (vm *VM) clone() *VM {
+	var tvm = vm
+	return tvm
+}
+
 func (vm *VM) currentFrame() *Frame {
 	return vm.frames[vm.frameIndex-1]
 }
@@ -779,6 +784,12 @@ func (vm *VM) execCall(numArgs int) error {
 	return vm.call(vm.stack[vm.sp-1-numArgs], numArgs)
 }
 
+func (vm *VM) execConcurrentCall(numArgs int) error {
+	tvm := vm.clone()
+	go tvm.call(vm.stack[vm.sp-1-numArgs], numArgs)
+	return nil
+}
+
 func (vm *VM) buildList(start, end int) obj.Object {
 	var elements = make([]obj.Object, end-start)
 
@@ -928,6 +939,11 @@ func (vm *VM) Run() (err error) {
 			numArgs := code.ReadUint8(ins[ip+1:])
 			vm.currentFrame().ip += 1
 			err = vm.execCall(int(numArgs))
+
+		case code.OpConcurrentCall:
+			numArgs := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+			err = vm.execConcurrentCall(int(numArgs))
 
 		case code.OpGetBuiltin:
 			idx := code.ReadUint8(ins[ip+1:])

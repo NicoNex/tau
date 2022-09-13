@@ -64,6 +64,7 @@ const (
 	MapType                  // map
 	ContinueType             // continue
 	BreakType                // break
+	PipeType                 // pipe
 )
 
 var (

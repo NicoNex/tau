@@ -207,14 +207,13 @@ func (vm VM) execLoadModule() error {
 	return vm.push(mod)
 }
 
-func (vm *VM) execInterpolate() error {
+func (vm *VM) pushInterpolated(strIdx, numSub int) error {
 	var (
-		str    = vm.pop().(*obj.String).Val()
-		nSub   = vm.pop().(*obj.Integer).Val()
-		substr = make([]any, nSub)
+		str    = vm.Consts[strIdx].String()
+		substr = make([]any, numSub)
 	)
 
-	for i := nSub - 1; i >= 0; i-- {
+	for i := numSub - 1; i >= 0; i-- {
 		substr[i] = vm.pop()
 	}
 
@@ -952,7 +951,10 @@ func (vm *VM) Run() (err error) {
 			err = vm.execLoadModule()
 
 		case code.OpInterpolate:
-			err = vm.execInterpolate()
+			strIdx := code.ReadUint16(ins[ip+1:])
+			numArgs := code.ReadUint8(ins[ip+3:])
+			vm.currentFrame().ip += 3
+			err = vm.pushInterpolated(int(strIdx), int(numArgs))
 
 		case code.OpDot:
 			err = vm.execDot()

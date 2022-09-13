@@ -64,9 +64,7 @@ func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 		c.RemoveLast()
 	}
 
-	c.Emit(code.OpConstant, c.AddConstant(obj.NewInteger(int64(len(s.substr)))))
-	c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s)))
-	return c.Emit(code.OpInterpolate), nil
+	return c.Emit(code.OpInterpolate, c.AddConstant(obj.NewString(s.s)), len(s.substr)), nil
 }
 
 func escape(s string) (string, error) {

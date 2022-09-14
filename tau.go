@@ -18,7 +18,10 @@ import (
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-//go:generate go run gen.go
+const (
+	TauVersion = "v1.2.9"
+	GoVersion  = "go version go1.19 linux/amd64"
+)
 
 var ErrParseError = errors.New("error: parse error")
 

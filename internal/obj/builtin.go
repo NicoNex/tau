@@ -372,6 +372,51 @@ var Builtins = []struct {
 			return NewNativePlugin(str.String())
 		},
 	},
+	{
+		"hex",
+		func(args ...Object) Object {
+			if l := len(args); l != 1 {
+				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
+			}
+
+			i, ok := args[0].(*Integer)
+			if !ok {
+				return NewError("plugin: first argument must be an int, got %s instead", args[0].Type())
+			}
+
+			return NewString(fmt.Sprintf("0x%x", i.Val()))
+		},
+	},
+	{
+		"oct",
+		func(args ...Object) Object {
+			if l := len(args); l != 1 {
+				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
+			}
+
+			i, ok := args[0].(*Integer)
+			if !ok {
+				return NewError("plugin: first argument must be an int, got %s instead", args[0].Type())
+			}
+
+			return NewString(fmt.Sprintf("%O", i.Val()))
+		},
+	},
+	{
+		"bin",
+		func(args ...Object) Object {
+			if l := len(args); l != 1 {
+				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
+			}
+
+			i, ok := args[0].(*Integer)
+			if !ok {
+				return NewError("plugin: first argument must be an int, got %s instead", args[0].Type())
+			}
+
+			return NewString(fmt.Sprintf("0b%b", i.Val()))
+		},
+	},
 }
 
 func listify(start, stop, step int) List {

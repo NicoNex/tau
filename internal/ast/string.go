@@ -205,11 +205,6 @@ loop:
 
 		case end:
 			if !i.insideBlock() {
-				if p := i.peek(); p == end {
-					buf.WriteRune(end)
-					i.next()
-					continue loop
-				}
 				break loop
 			}
 			i.exitBlock()
@@ -228,12 +223,12 @@ func (i *interpolator) nodes() ([]Node, string, error) {
 
 	for r := i.next(); r != eof; r = i.next() {
 		if r == '{' {
-			if r := i.peek(); r == '{' {
+			if i.peek() == '{' {
 				i.next()
 				goto tail
 			}
 
-			// get the code between braces
+			// Get the code between braces
 			s, err := i.acceptUntil('{', '}')
 			if err != nil {
 				return []Node{}, "", err
@@ -241,7 +236,7 @@ func (i *interpolator) nodes() ([]Node, string, error) {
 				continue
 			}
 
-			// parse the code
+			// Parse the code
 			tree, errs := i.parse(s)
 			if len(errs) > 0 {
 				return []Node{}, "", i.parserError(errs)

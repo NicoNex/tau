@@ -952,8 +952,8 @@ func (vm *VM) Run() (err error) {
 
 		case code.OpInterpolate:
 			strIdx := code.ReadUint16(ins[ip+1:])
-			numArgs := code.ReadUint8(ins[ip+3:])
-			vm.currentFrame().ip += 3
+			numArgs := code.ReadUint16(ins[ip+3:])
+			vm.currentFrame().ip += 4
 			err = vm.pushInterpolated(int(strIdx), int(numArgs))
 
 		case code.OpDot:

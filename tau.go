@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	TauVersion = "v1.2.9"
+	TauVersion = "v1.2.10"
 	GoVersion  = "go version go1.19 linux/amd64"
 )
 

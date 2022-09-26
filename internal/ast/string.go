@@ -145,11 +145,13 @@ func toAnySlice(args []obj.Object) []any {
 const eof = -1
 
 type interpolator struct {
-	s       string
-	pos     int
-	width   int
-	nblocks int
-	parse   parseFn
+	s          string
+	pos        int
+	width      int
+	nblocks    int
+	inQuotes   bool
+	inBacktick bool
+	parse      parseFn
 	strings.Builder
 }
 
@@ -190,6 +192,18 @@ func (i *interpolator) insideBlock() bool {
 	return i.nblocks > 0
 }
 
+func (i *interpolator) quotes() {
+	i.inQuotes = !i.inQuotes
+}
+
+func (i *interpolator) backtick() {
+	i.inBacktick = !i.inBacktick
+}
+
+func (i *interpolator) insideString() bool {
+	return i.inQuotes || i.inBacktick
+}
+
 func (i *interpolator) acceptUntil(start, end rune) (string, error) {
 	var buf strings.Builder
 
@@ -199,15 +213,27 @@ loop:
 		case eof:
 			return "", errors.New("bad interpolation syntax")
 
+		case '"':
+			i.quotes()
+			buf.WriteRune(r)
+
+		case '`':
+			i.backtick()
+			buf.WriteRune(r)
+
 		case start:
-			i.enterBlock()
+			if !i.insideString() {
+				i.enterBlock()
+			}
 			buf.WriteRune(r)
 
 		case end:
-			if !i.insideBlock() {
-				break loop
+			if !i.insideString() {
+				if !i.insideBlock() {
+					break loop
+				}
+				i.exitBlock()
 			}
-			i.exitBlock()
 			fallthrough
 
 		default:

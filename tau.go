@@ -18,10 +18,7 @@ import (
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-const (
-	TauVersion = "v1.2.10"
-	GoVersion  = "go version go1.19 linux/amd64"
-)
+const TauVersion = "v1.2.11"
 
 var ErrParseError = errors.New("error: parse error")
 
@@ -188,5 +185,5 @@ func CompileFiles(files []string) error {
 }
 
 func PrintVersionInfo(w io.Writer) {
-	fmt.Fprintf(w, "Tau %s [%s] on %s\n", TauVersion, GoVersion, runtime.GOOS)
+	fmt.Fprintf(w, "Tau %s on %s\n", TauVersion, strings.Title(runtime.GOOS))
 }

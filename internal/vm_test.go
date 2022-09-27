@@ -259,6 +259,17 @@ func TestVMStringExpressions(t *testing.T) {
 	runVmTests(t, tests)
 }
 
+func TestVMStringInterpolation(t *testing.T) {
+	tests := []vmTestCase{
+		{`a = 1; "{if a > 0 { \"test1\" } else { \"test0\" }}"`, "test1"},
+		{`"{\"}}\"}"`, "}"},
+		{`"{ \"{{\" }"`, "{"},
+		{`"{ {\"test\": \"it works\"}[\"test\"] }"`, "it works"},
+	}
+
+	runVmTests(t, tests)
+}
+
 func TestVMListLiterals(t *testing.T) {
 	tests := []vmTestCase{
 		{"[]", []int{}},

@@ -101,34 +101,24 @@ func escapeRune(r rune) (rune, error) {
 	switch r {
 	case 'a':
 		return '\a', nil
-
 	case 'b':
 		return '\b', nil
-
 	case 'f':
 		return '\f', nil
-
 	case 'n':
 		return '\n', nil
-
 	case 'r':
 		return '\r', nil
-
 	case 't':
 		return '\t', nil
-
 	case 'v':
 		return '\v', nil
-
 	case '\\':
 		return '\\', nil
-
 	case '\'':
 		return '\'', nil
-
 	case '"':
 		return '"', nil
-
 	default:
 		return r, fmt.Errorf(`unknown escape "\%c"`, r)
 	}
@@ -143,6 +133,8 @@ func toAnySlice(args []obj.Object) []any {
 }
 
 const eof = -1
+
+var errBadInterpolationSyntax = errors.New("bad interpolation syntax")
 
 type interpolator struct {
 	s          string
@@ -211,21 +203,18 @@ loop:
 	for r := i.next(); ; r = i.next() {
 		switch r {
 		case eof:
-			return "", errors.New("bad interpolation syntax")
+			return "", errBadInterpolationSyntax
 
 		case '"':
 			i.quotes()
-			buf.WriteRune(r)
 
 		case '`':
 			i.backtick()
-			buf.WriteRune(r)
 
 		case start:
 			if !i.insideString() {
 				i.enterBlock()
 			}
-			buf.WriteRune(r)
 
 		case end:
 			if !i.insideString() {
@@ -234,11 +223,9 @@ loop:
 				}
 				i.exitBlock()
 			}
-			fallthrough
-
-		default:
-			buf.WriteRune(r)
 		}
+
+		buf.WriteRune(r)
 	}
 
 	return buf.String(), nil
@@ -271,7 +258,10 @@ func (i *interpolator) nodes() ([]Node, string, error) {
 			nodes = append(nodes, tree)
 			i.WriteString("%v")
 			continue
-		} else if p := i.peek(); r == '}' && p == '}' {
+		} else if r == '}' {
+			if i.peek() != '}' {
+				return []Node{}, "", errBadInterpolationSyntax
+			}
 			i.next()
 		}
 

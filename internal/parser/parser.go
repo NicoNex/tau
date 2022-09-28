@@ -13,6 +13,7 @@ type Parser struct {
 	cur           item.Item
 	peek          item.Item
 	items         chan item.Item
+	input         string
 	errs          []string
 	nestedLoops   uint
 	prefixParsers map[item.Type]parsePrefixFn
@@ -83,11 +84,12 @@ var precedences = map[item.Type]int{
 	item.Dot:            Dot,
 }
 
-func newParser(items chan item.Item) *Parser {
+func newParser(input string, items chan item.Item) *Parser {
 	p := &Parser{
 		cur:           <-items,
 		peek:          <-items,
 		items:         items,
+		input:         input,
 		prefixParsers: make(map[item.Type]parsePrefixFn),
 		infixParsers:  make(map[item.Type]parseInfixFn),
 	}
@@ -171,6 +173,22 @@ func (p *Parser) next() {
 
 func (p *Parser) errors() []string {
 	return p.errs
+}
+
+func (p *Parser) line(pos int) string {
+	return p.input[startLine(p.input, pos):endLine(p.input, pos)]
+}
+
+func (p *Parser) errorf(s string, a ...any) {
+	line := p.line(p.cur.Pos)
+
+	p.errs = append(p.errs, fmt.Sprintf(
+		"Error at line %d:\n    %s\n    %s\n%s",
+		lineNo(p.input, p.cur.Pos),
+		line,
+		arrow(p.cur.Pos%(len(line)+1)),
+		fmt.Sprintf(s, a...),
+	))
 }
 
 func (p *Parser) parse() ast.Node {
@@ -306,7 +324,7 @@ func (p *Parser) parseImport() ast.Node {
 	args := p.parseNodeList(item.RParen)
 
 	if l := len(args); l != 1 {
-		p.errs = append(p.errs, fmt.Sprintf("import: expected exactly 1 argument but %d provided", l))
+		p.errorf("import: expected exactly 1 argument but %d provided", l)
 		return nil
 	}
 
@@ -360,7 +378,7 @@ func (p *Parser) parseNull() ast.Node {
 
 func (p *Parser) parseContinue() ast.Node {
 	if !p.isInsideLoop() {
-		p.errs = append(p.errs, `continue statement not inside "for" block`)
+		p.errorf(`continue statement not inside "for" block`)
 		return nil
 	}
 	return ast.NewContinue()
@@ -368,7 +386,7 @@ func (p *Parser) parseContinue() ast.Node {
 
 func (p *Parser) parseBreak() ast.Node {
 	if !p.isInsideLoop() {
-		p.errs = append(p.errs, `break statement not inside "for" block`)
+		p.errorf(`break statement not inside "for" block`)
 		return nil
 	}
 	return ast.NewBreak()
@@ -383,8 +401,7 @@ func (p *Parser) parseError() ast.Node {
 func (p *Parser) parseInteger() ast.Node {
 	i, err := strconv.ParseInt(p.cur.Val, 0, 64)
 	if err != nil {
-		msg := fmt.Sprintf("unable to parse %q as integer", p.cur.Val)
-		p.errs = append(p.errs, msg)
+		p.errorf("unable to parse %q as integer", p.cur.Val)
 		return nil
 	}
 	return ast.NewInteger(i)
@@ -394,8 +411,7 @@ func (p *Parser) parseInteger() ast.Node {
 func (p *Parser) parseFloat() ast.Node {
 	f, err := strconv.ParseFloat(p.cur.Val, 64)
 	if err != nil {
-		msg := fmt.Sprintf("unable to parse %q as float", p.cur.Val)
-		p.errs = append(p.errs, msg)
+		p.errorf("unable to parse %q as float", p.cur.Val)
 		return nil
 	}
 	return ast.NewFloat(f)
@@ -404,7 +420,7 @@ func (p *Parser) parseFloat() ast.Node {
 func (p *Parser) parseString() ast.Node {
 	s, err := ast.NewString(p.cur.Val, Parse)
 	if err != nil {
-		p.errs = append(p.errs, err.Error())
+		p.errorf(err.Error())
 		return nil
 	}
 	return s
@@ -458,8 +474,7 @@ func (p *Parser) parseFor() ast.Node {
 		return ast.NewFor(arg[1], p.parseBlock(), arg[0], arg[2])
 
 	default:
-		msg := fmt.Sprintf("wrong number of expressions, expected 1 or 3 but got %d", l)
-		p.errs = append(p.errs, msg)
+		p.errorf("wrong number of expressions, expected 1 or 3 but got %d", l)
 		return nil
 	}
 }
@@ -747,10 +762,7 @@ func (p *Parser) expectPeek(t item.Type) bool {
 
 // Emits an error if the peek item is not of tipe t.
 func (p *Parser) peekError(t item.Type) {
-	p.errs = append(
-		p.errs,
-		fmt.Sprintf("expected next item to be %v, got %v instead", t, p.peek.Typ),
-	)
+	p.errorf("expected next item to be %v, got %v instead", t, p.peek.Typ)
 }
 
 // Returns the precedence value of the type of the peek item.
@@ -780,12 +792,54 @@ func (p *Parser) registerInfix(typ item.Type, fn parseInfixFn) {
 }
 
 func (p *Parser) noParsePrefixFnError(t item.Type) {
-	msg := fmt.Sprintf("no parse prefix function for '%s' found", t)
-	p.errs = append(p.errs, msg)
+	p.errorf("no parse prefix function for %q found", t)
 }
 
 func Parse(input string) (prog ast.Node, errs []string) {
 	items := lexer.Lex(input)
-	p := newParser(items)
+	p := newParser(input, items)
 	return p.parse(), p.errors()
+}
+
+func startLine(s string, pos int) (beg int) {
+	for i := pos - 1; i >= 0; i-- {
+		if s[i] == '\n' {
+			return i
+		}
+	}
+	return
+}
+
+func endLine(s string, pos int) (end int) {
+	end = len(s)
+	for i := pos; i < len(s); i++ {
+		if s[i] == '\n' {
+			return i
+		}
+	}
+	return
+}
+func lineNo(s string, pos int) int {
+	var cnt = 1
+
+	for _, b := range s[:pos] {
+		if b == '\n' {
+			cnt++
+		}
+	}
+
+	return cnt
+}
+
+func arrow(pos int) string {
+	var s = make([]byte, pos+1)
+
+	for i := range s {
+		if i == pos {
+			s[i] = '^'
+		} else {
+			s[i] = ' '
+		}
+	}
+	return string(s)
 }

@@ -38,6 +38,10 @@ func (a And) String() string {
 }
 
 func (a And) Compile(c *compiler.Compiler) (position int, err error) {
+	if a.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(a.Eval(nil))), nil
+	}
+
 	if position, err = a.l.Compile(c); err != nil {
 		return
 	}
@@ -45,4 +49,8 @@ func (a And) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 	return c.Emit(code.OpAnd), nil
+}
+
+func (a And) IsConstExpression() bool {
+	return a.l.IsConstExpression() && a.r.IsConstExpression()
 }

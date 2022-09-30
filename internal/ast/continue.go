@@ -23,3 +23,7 @@ func (c Continue) String() string {
 func (c Continue) Compile(comp *compiler.Compiler) (position int, err error) {
 	return comp.Emit(code.OpJump, compiler.ContinuePlaceholder), nil
 }
+
+func (c Continue) IsConstExpression() bool {
+	return false
+}

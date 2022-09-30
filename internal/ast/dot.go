@@ -65,3 +65,7 @@ func (d Dot) Compile(c *compiler.Compiler) (position int, err error) {
 	position = c.Emit(code.OpConstant, c.AddConstant(obj.NewString(d.r.String())))
 	return c.Emit(code.OpDot), nil
 }
+
+func (d Dot) IsConstExpression() bool {
+	return false
+}

@@ -54,6 +54,10 @@ func (t Times) String() string {
 }
 
 func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
+	if t.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(t.Eval(nil))), nil
+	}
+
 	if position, err = t.l.Compile(c); err != nil {
 		return
 	}
@@ -61,4 +65,8 @@ func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 	return c.Emit(code.OpMul), nil
+}
+
+func (t Times) IsConstExpression() bool {
+	return t.l.IsConstExpression() && t.r.IsConstExpression()
 }

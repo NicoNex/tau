@@ -54,6 +54,10 @@ func (g Greater) String() string {
 }
 
 func (g Greater) Compile(c *compiler.Compiler) (position int, err error) {
+	if g.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(g.Eval(nil))), nil
+	}
+
 	if position, err = g.l.Compile(c); err != nil {
 		return
 	}
@@ -61,4 +65,8 @@ func (g Greater) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 	return c.Emit(code.OpGreaterThan), nil
+}
+
+func (g Greater) IsConstExpression() bool {
+	return g.l.IsConstExpression() && g.r.IsConstExpression()
 }

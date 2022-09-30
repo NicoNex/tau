@@ -54,6 +54,10 @@ func (l Less) String() string {
 }
 
 func (l Less) Compile(c *compiler.Compiler) (position int, err error) {
+	if l.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(l.Eval(nil))), nil
+	}
+
 	// the order of the compilation of the operands is inverted because we reuse
 	// the code.OpGreaterThan OpCode.
 	if position, err = l.r.Compile(c); err != nil {
@@ -63,4 +67,8 @@ func (l Less) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 	return c.Emit(code.OpGreaterThan), nil
+}
+
+func (l Less) IsConstExpression() bool {
+	return l.l.IsConstExpression() && l.r.IsConstExpression()
 }

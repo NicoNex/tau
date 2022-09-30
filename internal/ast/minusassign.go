@@ -82,3 +82,7 @@ func (m MinusAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{m.l, Minus{m.l, m.r}}
 	return n.Compile(c)
 }
+
+func (m MinusAssign) IsConstExpression() bool {
+	return false
+}

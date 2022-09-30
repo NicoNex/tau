@@ -68,3 +68,7 @@ func (i Import) Compile(c *compiler.Compiler) (position int, err error) {
 func (i Import) String() string {
 	return fmt.Sprintf("import(%q)", i.name.String())
 }
+
+func (i Import) IsConstExpression() bool {
+	return false
+}

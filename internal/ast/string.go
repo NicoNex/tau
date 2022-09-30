@@ -67,6 +67,10 @@ func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 	return c.Emit(code.OpInterpolate, c.AddConstant(obj.NewString(s.s)), len(s.substr)), nil
 }
 
+func (s String) IsConstExpression() bool {
+	return len(s.substr) == 0
+}
+
 func escape(s string) (string, error) {
 	var buf strings.Builder
 

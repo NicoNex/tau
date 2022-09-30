@@ -30,3 +30,7 @@ func (r Return) Compile(c *compiler.Compiler) (position int, err error) {
 	}
 	return c.Emit(code.OpReturnValue), nil
 }
+
+func (r Return) IsConstExpression() bool {
+	return false
+}

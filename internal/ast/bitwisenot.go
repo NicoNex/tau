@@ -36,8 +36,16 @@ func (b BitwiseNot) String() string {
 }
 
 func (b BitwiseNot) Compile(c *compiler.Compiler) (position int, err error) {
+	if b.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+	}
+
 	if position, err = b.n.Compile(c); err != nil {
 		return
 	}
 	return c.Emit(code.OpBwNot), nil
+}
+
+func (b BitwiseNot) IsConstExpression() bool {
+	return b.n.IsConstExpression()
 }

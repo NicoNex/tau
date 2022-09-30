@@ -348,21 +348,14 @@ func (vm *VM) execDiv() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	switch {
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
-		return vm.push(obj.NewInteger(l / r))
-
-	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
-		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
-		return vm.push(obj.NewFloat(l / r))
-
-	default:
+	if !assertTypes(left, obj.IntType, obj.FloatType) || !assertTypes(right, obj.IntType, obj.FloatType) {
 		return fmt.Errorf("unsupported operator '/' for types %v and %v", left.Type(), right.Type())
 	}
+
+	left, right = toFloat(left, right)
+	l := left.(*obj.Float).Val()
+	r := right.(*obj.Float).Val()
+	return vm.push(obj.NewFloat(l / r))
 }
 
 func (vm *VM) execMod() error {

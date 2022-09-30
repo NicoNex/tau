@@ -34,3 +34,7 @@ func (r RawString) Quoted() string {
 func (r RawString) Compile(c *compiler.Compiler) (position int, err error) {
 	return c.Emit(code.OpConstant, c.AddConstant(obj.NewString(string(r)))), nil
 }
+
+func (r RawString) IsConstExpression() bool {
+	return true
+}

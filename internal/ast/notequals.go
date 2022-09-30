@@ -70,6 +70,10 @@ func (n NotEquals) String() string {
 }
 
 func (n NotEquals) Compile(c *compiler.Compiler) (position int, err error) {
+	if n.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(n.Eval(nil))), nil
+	}
+
 	if position, err = n.l.Compile(c); err != nil {
 		return
 	}
@@ -77,4 +81,8 @@ func (n NotEquals) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 	return c.Emit(code.OpNotEqual), nil
+}
+
+func (n NotEquals) IsConstExpression() bool {
+	return n.l.IsConstExpression() && n.r.IsConstExpression()
 }

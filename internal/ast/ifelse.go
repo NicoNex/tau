@@ -85,3 +85,7 @@ func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {
 	c.ReplaceOperand(jumpPos, c.Pos())
 	return c.Pos(), nil
 }
+
+func (i IfExpr) IsConstExpression() bool {
+	return false
+}

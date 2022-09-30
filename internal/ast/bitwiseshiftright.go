@@ -47,6 +47,10 @@ func (b BitwiseRightShift) String() string {
 }
 
 func (b BitwiseRightShift) Compile(c *compiler.Compiler) (position int, err error) {
+	if b.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+	}
+
 	if position, err = b.l.Compile(c); err != nil {
 		return
 	}
@@ -54,4 +58,8 @@ func (b BitwiseRightShift) Compile(c *compiler.Compiler) (position int, err erro
 		return
 	}
 	return c.Emit(code.OpBwRShift), nil
+}
+
+func (b BitwiseRightShift) IsConstExpression() bool {
+	return b.l.IsConstExpression() && b.r.IsConstExpression()
 }

@@ -73,8 +73,6 @@ var (
 	BreakObj    = NewBreak()
 )
 
-var BaseDir string
-
 func ParseBool(b bool) Object {
 	if b {
 		return True
@@ -105,7 +103,7 @@ func ImportLookup(taupath string) (string, error) {
 		file += ".tau"
 	}
 
-	path := filepath.Join(BaseDir, dir, file)
+	path := filepath.Join(dir, file)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		path = filepath.Join("/lib", "tau", dir, file)
 		if _, err := os.Stat(path); os.IsNotExist(err) {

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -38,6 +39,7 @@ type VM struct {
 	sp         int
 	frames     []*Frame
 	frameIndex int
+	dir        string
 	*State
 }
 
@@ -133,6 +135,10 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 	return vm
 }
 
+func (vm *VM) SetDir(dir string) {
+	vm.dir = dir
+}
+
 func (vm *VM) currentFrame() *Frame {
 	return vm.frames[vm.frameIndex-1]
 }
@@ -162,7 +168,7 @@ func (vm VM) execLoadModule() error {
 		return fmt.Errorf("import: expected string, got %v", taupath.Type())
 	}
 
-	path, err := obj.ImportLookup(string(*pathObj))
+	path, err := obj.ImportLookup(filepath.Join(vm.dir, string(*pathObj)))
 	if err != nil {
 		return fmt.Errorf("import: %w", err)
 	}
@@ -184,6 +190,7 @@ func (vm VM) execLoadModule() error {
 	}
 
 	tvm := NewWithState(c.Bytecode(), vm.State)
+	tvm.dir, _ = filepath.Split(path)
 	if err := tvm.Run(); err != nil {
 		return err
 	}

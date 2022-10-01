@@ -12,14 +12,29 @@ type Moduler interface {
 type Env struct {
 	Outer *Env
 	Store map[string]Object
+	dir   string
 }
 
 func NewEnv() *Env {
-	return &Env{nil, make(map[string]Object)}
+	return &Env{
+		Outer: nil,
+		Store: make(map[string]Object),
+	}
 }
 
 func NewEnvWrap(e *Env) *Env {
-	return &Env{e, make(map[string]Object)}
+	return &Env{
+		Outer: e,
+		Store: make(map[string]Object),
+	}
+}
+
+func (e *Env) Dir() string {
+	return e.dir
+}
+
+func (e *Env) SetDir(dir string) {
+	e.dir = dir
 }
 
 func (e *Env) Get(n string) (Object, bool) {

@@ -3,6 +3,7 @@ package ast
 import (
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/NicoNex/tau/internal/code"
@@ -34,7 +35,7 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("import: expected string but got %v", name.Type())
 	}
 
-	path, err := obj.ImportLookup(string(*n))
+	path, err := obj.ImportLookup(filepath.Join(env.Dir(), string(*n)))
 	if err != nil {
 		return obj.NewError("import: %v", err)
 	}
@@ -54,6 +55,8 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 	}
 
 	modEnv := obj.NewEnv()
+	dir, _ := filepath.Split(path)
+	modEnv.SetDir(dir)
 	tree.Eval(modEnv)
 	return modEnv.Module()
 }

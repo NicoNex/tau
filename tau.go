@@ -117,7 +117,6 @@ func compile(path string) (*compiler.Bytecode, error) {
 func ExecFileVM(f string) (err error) {
 	var bytecode *compiler.Bytecode
 
-	obj.BaseDir, _ = filepath.Split(f)
 	if filepath.Ext(f) == ".tauc" {
 		bytecode, err = precompiledBytecode(f)
 	} else {
@@ -130,6 +129,8 @@ func ExecFileVM(f string) (err error) {
 	}
 
 	tvm := vm.New(bytecode)
+	dir, _ := filepath.Split(f)
+	tvm.SetDir(dir)
 	if err = tvm.Run(); err != nil {
 		fmt.Println(err)
 		return
@@ -141,7 +142,8 @@ func ExecFileVM(f string) (err error) {
 func ExecFileEval(f string) error {
 	var env = obj.NewEnv()
 
-	obj.BaseDir, _ = filepath.Split(f)
+	dir, _ := filepath.Split(f)
+	env.SetDir(dir)
 	b := readFile(f)
 	res, errs := parser.Parse(string(b))
 	if len(errs) != 0 {

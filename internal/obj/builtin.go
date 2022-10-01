@@ -417,6 +417,42 @@ var Builtins = []struct {
 			return NewString(fmt.Sprintf("0b%b", i.Val()))
 		},
 	},
+	{
+		"slice",
+		func(args ...Object) Object {
+			if l := len(args); l != 3 {
+				return NewError("slice: wrong number of arguments, expected 3, got %d", l)
+			}
+
+			list, ok := args[0].(List)
+			if !ok {
+				return NewError("slice: first argument must be a list, got %s instead", args[0].Type())
+			}
+
+			start, ok := args[1].(*Integer)
+			if !ok {
+				return NewError("slice: second argument must be an int, got %s instead", args[1].Type())
+			}
+
+			end, ok := args[2].(*Integer)
+			if !ok {
+				return NewError("slice: third argument must be an int, got %s instead", args[2].Type())
+			}
+
+			s := int(*start)
+			e := int(*end)
+
+			if s < 0 {
+				return NewError("slice: invalid argument: index %d must not be negative", s)
+			} else if e < 0 {
+				NewError("slice: invalid argument: index %d must not be negative", e)
+			} else if e > len(list) {
+				NewError("slice: list bounds out of range %d with capacity %d", e, len(list))
+			}
+
+			return list[s:e]
+		},
+	},
 }
 
 func listify(start, stop, step int) List {

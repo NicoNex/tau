@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type Object interface {
@@ -74,6 +73,8 @@ var (
 	BreakObj    = NewBreak()
 )
 
+var BaseDir string
+
 func ParseBool(b bool) Object {
 	if b {
 		return True
@@ -94,20 +95,19 @@ var (
 )
 
 func ImportLookup(taupath string) (string, error) {
-	pslice := strings.Split(taupath, "/")
-	file := pslice[len(pslice)-1]
+	dir, file := filepath.Split(taupath)
 
 	if file == "" {
 		return "", ErrNoFileProvided
 	}
 
 	if filepath.Ext(file) == "" {
-		pslice[len(pslice)-1] += ".tau"
+		file += ".tau"
 	}
 
-	path := filepath.Join(pslice...)
+	path := filepath.Join(BaseDir, dir, file)
 	if _, err := os.Stat(path); os.IsNotExist(err) {
-		path = filepath.Join("/lib", "tau", path)
+		path = filepath.Join("/lib", "tau", dir, file)
 		if _, err := os.Stat(path); os.IsNotExist(err) {
 			return "", fmt.Errorf("%s: %w", path, err)
 		}

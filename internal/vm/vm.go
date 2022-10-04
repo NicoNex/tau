@@ -40,6 +40,7 @@ type VM struct {
 	frames     []*Frame
 	frameIndex int
 	dir        string
+	localTable []bool // Keeps track of the locally defined globals.
 	*State
 }
 
@@ -113,6 +114,7 @@ func New(bytecode *compiler.Bytecode) *VM {
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
+		localTable: make([]bool, GlobalSize),
 		State:      NewState(),
 	}
 
@@ -127,6 +129,7 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
+		localTable: make([]bool, GlobalSize),
 		State:      state,
 	}
 
@@ -137,6 +140,10 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 
 func (vm *VM) SetDir(dir string) {
 	vm.dir = dir
+}
+
+func (vm *VM) isLocal(i int) bool {
+	return vm.localTable[i]
 }
 
 func (vm *VM) currentFrame() *Frame {
@@ -158,10 +165,7 @@ func (vm *VM) LastPoppedStackElem() obj.Object {
 }
 
 func (vm VM) execLoadModule() error {
-	var (
-		taupath = vm.pop()
-		defs    = vm.Symbols.NumDefs
-	)
+	var taupath = vm.pop()
 
 	pathObj, ok := taupath.(*obj.String)
 	if !ok {
@@ -197,7 +201,7 @@ func (vm VM) execLoadModule() error {
 
 	mod := obj.NewModule()
 	for name, symbol := range vm.Symbols.Store {
-		if symbol.Scope == compiler.GlobalScope && symbol.Index >= defs {
+		if symbol.Scope == compiler.GlobalScope && tvm.isLocal(symbol.Index) {
 			o := vm.Globals[symbol.Index]
 			if m, ok := o.(obj.Moduler); ok {
 				o = m.Module()
@@ -497,7 +501,7 @@ func (vm *VM) execEqual() error {
 		return vm.push(obj.ParseBool(l == r))
 
 	default:
-		return fmt.Errorf("unsupported operator '==' for types %v and %v", left.Type(), right.Type())
+		return vm.push(False)
 	}
 }
 
@@ -528,7 +532,7 @@ func (vm *VM) execNotEqual() error {
 		return vm.push(obj.ParseBool(l != r))
 
 	default:
-		return fmt.Errorf("unsupported operator '!=' for types %v and %v", left.Type(), right.Type())
+		return vm.push(True)
 	}
 }
 
@@ -883,6 +887,7 @@ func (vm *VM) Run() (err error) {
 		case code.OpSetGlobal:
 			globalIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
+			vm.localTable[globalIndex] = true
 			vm.Globals[globalIndex] = vm.peek()
 
 		case code.OpGetGlobal:

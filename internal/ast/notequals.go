@@ -58,10 +58,7 @@ func (n NotEquals) Eval(env *obj.Env) obj.Object {
 		return obj.ParseBool(l != r)
 
 	default:
-		return obj.NewError(
-			"invalid operation %v != %v (wrong types %v and %v)",
-			left, right, left.Type(), right.Type(),
-		)
+		return obj.True
 	}
 }
 

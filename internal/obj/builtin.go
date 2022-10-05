@@ -424,33 +424,38 @@ var Builtins = []struct {
 				return NewError("slice: wrong number of arguments, expected 3, got %d", l)
 			}
 
-			list, ok := Unwrap(args[0]).(List)
-			if !ok {
-				return NewError("slice: first argument must be a list, got %s instead", Unwrap(args[0]).Type())
-			}
-
-			start, ok := Unwrap(args[1]).(*Integer)
+			s, ok := Unwrap(args[1]).(*Integer)
 			if !ok {
 				return NewError("slice: second argument must be an int, got %s instead", Unwrap(args[1]).Type())
 			}
 
-			end, ok := Unwrap(args[2]).(*Integer)
+			e, ok := Unwrap(args[2]).(*Integer)
 			if !ok {
 				return NewError("slice: third argument must be an int, got %s instead", Unwrap(args[2]).Type())
 			}
 
-			s := int(*start)
-			e := int(*end)
+			var start, end = int(*s), int(*e)
 
-			if s < 0 {
-				return NewError("slice: invalid argument: index %d must not be negative", s)
-			} else if e < 0 {
-				NewError("slice: invalid argument: index %d must not be negative", e)
-			} else if e > len(list) {
-				NewError("slice: list bounds out of range %d with capacity %d", e, len(list))
+			switch slice := Unwrap(args[0]).(type) {
+			case List:
+				if start < 0 || end < 0 {
+					return NewError("slice: invalid argument: index arguments must not be negative")
+				} else if end > len(slice) {
+					return NewError("slice: list bounds out of range %d with capacity %d", end, len(slice))
+				}
+				return slice[start:end]
+
+			case *String:
+				if start < 0 || end < 0 {
+					return NewError("slice: invalid argument: index arguments must not be negative")
+				} else if end > len(*slice) {
+					return NewError("slice: string bounds out of range %d with capacity %d", end, len(*slice))
+				}
+				return NewString(string(*slice)[start:end])
+
+			default:
+				return NewError("slice: first argument must be a list or string, got %s instead", args[0].Type())
 			}
-
-			return list[s:e]
 		},
 	},
 }

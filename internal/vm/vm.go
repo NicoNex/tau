@@ -40,7 +40,8 @@ type VM struct {
 	frames     []*Frame
 	frameIndex int
 	dir        string
-	localTable []bool // Keeps track of the locally defined globals.
+	// Keeps track of the locally defined globals.
+	localTable []bool
 	*State
 }
 
@@ -268,7 +269,7 @@ func (vm *VM) execDot() error {
 
 func (vm *VM) execDefine() error {
 	var (
-		right = vm.pop()
+		right = obj.Unwrap(vm.pop())
 		left  = vm.pop()
 	)
 

@@ -82,3 +82,7 @@ func (t TimesAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{t.l, Times{t.l, t.r}}
 	return n.Compile(c)
 }
+
+func (t TimesAssign) IsConstExpression() bool {
+	return false
+}

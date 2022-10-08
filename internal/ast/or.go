@@ -38,6 +38,10 @@ func (o Or) String() string {
 }
 
 func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
+	if o.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(o.Eval(nil))), nil
+	}
+
 	if position, err = o.l.Compile(c); err != nil {
 		return
 	}
@@ -45,4 +49,8 @@ func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 	return c.Emit(code.OpOr), nil
+}
+
+func (o Or) IsConstExpression() bool {
+	return o.l.IsConstExpression() && o.r.IsConstExpression()
 }

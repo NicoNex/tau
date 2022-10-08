@@ -58,10 +58,7 @@ func (e Equals) Eval(env *obj.Env) obj.Object {
 		return obj.ParseBool(l == r)
 
 	default:
-		return obj.NewError(
-			"invalid operation %v == %v (wrong types %v and %v)",
-			left, right, left.Type(), right.Type(),
-		)
+		return obj.False
 	}
 }
 
@@ -70,6 +67,10 @@ func (e Equals) String() string {
 }
 
 func (e Equals) Compile(c *compiler.Compiler) (position int, err error) {
+	if e.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(e.Eval(nil))), nil
+	}
+
 	if position, err = e.l.Compile(c); err != nil {
 		return
 	}
@@ -77,4 +78,8 @@ func (e Equals) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 	return c.Emit(code.OpEqual), nil
+}
+
+func (e Equals) IsConstExpression() bool {
+	return e.l.IsConstExpression() && e.r.IsConstExpression()
 }

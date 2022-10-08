@@ -23,3 +23,7 @@ func (n Null) String() string {
 func (n Null) Compile(c *compiler.Compiler) (position int, err error) {
 	return c.Emit(code.OpConstant, c.AddConstant(obj.NullObj)), nil
 }
+
+func (n Null) IsConstExpression() bool {
+	return true
+}

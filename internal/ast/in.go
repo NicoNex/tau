@@ -96,3 +96,7 @@ func (i In) Compile(c *compiler.Compiler) (position int, err error) {
 	}
 	return c.Emit(code.OpIn), nil
 }
+
+func (i In) IsConstExpression() bool {
+	return false
+}

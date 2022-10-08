@@ -93,3 +93,7 @@ func (p PlusAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{p.l, Plus{p.l, p.r}}
 	return n.Compile(c)
 }
+
+func (p PlusAssign) IsConstExpression() bool {
+	return false
+}

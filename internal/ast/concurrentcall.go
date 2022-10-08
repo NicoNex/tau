@@ -84,3 +84,7 @@ func (c ConcurrentCall) Compile(comp *compiler.Compiler) (position int, err erro
 
 	return comp.Emit(code.OpConcurrentCall, len(c.args)), nil
 }
+
+func (ConcurrentCall) IsConstExpression() bool {
+	return false
+}

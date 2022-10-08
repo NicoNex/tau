@@ -9,6 +9,7 @@ import (
 
 type Compilable interface {
 	Compile(c *Compiler) (int, error)
+	IsConstExpression() bool
 }
 
 type EmittedInst struct {

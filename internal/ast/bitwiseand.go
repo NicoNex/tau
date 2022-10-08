@@ -47,6 +47,10 @@ func (b BitwiseAnd) String() string {
 }
 
 func (b BitwiseAnd) Compile(c *compiler.Compiler) (position int, err error) {
+	if b.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+	}
+
 	if position, err = b.l.Compile(c); err != nil {
 		return
 	}
@@ -54,4 +58,8 @@ func (b BitwiseAnd) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 	return c.Emit(code.OpBwAnd), nil
+}
+
+func (b BitwiseAnd) IsConstExpression() bool {
+	return b.l.IsConstExpression() && b.r.IsConstExpression()
 }

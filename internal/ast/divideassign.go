@@ -62,3 +62,7 @@ func (d DivideAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{d.l, Divide{d.l, d.r}}
 	return n.Compile(c)
 }
+
+func (d DivideAssign) IsConstExpression() bool {
+	return false
+}

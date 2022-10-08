@@ -51,3 +51,7 @@ func (b Block) Compile(c *compiler.Compiler) (position int, err error) {
 	}
 	return
 }
+
+func (b Block) IsConstExpression() bool {
+	return false
+}

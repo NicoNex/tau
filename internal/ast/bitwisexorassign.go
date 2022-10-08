@@ -60,3 +60,7 @@ func (b BitwiseXorAssign) Compile(c *compiler.Compiler) (position int, err error
 	n := Assign{b.l, BitwiseXor{b.l, b.r}}
 	return n.Compile(c)
 }
+
+func (b BitwiseXorAssign) IsConstExpression() bool {
+	return false
+}

@@ -60,3 +60,7 @@ func (b BitwiseShiftLeftAssign) Compile(c *compiler.Compiler) (position int, err
 	n := Assign{b.l, BitwiseLeftShift{b.l, b.r}}
 	return n.Compile(c)
 }
+
+func (b BitwiseShiftLeftAssign) IsConstExpression() bool {
+	return false
+}

@@ -55,3 +55,7 @@ func (l List) Compile(c *compiler.Compiler) (position int, err error) {
 	position = c.Emit(code.OpList, len(l))
 	return
 }
+
+func (l List) IsConstExpression() bool {
+	return false
+}

@@ -153,8 +153,8 @@ func TestVMIntegerArithmetic(t *testing.T) {
 		{"1 + 2", 3},
 		{"1 - 2", -1},
 		{"1 * 2", 2},
-		{"4 / 2", 2},
-		{"50 / 2 * 2 + 10 - 5", 55},
+		{"4 / 2", 2.0},
+		{"50 / 2 * 2 + 10 - 5", 55.0},
 		{"5 * (2 + 10)", 60},
 		{"5 + 5 + 5 + 5 - 10", 10},
 		{"2 * 2 * 2 * 2 * 2", 32},
@@ -164,7 +164,7 @@ func TestVMIntegerArithmetic(t *testing.T) {
 		{"-5", -5},
 		{"-10", -10},
 		{"-50 + 100 + -50", 0},
-		{"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50},
+		{"(5 + 10 * 2 + 15 / 3) * 2 + -10", 50.0},
 	}
 
 	runVmTests(t, tests)
@@ -254,6 +254,17 @@ func TestVMStringExpressions(t *testing.T) {
 		{`"tau"`, "tau"},
 		{`"tau" + "rocks"`, "taurocks"},
 		{`"t" + "a" + "u"`, "tau"},
+	}
+
+	runVmTests(t, tests)
+}
+
+func TestVMStringInterpolation(t *testing.T) {
+	tests := []vmTestCase{
+		{`a = 1; "{if a > 0 { \"test1\" } else { \"test0\" }}"`, "test1"},
+		{`"{\"}}\"}"`, "}"},
+		{`"{ \"{{\" }"`, "{"},
+		{`"{ {\"test\": \"it works\"}[\"test\"] }"`, "it works"},
 	}
 
 	runVmTests(t, tests)

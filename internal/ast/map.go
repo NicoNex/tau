@@ -98,3 +98,7 @@ func (m Map) Compile(c *compiler.Compiler) (position int, err error) {
 
 	return c.Emit(code.OpMap, len(m)*2), nil
 }
+
+func (m Map) IsConstExpression() bool {
+	return false
+}

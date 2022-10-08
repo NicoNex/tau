@@ -191,6 +191,14 @@ println(myString)
 ```
 >>> The temperature is hot
 ```
+For raw strings use the backtick instead of double quotes.
+```python
+s = `this is a raw string\n {}`
+println(s)
+```
+```
+>>> this is a raw string\n {}
+```
 
 #### Boolean
 ```js

@@ -67,3 +67,7 @@ func (m ModAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{m.l, Mod{m.l, m.r}}
 	return n.Compile(c)
 }
+
+func (m ModAssign) IsConstExpression() bool {
+	return false
+}

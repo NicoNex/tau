@@ -59,51 +59,41 @@ func TestCompilerIntegerArithmetic(t *testing.T) {
 	tests := []compilerTestCase{
 		{
 			input:             "1 + 2",
-			expectedConstants: []any{1, 2},
+			expectedConstants: []any{3},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpAdd),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "1 - 2",
-			expectedConstants: []any{1, 2},
+			expectedConstants: []any{-1},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpSub),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "2 * 2",
-			expectedConstants: []any{2, 2},
+			expectedConstants: []any{4},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpMul),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "4 / 2",
-			expectedConstants: []any{4, 2},
+			expectedConstants: []any{2.0},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpDiv),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "4 % 2",
-			expectedConstants: []any{4, 2},
+			expectedConstants: []any{0},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpMod),
 				code.Make(code.OpPop),
 			},
 		},
@@ -119,10 +109,9 @@ func TestCompilerIntegerArithmetic(t *testing.T) {
 		},
 		{
 			input:             "-1",
-			expectedConstants: []any{1},
+			expectedConstants: []any{-1},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpMinus),
 				code.Make(code.OpPop)},
 		},
 	}
@@ -144,50 +133,41 @@ func TestCompilerFloatArithmetic(t *testing.T) {
 		},
 		{
 			input:             "1.5 + 2.5",
-			expectedConstants: []any{1.5, 2.5},
+			expectedConstants: []any{4.0},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpAdd),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "1.5 - 2",
-			expectedConstants: []any{1.5, 2},
+			expectedConstants: []any{-0.5},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpSub),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "1.5 * 2",
-			expectedConstants: []any{1.5, 2},
+			expectedConstants: []any{3.0},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpMul),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "2.8 / 2",
-			expectedConstants: []any{2.8, 2},
+			expectedConstants: []any{1.4},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpDiv),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "-1.37",
-			expectedConstants: []any{1.37},
+			expectedConstants: []any{-1.37},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpMinus),
 				code.Make(code.OpPop)},
 		},
 	}
@@ -300,113 +280,91 @@ func TestCompilerBooleanExpressions(t *testing.T) {
 
 func TestBooleanExpressions(t *testing.T) {
 	tests := []compilerTestCase{
-		// [...]
 		{
 			input:             "1 > 2",
-			expectedConstants: []any{1, 2},
+			expectedConstants: []any{false},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpGreaterThan),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "1 < 2",
-			expectedConstants: []any{2, 1},
+			expectedConstants: []any{true},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpGreaterThan),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "1 >= 2",
-			expectedConstants: []any{1, 2},
+			expectedConstants: []any{false},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpGreaterThanEqual),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "1 <= 2",
-			expectedConstants: []any{2, 1},
+			expectedConstants: []any{true},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpGreaterThanEqual),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "1 == 2",
-			expectedConstants: []any{1, 2},
+			expectedConstants: []any{false},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpEqual),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "1 != 2",
-			expectedConstants: []any{1, 2},
+			expectedConstants: []any{true},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpNotEqual),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "true == false",
-			expectedConstants: []any{},
+			expectedConstants: []any{false},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpTrue),
-				code.Make(code.OpFalse),
-				code.Make(code.OpEqual),
+				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "true != false",
-			expectedConstants: []any{},
+			expectedConstants: []any{true},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpTrue),
-				code.Make(code.OpFalse),
-				code.Make(code.OpNotEqual),
+				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "true && false",
-			expectedConstants: []any{},
+			expectedConstants: []any{false},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpTrue),
-				code.Make(code.OpFalse),
-				code.Make(code.OpAnd),
+				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "true || false",
-			expectedConstants: []any{},
+			expectedConstants: []any{true},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpTrue),
-				code.Make(code.OpFalse),
-				code.Make(code.OpOr),
+				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "!true",
-			expectedConstants: []any{},
+			expectedConstants: []any{false},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpTrue),
-				code.Make(code.OpBang),
+				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
 			},
 		},
@@ -505,11 +463,9 @@ func TestGlobalAssignments(t *testing.T) {
 		},
 		{
 			input:             `three = 1 + 2`,
-			expectedConstants: []any{1, 2},
+			expectedConstants: []any{3},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpAdd),
 				code.Make(code.OpSetGlobal, 0),
 				code.Make(code.OpPop),
 			},
@@ -559,11 +515,9 @@ func TestCompilerStringExpressions(t *testing.T) {
 		},
 		{
 			input:             `"tau" + "rocks"`,
-			expectedConstants: []any{"tau", "rocks"},
+			expectedConstants: []any{"taurocks"},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpConstant, 1),
-				code.Make(code.OpAdd),
 				code.Make(code.OpPop),
 			},
 		},
@@ -594,17 +548,11 @@ func TestCompilerListLiterals(t *testing.T) {
 		},
 		{
 			input:             "[1 + 2, 3 - 4, 5 * 6]",
-			expectedConstants: []any{1, 2, 3, 4, 5, 6},
+			expectedConstants: []any{3, -1, 30},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpConstant, 1),
-				code.Make(code.OpAdd),
 				code.Make(code.OpConstant, 2),
-				code.Make(code.OpConstant, 3),
-				code.Make(code.OpSub),
-				code.Make(code.OpConstant, 4),
-				code.Make(code.OpConstant, 5),
-				code.Make(code.OpMul),
 				code.Make(code.OpList, 3),
 				code.Make(code.OpPop),
 			},
@@ -640,16 +588,12 @@ func TestCompilerMapLiterals(t *testing.T) {
 		},
 		{
 			input:             "{1: 2 + 3, 4: 5 * 6}",
-			expectedConstants: []any{1, 2, 3, 4, 5, 6},
+			expectedConstants: []any{1, 5, 4, 30},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpConstant, 1),
 				code.Make(code.OpConstant, 2),
-				code.Make(code.OpAdd),
 				code.Make(code.OpConstant, 3),
-				code.Make(code.OpConstant, 4),
-				code.Make(code.OpConstant, 5),
-				code.Make(code.OpMul),
 				code.Make(code.OpMap, 4),
 				code.Make(code.OpPop),
 			},
@@ -663,29 +607,25 @@ func TestCompilerIndexExpressions(t *testing.T) {
 	tests := []compilerTestCase{
 		{
 			input:             "[1, 2, 3][1 + 1]",
-			expectedConstants: []any{1, 2, 3, 1, 1},
+			expectedConstants: []any{1, 2, 3, 2},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpConstant, 1),
 				code.Make(code.OpConstant, 2),
 				code.Make(code.OpList, 3),
 				code.Make(code.OpConstant, 3),
-				code.Make(code.OpConstant, 4),
-				code.Make(code.OpAdd),
 				code.Make(code.OpIndex),
 				code.Make(code.OpPop),
 			},
 		},
 		{
 			input:             "{1: 2}[2 - 1]",
-			expectedConstants: []any{1, 2, 2, 1},
+			expectedConstants: []any{1, 2, 1},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpConstant, 1),
 				code.Make(code.OpMap, 2),
 				code.Make(code.OpConstant, 2),
-				code.Make(code.OpConstant, 3),
-				code.Make(code.OpSub),
 				code.Make(code.OpIndex),
 				code.Make(code.OpPop),
 			},
@@ -725,17 +665,14 @@ func TestCompilerFunctions(t *testing.T) {
 		{
 			input: `fn() { return 5 + 10 }`,
 			expectedConstants: []any{
-				5,
-				10,
+				15,
 				[]code.Instructions{
 					code.Make(code.OpConstant, 0),
-					code.Make(code.OpConstant, 1),
-					code.Make(code.OpAdd),
 					code.Make(code.OpReturnValue),
 				},
 			},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpClosure, 2, 0),
+				code.Make(code.OpClosure, 1, 0),
 				code.Make(code.OpPop),
 			},
 		},

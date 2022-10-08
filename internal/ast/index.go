@@ -99,3 +99,7 @@ func (i Index) Compile(c *compiler.Compiler) (position int, err error) {
 	}
 	return c.Emit(code.OpIndex), nil
 }
+
+func (i Index) IsConstExpression() bool {
+	return false
+}

@@ -64,9 +64,11 @@ func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 		c.RemoveLast()
 	}
 
-	c.Emit(code.OpConstant, c.AddConstant(obj.NewInteger(int64(len(s.substr)))))
-	c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s)))
-	return c.Emit(code.OpInterpolate), nil
+	return c.Emit(code.OpInterpolate, c.AddConstant(obj.NewString(s.s)), len(s.substr)), nil
+}
+
+func (s String) IsConstExpression() bool {
+	return len(s.substr) == 0
 }
 
 func escape(s string) (string, error) {
@@ -103,34 +105,24 @@ func escapeRune(r rune) (rune, error) {
 	switch r {
 	case 'a':
 		return '\a', nil
-
 	case 'b':
 		return '\b', nil
-
 	case 'f':
 		return '\f', nil
-
 	case 'n':
 		return '\n', nil
-
 	case 'r':
 		return '\r', nil
-
 	case 't':
 		return '\t', nil
-
 	case 'v':
 		return '\v', nil
-
 	case '\\':
 		return '\\', nil
-
 	case '\'':
 		return '\'', nil
-
 	case '"':
 		return '"', nil
-
 	default:
 		return r, fmt.Errorf(`unknown escape "\%c"`, r)
 	}
@@ -146,12 +138,16 @@ func toAnySlice(args []obj.Object) []any {
 
 const eof = -1
 
+var errBadInterpolationSyntax = errors.New("bad interpolation syntax")
+
 type interpolator struct {
-	s       string
-	pos     int
-	width   int
-	nblocks int
-	parse   parseFn
+	s          string
+	pos        int
+	width      int
+	nblocks    int
+	inQuotes   bool
+	inBacktick bool
+	parse      parseFn
 	strings.Builder
 }
 
@@ -192,6 +188,18 @@ func (i *interpolator) insideBlock() bool {
 	return i.nblocks > 0
 }
 
+func (i *interpolator) quotes() {
+	i.inQuotes = !i.inQuotes
+}
+
+func (i *interpolator) backtick() {
+	i.inBacktick = !i.inBacktick
+}
+
+func (i *interpolator) insideString() bool {
+	return i.inQuotes || i.inBacktick
+}
+
 func (i *interpolator) acceptUntil(start, end rune) (string, error) {
 	var buf strings.Builder
 
@@ -199,27 +207,29 @@ loop:
 	for r := i.next(); ; r = i.next() {
 		switch r {
 		case eof:
-			return "", errors.New("bad interpolation syntax")
+			return "", errBadInterpolationSyntax
+
+		case '"':
+			i.quotes()
+
+		case '`':
+			i.backtick()
 
 		case start:
-			i.enterBlock()
-			buf.WriteRune(r)
+			if !i.insideString() {
+				i.enterBlock()
+			}
 
 		case end:
-			if !i.insideBlock() {
-				if p := i.peek(); p == end {
-					buf.WriteRune(end)
-					i.next()
-					continue loop
+			if !i.insideString() {
+				if !i.insideBlock() {
+					break loop
 				}
-				break loop
+				i.exitBlock()
 			}
-			i.exitBlock()
-			fallthrough
-
-		default:
-			buf.WriteRune(r)
 		}
+
+		buf.WriteRune(r)
 	}
 
 	return buf.String(), nil
@@ -230,12 +240,12 @@ func (i *interpolator) nodes() ([]Node, string, error) {
 
 	for r := i.next(); r != eof; r = i.next() {
 		if r == '{' {
-			if r := i.peek(); r == '{' {
+			if i.peek() == '{' {
 				i.next()
 				goto tail
 			}
 
-			// get the code between braces
+			// Get the code between braces
 			s, err := i.acceptUntil('{', '}')
 			if err != nil {
 				return []Node{}, "", err
@@ -243,7 +253,7 @@ func (i *interpolator) nodes() ([]Node, string, error) {
 				continue
 			}
 
-			// parse the code
+			// Parse the code
 			tree, errs := i.parse(s)
 			if len(errs) > 0 {
 				return []Node{}, "", i.parserError(errs)
@@ -252,7 +262,10 @@ func (i *interpolator) nodes() ([]Node, string, error) {
 			nodes = append(nodes, tree)
 			i.WriteString("%v")
 			continue
-		} else if p := i.peek(); r == '}' && p == '}' {
+		} else if r == '}' {
+			if i.peek() != '}' {
+				return []Node{}, "", errBadInterpolationSyntax
+			}
 			i.next()
 		}
 

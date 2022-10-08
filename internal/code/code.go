@@ -126,7 +126,7 @@ var definitions = map[Opcode]*Definition{
 	OpGetBuiltin:  {"OpGetBuiltin", []int{1}},
 	OpGetFree:     {"OpGetFree", []int{1}},
 	OpLoadModule:  {"OpLoadModule", []int{}},
-	OpInterpolate: {"OpInterpolate", []int{}},
+	OpInterpolate: {"OpInterpolate", []int{2, 2}},
 
 	OpPop: {"OpPop", []int{}},
 }

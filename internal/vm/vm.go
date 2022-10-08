@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 
@@ -110,6 +111,16 @@ func parserError(prefix string, errs []string) error {
 	return errors.New(buf.String())
 }
 
+func wait(fns ...func()) {
+	var wg sync.WaitGroup
+
+	wg.Add(len(fns))
+	for _, fn := range fns {
+		go func(fn func()) { fn(); wg.Done() }(fn)
+	}
+	wg.Wait()
+}
+
 func New(bytecode *compiler.Bytecode) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
@@ -143,13 +154,43 @@ func (vm *VM) clone() *VM {
 	var tvm = &VM{
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
+		frameIndex: vm.frameIndex,
 		localTable: make([]bool, GlobalSize),
 		State: &State{
 			Consts:  make([]obj.Object, len(vm.Consts)),
 			Globals: make([]obj.Object, GlobalSize),
-			Symbols: compiler.NewSymbolTable(),
+			Symbols: vm.Symbols,
 		},
 	}
+
+	wait(
+		func() {
+			for i := range tvm.stack {
+				tvm.stack[i] = vm.stack[i]
+			}
+		},
+		func() {
+			for i := range tvm.frames {
+				tvm.frames[i] = vm.frames[i]
+			}
+		},
+		func() {
+			for i := range tvm.localTable {
+				tvm.localTable[i] = vm.localTable[i]
+			}
+		},
+		func() {
+			for i := range tvm.Consts {
+				tvm.Consts[i] = vm.Consts[i]
+			}
+		},
+		func() {
+			for i := range tvm.Globals {
+				tvm.Globals[i] = vm.Globals[i]
+			}
+		},
+	)
+
 	return tvm
 }
 
@@ -799,7 +840,7 @@ func (vm *VM) execCall(numArgs int) error {
 
 func (vm *VM) execConcurrentCall(numArgs int) error {
 	tvm := vm.clone()
-	go tvm.call(vm.stack[vm.sp-1-numArgs], numArgs)
+	go tvm.call(tvm.stack[tvm.sp-1-numArgs], numArgs)
 	return nil
 }
 

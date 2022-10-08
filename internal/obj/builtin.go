@@ -394,6 +394,8 @@ var Builtins = []struct {
 	{
 		"send",
 		func(args ...Object) (o Object) {
+			defer println("dio cane")
+
 			if l := len(args); l != 2 {
 				return NewError("send: wrong number of arguments, expected 2, got %d", l)
 			}

@@ -11,6 +11,7 @@ Beginning = 9
 End = 10
 Literal = 11
 Group = 12
+Number = 13
 
 typemap = {
 	LeftParen:    "LeftParen",
@@ -25,7 +26,8 @@ typemap = {
 	Beginning:    "Beginning",
 	End:          "End",
 	Literal:      "Literal",
-	Group:        "Group"
+	Group:        "Group",
+	Number:       "Number"
 }
 
 New = fn(type, lit) {

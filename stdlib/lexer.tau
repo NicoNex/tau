@@ -15,6 +15,8 @@ isAlphaNumeric = fn(c) {
 	contains(`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_,;:'`, c)
 }
 
+isNumber = fn(c) { contains("0123456789", c) }
+
 New = fn(input) {
 	l = new()
 	l.input = input
@@ -92,6 +94,28 @@ New = fn(input) {
 		return error("invalid escape sequence")
 	}
 
+	l.lexNumber = fn() {
+		l.acceptRun("0123456789")
+		l.emit(item.Number)
+
+		c = l.next()
+		if c == "," {
+			l.emit(item.Comma)
+			if l.peek() == " " {
+				l.next()
+				l.ignore()
+				return l.lexNumber
+			}
+			return l.lexNumber
+		} else if c == `}` {
+			l.emit(item.RightBrace)
+			return l.lexExpression
+		}
+
+		l.backup()
+		return l.lexExpression
+	}
+
 	l.lexExpression = fn() {
 		c = l.next()
 
@@ -111,6 +135,9 @@ New = fn(input) {
 		} else if c == `{` {
 			# TODO: add cases like '{3}', '{3, 5}'.
 			l.emit(item.LeftBrace)
+			if isNumber(l.peek()) {
+				return l.lexNumber
+			}
 		} else if c == `}` {
 			l.emit(item.RightBrace)
 		} else if c == `\` {

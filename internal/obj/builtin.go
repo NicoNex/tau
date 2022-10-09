@@ -394,8 +394,6 @@ var Builtins = []struct {
 	{
 		"send",
 		func(args ...Object) (o Object) {
-			defer println("dio cane")
-
 			if l := len(args); l != 2 {
 				return NewError("send: wrong number of arguments, expected 2, got %d", l)
 			}
@@ -404,12 +402,6 @@ var Builtins = []struct {
 			if !ok {
 				return NewError("send: first argument must be a pipe, got %s instead", args[0].Type())
 			}
-
-			defer func() {
-				if err := recover(); err != nil {
-					o = NewError(err.(error).Error())
-				}
-			}()
 
 			p <- args[1]
 			return args[1]
@@ -426,12 +418,6 @@ var Builtins = []struct {
 			if !ok {
 				return NewError("recv: first argument must be a pipe, got %s instead", args[0].Type())
 			}
-
-			defer func() {
-				if err := recover(); err != nil {
-					o = NewError(err.(error).Error())
-				}
-			}()
 
 			return <-p
 		},

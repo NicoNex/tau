@@ -153,6 +153,8 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 func (vm *VM) clone() *VM {
 	var tvm = &VM{
 		stack:      make([]obj.Object, StackSize),
+		sp:         vm.sp,
+		dir:        vm.dir,
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: vm.frameIndex,
 		localTable: make([]bool, GlobalSize),

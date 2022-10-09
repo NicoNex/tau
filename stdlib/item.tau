@@ -1,0 +1,40 @@
+LeftParen = 0
+RightParen = 1
+LeftBracket = 2
+RightBracket = 3
+LeftBrace = 4
+RightBrace = 5
+Plus = 6
+Asterisk = 7
+Comma = 8
+Beginning = 9
+End = 10
+Literal = 11
+Group = 12
+
+typemap = {
+	LeftParen:    "LeftParen",
+	RightParen:   "RightParen",
+	LeftBracket:  "LeftBracket",
+	RightBracket: "RightBracket",
+	LeftBrace:    "LeftBrace",
+	RightBrace:   "RightBrace",
+	Plus:         "Plus",
+	Asterisk:     "Asterisk",
+	Comma:        "Comma",
+	Beginning:    "Beginning",
+	End:          "End",
+	Literal:      "Literal",
+	Group:        "Group"
+}
+
+New = fn(type, lit) {
+	i = new()
+	i.type = type
+	i.lit = lit
+
+	i.String = fn() { "type: {typemap[i.type]}, literal: '{i.lit}'" }
+
+	return i
+}
+

@@ -1,0 +1,137 @@
+item = import("item")
+
+eof = -1
+
+contains = fn(elems, c) {
+	for i = 0; i < len(elems); ++i {
+		if c == elems[i] {
+			return true
+		}
+	}
+	return false
+}
+
+isAlphaNumeric = fn(c) {
+	contains(`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_,;:'`, c)
+}
+
+New = fn(input) {
+	l = new()
+	l.input = input
+	l.start = 0
+	l.pos = 0
+	l.width = 1
+	l.items = []
+
+	l.next = fn() {
+		if l.pos >= len(l.input) {
+			l.width = 0
+			return eof
+		}
+
+		c = l.input[l.pos]
+		l.pos += l.width
+		return c
+	}
+
+	l.backup = fn() {
+		l.pos -= l.width
+	}
+
+	l.peek = fn() {
+		c = l.next()
+		l.backup()
+		return c
+	}
+
+	l.emit = fn(type) {
+		l.items = append(l.items, item.New(type, slice(l.input, l.start, l.pos)))
+		l.start = l.pos
+	}
+
+	l.ignore = fn() {
+		l.start = l.pos
+	}
+
+	l.accept = fn(charset) {
+		if contains(charset, l.next()) {
+			return true
+		}
+		l.backup()
+		return false
+	}
+
+	l.acceptRun = fn(charset) {
+		for c = l.next(); c != eof && contains(charset, c); c = l.next() {}
+		l.backup()
+		return true
+	}
+
+	l.lexLiteral = fn() {
+		l.acceptRun(`abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_,;:'@"`)
+		if l.next() == `\` {
+			return l.lexEscaped
+		}
+
+		l.backup()
+		l.emit(item.Literal)
+		return l.lexExpression
+	}
+
+	l.lexEscaped = fn() {
+		c = l.peek()
+
+		if contains(`\^$.|?*+()[]{}`, c) {
+			l.next()
+			return l.lexLiteral
+		} else if l.accept("wWdDsS") {
+			l.emit(item.Group)
+			return l.lexExpression
+		}
+
+		return error("invalid escape sequence")
+	}
+
+	l.lexExpression = fn() {
+		c = l.next()
+
+		if c == eof {
+			return null
+		} else if isAlphaNumeric(c) {
+			l.backup()
+			return l.lexLiteral
+		} else if c == "[" {
+			l.emit(item.LeftBracket)
+		} else if c == "]" {
+			l.emit(item.RightBracket)
+		} else if c == "(" {
+			l.emit(item.LeftParen)
+		} else if c == ")" {
+			l.emit(item.RightParen)
+		} else if c == `{` {
+			# TODO: add cases like '{3}', '{3, 5}'.
+			l.emit(item.LeftBrace)
+		} else if c == `}` {
+			l.emit(item.RightBrace)
+		} else if c == `\` {
+			return l.lexEscaped
+		} else if c == "*" {
+			l.emit(item.Asterisk)
+		} else if c == "+" {
+			l.emit(item.Plus)
+		}
+
+		return l.lexExpression
+	}
+
+	l.Run = fn() {
+		for state = l.lexExpression; state != null; state = state() {
+			if failed(state) {
+				return state
+			}
+		}
+		return l.items
+	}
+
+	return l
+}

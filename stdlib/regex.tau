@@ -1,0 +1,21 @@
+lexer = import("lexer")
+
+alternation				   = 0
+anchoring				   = 1
+concatenation			   = 2
+singleCharacterDuplication = 3
+grouping				   = 4
+bracketExpression		   = 5
+escapedCharacters		   = 6
+collationBracket		   = 7
+
+Match = fn(input) {
+	lex = lexer.New(input)
+	if failed(toks = lex.Run()) {
+		return toks
+	}
+
+	for i = 0; i < len(toks); ++i {
+		println(toks[i].String())
+	}
+}

@@ -83,8 +83,7 @@ New = fn(input) {
 	l.lexEscaped = fn() {
 		c = l.peek()
 
-		if contains(`\^$.|?*+()[]{}`, c) {
-			l.next()
+		if l.accept(`\^$.|?*+()[]{}`) {
 			return l.lexLiteral
 		} else if l.accept("wWdDsS") {
 			l.emit(item.Group)
@@ -133,7 +132,6 @@ New = fn(input) {
 		} else if c == ")" {
 			l.emit(item.RightParen)
 		} else if c == `{` {
-			# TODO: add cases like '{3}', '{3, 5}'.
 			l.emit(item.LeftBrace)
 			if isNumber(l.peek()) {
 				return l.lexNumber

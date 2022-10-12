@@ -32,7 +32,9 @@ func (r Return) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = r.v.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpReturnValue), nil
+	position = c.Emit(code.OpReturnValue)
+	c.Bookmark(r.pos)
+	return
 }
 
 func (r Return) IsConstExpression() bool {

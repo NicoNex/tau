@@ -45,13 +45,17 @@ func (b Bang) String() string {
 
 func (b Bang) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+		position = c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil)))
+		c.Bookmark(b.pos)
+		return
 	}
 
 	if position, err = b.n.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpBang), nil
+	position = c.Emit(code.OpBang)
+	c.Bookmark(b.pos)
+	return
 }
 
 func (b Bang) IsConstExpression() bool {

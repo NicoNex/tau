@@ -57,7 +57,9 @@ func (m Mod) String() string {
 
 func (m Mod) Compile(c *compiler.Compiler) (position int, err error) {
 	if m.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(m.Eval(nil))), nil
+		position = c.Emit(code.OpConstant, c.AddConstant(m.Eval(nil)))
+		c.Bookmark(m.pos)
+		return
 	}
 
 	if position, err = m.l.Compile(c); err != nil {
@@ -66,7 +68,9 @@ func (m Mod) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = m.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpMod), nil
+	position = c.Emit(code.OpMod)
+	c.Bookmark(m.pos)
+	return
 }
 
 func (m Mod) IsConstExpression() bool {

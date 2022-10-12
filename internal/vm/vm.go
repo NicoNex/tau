@@ -42,6 +42,7 @@ type VM struct {
 	dir        string
 	// Keeps track of the locally defined globals.
 	localTable []bool
+	bookmarks  map[int][]compiler.Bookmark
 	*State
 }
 
@@ -116,6 +117,7 @@ func New(bytecode *compiler.Bytecode) *VM {
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
 		localTable: make([]bool, GlobalSize),
+		bookmarks:  bytecode.Bookmarks,
 		State:      NewState(),
 	}
 
@@ -131,6 +133,7 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
 		localTable: make([]bool, GlobalSize),
+		bookmarks:  bytecode.Bookmarks,
 		State:      state,
 	}
 
@@ -165,7 +168,38 @@ func (vm *VM) LastPoppedStackElem() obj.Object {
 	return vm.stack[vm.sp]
 }
 
-func (vm VM) execLoadModule() error {
+// Scans the bookmarks and return the position of the input corresponding to the
+// current position in the bytecode.
+func (vm *VM) positionLookup() int {
+	var pos = vm.currentFrame().ip
+
+	bookmarks, ok := vm.bookmarks[vm.frameIndex-1]
+	if !ok {
+		return 0
+	}
+
+	switch len(bookmarks) {
+	case 0:
+		return 0
+
+	default:
+		prev := bookmarks[0]
+
+		for _, bm := range bookmarks[1:] {
+			if pos > prev.Offset && pos <= bm.Offset {
+				return bm.Pos
+			}
+			prev = bm
+		}
+		return prev.Pos
+	}
+}
+
+func (vm *VM) errorf(s string, a ...any) error {
+	return obj.Errorf(vm.positionLookup(), s, a...)
+}
+
+func (vm *VM) execLoadModule() error {
 	var taupath = vm.pop()
 
 	pathObj, ok := taupath.(*obj.String)
@@ -275,7 +309,7 @@ func (vm *VM) execDefine() error {
 
 	l, ok := left.(obj.Setter)
 	if !ok {
-		return fmt.Errorf("cannot assign to type %v", left.Type())
+		return vm.errorf("cannot assign to type %v", left.Type())
 	}
 	return vm.push(l.Set(right))
 }
@@ -304,7 +338,7 @@ func (vm *VM) execAdd() error {
 		return vm.push(obj.NewFloat(l + r))
 
 	default:
-		return fmt.Errorf("unsupported operator '+' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '+' for types %v and %v", left.Type(), right.Type())
 	}
 }
 

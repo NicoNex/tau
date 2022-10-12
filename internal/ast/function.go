@@ -74,7 +74,9 @@ func (f Function) Compile(c *compiler.Compiler) (position int, err error) {
 	}
 
 	fn := obj.NewFunctionCompiled(ins, nLocals, len(f.params))
-	return c.Emit(code.OpClosure, c.AddConstant(fn), len(freeSymbols)), nil
+	position = c.Emit(code.OpClosure, c.AddConstant(fn), len(freeSymbols))
+	c.Bookmark(f.pos)
+	return
 }
 
 func (f Function) IsConstExpression() bool {

@@ -23,16 +23,23 @@ type CompilationScope struct {
 	prevInst     EmittedInst
 }
 
+type Bookmark struct {
+	Offset int
+	Pos    int
+}
+
 type Compiler struct {
 	constants  *[]obj.Object
 	scopes     []CompilationScope
 	scopeIndex int
+	bookmarks  map[int][]Bookmark
 	*SymbolTable
 }
 
 type Bytecode struct {
 	Instructions code.Instructions
 	Constants    []obj.Object
+	Bookmarks    map[int][]Bookmark
 }
 
 const (
@@ -51,6 +58,7 @@ func New() *Compiler {
 		SymbolTable: st,
 		scopes:      []CompilationScope{{}},
 		constants:   &[]obj.Object{},
+		bookmarks:   make(map[int][]Bookmark),
 	}
 }
 
@@ -59,6 +67,7 @@ func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
 		SymbolTable: s,
 		scopes:      []CompilationScope{{}},
 		constants:   constants,
+		bookmarks:   make(map[int][]Bookmark),
 	}
 }
 
@@ -198,6 +207,13 @@ func (c *Compiler) Pos() int {
 	return len(c.scopes[c.scopeIndex].instructions)
 }
 
+func (c *Compiler) Bookmark(pos int) {
+	c.bookmarks[c.scopeIndex] = append(
+		c.bookmarks[c.scopeIndex],
+		Bookmark{Offset: c.Pos(), Pos: pos},
+	)
+}
+
 func (c *Compiler) Compile(node Compilable) error {
 	_, err := node.Compile(c)
 	return err
@@ -207,6 +223,7 @@ func (c *Compiler) Bytecode() *Bytecode {
 	return &Bytecode{
 		Instructions: c.scopes[c.scopeIndex].instructions,
 		Constants:    *c.constants,
+		Bookmarks:    c.bookmarks,
 	}
 }
 

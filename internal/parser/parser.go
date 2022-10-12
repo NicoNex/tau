@@ -7,6 +7,7 @@ import (
 	"github.com/NicoNex/tau/internal/ast"
 	"github.com/NicoNex/tau/internal/item"
 	"github.com/NicoNex/tau/internal/lexer"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Parser struct {
@@ -839,6 +840,7 @@ func (p *Parser) noParsePrefixFnError(t item.Type) {
 }
 
 func Parse(input string) (prog ast.Node, errs []string) {
+	obj.Input = input
 	items := lexer.Lex(input)
 	p := newParser(input, items)
 	return p.parse(), p.errors()
@@ -862,6 +864,7 @@ func endLine(s string, pos int) (end int) {
 	}
 	return
 }
+
 func lineNo(s string, pos int) int {
 	var cnt = 1
 

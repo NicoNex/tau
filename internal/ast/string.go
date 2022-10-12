@@ -55,7 +55,9 @@ func (s String) Quoted() string {
 
 func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 	if len(s.substr) == 0 {
-		return c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s))), nil
+		position = c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s)))
+		c.Bookmark(s.pos)
+		return
 	}
 
 	for _, sub := range s.substr {
@@ -65,7 +67,9 @@ func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 		c.RemoveLast()
 	}
 
-	return c.Emit(code.OpInterpolate, c.AddConstant(obj.NewString(s.s)), len(s.substr)), nil
+	position = c.Emit(code.OpInterpolate, c.AddConstant(obj.NewString(s.s)), len(s.substr))
+	c.Bookmark(s.pos)
+	return
 }
 
 func (s String) IsConstExpression() bool {

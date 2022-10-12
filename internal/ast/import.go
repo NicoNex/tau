@@ -67,7 +67,9 @@ func (i Import) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = i.name.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpLoadModule), nil
+	position = c.Emit(code.OpLoadModule)
+	c.Bookmark(i.pos)
+	return
 }
 
 func (i Import) String() string {

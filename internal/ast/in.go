@@ -99,7 +99,9 @@ func (i In) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = i.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpIn), nil
+	position = c.Emit(code.OpIn)
+	c.Bookmark(i.pos)
+	return
 }
 
 func (i In) IsConstExpression() bool {

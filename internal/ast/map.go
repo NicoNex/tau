@@ -102,7 +102,9 @@ func (m Map) Compile(c *compiler.Compiler) (position int, err error) {
 		}
 	}
 
-	return c.Emit(code.OpMap, len(m.m)*2), nil
+	position = c.Emit(code.OpMap, len(m.m)*2)
+	c.Bookmark(m.pos)
+	return
 }
 
 func (m Map) IsConstExpression() bool {

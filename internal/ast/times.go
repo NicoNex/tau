@@ -60,7 +60,9 @@ func (t Times) String() string {
 
 func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
 	if t.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(t.Eval(nil))), nil
+		position = c.Emit(code.OpConstant, c.AddConstant(t.Eval(nil)))
+		c.Bookmark(t.pos)
+		return
 	}
 
 	if position, err = t.l.Compile(c); err != nil {
@@ -69,7 +71,9 @@ func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = t.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpMul), nil
+	position = c.Emit(code.OpMul)
+	c.Bookmark(t.pos)
+	return
 }
 
 func (t Times) IsConstExpression() bool {

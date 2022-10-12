@@ -68,7 +68,9 @@ func (d Dot) Compile(c *compiler.Compiler) (position int, err error) {
 		return position, fmt.Errorf("expected identifier with dot operator, got %T", d.r)
 	}
 	position = c.Emit(code.OpConstant, c.AddConstant(obj.NewString(d.r.String())))
-	return c.Emit(code.OpDot), nil
+	position = c.Emit(code.OpDot)
+	c.Bookmark(d.pos)
+	return
 }
 
 func (d Dot) IsConstExpression() bool {

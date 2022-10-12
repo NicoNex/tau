@@ -88,6 +88,7 @@ func Unwrap(o Object) Object {
 }
 
 var (
+	Input             string
 	ErrFileNotFound   = errors.New("file not found")
 	ErrNoFileProvided = errors.New("no file provided")
 )
@@ -112,4 +113,97 @@ func ImportLookup(taupath string) (string, error) {
 	}
 
 	return path, nil
+}
+
+type TauError struct {
+	pos int
+	msg string
+}
+
+func Errorf(pos int, f string, a ...any) TauError {
+	line := extractLine(Input, pos)
+
+	return TauError{
+		pos: pos,
+		msg: fmt.Sprintf(
+			"Error at line %d:\n    %s\n    %s\n%s",
+			line.number,
+			line,
+			arrow(pos-line.start),
+			fmt.Sprintf(f, a...),
+		),
+	}
+}
+
+func (t TauError) Error() string {
+	return t.msg
+}
+
+func (t TauError) Pos() int {
+	return t.pos
+}
+
+type line struct {
+	start  int
+	end    int
+	number int
+	str    string
+}
+
+func (l line) String() string {
+	return l.str
+}
+
+func extractLine(input string, pos int) line {
+	s, e := startLine(input, pos), endLine(input, pos)
+	return line{
+		start:  s,
+		end:    e,
+		number: lineNo(input, pos),
+		str:    input[s:e],
+	}
+}
+
+func startLine(s string, pos int) (beg int) {
+	for i := pos - 1; i >= 0; i-- {
+		if s[i] == '\n' {
+			return i + 1
+		}
+	}
+	return
+}
+
+func endLine(s string, pos int) (end int) {
+	end = len(s)
+	for i := pos; i < len(s); i++ {
+		if s[i] == '\n' {
+			return i
+		}
+	}
+	return
+}
+
+func lineNo(s string, pos int) int {
+	var cnt = 1
+
+	for _, b := range s[:pos] {
+		if b == '\n' {
+			cnt++
+		}
+	}
+
+	return cnt
+}
+
+func arrow(pos int) string {
+	var s = make([]byte, pos+1)
+
+	for i := range s {
+		if i == pos {
+			s[i] = '^'
+		} else {
+			s[i] = ' '
+		}
+	}
+	return string(s)
 }

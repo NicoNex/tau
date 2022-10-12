@@ -60,7 +60,9 @@ func (l LessEq) String() string {
 
 func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if l.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(l.Eval(nil))), nil
+		position = c.Emit(code.OpConstant, c.AddConstant(l.Eval(nil)))
+		c.Bookmark(l.pos)
+		return
 	}
 
 	if position, err = l.r.Compile(c); err != nil {
@@ -69,7 +71,9 @@ func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = l.l.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpGreaterThanEqual), nil
+	position = c.Emit(code.OpGreaterThanEqual)
+	c.Bookmark(l.pos)
+	return
 }
 
 func (l LessEq) IsConstExpression() bool {

@@ -102,7 +102,9 @@ func (i Index) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = i.index.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpIndex), nil
+	position = c.Emit(code.OpIndex)
+	c.Bookmark(i.pos)
+	return
 }
 
 func (i Index) IsConstExpression() bool {

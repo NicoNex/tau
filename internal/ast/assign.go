@@ -48,6 +48,8 @@ func (a Assign) String() string {
 }
 
 func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
+	defer c.Bookmark(position)
+
 	switch left := a.l.(type) {
 	case Identifier:
 		symbol := c.Define(string(left))
@@ -56,9 +58,13 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 		}
 
 		if symbol.Scope == compiler.GlobalScope {
-			return c.Emit(code.OpSetGlobal, symbol.Index), nil
+			position = c.Emit(code.OpSetGlobal, symbol.Index)
+			c.Bookmark(a.pos)
+			return
 		} else {
-			return c.Emit(code.OpSetLocal, symbol.Index), nil
+			position = c.Emit(code.OpSetLocal, symbol.Index)
+			c.Bookmark(a.pos)
+			return
 		}
 
 	case Dot, Index:
@@ -68,7 +74,9 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 		if position, err = a.r.Compile(c); err != nil {
 			return
 		}
-		return c.Emit(code.OpDefine), nil
+		position = c.Emit(code.OpDefine)
+		c.Bookmark(a.pos)
+		return
 
 	default:
 		return 0, fmt.Errorf("cannot assign to literal")

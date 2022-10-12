@@ -215,9 +215,9 @@ func (p *Parser) parseReturn() ast.Node {
 
 	p.next()
 	if !p.cur.Is(item.Semicolon) {
-		ret = ast.NewReturn(p.parseExpr(Lowest))
+		ret = ast.NewReturn(p.parseExpr(Lowest), p.cur.Pos)
 	} else {
-		ret = ast.NewReturn(ast.NewNull())
+		ret = ast.NewReturn(ast.NewNull(), p.cur.Pos)
 	}
 
 	if p.peek.Is(item.Semicolon) {
@@ -279,6 +279,7 @@ func (p *Parser) parseBlock() ast.Node {
 }
 
 func (p *Parser) parseIfExpr() ast.Node {
+	pos := p.cur.Pos
 	p.next()
 	cond := p.parseExpr(Lowest)
 
@@ -303,7 +304,7 @@ func (p *Parser) parseIfExpr() ast.Node {
 		}
 	}
 
-	return ast.NewIfExpr(cond, body, alt)
+	return ast.NewIfExpr(cond, body, alt, pos)
 }
 
 func (p *Parser) parseList() ast.Node {
@@ -312,11 +313,13 @@ func (p *Parser) parseList() ast.Node {
 }
 
 func (p *Parser) parseMap() ast.Node {
+	pos := p.cur.Pos
 	couples := p.parseNodePairs(item.RBrace)
-	return ast.NewMap(couples...)
+	return ast.NewMap(pos, couples...)
 }
 
 func (p *Parser) parseImport() ast.Node {
+	pos := p.cur.Pos
 	if !p.expectPeek(item.LParen) {
 		return nil
 	}
@@ -328,10 +331,11 @@ func (p *Parser) parseImport() ast.Node {
 		return nil
 	}
 
-	return ast.NewImport(args[0], Parse)
+	return ast.NewImport(args[0], Parse, pos)
 }
 
 func (p *Parser) parseFunction() ast.Node {
+	pos := p.cur.Pos
 	if !p.expectPeek(item.LParen) {
 		return nil
 	}
@@ -341,7 +345,7 @@ func (p *Parser) parseFunction() ast.Node {
 		return nil
 	}
 
-	return ast.NewFunction(params, p.parseBlock())
+	return ast.NewFunction(params, p.parseBlock(), pos)
 }
 
 func (p *Parser) parseFunctionParams() []ast.Identifier {
@@ -369,7 +373,7 @@ func (p *Parser) parseFunctionParams() []ast.Identifier {
 
 // Returns an identifier node.
 func (p *Parser) parseIdentifier() ast.Node {
-	return ast.NewIdentifier(p.cur.Val)
+	return ast.NewIdentifier(p.cur.Val, p.cur.Pos)
 }
 
 func (p *Parser) parseNull() ast.Node {
@@ -418,7 +422,7 @@ func (p *Parser) parseFloat() ast.Node {
 }
 
 func (p *Parser) parseString() ast.Node {
-	s, err := ast.NewString(p.cur.Val, Parse)
+	s, err := ast.NewString(p.cur.Val, Parse, p.cur.Pos)
 	if err != nil {
 		p.errorf(err.Error())
 		return nil
@@ -437,18 +441,21 @@ func (p *Parser) parseBoolean() ast.Node {
 
 // Returns a node of type PrefixMinus.
 func (p *Parser) parsePrefixMinus() ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewPrefixMinus(p.parseExpr(Prefix))
+	return ast.NewPrefixMinus(p.parseExpr(Prefix), pos)
 }
 
 func (p *Parser) parsePlusPlus() ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewPlusPlus(p.parseExpr(Prefix))
+	return ast.NewPlusPlus(p.parseExpr(Prefix), pos)
 }
 
 func (p *Parser) parseMinusMinus() ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewMinusMinus(p.parseExpr(Prefix))
+	return ast.NewMinusMinus(p.parseExpr(Prefix), pos)
 }
 
 func (p *Parser) parseFor() ast.Node {
@@ -456,9 +463,10 @@ func (p *Parser) parseFor() ast.Node {
 	p.enterLoop()
 	defer p.exitLoop()
 
+	pos := p.cur.Pos
 	p.next()
 	if p.cur.Is(item.LBrace) {
-		return ast.NewFor(ast.NewBoolean(true), p.parseBlock(), nil, nil)
+		return ast.NewFor(ast.NewBoolean(true), p.parseBlock(), nil, nil, pos)
 	}
 
 	for !p.cur.Is(item.LBrace) && !p.cur.Is(item.EOF) {
@@ -468,10 +476,10 @@ func (p *Parser) parseFor() ast.Node {
 
 	switch l := len(arg); l {
 	case 1:
-		return ast.NewFor(arg[0], p.parseBlock(), nil, nil)
+		return ast.NewFor(arg[0], p.parseBlock(), nil, nil, pos)
 
 	case 3:
-		return ast.NewFor(arg[1], p.parseBlock(), arg[0], arg[2])
+		return ast.NewFor(arg[1], p.parseBlock(), arg[0], arg[2], pos)
 
 	default:
 		p.errorf("wrong number of expressions, expected 1 or 3 but got %d", l)
@@ -481,132 +489,154 @@ func (p *Parser) parseFor() ast.Node {
 
 // Returns a node of type Bang.
 func (p *Parser) parseBang() ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewBang(p.parseExpr(Prefix))
+	return ast.NewBang(p.parseExpr(Prefix), pos)
 }
 
 func (p *Parser) parsePlus(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewPlus(left, p.parseExpr(prec))
+	return ast.NewPlus(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseMinus(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewMinus(left, p.parseExpr(prec))
+	return ast.NewMinus(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseAsterisk(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewTimes(left, p.parseExpr(prec))
+	return ast.NewTimes(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseSlash(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewDivide(left, p.parseExpr(prec))
+	return ast.NewDivide(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseModulus(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewMod(left, p.parseExpr(prec))
+	return ast.NewMod(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseBwAnd(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewBitwiseAnd(left, p.parseExpr(prec))
+	return ast.NewBitwiseAnd(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseBwNot() ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewBitwiseNot(p.parseExpr(Prefix))
+	return ast.NewBitwiseNot(p.parseExpr(Prefix), pos)
 }
 
 func (p *Parser) parseBwOr(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewBitwiseOr(left, p.parseExpr(prec))
+	return ast.NewBitwiseOr(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseBwXor(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewBitwiseXor(left, p.parseExpr(prec))
+	return ast.NewBitwiseXor(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseLShift(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewBitwiseLeftShift(left, p.parseExpr(prec))
+	return ast.NewBitwiseLeftShift(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseRShift(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewBitwiseRightShift(left, p.parseExpr(prec))
+	return ast.NewBitwiseRightShift(left, p.parseExpr(prec), pos)
 }
 
 // Returns a node of type ast.Equals.
 func (p *Parser) parseEquals(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewEquals(left, p.parseExpr(prec))
+	return ast.NewEquals(left, p.parseExpr(prec), pos)
 }
 
 // Returns a node of type ast.Equals.
 func (p *Parser) parseNotEquals(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewNotEquals(left, p.parseExpr(prec))
+	return ast.NewNotEquals(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseLess(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewLess(left, p.parseExpr(prec))
+	return ast.NewLess(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseGreater(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewGreater(left, p.parseExpr(prec))
+	return ast.NewGreater(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseLessEq(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewLessEq(left, p.parseExpr(prec))
+	return ast.NewLessEq(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseGreaterEq(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewGreaterEq(left, p.parseExpr(prec))
+	return ast.NewGreaterEq(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseAnd(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewAnd(left, p.parseExpr(prec))
+	return ast.NewAnd(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseOr(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewOr(left, p.parseExpr(prec))
+	return ast.NewOr(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseIn(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewIn(left, p.parseExpr(prec))
+	return ast.NewIn(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
 	right := p.parseExpr(Lowest)
 
@@ -617,76 +647,89 @@ func (p *Parser) parseAssign(left ast.Node) ast.Node {
 		fn.Name = i.String()
 	}
 
-	return ast.NewAssign(left, right)
+	return ast.NewAssign(left, right, pos)
 }
 
 func (p *Parser) parsePlusAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewPlusAssign(left, p.parseExpr(Lowest))
+	return ast.NewPlusAssign(left, p.parseExpr(Lowest), pos)
 }
 
 func (p *Parser) parseMinusAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewMinusAssign(left, p.parseExpr(Lowest))
+	return ast.NewMinusAssign(left, p.parseExpr(Lowest), pos)
 }
 
 func (p *Parser) parseSlashAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewDivideAssign(left, p.parseExpr(Lowest))
+	return ast.NewDivideAssign(left, p.parseExpr(Lowest), pos)
 }
 
 func (p *Parser) parseAsteriskAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewTimesAssign(left, p.parseExpr(Lowest))
+	return ast.NewTimesAssign(left, p.parseExpr(Lowest), pos)
 }
 
 func (p *Parser) parseModulusAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewModAssign(left, p.parseExpr(Lowest))
+	return ast.NewModAssign(left, p.parseExpr(Lowest), pos)
 }
 
 func (p *Parser) parseBwAndAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewBitwiseAndAssign(left, p.parseExpr(Lowest))
+	return ast.NewBitwiseAndAssign(left, p.parseExpr(Lowest), pos)
 }
 
 func (p *Parser) parseBwOrAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewBitwiseOrAssign(left, p.parseExpr(Lowest))
+	return ast.NewBitwiseOrAssign(left, p.parseExpr(Lowest), pos)
 }
 
 func (p *Parser) parseBwXorAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewBitwiseXorAssign(left, p.parseExpr(Lowest))
+	return ast.NewBitwiseXorAssign(left, p.parseExpr(Lowest), pos)
 }
 
 func (p *Parser) parseLShiftAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewBitwiseShiftLeftAssign(left, p.parseExpr(Lowest))
+	return ast.NewBitwiseShiftLeftAssign(left, p.parseExpr(Lowest), pos)
 }
 
 func (p *Parser) parseRShiftAssign(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
-	return ast.NewBitwiseShiftRightAssign(left, p.parseExpr(Lowest))
+	return ast.NewBitwiseShiftRightAssign(left, p.parseExpr(Lowest), pos)
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {
-	return ast.NewCall(fn, p.parseNodeList(item.RParen))
+	pos := p.cur.Pos
+	return ast.NewCall(fn, p.parseNodeList(item.RParen), pos)
 }
 
 func (p *Parser) parseIndex(list ast.Node) ast.Node {
+	pos := p.cur.Pos
 	p.next()
 	expr := p.parseExpr(Lowest)
 	if !p.expectPeek(item.RBracket) {
 		return nil
 	}
-	return ast.NewIndex(list, expr)
+	return ast.NewIndex(list, expr, pos)
 }
 
 func (p *Parser) parseDot(left ast.Node) ast.Node {
+	pos := p.cur.Pos
 	prec := p.precedence()
 	p.next()
-	return ast.NewDot(left, p.parseExpr(prec))
+	return ast.NewDot(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parsePair() [2]ast.Node {

@@ -14,11 +14,11 @@ type Dot struct {
 	pos int
 }
 
-func NewDot(l, r Node) Node {
+func NewDot(l, r Node, pos int) Node {
 	return Dot{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

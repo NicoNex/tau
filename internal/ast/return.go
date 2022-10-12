@@ -13,10 +13,10 @@ type Return struct {
 	pos int
 }
 
-func NewReturn(n Node) Node {
+func NewReturn(n Node, pos int) Node {
 	return Return{
 		v:   nil,
-		pos: 0,
+		pos: pos,
 	}
 }
 

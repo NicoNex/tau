@@ -18,9 +18,10 @@ type String struct {
 	s      string
 	parse  parseFn
 	substr []Node
+	pos    int
 }
 
-func NewString(s string, parse parseFn) (Node, error) {
+func NewString(s string, parse parseFn, pos int) (Node, error) {
 	str, err := escape(s)
 	if err != nil {
 		return nil, err
@@ -28,7 +29,7 @@ func NewString(s string, parse parseFn) (Node, error) {
 
 	i := newInterpolator(str, parse)
 	nodes, str, err := i.nodes()
-	return String{s: str, parse: parse, substr: nodes}, err
+	return String{s: str, parse: parse, substr: nodes, pos: pos}, err
 }
 
 func (s String) Eval(env *obj.Env) obj.Object {

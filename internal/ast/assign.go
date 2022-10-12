@@ -14,11 +14,11 @@ type Assign struct {
 	pos int
 }
 
-func NewAssign(l, r Node) Node {
+func NewAssign(l, r Node, pos int) Node {
 	return Assign{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

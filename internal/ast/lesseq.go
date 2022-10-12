@@ -14,11 +14,11 @@ type LessEq struct {
 	pos int
 }
 
-func NewLessEq(l, r Node) Node {
+func NewLessEq(l, r Node, pos int) Node {
 	return LessEq{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

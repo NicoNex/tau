@@ -13,11 +13,11 @@ type ModAssign struct {
 	pos int
 }
 
-func NewModAssign(l, r Node) Node {
+func NewModAssign(l, r Node, pos int) Node {
 	return ModAssign{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

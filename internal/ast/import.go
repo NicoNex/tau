@@ -17,11 +17,11 @@ type Import struct {
 	pos   int
 }
 
-func NewImport(name Node, parse func(string) (Node, []string)) Node {
+func NewImport(name Node, parse func(string) (Node, []string), pos int) Node {
 	return &Import{
 		name:  name,
 		parse: parse,
-		pos:   0,
+		pos:   pos,
 	}
 }
 

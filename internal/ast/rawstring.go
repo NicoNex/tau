@@ -10,7 +10,7 @@ import (
 
 type RawString string
 
-func NewRawString(s string) Node {
+func NewRawString(s string, pos int) Node {
 	return RawString(s)
 }
 

@@ -14,11 +14,11 @@ type And struct {
 	pos int
 }
 
-func NewAnd(l, r Node) Node {
+func NewAnd(l, r Node, pos int) Node {
 	return And{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

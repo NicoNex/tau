@@ -15,12 +15,12 @@ type IfExpr struct {
 	pos    int
 }
 
-func NewIfExpr(cond, body, alt Node) Node {
+func NewIfExpr(cond, body, alt Node, pos int) Node {
 	return IfExpr{
 		cond:   cond,
 		body:   body,
 		altern: alt,
-		pos:    0,
+		pos:    pos,
 	}
 }
 

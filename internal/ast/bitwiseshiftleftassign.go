@@ -13,11 +13,11 @@ type BitwiseShiftLeftAssign struct {
 	pos int
 }
 
-func NewBitwiseShiftLeftAssign(l, r Node) Node {
+func NewBitwiseShiftLeftAssign(l, r Node, pos int) Node {
 	return BitwiseShiftLeftAssign{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

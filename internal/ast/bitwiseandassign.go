@@ -13,11 +13,11 @@ type BitwiseAndAssign struct {
 	pos int
 }
 
-func NewBitwiseAndAssign(l, r Node) Node {
+func NewBitwiseAndAssign(l, r Node, pos int) Node {
 	return BitwiseAndAssign{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

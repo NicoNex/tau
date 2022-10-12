@@ -13,11 +13,11 @@ type DivideAssign struct {
 	pos int
 }
 
-func NewDivideAssign(l, r Node) Node {
+func NewDivideAssign(l, r Node, pos int) Node {
 	return DivideAssign{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

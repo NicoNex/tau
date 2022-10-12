@@ -16,11 +16,11 @@ type Function struct {
 	pos    int
 }
 
-func NewFunction(params []Identifier, body Node) Node {
+func NewFunction(params []Identifier, body Node, pos int) Node {
 	return Function{
 		params: params,
 		body:   body,
-		pos:    0,
+		pos:    pos,
 	}
 }
 

@@ -13,10 +13,10 @@ type PrefixMinus struct {
 	pos int
 }
 
-func NewPrefixMinus(n Node) Node {
+func NewPrefixMinus(n Node, pos int) Node {
 	return PrefixMinus{
 		n:   n,
-		pos: 0,
+		pos: pos,
 	}
 }
 

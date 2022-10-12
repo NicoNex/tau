@@ -13,10 +13,10 @@ type BitwiseNot struct {
 	pos int
 }
 
-func NewBitwiseNot(n Node) Node {
+func NewBitwiseNot(n Node, pos int) Node {
 	return BitwiseNot{
 		n:   n,
-		pos: 0,
+		pos: pos,
 	}
 }
 

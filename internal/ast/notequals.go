@@ -14,11 +14,11 @@ type NotEquals struct {
 	pos int
 }
 
-func NewNotEquals(l, r Node) Node {
+func NewNotEquals(l, r Node, pos int) Node {
 	return NotEquals{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

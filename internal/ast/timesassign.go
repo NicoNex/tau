@@ -13,11 +13,11 @@ type TimesAssign struct {
 	pos int
 }
 
-func NewTimesAssign(l, r Node) Node {
+func NewTimesAssign(l, r Node, pos int) Node {
 	return TimesAssign{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

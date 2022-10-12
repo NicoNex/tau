@@ -14,11 +14,11 @@ type BitwiseOr struct {
 	pos int
 }
 
-func NewBitwiseOr(l, r Node) Node {
+func NewBitwiseOr(l, r Node, pos int) Node {
 	return BitwiseOr{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

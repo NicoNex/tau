@@ -14,11 +14,11 @@ type BitwiseXor struct {
 	pos int
 }
 
-func NewBitwiseXor(l, r Node) Node {
+func NewBitwiseXor(l, r Node, pos int) Node {
 	return BitwiseXor{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

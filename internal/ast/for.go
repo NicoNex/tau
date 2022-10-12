@@ -16,13 +16,13 @@ type For struct {
 	pos    int
 }
 
-func NewFor(cond, body, before, after Node) Node {
+func NewFor(cond, body, before, after Node, pos int) Node {
 	return For{
 		before: before,
 		after:  after,
 		cond:   cond,
 		body:   body,
-		pos:    0,
+		pos:    pos,
 	}
 }
 

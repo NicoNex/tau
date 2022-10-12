@@ -14,11 +14,11 @@ type Or struct {
 	pos int
 }
 
-func NewOr(l, r Node) Node {
+func NewOr(l, r Node, pos int) Node {
 	return Or{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

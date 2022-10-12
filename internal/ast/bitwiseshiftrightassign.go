@@ -13,11 +13,11 @@ type BitwiseShiftRightAssign struct {
 	pos int
 }
 
-func NewBitwiseShiftRightAssign(l, r Node) Node {
+func NewBitwiseShiftRightAssign(l, r Node, pos int) Node {
 	return BitwiseShiftRightAssign{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 
@@ -62,11 +62,7 @@ func (b BitwiseShiftRightAssign) String() string {
 }
 
 func (b BitwiseShiftRightAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{
-		l:   b.l,
-		r:   BitwiseRightShift{l: b.l, r: b.r, pos: b.pos},
-		pos: b.pos,
-	}
+	n := Assign{l: b.l, r: BitwiseRightShift{l: b.l, r: b.r, pos: b.pos}, pos: b.pos}
 	return n.Compile(c)
 }
 

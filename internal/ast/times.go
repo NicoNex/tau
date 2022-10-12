@@ -14,11 +14,11 @@ type Times struct {
 	pos int
 }
 
-func NewTimes(l, r Node) Node {
+func NewTimes(l, r Node, pos int) Node {
 	return Times{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

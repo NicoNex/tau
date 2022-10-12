@@ -14,11 +14,11 @@ type Divide struct {
 	pos int
 }
 
-func NewDivide(l, r Node) Node {
+func NewDivide(l, r Node, pos int) Node {
 	return Divide{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

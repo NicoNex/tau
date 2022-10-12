@@ -12,10 +12,10 @@ type PlusPlus struct {
 	pos int
 }
 
-func NewPlusPlus(r Node) Node {
+func NewPlusPlus(r Node, pos int) Node {
 	return PlusPlus{
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

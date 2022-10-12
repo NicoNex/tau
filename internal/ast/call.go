@@ -15,11 +15,11 @@ type Call struct {
 	pos  int
 }
 
-func NewCall(fn Node, args []Node) Node {
+func NewCall(fn Node, args []Node, pos int) Node {
 	return Call{
 		fn:   fn,
 		args: args,
-		pos:  0,
+		pos:  pos,
 	}
 }
 

@@ -14,11 +14,11 @@ type BitwiseLeftShift struct {
 	pos int
 }
 
-func NewBitwiseLeftShift(l, r Node) Node {
+func NewBitwiseLeftShift(l, r Node, pos int) Node {
 	return BitwiseLeftShift{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

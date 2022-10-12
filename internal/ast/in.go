@@ -15,11 +15,11 @@ type In struct {
 	pos int
 }
 
-func NewIn(l, r Node) Node {
+func NewIn(l, r Node, pos int) Node {
 	return In{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

@@ -13,10 +13,10 @@ type Bang struct {
 	pos int
 }
 
-func NewBang(n Node) Node {
+func NewBang(n Node, pos int) Node {
 	return Bang{
 		n:   n,
-		pos: 0,
+		pos: pos,
 	}
 }
 

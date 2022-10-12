@@ -9,7 +9,7 @@ import (
 
 type Identifier string
 
-func NewIdentifier(name string) Node {
+func NewIdentifier(name string, pos int) Node {
 	return Identifier(name)
 }
 

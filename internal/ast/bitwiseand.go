@@ -14,11 +14,11 @@ type BitwiseAnd struct {
 	pos int
 }
 
-func NewBitwiseAnd(l, r Node) Node {
+func NewBitwiseAnd(l, r Node, pos int) Node {
 	return BitwiseAnd{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

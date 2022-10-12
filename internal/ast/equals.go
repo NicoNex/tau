@@ -14,11 +14,11 @@ type Equals struct {
 	pos int
 }
 
-func NewEquals(l, r Node) Node {
+func NewEquals(l, r Node, pos int) Node {
 	return Equals{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

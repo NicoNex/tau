@@ -14,11 +14,11 @@ type Greater struct {
 	pos int
 }
 
-func NewGreater(l, r Node) Node {
+func NewGreater(l, r Node, pos int) Node {
 	return Greater{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

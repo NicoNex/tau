@@ -13,11 +13,11 @@ type MinusAssign struct {
 	pos int
 }
 
-func NewMinusAssign(l, r Node) Node {
+func NewMinusAssign(l, r Node, pos int) Node {
 	return MinusAssign{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

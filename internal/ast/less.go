@@ -14,11 +14,11 @@ type Less struct {
 	pos int
 }
 
-func NewLess(l, r Node) Node {
+func NewLess(l, r Node, pos int) Node {
 	return Less{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

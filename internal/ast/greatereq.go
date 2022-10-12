@@ -14,11 +14,11 @@ type GreaterEq struct {
 	pos int
 }
 
-func NewGreaterEq(l, r Node) Node {
+func NewGreaterEq(l, r Node, pos int) Node {
 	return GreaterEq{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

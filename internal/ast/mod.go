@@ -14,11 +14,11 @@ type Mod struct {
 	pos int
 }
 
-func NewMod(l, r Node) Node {
+func NewMod(l, r Node, pos int) Node {
 	return Mod{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

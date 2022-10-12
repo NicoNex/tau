@@ -14,11 +14,11 @@ type Index struct {
 	pos   int
 }
 
-func NewIndex(l, i Node) Node {
+func NewIndex(l, i Node, pos int) Node {
 	return Index{
 		left:  l,
 		index: i,
-		pos:   0,
+		pos:   pos,
 	}
 }
 

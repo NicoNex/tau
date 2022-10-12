@@ -14,11 +14,11 @@ type Plus struct {
 	pos int
 }
 
-func NewPlus(l, r Node) Node {
+func NewPlus(l, r Node, pos int) Node {
 	return Plus{
 		l:   l,
 		r:   r,
-		pos: 0,
+		pos: pos,
 	}
 }
 

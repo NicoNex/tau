@@ -10,7 +10,7 @@ import (
 
 type Integer int64
 
-func NewInteger(i int64) Node {
+func NewInteger(i int64, pos int) Node {
 	return Integer(i)
 }
 

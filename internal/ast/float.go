@@ -10,7 +10,7 @@ import (
 
 type Float float64
 
-func NewFloat(f float64, pos int) Node {
+func NewFloat(f float64) Node {
 	return Float(f)
 }
 

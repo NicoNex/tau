@@ -8,7 +8,7 @@ import (
 
 type Boolean bool
 
-func NewBoolean(b bool, pos int) Node {
+func NewBoolean(b bool) Node {
 	return Boolean(b)
 }
 

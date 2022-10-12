@@ -15,7 +15,7 @@ type Return struct {
 
 func NewReturn(n Node, pos int) Node {
 	return Return{
-		v:   nil,
+		v:   n,
 		pos: pos,
 	}
 }

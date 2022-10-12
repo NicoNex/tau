@@ -48,6 +48,10 @@ func (d Divide) String() string {
 }
 
 func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
+	if d.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(d.Eval(nil))), nil
+	}
+
 	if position, err = d.l.Compile(c); err != nil {
 		return
 	}
@@ -55,4 +59,8 @@ func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 	return c.Emit(code.OpDiv), nil
+}
+
+func (d Divide) IsConstExpression() bool {
+	return d.l.IsConstExpression() && d.r.IsConstExpression()
 }

@@ -42,7 +42,7 @@ var Builtins = []struct {
 				return NewError("len: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			switch o := args[0].(type) {
+			switch o := Unwrap(args[0]).(type) {
 			case List:
 				return NewInteger(int64(len(o)))
 			case *String:
@@ -76,7 +76,7 @@ var Builtins = []struct {
 				fmt.Scanln(&tmp)
 
 			case 1:
-				fmt.Print(args[0])
+				fmt.Print(Unwrap(args[0]))
 				fmt.Scanln(&tmp)
 
 			default:
@@ -103,7 +103,7 @@ var Builtins = []struct {
 			if l := len(args); l != 1 {
 				return NewError("type: wrong number of arguments, expected 1, got %d", l)
 			}
-			return NewString(args[0].Type().String())
+			return NewString(Unwrap(args[0]).Type().String())
 		},
 	},
 	{
@@ -113,7 +113,7 @@ var Builtins = []struct {
 				return NewError("int: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			switch o := args[0].(type) {
+			switch o := Unwrap(args[0]).(type) {
 			case *Integer:
 				return NewInteger(int64(*o))
 
@@ -124,10 +124,10 @@ var Builtins = []struct {
 				if a, err := strconv.ParseFloat(string(*o), 64); err == nil {
 					return NewInteger(int64(a))
 				}
-				return NewError("%v is not a number", args[0])
+				return NewError("%v is not a number", Unwrap(args[0]))
 
 			default:
-				return NewError("%v is not a number", args[0])
+				return NewError("%v is not a number", Unwrap(args[0]))
 			}
 		},
 	},
@@ -138,7 +138,7 @@ var Builtins = []struct {
 				return NewError("float: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			switch o := args[0].(type) {
+			switch o := Unwrap(args[0]).(type) {
 			case *Integer:
 				return NewFloat(float64(*o))
 
@@ -149,10 +149,10 @@ var Builtins = []struct {
 				if a, err := strconv.ParseFloat(string(*o), 64); err == nil {
 					return NewFloat(a)
 				}
-				return NewError("%v is not a number", args[0])
+				return NewError("%v is not a number", Unwrap(args[0]))
 
 			default:
-				return NewError("%v is not a number", args[0])
+				return NewError("%v is not a number", Unwrap(args[0]))
 			}
 		},
 	},
@@ -166,7 +166,7 @@ var Builtins = []struct {
 			} else if l > 2 {
 				return NewError("exit: wrong number of arguments, max 2, got %d", l)
 			} else if l == 1 {
-				switch o := args[0].(type) {
+				switch o := Unwrap(args[0]).(type) {
 				case *Integer:
 					os.Exit(int(*o))
 
@@ -179,12 +179,12 @@ var Builtins = []struct {
 				}
 			}
 
-			msg, ok := args[0].(*String)
+			msg, ok := Unwrap(args[0]).(*String)
 			if !ok {
 				return NewError("exit: first argument must be a string")
 			}
 
-			code, ok := args[1].(*Integer)
+			code, ok := Unwrap(args[1]).(*Integer)
 			if !ok {
 				return NewError("exit: second argument must be an int")
 			}
@@ -201,7 +201,7 @@ var Builtins = []struct {
 				return NewError("append: no argument provided")
 			}
 
-			lst, ok := args[0].(List)
+			lst, ok := Unwrap(args[0]).(List)
 			if !ok {
 				return NewError("append: first argument must be a list")
 			}
@@ -219,7 +219,7 @@ var Builtins = []struct {
 				return NewError("push: no argument provided")
 			}
 
-			lst, ok := args[0].(List)
+			lst, ok := Unwrap(args[0]).(List)
 			if !ok {
 				return NewError("push: first argument must be a list")
 			}
@@ -241,35 +241,35 @@ var Builtins = []struct {
 		func(args ...Object) Object {
 			switch len(args) {
 			case 1:
-				if stop, ok := args[0].(*Integer); ok {
+				if stop, ok := Unwrap(args[0]).(*Integer); ok {
 					return listify(0, int(*stop), 1)
 				}
 				return NewError("range: start value must be an int")
 
 			case 2:
-				start, ok := args[0].(*Integer)
+				start, ok := Unwrap(args[0]).(*Integer)
 				if !ok {
 					return NewError("range: start value must be an int")
 				}
 
-				stop, ok := args[1].(*Integer)
+				stop, ok := Unwrap(args[1]).(*Integer)
 				if !ok {
 					return NewError("range: stop value must be an int")
 				}
 				return listify(int(*start), int(*stop), 1)
 
 			case 3:
-				start, ok := args[0].(*Integer)
+				start, ok := Unwrap(args[0]).(*Integer)
 				if !ok {
 					return NewError("range: start value must be an int")
 				}
 
-				stop, ok := args[1].(*Integer)
+				stop, ok := Unwrap(args[1]).(*Integer)
 				if !ok {
 					return NewError("range: stop value must be an int")
 				}
 
-				step, ok := args[2].(*Integer)
+				step, ok := Unwrap(args[2]).(*Integer)
 				if !ok {
 					return NewError("range: step value must be an int")
 				}
@@ -291,13 +291,13 @@ var Builtins = []struct {
 				return NewError("first: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			switch o := args[0].(type) {
+			switch o := Unwrap(args[0]).(type) {
 			case List:
 				return o[0]
 			case *String:
 				return NewString(string(string(*o)[0]))
 			default:
-				return NewError("first: wrong argument type, expected list, got %s", args[0].Type())
+				return NewError("first: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
 			}
 		},
 	},
@@ -308,14 +308,14 @@ var Builtins = []struct {
 				return NewError("last: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			switch o := args[0].(type) {
+			switch o := Unwrap(args[0]).(type) {
 			case List:
 				return o[len(o)-1]
 			case *String:
 				s := string(*o)
 				return NewString(string(s[len(s)-1]))
 			default:
-				return NewError("last: wrong argument type, expected list, got %s", args[0].Type())
+				return NewError("last: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
 			}
 		},
 	},
@@ -326,14 +326,14 @@ var Builtins = []struct {
 				return NewError("tail: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			switch o := args[0].(type) {
+			switch o := Unwrap(args[0]).(type) {
 			case List:
 				return o[1:]
 			case *String:
 				s := string(*o)
 				return NewString(s[1:])
 			default:
-				return NewError("tail: wrong argument type, expected list, got %s", args[0].Type())
+				return NewError("tail: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
 			}
 		},
 	},
@@ -353,7 +353,7 @@ var Builtins = []struct {
 				return NewError("failed: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			_, ok := args[0].(*Error)
+			_, ok := Unwrap(args[0]).(*Error)
 			return ParseBool(ok)
 		},
 	},
@@ -364,9 +364,9 @@ var Builtins = []struct {
 				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			str, ok := args[0].(*String)
+			str, ok := Unwrap(args[0]).(*String)
 			if !ok {
-				return NewError("plugin: first argument must be a string, got %s instead", args[0].Type())
+				return NewError("plugin: first argument must be a string, got %s instead", Unwrap(args[0]).Type())
 			}
 
 			return NewNativePlugin(str.String())
@@ -379,9 +379,9 @@ var Builtins = []struct {
 				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			i, ok := args[0].(*Integer)
+			i, ok := Unwrap(args[0]).(*Integer)
 			if !ok {
-				return NewError("plugin: first argument must be an int, got %s instead", args[0].Type())
+				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
 
 			return NewString(fmt.Sprintf("0x%x", i.Val()))
@@ -394,9 +394,9 @@ var Builtins = []struct {
 				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			i, ok := args[0].(*Integer)
+			i, ok := Unwrap(args[0]).(*Integer)
 			if !ok {
-				return NewError("plugin: first argument must be an int, got %s instead", args[0].Type())
+				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
 
 			return NewString(fmt.Sprintf("%O", i.Val()))
@@ -409,12 +409,53 @@ var Builtins = []struct {
 				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			i, ok := args[0].(*Integer)
+			i, ok := Unwrap(args[0]).(*Integer)
 			if !ok {
-				return NewError("plugin: first argument must be an int, got %s instead", args[0].Type())
+				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
 
 			return NewString(fmt.Sprintf("0b%b", i.Val()))
+		},
+	},
+	{
+		"slice",
+		func(args ...Object) Object {
+			if l := len(args); l != 3 {
+				return NewError("slice: wrong number of arguments, expected 3, got %d", l)
+			}
+
+			s, ok := Unwrap(args[1]).(*Integer)
+			if !ok {
+				return NewError("slice: second argument must be an int, got %s instead", Unwrap(args[1]).Type())
+			}
+
+			e, ok := Unwrap(args[2]).(*Integer)
+			if !ok {
+				return NewError("slice: third argument must be an int, got %s instead", Unwrap(args[2]).Type())
+			}
+
+			var start, end = int(*s), int(*e)
+
+			switch slice := Unwrap(args[0]).(type) {
+			case List:
+				if start < 0 || end < 0 {
+					return NewError("slice: invalid argument: index arguments must not be negative")
+				} else if end > len(slice) {
+					return NewError("slice: list bounds out of range %d with capacity %d", end, len(slice))
+				}
+				return slice[start:end]
+
+			case *String:
+				if start < 0 || end < 0 {
+					return NewError("slice: invalid argument: index arguments must not be negative")
+				} else if end > len(*slice) {
+					return NewError("slice: string bounds out of range %d with capacity %d", end, len(*slice))
+				}
+				return NewString(string(*slice)[start:end])
+
+			default:
+				return NewError("slice: first argument must be a list or string, got %s instead", args[0].Type())
+			}
 		},
 	},
 }

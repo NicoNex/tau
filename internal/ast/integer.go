@@ -25,3 +25,7 @@ func (i Integer) String() string {
 func (i Integer) Compile(c *compiler.Compiler) (position int, err error) {
 	return c.Emit(code.OpConstant, c.AddConstant(obj.NewInteger(int64(i)))), nil
 }
+
+func (i Integer) IsConstExpression() bool {
+	return true
+}

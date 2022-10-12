@@ -67,6 +67,10 @@ func (p Plus) String() string {
 }
 
 func (p Plus) Compile(c *compiler.Compiler) (position int, err error) {
+	if p.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(p.Eval(nil))), nil
+	}
+
 	if position, err = p.l.Compile(c); err != nil {
 		return
 	}
@@ -74,4 +78,8 @@ func (p Plus) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 	return c.Emit(code.OpAdd), nil
+}
+
+func (p Plus) IsConstExpression() bool {
+	return p.l.IsConstExpression() && p.r.IsConstExpression()
 }

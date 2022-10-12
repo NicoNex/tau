@@ -59,3 +59,7 @@ func (b BitwiseOrAssign) Compile(c *compiler.Compiler) (position int, err error)
 	n := Assign{b.l, BitwiseOr{b.l, b.r}}
 	return n.Compile(c)
 }
+
+func (b BitwiseOrAssign) IsConstExpression() bool {
+	return false
+}

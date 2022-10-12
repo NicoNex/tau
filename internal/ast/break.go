@@ -23,3 +23,7 @@ func (b Break) String() string {
 func (b Break) Compile(c *compiler.Compiler) (position int, err error) {
 	return c.Emit(code.OpJump, compiler.BreakPlaceholder), nil
 }
+
+func (b Break) IsConstExpression() bool {
+	return false
+}

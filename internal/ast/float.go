@@ -25,3 +25,7 @@ func (f Float) String() string {
 func (f Float) Compile(c *compiler.Compiler) (position int, err error) {
 	return c.Emit(code.OpConstant, c.AddConstant(obj.NewFloat(float64(f)))), nil
 }
+
+func (f Float) IsConstExpression() bool {
+	return true
+}

@@ -12,6 +12,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/NicoNex/tau/internal/ast"
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
@@ -128,6 +129,8 @@ func ExecFileVM(f string) (err error) {
 	}
 
 	tvm := vm.New(bytecode)
+	dir, _ := filepath.Split(f)
+	tvm.SetDir(dir)
 	if err = tvm.Run(); err != nil {
 		fmt.Println(err)
 		return
@@ -139,6 +142,8 @@ func ExecFileVM(f string) (err error) {
 func ExecFileEval(f string) error {
 	var env = obj.NewEnv()
 
+	dir, _ := filepath.Split(f)
+	env.SetDir(dir)
 	b := readFile(f)
 	res, errs := parser.Parse(string(b))
 	if len(errs) != 0 {
@@ -186,4 +191,22 @@ func CompileFiles(files []string) error {
 
 func PrintVersionInfo(w io.Writer) {
 	fmt.Fprintf(w, "Tau %s on %s\n", TauVersion, strings.Title(runtime.GOOS))
+}
+
+func Parse(src string) (ast.Node, error) {
+	tree, errs := parser.Parse(src)
+	if len(errs) > 0 {
+		var buf strings.Builder
+
+		buf.WriteString("parser error:\n")
+		for _, e := range errs {
+			buf.WriteString("    ")
+			buf.WriteString(e)
+			buf.WriteByte('\n')
+		}
+
+		return nil, errors.New(buf.String())
+	}
+
+	return tree, nil
 }

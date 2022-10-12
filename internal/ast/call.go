@@ -99,3 +99,7 @@ func (c Call) Compile(comp *compiler.Compiler) (position int, err error) {
 
 	return comp.Emit(code.OpCall, len(c.args)), nil
 }
+
+func (c Call) IsConstExpression() bool {
+	return false
+}

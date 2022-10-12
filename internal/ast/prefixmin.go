@@ -41,8 +41,16 @@ func (p PrefixMinus) String() string {
 }
 
 func (p PrefixMinus) Compile(c *compiler.Compiler) (position int, err error) {
+	if p.IsConstExpression() {
+		return c.Emit(code.OpConstant, c.AddConstant(p.Eval(nil))), nil
+	}
+
 	if position, err = p.n.Compile(c); err != nil {
 		return
 	}
 	return c.Emit(code.OpMinus), nil
+}
+
+func (p PrefixMinus) IsConstExpression() bool {
+	return p.n.IsConstExpression()
 }

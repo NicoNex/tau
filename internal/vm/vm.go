@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -38,6 +39,9 @@ type VM struct {
 	sp         int
 	frames     []*Frame
 	frameIndex int
+	dir        string
+	// Keeps track of the locally defined globals.
+	localTable []bool
 	*State
 }
 
@@ -111,6 +115,7 @@ func New(bytecode *compiler.Bytecode) *VM {
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
+		localTable: make([]bool, GlobalSize),
 		State:      NewState(),
 	}
 
@@ -125,12 +130,21 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
+		localTable: make([]bool, GlobalSize),
 		State:      state,
 	}
 
 	fn := &obj.Function{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
+}
+
+func (vm *VM) SetDir(dir string) {
+	vm.dir = dir
+}
+
+func (vm *VM) isLocal(i int) bool {
+	return vm.localTable[i]
 }
 
 func (vm *VM) currentFrame() *Frame {
@@ -152,17 +166,14 @@ func (vm *VM) LastPoppedStackElem() obj.Object {
 }
 
 func (vm VM) execLoadModule() error {
-	var (
-		taupath = vm.pop()
-		defs    = vm.Symbols.NumDefs
-	)
+	var taupath = vm.pop()
 
 	pathObj, ok := taupath.(*obj.String)
 	if !ok {
 		return fmt.Errorf("import: expected string, got %v", taupath.Type())
 	}
 
-	path, err := obj.ImportLookup(string(*pathObj))
+	path, err := obj.ImportLookup(filepath.Join(vm.dir, string(*pathObj)))
 	if err != nil {
 		return fmt.Errorf("import: %w", err)
 	}
@@ -184,13 +195,14 @@ func (vm VM) execLoadModule() error {
 	}
 
 	tvm := NewWithState(c.Bytecode(), vm.State)
+	tvm.dir, _ = filepath.Split(path)
 	if err := tvm.Run(); err != nil {
 		return err
 	}
 
 	mod := obj.NewModule()
 	for name, symbol := range vm.Symbols.Store {
-		if symbol.Scope == compiler.GlobalScope && symbol.Index >= defs {
+		if symbol.Scope == compiler.GlobalScope && tvm.isLocal(symbol.Index) {
 			o := vm.Globals[symbol.Index]
 			if m, ok := o.(obj.Moduler); ok {
 				o = m.Module()
@@ -257,7 +269,7 @@ func (vm *VM) execDot() error {
 
 func (vm *VM) execDefine() error {
 	var (
-		right = vm.pop()
+		right = obj.Unwrap(vm.pop())
 		left  = vm.pop()
 	)
 
@@ -348,21 +360,14 @@ func (vm *VM) execDiv() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	switch {
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
-		return vm.push(obj.NewInteger(l / r))
-
-	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
-		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
-		return vm.push(obj.NewFloat(l / r))
-
-	default:
+	if !assertTypes(left, obj.IntType, obj.FloatType) || !assertTypes(right, obj.IntType, obj.FloatType) {
 		return fmt.Errorf("unsupported operator '/' for types %v and %v", left.Type(), right.Type())
 	}
+
+	left, right = toFloat(left, right)
+	l := left.(*obj.Float).Val()
+	r := right.(*obj.Float).Val()
+	return vm.push(obj.NewFloat(l / r))
 }
 
 func (vm *VM) execMod() error {
@@ -497,7 +502,7 @@ func (vm *VM) execEqual() error {
 		return vm.push(obj.ParseBool(l == r))
 
 	default:
-		return fmt.Errorf("unsupported operator '==' for types %v and %v", left.Type(), right.Type())
+		return vm.push(False)
 	}
 }
 
@@ -528,7 +533,7 @@ func (vm *VM) execNotEqual() error {
 		return vm.push(obj.ParseBool(l != r))
 
 	default:
-		return fmt.Errorf("unsupported operator '!=' for types %v and %v", left.Type(), right.Type())
+		return vm.push(True)
 	}
 }
 
@@ -883,6 +888,7 @@ func (vm *VM) Run() (err error) {
 		case code.OpSetGlobal:
 			globalIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
+			vm.localTable[globalIndex] = true
 			vm.Globals[globalIndex] = vm.peek()
 
 		case code.OpGetGlobal:

@@ -8,12 +8,17 @@ import (
 )
 
 type BitwiseXorAssign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewBitwiseXorAssign(l, r Node) Node {
-	return BitwiseXorAssign{l, r}
+	return BitwiseXorAssign{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (b BitwiseXorAssign) Eval(env *obj.Env) obj.Object {
@@ -57,7 +62,7 @@ func (b BitwiseXorAssign) String() string {
 }
 
 func (b BitwiseXorAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{b.l, BitwiseXor{b.l, b.r}}
+	n := Assign{l: b.l, r: BitwiseXor{l: b.l, r: b.r, pos: b.pos}, pos: b.pos}
 	return n.Compile(c)
 }
 

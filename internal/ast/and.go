@@ -9,12 +9,17 @@ import (
 )
 
 type And struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewAnd(l, r Node) Node {
-	return And{l, r}
+	return And{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (a And) Eval(env *obj.Env) obj.Object {

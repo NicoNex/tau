@@ -10,12 +10,17 @@ import (
 )
 
 type In struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewIn(l, r Node) Node {
-	return In{l, r}
+	return In{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (i In) Eval(env *obj.Env) obj.Object {

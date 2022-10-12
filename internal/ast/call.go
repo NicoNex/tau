@@ -12,10 +12,15 @@ import (
 type Call struct {
 	fn   Node
 	args []Node
+	pos  int
 }
 
 func NewCall(fn Node, args []Node) Node {
-	return Call{fn, args}
+	return Call{
+		fn:   fn,
+		args: args,
+		pos:  0,
+	}
 }
 
 func (c Call) Eval(env *obj.Env) obj.Object {

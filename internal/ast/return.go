@@ -9,11 +9,15 @@ import (
 )
 
 type Return struct {
-	v Node
+	v   Node
+	pos int
 }
 
 func NewReturn(n Node) Node {
-	return Return{n}
+	return Return{
+		v:   nil,
+		pos: 0,
+	}
 }
 
 func (r Return) Eval(env *obj.Env) obj.Object {

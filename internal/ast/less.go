@@ -9,12 +9,17 @@ import (
 )
 
 type Less struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewLess(l, r Node) Node {
-	return Less{l, r}
+	return Less{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (l Less) Eval(env *obj.Env) obj.Object {

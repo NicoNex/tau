@@ -8,12 +8,17 @@ import (
 )
 
 type TimesAssign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewTimesAssign(l, r Node) Node {
-	return TimesAssign{l, r}
+	return TimesAssign{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (t TimesAssign) Eval(env *obj.Env) obj.Object {
@@ -79,7 +84,7 @@ func (t TimesAssign) String() string {
 }
 
 func (t TimesAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{t.l, Times{t.l, t.r}}
+	n := Assign{l: t.l, r: Times{l: t.l, r: t.r, pos: t.pos}, pos: t.pos}
 	return n.Compile(c)
 }
 

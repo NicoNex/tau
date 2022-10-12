@@ -14,12 +14,14 @@ import (
 type Import struct {
 	name  Node
 	parse func(string) (Node, []string)
+	pos   int
 }
 
 func NewImport(name Node, parse func(string) (Node, []string)) Node {
 	return &Import{
 		name:  name,
 		parse: parse,
+		pos:   0,
 	}
 }
 

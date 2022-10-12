@@ -13,10 +13,15 @@ type Function struct {
 	params []Identifier
 	body   Node
 	Name   string
+	pos    int
 }
 
 func NewFunction(params []Identifier, body Node) Node {
-	return Function{params: params, body: body}
+	return Function{
+		params: params,
+		body:   body,
+		pos:    0,
+	}
 }
 
 func (f Function) Eval(env *obj.Env) obj.Object {

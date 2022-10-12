@@ -11,10 +11,15 @@ import (
 type Index struct {
 	left  Node
 	index Node
+	pos   int
 }
 
 func NewIndex(l, i Node) Node {
-	return Index{l, i}
+	return Index{
+		left:  l,
+		index: i,
+		pos:   0,
+	}
 }
 
 func (i Index) Eval(env *obj.Env) obj.Object {

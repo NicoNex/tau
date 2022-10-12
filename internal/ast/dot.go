@@ -9,12 +9,17 @@ import (
 )
 
 type Dot struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewDot(l, r Node) Node {
-	return Dot{l, r}
+	return Dot{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (d Dot) Eval(env *obj.Env) obj.Object {

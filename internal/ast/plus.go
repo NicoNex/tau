@@ -9,12 +9,17 @@ import (
 )
 
 type Plus struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewPlus(l, r Node) Node {
-	return Plus{l, r}
+	return Plus{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (p Plus) Eval(env *obj.Env) obj.Object {

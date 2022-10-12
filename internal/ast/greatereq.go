@@ -9,12 +9,17 @@ import (
 )
 
 type GreaterEq struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewGreaterEq(l, r Node) Node {
-	return GreaterEq{l, r}
+	return GreaterEq{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (g GreaterEq) Eval(env *obj.Env) obj.Object {

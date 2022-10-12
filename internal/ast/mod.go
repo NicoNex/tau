@@ -9,12 +9,17 @@ import (
 )
 
 type Mod struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewMod(l, r Node) Node {
-	return Mod{l, r}
+	return Mod{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (m Mod) Eval(env *obj.Env) obj.Object {

@@ -9,12 +9,17 @@ import (
 )
 
 type Equals struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewEquals(l, r Node) Node {
-	return Equals{l, r}
+	return Equals{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (e Equals) Eval(env *obj.Env) obj.Object {

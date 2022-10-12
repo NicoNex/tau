@@ -9,11 +9,15 @@ import (
 )
 
 type Bang struct {
-	n Node
+	n   Node
+	pos int
 }
 
 func NewBang(n Node) Node {
-	return Bang{n}
+	return Bang{
+		n:   n,
+		pos: 0,
+	}
 }
 
 func (b Bang) Eval(env *obj.Env) obj.Object {

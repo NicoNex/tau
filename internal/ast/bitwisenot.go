@@ -9,11 +9,15 @@ import (
 )
 
 type BitwiseNot struct {
-	n Node
+	n   Node
+	pos int
 }
 
 func NewBitwiseNot(n Node) Node {
-	return BitwiseNot{n}
+	return BitwiseNot{
+		n:   n,
+		pos: 0,
+	}
 }
 
 func (b BitwiseNot) Eval(env *obj.Env) obj.Object {

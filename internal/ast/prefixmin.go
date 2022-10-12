@@ -9,11 +9,15 @@ import (
 )
 
 type PrefixMinus struct {
-	n Node
+	n   Node
+	pos int
 }
 
 func NewPrefixMinus(n Node) Node {
-	return PrefixMinus{n}
+	return PrefixMinus{
+		n:   n,
+		pos: 0,
+	}
 }
 
 func (p PrefixMinus) Eval(env *obj.Env) obj.Object {

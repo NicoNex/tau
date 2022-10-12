@@ -8,12 +8,17 @@ import (
 )
 
 type PlusAssign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewPlusAssign(l, r Node) Node {
-	return PlusAssign{l, r}
+	return PlusAssign{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (p PlusAssign) Eval(env *obj.Env) obj.Object {
@@ -90,7 +95,7 @@ func (p PlusAssign) String() string {
 }
 
 func (p PlusAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{p.l, Plus{p.l, p.r}}
+	n := Assign{l: p.l, r: Plus{l: p.l, r: p.r, pos: p.pos}, pos: p.pos}
 	return n.Compile(c)
 }
 

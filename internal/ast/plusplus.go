@@ -8,11 +8,15 @@ import (
 )
 
 type PlusPlus struct {
-	r Node
+	r   Node
+	pos int
 }
 
 func NewPlusPlus(r Node) Node {
-	return PlusPlus{r}
+	return PlusPlus{
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (p PlusPlus) Eval(env *obj.Env) obj.Object {
@@ -59,7 +63,7 @@ func (p PlusPlus) String() string {
 }
 
 func (p PlusPlus) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{p.r, Plus{p.r, Integer(1)}}
+	n := Assign{l: p.r, r: Plus{l: p.r, r: Integer(1), pos: p.pos}, pos: p.pos}
 	return n.Compile(c)
 }
 

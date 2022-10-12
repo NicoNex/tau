@@ -9,12 +9,17 @@ import (
 )
 
 type Or struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewOr(l, r Node) Node {
-	return Or{l, r}
+	return Or{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (o Or) Eval(env *obj.Env) obj.Object {

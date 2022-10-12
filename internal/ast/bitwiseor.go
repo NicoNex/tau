@@ -9,12 +9,17 @@ import (
 )
 
 type BitwiseOr struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewBitwiseOr(l, r Node) Node {
-	return BitwiseOr{l, r}
+	return BitwiseOr{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (b BitwiseOr) Eval(env *obj.Env) obj.Object {

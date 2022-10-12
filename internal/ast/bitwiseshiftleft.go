@@ -9,12 +9,17 @@ import (
 )
 
 type BitwiseLeftShift struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewBitwiseLeftShift(l, r Node) Node {
-	return BitwiseLeftShift{l, r}
+	return BitwiseLeftShift{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (b BitwiseLeftShift) Eval(env *obj.Env) obj.Object {

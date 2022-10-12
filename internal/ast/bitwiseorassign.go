@@ -8,12 +8,17 @@ import (
 )
 
 type BitwiseOrAssign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewBitwiseOrAssign(l, r Node) Node {
-	return BitwiseOrAssign{l, r}
+	return BitwiseOrAssign{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (b BitwiseOrAssign) Eval(env *obj.Env) obj.Object {
@@ -56,7 +61,7 @@ func (b BitwiseOrAssign) String() string {
 }
 
 func (b BitwiseOrAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{b.l, BitwiseOr{b.l, b.r}}
+	n := Assign{l: b.l, r: BitwiseOr{l: b.l, r: b.r, pos: b.pos}, pos: b.pos}
 	return n.Compile(c)
 }
 

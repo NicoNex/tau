@@ -9,12 +9,17 @@ import (
 )
 
 type Times struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewTimes(l, r Node) Node {
-	return Times{l, r}
+	return Times{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (t Times) Eval(env *obj.Env) obj.Object {

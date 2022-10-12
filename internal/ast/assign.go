@@ -9,12 +9,17 @@ import (
 )
 
 type Assign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewAssign(l, r Node) Node {
-	return Assign{l, r}
+	return Assign{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (a Assign) Eval(env *obj.Env) obj.Object {

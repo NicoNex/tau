@@ -9,12 +9,17 @@ import (
 )
 
 type LessEq struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewLessEq(l, r Node) Node {
-	return LessEq{l, r}
+	return LessEq{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (l LessEq) Eval(env *obj.Env) obj.Object {

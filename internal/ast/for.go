@@ -13,10 +13,17 @@ type For struct {
 	after  Node
 	cond   Node
 	body   Node
+	pos    int
 }
 
 func NewFor(cond, body, before, after Node) Node {
-	return For{before, after, cond, body}
+	return For{
+		before: before,
+		after:  after,
+		cond:   cond,
+		body:   body,
+		pos:    0,
+	}
 }
 
 func (f For) Eval(env *obj.Env) obj.Object {

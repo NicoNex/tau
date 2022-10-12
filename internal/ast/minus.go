@@ -9,12 +9,17 @@ import (
 )
 
 type Minus struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewMinus(l, r Node) Node {
-	return Minus{l, r}
+	return Minus{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (m Minus) Eval(env *obj.Env) obj.Object {

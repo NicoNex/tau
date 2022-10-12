@@ -9,12 +9,17 @@ import (
 )
 
 type BitwiseXor struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewBitwiseXor(l, r Node) Node {
-	return BitwiseXor{l, r}
+	return BitwiseXor{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (b BitwiseXor) Eval(env *obj.Env) obj.Object {

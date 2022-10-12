@@ -8,12 +8,17 @@ import (
 )
 
 type BitwiseShiftLeftAssign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewBitwiseShiftLeftAssign(l, r Node) Node {
-	return BitwiseShiftLeftAssign{l, r}
+	return BitwiseShiftLeftAssign{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (b BitwiseShiftLeftAssign) Eval(env *obj.Env) obj.Object {
@@ -57,7 +62,7 @@ func (b BitwiseShiftLeftAssign) String() string {
 }
 
 func (b BitwiseShiftLeftAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{b.l, BitwiseLeftShift{b.l, b.r}}
+	n := Assign{l: b.l, r: BitwiseLeftShift{l: b.l, r: b.r, pos: b.pos}, pos: b.pos}
 	return n.Compile(c)
 }
 

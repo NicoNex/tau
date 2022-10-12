@@ -9,12 +9,17 @@ import (
 )
 
 type Greater struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewGreater(l, r Node) Node {
-	return Greater{l, r}
+	return Greater{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (g Greater) Eval(env *obj.Env) obj.Object {

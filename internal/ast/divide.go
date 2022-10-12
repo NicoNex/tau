@@ -9,12 +9,17 @@ import (
 )
 
 type Divide struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewDivide(l, r Node) Node {
-	return Divide{l, r}
+	return Divide{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (d Divide) Eval(env *obj.Env) obj.Object {

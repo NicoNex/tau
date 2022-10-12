@@ -9,12 +9,17 @@ import (
 )
 
 type BitwiseAnd struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewBitwiseAnd(l, r Node) Node {
-	return BitwiseAnd{l, r}
+	return BitwiseAnd{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (b BitwiseAnd) Eval(env *obj.Env) obj.Object {

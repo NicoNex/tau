@@ -9,12 +9,17 @@ import (
 )
 
 type NotEquals struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
 func NewNotEquals(l, r Node) Node {
-	return NotEquals{l, r}
+	return NotEquals{
+		l:   l,
+		r:   r,
+		pos: 0,
+	}
 }
 
 func (n NotEquals) Eval(env *obj.Env) obj.Object {

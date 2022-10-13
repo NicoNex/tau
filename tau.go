@@ -88,39 +88,37 @@ func precompiledBytecode(path string) (*compiler.Bytecode, error) {
 	return decode(bufio.NewReader(file))
 }
 
-func compile(path string) (*compiler.Bytecode, error) {
-	b := readFile(path)
-	res, errs := parser.Parse(string(b))
+func compile(path string) (input string, bc *compiler.Bytecode, err error) {
+	input = string(readFile(path))
+	res, errs := parser.Parse(input)
 	if len(errs) > 0 {
 		var buf strings.Builder
 
-		buf.WriteString("error parsing module ")
-		buf.WriteString(path)
-		buf.WriteRune(':')
-
 		for _, e := range errs {
-			buf.WriteRune('\t')
 			buf.WriteString(e)
+			buf.WriteByte('\n')
 		}
-
-		return nil, errors.New(buf.String())
+		return input, nil, errors.New(buf.String())
 	}
 
 	c := compiler.New()
-	if err := c.Compile(res); err != nil {
-		return nil, err
+	if err = c.Compile(res); err != nil {
+		return
 	}
 
-	return c.Bytecode(), nil
+	return input, c.Bytecode(), nil
 }
 
 func ExecFileVM(f string) (err error) {
-	var bytecode *compiler.Bytecode
+	var (
+		input    string
+		bytecode *compiler.Bytecode
+	)
 
 	if filepath.Ext(f) == ".tauc" {
 		bytecode, err = precompiledBytecode(f)
 	} else {
-		bytecode, err = compile(f)
+		input, bytecode, err = compile(f)
 	}
 
 	if err != nil {
@@ -129,8 +127,8 @@ func ExecFileVM(f string) (err error) {
 	}
 
 	tvm := vm.New(bytecode)
-	dir, _ := filepath.Split(f)
-	tvm.SetDir(dir)
+	tvm.SetFile(f)
+	tvm.SetInput(input)
 	if err = tvm.Run(); err != nil {
 		fmt.Println(err)
 		return

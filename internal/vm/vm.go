@@ -39,9 +39,11 @@ type VM struct {
 	sp         int
 	frames     []*Frame
 	frameIndex int
-	dir        string
 	// Keeps track of the locally defined globals.
 	localTable []bool
+	file       string
+	dir        string
+	input      string
 	bookmarks  map[int][]compiler.Bookmark
 	*State
 }
@@ -142,8 +144,12 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 	return vm
 }
 
-func (vm *VM) SetDir(dir string) {
-	vm.dir = dir
+func (vm *VM) SetInput(input string) {
+	vm.input = input
+}
+
+func (vm *VM) SetFile(file string) {
+	vm.dir, vm.file = filepath.Split(file)
 }
 
 func (vm *VM) isLocal(i int) bool {
@@ -193,7 +199,7 @@ func (vm *VM) positionLookup() int {
 }
 
 func (vm *VM) errorf(s string, a ...any) error {
-	return obj.Errorf(vm.positionLookup(), s, a...)
+	return obj.Errorf(vm.input, vm.positionLookup(), s, a...)
 }
 
 func (vm *VM) execLoadModule() error {

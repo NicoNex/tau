@@ -89,7 +89,6 @@ func Unwrap(o Object) Object {
 }
 
 var (
-	Input             string
 	ErrFileNotFound   = errors.New("file not found")
 	ErrNoFileProvided = errors.New("no file provided")
 )
@@ -121,10 +120,14 @@ type TauError struct {
 	msg string
 }
 
-func Errorf(pos int, f string, a ...any) TauError {
-	line := extractLine(Input, pos)
+func Errorf(input string, pos int, f string, a ...any) error {
+	if input == "" {
+		return fmt.Errorf(f, a...)
+	}
 
-	return TauError{
+	line := extractLine(input, pos)
+
+	return &TauError{
 		pos: pos,
 		msg: fmt.Sprintf(
 			"Error at line %d:\n    %s\n    %s\n%s",

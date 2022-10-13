@@ -176,7 +176,7 @@ func (p *Parser) errors() []string {
 }
 
 func (p *Parser) errorf(s string, a ...any) {
-	p.errs = append(p.errs, obj.Errorf(p.cur.Pos, s, a...).Error())
+	p.errs = append(p.errs, obj.Errorf(p.input, p.cur.Pos, s, a...).Error())
 }
 
 func (p *Parser) parse() ast.Node {
@@ -827,7 +827,6 @@ func (p *Parser) noParsePrefixFnError(t item.Type) {
 }
 
 func Parse(input string) (prog ast.Node, errs []string) {
-	obj.Input = input
 	items := lexer.Lex(input)
 	p := newParser(input, items)
 	return p.parse(), p.errors()

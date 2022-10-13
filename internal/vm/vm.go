@@ -178,21 +178,18 @@ func (vm *VM) positionLookup() int {
 		return 0
 	}
 
-	switch len(bookmarks) {
-	case 0:
+	if len(bookmarks) == 0 {
 		return 0
-
-	default:
-		prev := bookmarks[0]
-
-		for _, bm := range bookmarks[1:] {
-			if pos > prev.Offset && pos <= bm.Offset {
-				return bm.Pos
-			}
-			prev = bm
-		}
-		return prev.Pos
 	}
+
+	prev := bookmarks[0]
+	for _, bm := range bookmarks[1:] {
+		if pos > prev.Offset && pos <= bm.Offset {
+			return bm.Pos
+		}
+		prev = bm
+	}
+	return prev.Pos
 }
 
 func (vm *VM) errorf(s string, a ...any) error {
@@ -204,12 +201,12 @@ func (vm *VM) execLoadModule() error {
 
 	pathObj, ok := taupath.(*obj.String)
 	if !ok {
-		return fmt.Errorf("import: expected string, got %v", taupath.Type())
+		return vm.errorf("import: expected string, got %v", taupath.Type())
 	}
 
 	path, err := obj.ImportLookup(filepath.Join(vm.dir, string(*pathObj)))
 	if err != nil {
-		return fmt.Errorf("import: %w", err)
+		return vm.errorf("import: %w", err)
 	}
 
 	b, err := os.ReadFile(path)
@@ -297,7 +294,7 @@ func (vm *VM) execDot() error {
 		})
 
 	default:
-		return fmt.Errorf("%v object has no attribute %s", left.Type(), right)
+		return vm.errorf("%v object has no attribute %s", left.Type(), right)
 	}
 }
 
@@ -361,7 +358,7 @@ func (vm *VM) execSub() error {
 		return vm.push(obj.NewFloat(l - r))
 
 	default:
-		return fmt.Errorf("unsupported operator '-' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '-' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -384,7 +381,7 @@ func (vm *VM) execMul() error {
 		return vm.push(obj.NewFloat(l * r))
 
 	default:
-		return fmt.Errorf("unsupported operator '*' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '*' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -395,7 +392,7 @@ func (vm *VM) execDiv() error {
 	)
 
 	if !assertTypes(left, obj.IntType, obj.FloatType) || !assertTypes(right, obj.IntType, obj.FloatType) {
-		return fmt.Errorf("unsupported operator '/' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '/' for types %v and %v", left.Type(), right.Type())
 	}
 
 	left, right = toFloat(left, right)
@@ -411,14 +408,14 @@ func (vm *VM) execMod() error {
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
-		return fmt.Errorf("unsupported operator '%%' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '%%' for types %v and %v", left.Type(), right.Type())
 	}
 
 	l := left.(*obj.Integer).Val()
 	r := right.(*obj.Integer).Val()
 
 	if r == 0 {
-		return fmt.Errorf("can't divide by 0")
+		return vm.errorf("can't divide by 0")
 	}
 	return vm.push(obj.NewInteger(l % r))
 }
@@ -430,7 +427,7 @@ func (vm *VM) execBwAnd() error {
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
-		return fmt.Errorf("unsupported operator '&' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '&' for types %v and %v", left.Type(), right.Type())
 	}
 
 	l := left.(*obj.Integer).Val()
@@ -445,7 +442,7 @@ func (vm *VM) execBwOr() error {
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
-		return fmt.Errorf("unsupported operator '|' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '|' for types %v and %v", left.Type(), right.Type())
 	}
 
 	l := left.(*obj.Integer).Val()
@@ -460,7 +457,7 @@ func (vm *VM) execBwXor() error {
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
-		return fmt.Errorf("unsupported operator '^' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '^' for types %v and %v", left.Type(), right.Type())
 	}
 
 	l := left.(*obj.Integer).Val()
@@ -472,7 +469,7 @@ func (vm *VM) execBwNot() error {
 	var left = obj.Unwrap(vm.pop())
 
 	if !assertTypes(left, obj.IntType) {
-		return fmt.Errorf("unsupported operator '~' for type %v", left.Type())
+		return vm.errorf("unsupported operator '~' for type %v", left.Type())
 	}
 
 	l := left.(*obj.Integer).Val()
@@ -486,7 +483,7 @@ func (vm *VM) execBwLShift() error {
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
-		return fmt.Errorf("unsupported operator '<<' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '<<' for types %v and %v", left.Type(), right.Type())
 	}
 
 	l := left.(*obj.Integer).Val()
@@ -501,7 +498,7 @@ func (vm *VM) execBwRShift() error {
 	)
 
 	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
-		return fmt.Errorf("unsupported operator '>>' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '>>' for types %v and %v", left.Type(), right.Type())
 	}
 
 	l := left.(*obj.Integer).Val()
@@ -587,10 +584,10 @@ func (vm *VM) execIn() error {
 	)
 
 	if !assertTypes(left, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
-		return fmt.Errorf("unsupported operator 'in' for type %v", left.Type())
+		return vm.errorf("unsupported operator 'in' for type %v", left.Type())
 	}
 	if !assertTypes(right, obj.ListType, obj.StringType) {
-		return fmt.Errorf("unsupported operator 'in' for type %v", right.Type())
+		return vm.errorf("unsupported operator 'in' for type %v", right.Type())
 	}
 
 	switch {
@@ -631,7 +628,7 @@ func (vm *VM) execIn() error {
 		return vm.push(obj.False)
 
 	default:
-		return fmt.Errorf(
+		return vm.errorf(
 			"invalid operation %v in %v (wrong types %v and %v)",
 			left, right, left.Type(), right.Type(),
 		)
@@ -666,7 +663,7 @@ func (vm *VM) execGreaterThan() error {
 		return vm.push(obj.ParseBool(l > r))
 
 	default:
-		return fmt.Errorf("unsupported operator '>' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '>' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -689,7 +686,7 @@ func (vm *VM) execGreaterThanEqual() error {
 		return vm.push(obj.ParseBool(l >= r))
 
 	default:
-		return fmt.Errorf("unsupported operator '>=' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '>=' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -726,7 +723,7 @@ func (vm *VM) execIndex() error {
 		i := int(index.(*obj.Integer).Val())
 
 		if i < 0 || i >= len(s) {
-			return fmt.Errorf("index out of range")
+			return vm.errorf("index out of range")
 		}
 		return vm.push(obj.NewString(string(s[i])))
 
@@ -747,7 +744,7 @@ func (vm *VM) execIndex() error {
 		})
 
 	default:
-		return fmt.Errorf("invalid index operator for types %v and %v", left.Type(), index.Type())
+		return vm.errorf("invalid index operator for types %v and %v", left.Type(), index.Type())
 	}
 }
 
@@ -777,7 +774,7 @@ func (vm *VM) execMinus() error {
 		return vm.push(obj.NewFloat(-r.Val()))
 
 	default:
-		return fmt.Errorf("unsupported prefix operator '-' for type %v", r.Type())
+		return vm.errorf("unsupported prefix operator '-' for type %v", r.Type())
 	}
 }
 
@@ -809,7 +806,7 @@ func (vm *VM) call(o obj.Object, numArgs int) error {
 	case obj.Getter:
 		return vm.call(fn.Object(), numArgs)
 	default:
-		return fmt.Errorf("calling non-function")
+		return vm.errorf("calling non-function")
 	}
 }
 
@@ -836,7 +833,7 @@ func (vm *VM) buildMap(start, end int) (obj.Object, error) {
 		pair := obj.MapPair{Key: key, Value: val}
 		mapKey, ok := key.(obj.Hashable)
 		if !ok {
-			return nil, fmt.Errorf("invalid map key type %v", key.Type())
+			return nil, vm.errorf("invalid map key type %v", key.Type())
 		}
 		m.Set(mapKey.KeyHash(), pair)
 	}
@@ -846,7 +843,7 @@ func (vm *VM) buildMap(start, end int) (obj.Object, error) {
 
 func (vm *VM) callClosure(cl *obj.Closure, nargs int) error {
 	if nargs != cl.Fn.NumParams {
-		return fmt.Errorf("wrong number of arguments: expected %d, got %d", cl.Fn.NumParams, nargs)
+		return vm.errorf("wrong number of arguments: expected %d, got %d", cl.Fn.NumParams, nargs)
 	}
 
 	frame := NewFrame(cl, vm.sp-nargs)
@@ -870,7 +867,7 @@ func (vm *VM) pushClosure(constIdx, numFree int) error {
 	constant := vm.Consts[constIdx]
 	fn, ok := constant.(*obj.Function)
 	if !ok {
-		return fmt.Errorf("not a function: %+v", constant)
+		return vm.errorf("not a function: %+v", constant)
 	}
 
 	free := make([]obj.Object, numFree)
@@ -1090,7 +1087,7 @@ func (vm *VM) Run() (err error) {
 
 func (vm *VM) push(o obj.Object) error {
 	if vm.sp >= StackSize {
-		return fmt.Errorf("stack overflow")
+		return vm.errorf("stack overflow")
 	}
 
 	vm.stack[vm.sp] = o

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 type Object interface {
@@ -129,7 +130,7 @@ func Errorf(pos int, f string, a ...any) TauError {
 			"Error at line %d:\n    %s\n    %s\n%s",
 			line.number,
 			line,
-			arrow(pos-line.start),
+			arrow(line.pos),
 			fmt.Sprintf(f, a...),
 		),
 	}
@@ -147,6 +148,7 @@ type line struct {
 	start  int
 	end    int
 	number int
+	pos    int
 	str    string
 }
 
@@ -156,11 +158,15 @@ func (l line) String() string {
 
 func extractLine(input string, pos int) line {
 	s, e := startLine(input, pos), endLine(input, pos)
+	l := input[s:e]
+	str := strings.TrimLeft(l, " \t")
+
 	return line{
 		start:  s,
 		end:    e,
 		number: lineNo(input, pos),
-		str:    input[s:e],
+		pos:    pos - s - (len(l) - len(str)),
+		str:    str,
 	}
 }
 
@@ -196,10 +202,10 @@ func lineNo(s string, pos int) int {
 }
 
 func arrow(pos int) string {
-	var s = make([]byte, pos+1)
+	var s = make([]byte, pos)
 
 	for i := range s {
-		if i == pos {
+		if i == pos-1 {
 			s[i] = '^'
 		} else {
 			s[i] = ' '

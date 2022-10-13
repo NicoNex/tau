@@ -70,7 +70,7 @@ func (l *lexer) acceptRun(valid string) bool {
 }
 
 func (l *lexer) acceptUntil(end rune) {
-	for cur := l.next(); cur != end && cur != 0; cur = l.next() {
+	for cur := l.next(); cur != end && cur != eof; cur = l.next() {
 	}
 	l.backup()
 }

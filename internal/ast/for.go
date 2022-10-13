@@ -95,6 +95,7 @@ func (f For) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 
+	c.Bookmark(f.pos)
 	return endPos, nil
 }
 

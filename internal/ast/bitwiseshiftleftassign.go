@@ -63,7 +63,9 @@ func (b BitwiseShiftLeftAssign) String() string {
 
 func (b BitwiseShiftLeftAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{l: b.l, r: BitwiseLeftShift{l: b.l, r: b.r, pos: b.pos}, pos: b.pos}
-	return n.Compile(c)
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (b BitwiseShiftLeftAssign) IsConstExpression() bool {

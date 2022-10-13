@@ -64,7 +64,9 @@ func (p PlusPlus) String() string {
 
 func (p PlusPlus) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{l: p.r, r: Plus{l: p.r, r: Integer(1), pos: p.pos}, pos: p.pos}
-	return n.Compile(c)
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (p PlusPlus) IsConstExpression() bool {

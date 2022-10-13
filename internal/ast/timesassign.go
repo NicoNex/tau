@@ -85,7 +85,9 @@ func (t TimesAssign) String() string {
 
 func (t TimesAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{l: t.l, r: Times{l: t.l, r: t.r, pos: t.pos}, pos: t.pos}
-	return n.Compile(c)
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (t TimesAssign) IsConstExpression() bool {

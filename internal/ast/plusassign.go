@@ -96,7 +96,9 @@ func (p PlusAssign) String() string {
 
 func (p PlusAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{l: p.l, r: Plus{l: p.l, r: p.r, pos: p.pos}, pos: p.pos}
-	return n.Compile(c)
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (p PlusAssign) IsConstExpression() bool {

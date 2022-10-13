@@ -65,7 +65,9 @@ func (d DivideAssign) String() string {
 
 func (d DivideAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{l: d.l, r: Divide{l: d.l, r: d.r, pos: d.pos}, pos: d.pos}
-	return n.Compile(c)
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (d DivideAssign) IsConstExpression() bool {

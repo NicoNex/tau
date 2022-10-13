@@ -63,7 +63,9 @@ func (b BitwiseAndAssign) String() string {
 
 func (b BitwiseAndAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{l: b.l, r: BitwiseAnd{l: b.l, r: b.r, pos: b.pos}, pos: b.pos}
-	return n.Compile(c)
+	position, err = n.Compile(c)
+	c.Bookmark(b.pos)
+	return
 }
 
 func (b BitwiseAndAssign) IsConstExpression() bool {

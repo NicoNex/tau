@@ -64,7 +64,9 @@ func (m MinusMinus) String() string {
 
 func (m MinusMinus) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{l: m.r, r: Minus{l: m.r, r: Integer(1), pos: m.pos}, pos: m.pos}
-	return n.Compile(c)
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (m MinusMinus) IsConstExpression() bool {

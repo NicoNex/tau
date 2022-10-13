@@ -70,7 +70,9 @@ func (m ModAssign) String() string {
 
 func (m ModAssign) Compile(c *compiler.Compiler) (position int, err error) {
 	n := Assign{l: m.l, r: Mod{l: m.l, r: m.r, pos: m.pos}, pos: m.pos}
-	return n.Compile(c)
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (m ModAssign) IsConstExpression() bool {

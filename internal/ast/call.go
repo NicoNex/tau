@@ -102,7 +102,9 @@ func (c Call) Compile(comp *compiler.Compiler) (position int, err error) {
 		}
 	}
 
-	return comp.Emit(code.OpCall, len(c.args)), nil
+	position = comp.Emit(code.OpCall, len(c.args))
+	comp.Bookmark(c.pos)
+	return
 }
 
 func (c Call) IsConstExpression() bool {

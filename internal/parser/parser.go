@@ -1,7 +1,6 @@
 package parser
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/NicoNex/tau/internal/ast"
@@ -176,20 +175,8 @@ func (p *Parser) errors() []string {
 	return p.errs
 }
 
-func (p *Parser) line(pos int) string {
-	return p.input[startLine(p.input, pos):endLine(p.input, pos)]
-}
-
 func (p *Parser) errorf(s string, a ...any) {
-	line := p.line(p.cur.Pos)
-
-	p.errs = append(p.errs, fmt.Sprintf(
-		"Error at line %d:\n    %s\n    %s\n%s",
-		lineNo(p.input, p.cur.Pos),
-		line,
-		arrow(p.cur.Pos%(len(line)+1)),
-		fmt.Sprintf(s, a...),
-	))
+	p.errs = append(p.errs, obj.Errorf(p.cur.Pos, s, a...).Error())
 }
 
 func (p *Parser) parse() ast.Node {
@@ -844,48 +831,4 @@ func Parse(input string) (prog ast.Node, errs []string) {
 	items := lexer.Lex(input)
 	p := newParser(input, items)
 	return p.parse(), p.errors()
-}
-
-func startLine(s string, pos int) (beg int) {
-	for i := pos - 1; i >= 0; i-- {
-		if s[i] == '\n' {
-			return i
-		}
-	}
-	return
-}
-
-func endLine(s string, pos int) (end int) {
-	end = len(s)
-	for i := pos; i < len(s); i++ {
-		if s[i] == '\n' {
-			return i
-		}
-	}
-	return
-}
-
-func lineNo(s string, pos int) int {
-	var cnt = 1
-
-	for _, b := range s[:pos] {
-		if b == '\n' {
-			cnt++
-		}
-	}
-
-	return cnt
-}
-
-func arrow(pos int) string {
-	var s = make([]byte, pos+1)
-
-	for i := range s {
-		if i == pos {
-			s[i] = '^'
-		} else {
-			s[i] = ' '
-		}
-	}
-	return string(s)
 }

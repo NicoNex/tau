@@ -202,7 +202,7 @@ func lineNo(s string, pos int) int {
 }
 
 func arrow(pos int) string {
-	var s = make([]byte, pos)
+	var s = make([]byte, pos+1)
 
 	for i := range s {
 		if i == pos-1 {

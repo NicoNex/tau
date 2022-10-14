@@ -103,11 +103,9 @@ func parserError(prefix string, errs []string) error {
 	var buf strings.Builder
 
 	buf.WriteString(prefix)
-	buf.WriteRune('\n')
+	buf.WriteByte('\n')
 	for _, e := range errs {
-		buf.WriteRune('\t')
 		buf.WriteString(e)
-		buf.WriteRune('\n')
 	}
 
 	return errors.New(buf.String())
@@ -210,7 +208,8 @@ func (vm *VM) execLoadModule() error {
 		return vm.errorf("import: expected string, got %v", taupath.Type())
 	}
 
-	path, err := obj.ImportLookup(filepath.Join(vm.dir, string(*pathObj)))
+	input := string(*pathObj)
+	path, err := obj.ImportLookup(filepath.Join(vm.dir, input))
 	if err != nil {
 		return vm.errorf("import: %w", err)
 	}
@@ -232,7 +231,8 @@ func (vm *VM) execLoadModule() error {
 	}
 
 	tvm := NewWithState(c.Bytecode(), vm.State)
-	tvm.dir, _ = filepath.Split(path)
+	tvm.SetFile(path)
+	tvm.SetInput(input)
 	if err := tvm.Run(); err != nil {
 		return err
 	}

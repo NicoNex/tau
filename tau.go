@@ -57,7 +57,7 @@ func decode(r io.Reader) (*compiler.Bytecode, error) {
 	gob.Register(obj.NewError(""))
 	gob.Register(obj.NewClosure(nil, []obj.Object{}))
 	gob.Register(obj.Builtin(func(arg ...obj.Object) obj.Object { return nil }))
-	gob.Register(obj.NewFunction([]string{}, obj.NewEnv(), nil))
+	gob.Register(obj.NewFunction([]string{}, obj.NewEnv(""), nil))
 
 	return b, dec.Decode(&b)
 }
@@ -134,10 +134,8 @@ func ExecFileVM(f string) (err error) {
 }
 
 func ExecFileEval(f string) error {
-	var env = obj.NewEnv()
+	var env = obj.NewEnv(f)
 
-	dir, _ := filepath.Split(f)
-	env.SetDir(dir)
 	b := readFile(f)
 	res, errs := parser.Parse(f, string(b))
 	if len(errs) != 0 {

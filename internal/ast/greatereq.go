@@ -60,7 +60,11 @@ func (g GreaterEq) String() string {
 
 func (g GreaterEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if g.IsConstExpression() {
-		position = c.Emit(code.OpConstant, c.AddConstant(g.Eval(nil)))
+		o := g.Eval(nil)
+		if e, ok := o.(*obj.Error); ok {
+			return 0, compiler.NewError(g.pos, string(*e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(g.pos)
 		return
 	}

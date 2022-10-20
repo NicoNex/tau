@@ -53,7 +53,11 @@ func (b BitwiseAnd) String() string {
 
 func (b BitwiseAnd) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		position = c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil)))
+		o := b.Eval(nil)
+		if e, ok := o.(*obj.Error); ok {
+			return 0, compiler.NewError(b.pos, string(*e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(b.pos)
 		return
 	}

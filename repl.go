@@ -18,7 +18,7 @@ import (
 )
 
 func EvalREPL() error {
-	var env = obj.NewEnv()
+	var env = obj.NewEnv("<stdin>")
 
 	initState, err := term.MakeRaw(0)
 	if err != nil {
@@ -91,7 +91,11 @@ func VmREPL() error {
 
 		c := compiler.NewWithState(state.Symbols, &state.Consts)
 		if err := c.Compile(res); err != nil {
-			fmt.Fprintln(t, err)
+			if ce, ok := err.(*compiler.CompilerError); ok {
+				fmt.Fprintln(t, tauerr.New("<stdin>", input, ce.Pos(), ce.Error()))
+			} else {
+				fmt.Fprintln(t, err)
+			}
 			continue
 		}
 

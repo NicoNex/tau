@@ -12,12 +12,13 @@ import (
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
+	"github.com/NicoNex/tau/internal/tauerr"
 	"github.com/NicoNex/tau/internal/vm"
 )
 
 func EvalREPL() {
 	var (
-		env    = obj.NewEnv()
+		env    = obj.NewEnv("<stdin>")
 		reader = bufio.NewReader(os.Stdin)
 	)
 
@@ -76,7 +77,11 @@ func VmREPL() {
 		c := compiler.NewWithState(state.Symbols, &state.Consts)
 		c.SetFileContent(input)
 		if err := c.Compile(res); err != nil {
-			fmt.Println(err)
+			if ce, ok := err.(*compiler.CompilerError); ok {
+				fmt.Println(tauerr.New("<stdin>", input, ce.Pos(), ce.Error()))
+			} else {
+				fmt.Println(err)
+			}
 			continue
 		}
 		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)

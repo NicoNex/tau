@@ -73,7 +73,11 @@ func (e Equals) String() string {
 
 func (e Equals) Compile(c *compiler.Compiler) (position int, err error) {
 	if e.IsConstExpression() {
-		position = c.Emit(code.OpConstant, c.AddConstant(e.Eval(nil)))
+		o := e.Eval(nil)
+		if oerr, ok := o.(*obj.Error); ok {
+			return 0, compiler.NewError(e.pos, string(*oerr))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(e.pos)
 		return
 	}

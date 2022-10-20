@@ -60,7 +60,11 @@ func (m Minus) String() string {
 
 func (m Minus) Compile(c *compiler.Compiler) (position int, err error) {
 	if m.IsConstExpression() {
-		position = c.Emit(code.OpConstant, c.AddConstant(m.Eval(nil)))
+		o := m.Eval(nil)
+		if e, ok := o.(*obj.Error); ok {
+			return 0, compiler.NewError(m.pos, string(*e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(m.pos)
 		return
 	}

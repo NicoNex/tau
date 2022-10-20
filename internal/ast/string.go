@@ -12,8 +12,6 @@ import (
 	"github.com/NicoNex/tau/internal/obj"
 )
 
-type parseFn func(string) (Node, []string)
-
 type String struct {
 	s      string
 	parse  parseFn
@@ -21,13 +19,13 @@ type String struct {
 	pos    int
 }
 
-func NewString(s string, parse parseFn, pos int) (Node, error) {
+func NewString(file, s string, parse parseFn, pos int) (Node, error) {
 	str, err := escape(s)
 	if err != nil {
 		return nil, err
 	}
 
-	i := newInterpolator(str, parse)
+	i := newInterpolator(file, str, parse)
 	nodes, str, err := i.nodes()
 	return String{s: str, parse: parse, substr: nodes, pos: pos}, err
 }
@@ -147,6 +145,7 @@ var errBadInterpolationSyntax = errors.New("bad interpolation syntax")
 
 type interpolator struct {
 	s          string
+	file       string
 	pos        int
 	width      int
 	nblocks    int
@@ -156,8 +155,8 @@ type interpolator struct {
 	strings.Builder
 }
 
-func newInterpolator(s string, parse parseFn) interpolator {
-	return interpolator{s: s, parse: parse}
+func newInterpolator(file, s string, parse parseFn) interpolator {
+	return interpolator{s: s, file: file, parse: parse}
 }
 
 func (i *interpolator) next() (r rune) {
@@ -259,7 +258,7 @@ func (i *interpolator) nodes() ([]Node, string, error) {
 			}
 
 			// Parse the code
-			tree, errs := i.parse(s)
+			tree, errs := i.parse(i.file, s)
 			if len(errs) > 0 {
 				return []Node{}, "", i.parserError(errs)
 			}
@@ -281,14 +280,13 @@ func (i *interpolator) nodes() ([]Node, string, error) {
 	return nodes, i.String(), nil
 }
 
-func (i *interpolator) parserError(errs []string) error {
+func (i *interpolator) parserError(errs []error) error {
 	var buf strings.Builder
 
 	buf.WriteString("interpolation errors:\n")
 	for _, e := range errs {
-		buf.WriteRune('\t')
-		buf.WriteString(e)
-		buf.WriteRune('\n')
+		buf.WriteString(e.Error())
+		buf.WriteByte('\n')
 	}
 
 	return errors.New(buf.String())

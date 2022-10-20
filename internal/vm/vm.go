@@ -13,6 +13,7 @@ import (
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
+	"github.com/NicoNex/tau/internal/tauerr"
 )
 
 type State struct {
@@ -43,8 +44,7 @@ type VM struct {
 	localTable []bool
 	file       string
 	dir        string
-	input      string
-	bookmarks  map[int][]compiler.Bookmark
+	bookmarks  map[int][]tauerr.Bookmark
 	*State
 }
 
@@ -99,19 +99,19 @@ func isExported(n string) bool {
 	return unicode.IsUpper(r)
 }
 
-func parserError(prefix string, errs []string) error {
+func parserError(prefix string, errs []error) error {
 	var buf strings.Builder
 
 	buf.WriteString(prefix)
 	buf.WriteByte('\n')
 	for _, e := range errs {
-		buf.WriteString(e)
+		buf.WriteString(e.Error())
 	}
 
 	return errors.New(buf.String())
 }
 
-func New(bytecode *compiler.Bytecode) *VM {
+func New(file string, bytecode *compiler.Bytecode) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
@@ -121,13 +121,14 @@ func New(bytecode *compiler.Bytecode) *VM {
 		State:      NewState(),
 	}
 
+	vm.dir, vm.file = filepath.Split(file)
 	vm.Consts = bytecode.Constants
 	fn := &obj.Function{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
 
-func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
+func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
@@ -137,17 +138,10 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 		State:      state,
 	}
 
+	vm.dir, vm.file = filepath.Split(file)
 	fn := &obj.Function{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
-}
-
-func (vm *VM) SetInput(input string) {
-	vm.input = input
-}
-
-func (vm *VM) SetFile(file string) {
-	vm.dir, vm.file = filepath.Split(file)
 }
 
 func (vm *VM) isLocal(i int) bool {
@@ -172,32 +166,32 @@ func (vm *VM) LastPoppedStackElem() obj.Object {
 	return vm.stack[vm.sp]
 }
 
-// Scans the bookmarks and return the position of the input corresponding to the
-// current position in the bytecode.
-func (vm *VM) positionLookup() int {
-	var pos = vm.currentFrame().ip
+// Returns the bookmark corresponding to the current position in the bytecode.
+func (vm *VM) bookmark() tauerr.Bookmark {
+	var offset = vm.currentFrame().ip
 
 	bookmarks, ok := vm.bookmarks[vm.frameIndex-1]
-	if !ok {
-		return 0
-	}
-
-	if len(bookmarks) == 0 {
-		return 0
+	if !ok || len(bookmarks) == 0 {
+		return tauerr.Bookmark{}
 	}
 
 	prev := bookmarks[0]
-	for _, bm := range bookmarks[1:] {
-		if pos > prev.Offset && pos <= bm.Offset {
-			return bm.Pos
+	for _, cur := range bookmarks[1:] {
+		if offset > prev.Offset && offset <= cur.Offset {
+			return cur
 		}
-		prev = bm
+		prev = cur
 	}
-	return prev.Pos
+	return prev
 }
 
 func (vm *VM) errorf(s string, a ...any) error {
-	return obj.Errorf(vm.input, vm.positionLookup(), s, a...)
+	return tauerr.NewFromBookmark(
+		filepath.Join(vm.dir, vm.file),
+		vm.bookmark(),
+		s,
+		a...,
+	)
 }
 
 func (vm *VM) execLoadModule() error {
@@ -219,20 +213,19 @@ func (vm *VM) execLoadModule() error {
 		return err
 	}
 
-	tree, errs := parser.Parse(string(b))
+	tree, errs := parser.Parse(path, string(b))
 	if len(errs) > 0 {
 		p := fmt.Sprintf("import: multiple errors in module %s:", path)
 		return parserError(p, errs)
 	}
 
 	c := compiler.NewWithState(vm.Symbols, &vm.Consts)
+	c.SetFileContent(input)
 	if err := c.Compile(tree); err != nil {
 		return err
 	}
 
-	tvm := NewWithState(c.Bytecode(), vm.State)
-	tvm.SetFile(path)
-	tvm.SetInput(input)
+	tvm := NewWithState(path, c.Bytecode(), vm.State)
 	if err := tvm.Run(); err != nil {
 		return err
 	}

@@ -88,37 +88,35 @@ func precompiledBytecode(path string) (*compiler.Bytecode, error) {
 	return decode(bufio.NewReader(file))
 }
 
-func compile(path string) (input string, bc *compiler.Bytecode, err error) {
-	input = string(readFile(path))
-	res, errs := parser.Parse(input)
+func compile(path string) (bc *compiler.Bytecode, err error) {
+	input := string(readFile(path))
+	res, errs := parser.Parse(path, input)
 	if len(errs) > 0 {
 		var buf strings.Builder
 
 		for _, e := range errs {
-			buf.WriteString(e)
+			buf.WriteString(e.Error())
 			buf.WriteByte('\n')
 		}
-		return input, nil, errors.New(buf.String())
+		return nil, errors.New(buf.String())
 	}
 
 	c := compiler.New()
+	c.SetFileContent(input)
 	if err = c.Compile(res); err != nil {
 		return
 	}
 
-	return input, c.Bytecode(), nil
+	return c.Bytecode(), nil
 }
 
 func ExecFileVM(f string) (err error) {
-	var (
-		input    string
-		bytecode *compiler.Bytecode
-	)
+	var bytecode *compiler.Bytecode
 
 	if filepath.Ext(f) == ".tauc" {
 		bytecode, err = precompiledBytecode(f)
 	} else {
-		input, bytecode, err = compile(f)
+		bytecode, err = compile(f)
 	}
 
 	if err != nil {
@@ -126,9 +124,7 @@ func ExecFileVM(f string) (err error) {
 		return
 	}
 
-	tvm := vm.New(bytecode)
-	tvm.SetFile(f)
-	tvm.SetInput(input)
+	tvm := vm.New(f, bytecode)
 	if err = tvm.Run(); err != nil {
 		fmt.Println(err)
 		return
@@ -143,7 +139,7 @@ func ExecFileEval(f string) error {
 	dir, _ := filepath.Split(f)
 	env.SetDir(dir)
 	b := readFile(f)
-	res, errs := parser.Parse(string(b))
+	res, errs := parser.Parse(f, string(b))
 	if len(errs) != 0 {
 		for _, e := range errs {
 			fmt.Println(e)
@@ -160,7 +156,7 @@ func CompileFiles(files []string) error {
 	for _, f := range files {
 		b := readFile(f)
 
-		res, errs := parser.Parse(string(b))
+		res, errs := parser.Parse(f, string(b))
 		if len(errs) != 0 {
 			for _, e := range errs {
 				fmt.Println(e)
@@ -192,14 +188,13 @@ func PrintVersionInfo(w io.Writer) {
 }
 
 func Parse(src string) (ast.Node, error) {
-	tree, errs := parser.Parse(src)
+	tree, errs := parser.Parse("<input>", src)
 	if len(errs) > 0 {
 		var buf strings.Builder
 
 		buf.WriteString("parser error:\n")
 		for _, e := range errs {
-			buf.WriteString("    ")
-			buf.WriteString(e)
+			buf.WriteString(e.Error())
 			buf.WriteByte('\n')
 		}
 

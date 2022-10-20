@@ -42,7 +42,7 @@ func EvalREPL() error {
 			check(t, initState, err)
 		}
 
-		res, errs := parser.Parse(input)
+		res, errs := parser.Parse("<stdin>", input)
 		if len(errs) != 0 {
 			for _, e := range errs {
 				fmt.Fprintln(t, e)
@@ -81,7 +81,7 @@ func VmREPL() error {
 			check(t, initState, err)
 		}
 
-		res, errs := parser.Parse(input)
+		res, errs := parser.Parse("<stdin>", input)
 		if len(errs) != 0 {
 			for _, e := range errs {
 				fmt.Fprintln(t, e)
@@ -94,8 +94,8 @@ func VmREPL() error {
 			fmt.Fprintln(t, err)
 			continue
 		}
-		tvm := vm.NewWithState(c.Bytecode(), state)
 
+		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)
 		if err := tvm.Run(); err != nil {
 			fmt.Fprintf(t, "runtime error: %v\n", err)
 			continue

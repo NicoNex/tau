@@ -33,7 +33,7 @@ func EvalREPL() {
 			check(err)
 		}
 
-		res, errs := parser.Parse(input)
+		res, errs := parser.Parse("<stdin>", input)
 		if len(errs) != 0 {
 			for _, e := range errs {
 				fmt.Println(e)
@@ -65,7 +65,7 @@ func VmREPL() {
 			check(err)
 		}
 
-		res, errs := parser.Parse(input)
+		res, errs := parser.Parse("<stdin>", input)
 		if len(errs) != 0 {
 			for _, e := range errs {
 				fmt.Println(e)
@@ -74,11 +74,12 @@ func VmREPL() {
 		}
 
 		c := compiler.NewWithState(state.Symbols, &state.Consts)
+		c.SetFileContent(input)
 		if err := c.Compile(res); err != nil {
 			fmt.Println(err)
 			continue
 		}
-		tvm := vm.NewWithState(c.Bytecode(), state)
+		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)
 
 		if err := tvm.Run(); err != nil {
 			fmt.Printf("runtime error: %v\n", err)

@@ -1,20 +1,22 @@
 package parser
 
 import (
+	"errors"
 	"strconv"
 
 	"github.com/NicoNex/tau/internal/ast"
 	"github.com/NicoNex/tau/internal/item"
 	"github.com/NicoNex/tau/internal/lexer"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/tauerr"
 )
 
 type Parser struct {
 	cur           item.Item
 	peek          item.Item
 	items         chan item.Item
+	file          string
 	input         string
-	errs          []string
+	errs          []error
 	nestedLoops   uint
 	prefixParsers map[item.Type]parsePrefixFn
 	infixParsers  map[item.Type]parseInfixFn
@@ -84,11 +86,12 @@ var precedences = map[item.Type]int{
 	item.Dot:            Dot,
 }
 
-func newParser(input string, items chan item.Item) *Parser {
+func newParser(file, input string, items chan item.Item) *Parser {
 	p := &Parser{
 		cur:           <-items,
 		peek:          <-items,
 		items:         items,
+		file:          file,
 		input:         input,
 		prefixParsers: make(map[item.Type]parsePrefixFn),
 		infixParsers:  make(map[item.Type]parseInfixFn),
@@ -171,12 +174,12 @@ func (p *Parser) next() {
 	p.peek = <-p.items
 }
 
-func (p *Parser) errors() []string {
+func (p *Parser) errors() []error {
 	return p.errs
 }
 
 func (p *Parser) errorf(s string, a ...any) {
-	p.errs = append(p.errs, obj.Errorf(p.input, p.cur.Pos, s, a...).Error())
+	p.errs = append(p.errs, tauerr.New(p.file, p.input, p.cur.Pos, s, a...))
 }
 
 func (p *Parser) parse() ast.Node {
@@ -385,7 +388,7 @@ func (p *Parser) parseBreak() ast.Node {
 }
 
 func (p *Parser) parseError() ast.Node {
-	p.errs = append(p.errs, p.cur.Val)
+	p.errs = append(p.errs, errors.New(p.cur.Val))
 	return nil
 }
 
@@ -410,7 +413,7 @@ func (p *Parser) parseFloat() ast.Node {
 }
 
 func (p *Parser) parseString() ast.Node {
-	s, err := ast.NewString(p.cur.Val, Parse, p.cur.Pos)
+	s, err := ast.NewString(p.file, p.cur.Val, Parse, p.cur.Pos)
 	if err != nil {
 		p.errorf(err.Error())
 		return nil
@@ -826,8 +829,8 @@ func (p *Parser) noParsePrefixFnError(t item.Type) {
 	p.errorf("no parse prefix function for %q found", t)
 }
 
-func Parse(input string) (prog ast.Node, errs []string) {
+func Parse(file, input string) (prog ast.Node, errs []error) {
 	items := lexer.Lex(input)
-	p := newParser(input, items)
+	p := newParser(file, input, items)
 	return p.parse(), p.errors()
 }

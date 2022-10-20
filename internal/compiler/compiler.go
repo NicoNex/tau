@@ -5,6 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/tauerr"
 )
 
 type Compilable interface {
@@ -23,23 +24,19 @@ type CompilationScope struct {
 	prevInst     EmittedInst
 }
 
-type Bookmark struct {
-	Offset int
-	Pos    int
-}
-
 type Compiler struct {
-	constants  *[]obj.Object
-	scopes     []CompilationScope
-	scopeIndex int
-	bookmarks  map[int][]Bookmark
+	constants   *[]obj.Object
+	scopes      []CompilationScope
+	scopeIndex  int
+	fileContent string
+	bookmarks   map[int][]tauerr.Bookmark
 	*SymbolTable
 }
 
 type Bytecode struct {
 	Instructions code.Instructions
 	Constants    []obj.Object
-	Bookmarks    map[int][]Bookmark
+	Bookmarks    map[int][]tauerr.Bookmark
 }
 
 const (
@@ -58,7 +55,7 @@ func New() *Compiler {
 		SymbolTable: st,
 		scopes:      []CompilationScope{{}},
 		constants:   &[]obj.Object{},
-		bookmarks:   make(map[int][]Bookmark),
+		bookmarks:   make(map[int][]tauerr.Bookmark),
 	}
 }
 
@@ -67,7 +64,7 @@ func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
 		SymbolTable: s,
 		scopes:      []CompilationScope{{}},
 		constants:   constants,
-		bookmarks:   make(map[int][]Bookmark),
+		bookmarks:   make(map[int][]tauerr.Bookmark),
 	}
 }
 
@@ -208,9 +205,13 @@ func (c *Compiler) Pos() int {
 }
 
 func (c *Compiler) Bookmark(pos int) {
+	if c.fileContent == "" {
+		return
+	}
+
 	c.bookmarks[c.scopeIndex] = append(
 		c.bookmarks[c.scopeIndex],
-		Bookmark{Offset: c.Pos(), Pos: pos},
+		tauerr.NewBookmark(c.fileContent, pos, c.Pos()),
 	)
 }
 
@@ -230,6 +231,10 @@ func (c *Compiler) Bytecode() *Bytecode {
 func (c *Compiler) SetBytecode(b *Bytecode) {
 	c.scopes[c.scopeIndex].instructions = b.Instructions
 	*c.constants = b.Constants
+}
+
+func (c *Compiler) SetFileContent(cnt string) {
+	c.fileContent = cnt
 }
 
 func (c *Compiler) LoadSymbol(s Symbol) int {

@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 type Object interface {
@@ -113,106 +112,4 @@ func ImportLookup(taupath string) (string, error) {
 	}
 
 	return path, nil
-}
-
-type TauError struct {
-	pos int
-	msg string
-}
-
-func Errorf(input string, pos int, f string, a ...any) error {
-	if input == "" {
-		return fmt.Errorf(f, a...)
-	}
-
-	line := extractLine(input, pos)
-
-	return &TauError{
-		pos: pos,
-		msg: fmt.Sprintf(
-			"Error at line %d:\n    %s\n    %s\n%s",
-			line.number,
-			line,
-			arrow(line.pos),
-			fmt.Sprintf(f, a...),
-		),
-	}
-}
-
-func (t TauError) Error() string {
-	return t.msg
-}
-
-func (t TauError) Pos() int {
-	return t.pos
-}
-
-type line struct {
-	start  int
-	end    int
-	number int
-	pos    int
-	str    string
-}
-
-func (l line) String() string {
-	return l.str
-}
-
-func extractLine(input string, pos int) line {
-	s, e := startLine(input, pos), endLine(input, pos)
-	l := input[s:e]
-	str := strings.TrimLeft(l, " \t")
-
-	return line{
-		start:  s,
-		end:    e,
-		number: lineNo(input, pos),
-		pos:    pos - s - (len(l) - len(str)),
-		str:    str,
-	}
-}
-
-func startLine(s string, pos int) (beg int) {
-	for i := pos - 1; i >= 0; i-- {
-		if s[i] == '\n' {
-			return i + 1
-		}
-	}
-	return
-}
-
-func endLine(s string, pos int) (end int) {
-	end = len(s)
-	for i := pos; i < len(s); i++ {
-		if s[i] == '\n' {
-			return i
-		}
-	}
-	return
-}
-
-func lineNo(s string, pos int) int {
-	var cnt = 1
-
-	for _, b := range s[:pos] {
-		if b == '\n' {
-			cnt++
-		}
-	}
-
-	return cnt
-}
-
-func arrow(pos int) string {
-	var s = make([]byte, pos+1)
-
-	for i := range s {
-		if i == pos {
-			s[i] = '^'
-		} else {
-			s[i] = ' '
-		}
-	}
-	return string(s)
 }

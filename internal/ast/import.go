@@ -13,11 +13,11 @@ import (
 
 type Import struct {
 	name  Node
-	parse func(string) (Node, []string)
+	parse parseFn
 	pos   int
 }
 
-func NewImport(name Node, parse func(string) (Node, []string), pos int) Node {
+func NewImport(name Node, parse parseFn, pos int) Node {
 	return &Import{
 		name:  name,
 		parse: parse,
@@ -47,12 +47,19 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("import: %v", err)
 	}
 
-	tree, errs := i.parse(string(b))
+	tree, errs := i.parse(path, string(b))
 	if len(errs) > 0 {
+		var buf strings.Builder
+
+		for _, e := range errs {
+			buf.WriteString(e.Error())
+			buf.WriteByte('\n')
+		}
+
 		return obj.NewError(
 			"import: multiple errors in module %q:\n  %s",
 			name,
-			strings.Join(errs, "\n  "),
+			buf.String(),
 		)
 	}
 

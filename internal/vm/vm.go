@@ -220,7 +220,7 @@ func (vm *VM) execLoadModule() error {
 	}
 
 	c := compiler.NewWithState(vm.Symbols, &vm.Consts)
-	c.SetFileContent(input)
+	c.SetFileContent(string(b))
 	if err := c.Compile(tree); err != nil {
 		return err
 	}

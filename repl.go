@@ -14,6 +14,7 @@ import (
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
+	"github.com/NicoNex/tau/internal/tauerr"
 	"github.com/NicoNex/tau/internal/vm"
 )
 

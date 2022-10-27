@@ -12,7 +12,7 @@ var (
 	Stdin  io.Reader = os.Stdin
 )
 
-type Builtin func(arg ...Object) Object
+type Builtin func(args ...Object) Object
 
 func (b Builtin) Type() Type {
 	return BuiltinType
@@ -376,12 +376,12 @@ var Builtins = []struct {
 		"hex",
 		func(args ...Object) Object {
 			if l := len(args); l != 1 {
-				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
+				return NewError("hex: wrong number of arguments, expected 1, got %d", l)
 			}
 
 			i, ok := Unwrap(args[0]).(*Integer)
 			if !ok {
-				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
+				return NewError("hex: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
 
 			return NewString(fmt.Sprintf("0x%x", i.Val()))
@@ -391,12 +391,12 @@ var Builtins = []struct {
 		"oct",
 		func(args ...Object) Object {
 			if l := len(args); l != 1 {
-				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
+				return NewError("oct: wrong number of arguments, expected 1, got %d", l)
 			}
 
 			i, ok := Unwrap(args[0]).(*Integer)
 			if !ok {
-				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
+				return NewError("oct: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
 
 			return NewString(fmt.Sprintf("%O", i.Val()))
@@ -406,12 +406,12 @@ var Builtins = []struct {
 		"bin",
 		func(args ...Object) Object {
 			if l := len(args); l != 1 {
-				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
+				return NewError("bin: wrong number of arguments, expected 1, got %d", l)
 			}
 
 			i, ok := Unwrap(args[0]).(*Integer)
 			if !ok {
-				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
+				return NewError("bin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
 
 			return NewString(fmt.Sprintf("0b%b", i.Val()))
@@ -458,6 +458,42 @@ var Builtins = []struct {
 			}
 		},
 	},
+	{
+		"open",
+		func(args ...Object) Object {
+			var l = len(args)
+
+			if l != 1 && l != 2 {
+				return NewError("open: wrong number of arguments, expected 1 or 2, got %d", l)
+			}
+
+			path, ok := Unwrap(args[0]).(*String)
+			if !ok {
+				return NewError("open: first argument must be a string, got %s instead", Unwrap(args[0]).Type())
+			}
+
+			var flag = os.O_RDONLY
+			if l == 2 {
+				mode, ok := Unwrap(args[1]).(*String)
+				if !ok {
+					return NewError("open: second argument must be a string, got %s instead", args[1].Type())
+				}
+				flag = parseFlag(string(*mode))
+			}
+
+			ret := Class{NewEnv()}
+			f, err := os.Open(string(*path))
+			if err != nil {
+				return NewError("open: %v", err)
+			}
+
+			if l == 1 {
+
+			}
+
+			return ret
+		},
+	},
 }
 
 func listify(start, stop, step int) List {
@@ -475,4 +511,13 @@ func toAnySlice(args []Object) []any {
 		ret[i] = a
 	}
 	return ret
+}
+
+func parseFlag(f string) (flag int) {
+	var flags = map[string]int{
+		"r":  os.O_RDONLY,
+		"w":  os.O_WRONLY,
+		"a":  os.O_APPEND,
+		"rw": os.O_RDWR,
+	}
 }

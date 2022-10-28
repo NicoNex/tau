@@ -478,19 +478,17 @@ var Builtins = []struct {
 				if !ok {
 					return NewError("open: second argument must be a string, got %s instead", args[1].Type())
 				}
-				flag = parseFlag(string(*mode))
+				parsed, err := parseFlag(string(*mode))
+				if err != nil {
+					return NewError("open: %v", err)
+				}
+				flag = parsed
 			}
 
-			ret := Class{NewEnv()}
-			f, err := os.Open(string(*path))
+			ret, err := NewFile(string(*path), flag)
 			if err != nil {
 				return NewError("open: %v", err)
 			}
-
-			if l == 1 {
-
-			}
-
 			return ret
 		},
 	},
@@ -513,11 +511,24 @@ func toAnySlice(args []Object) []any {
 	return ret
 }
 
-func parseFlag(f string) (flag int) {
-	var flags = map[string]int{
+var fileFlags = map[string]int{
 		"r":  os.O_RDONLY,
 		"w":  os.O_WRONLY,
 		"a":  os.O_APPEND,
 		"rw": os.O_RDWR,
+	}
+
+func parseFlag(f string) (int, error) {
+	switch f {
+	case "r":
+		return os.O_RDONLY, nil
+	case "w":
+		return os.O_WRONLY|os.O_TRUNC|os.O_CREATE, nil
+	case "a":
+		return os.O_RDWR|os.O_APPEND|os.O_CREATE, nil
+	case "x":
+		return os.O_RDWR|os.O_CREATE|os.O_EXCL, nil
+	default:
+		return 0, fmt.Errorf("invalid file flag %q", f)
 	}
 }

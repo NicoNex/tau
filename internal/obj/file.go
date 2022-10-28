@@ -54,6 +54,22 @@ func NewFile(path string, flag int) (Object, error) {
 		return NullObj
 	}))
 
+	ret.Set("Truncate", Builtin(func(args ...Object) Object {
+		if len(args) != 1 {
+			return NewError("Truncate: wrong number of arguments, expected 1, got %d", len(args))
+		}
+
+		size, ok := Unwrap(args[0]).(*Integer)
+		if !ok {
+			return NewError("Truncate: wrong argument type, expected int, got %s", args[0].Type())
+		}
+
+		if err := f.Truncate(int64(*size)); err != nil {
+			return NewError("Truncate: %v", err)
+		}
+		return NullObj
+	}))
+
 	ret.Set("Close", Builtin(func(args ...Object) Object {
 		if l := len(args); l != 0 {
 			return NewError("Close: wrong number of arguments, expected 0 got %d", l)

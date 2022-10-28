@@ -511,13 +511,6 @@ func toAnySlice(args []Object) []any {
 	return ret
 }
 
-var fileFlags = map[string]int{
-		"r":  os.O_RDONLY,
-		"w":  os.O_WRONLY,
-		"a":  os.O_APPEND,
-		"rw": os.O_RDWR,
-	}
-
 func parseFlag(f string) (int, error) {
 	switch f {
 	case "r":

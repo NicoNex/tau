@@ -36,11 +36,12 @@ func NewFile(path string, flag int) (Object, error) {
 			return NewError("Write: wrong argument type, expected string, got %s instead", args[0].Type())
 		}
 
-		if _, err := io.WriteString(f, string(*cnt)); err != nil {
+		i, err := io.WriteString(f, string(*cnt))
+		if err != nil {
 			return NewError("Write: %v", err)
 		}
 
-		return NullObj
+		return NewInteger(int64(i))
 	}))
 
 	ret.Set("Sync", Builtin(func(args ...Object) Object {

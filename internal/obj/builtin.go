@@ -528,6 +528,8 @@ func parseFlag(f string) (int, error) {
 		return os.O_RDWR|os.O_APPEND|os.O_CREATE, nil
 	case "x":
 		return os.O_RDWR|os.O_CREATE|os.O_EXCL, nil
+	case "rw":
+		return os.O_RDWR|os.O_CREATE|os.O_TRUNC, nil
 	default:
 		return 0, fmt.Errorf("invalid file flag %q", f)
 	}

@@ -136,7 +136,7 @@ func testCompilerStringObject(expected string, actual obj.Object) error {
 }
 
 func testBooleanObject(expected bool, actual obj.Object) error {
-	result, ok := actual.(obj.Boolean)
+	result, ok := actual.(*obj.Boolean)
 	if !ok {
 		return fmt.Errorf("object is not Boolean. got=%T (%+v)", actual, actual)
 	}

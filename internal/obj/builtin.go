@@ -12,7 +12,7 @@ var (
 	Stdin  io.Reader = os.Stdin
 )
 
-type Builtin func(arg ...Object) Object
+type Builtin func(args ...Object) Object
 
 func (b Builtin) Type() Type {
 	return BuiltinType
@@ -88,6 +88,13 @@ var Builtins = []struct {
 	{
 		"string",
 		func(args ...Object) Object {
+			if len(args) == 0 {
+				return NewError("string: no argument provided")
+			}
+
+			if b, ok := args[0].(Bytes); ok {
+				return String(b)
+			}
 			return NewString(fmt.Sprint(toAnySlice(args)...))
 		},
 	},
@@ -296,6 +303,8 @@ var Builtins = []struct {
 				return o[0]
 			case String:
 				return NewString(string(string(o)[0]))
+			case Bytes:
+				return Integer(o[0])
 			default:
 				return NewError("first: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
 			}
@@ -314,6 +323,8 @@ var Builtins = []struct {
 			case String:
 				s := string(o)
 				return NewString(string(s[len(s)-1]))
+			case Bytes:
+				return Integer(o[len(o)-1])
 			default:
 				return NewError("last: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
 			}
@@ -332,6 +343,8 @@ var Builtins = []struct {
 			case String:
 				s := string(o)
 				return NewString(s[1:])
+			case Bytes:
+				return Bytes(o[1:])
 			default:
 				return NewError("tail: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
 			}
@@ -451,13 +464,91 @@ var Builtins = []struct {
 				} else if end > len(slice) {
 					return NewError("slice: string bounds out of range %d with capacity %d", end, len(slice))
 				}
-				return NewString(string(slice)[start:end])
+				return slice[start:end]
+
+			case Bytes:
+				if start < 0 || end < 0 {
+					return NewError("slice: invalid argument: index arguments must not be negative")
+				} else if end > len(slice) {
+					return NewError("slice: bytes bounds out of range %d with capacity %d", end, len(slice))
+				}
+				return slice[start:end]
 
 			default:
 				return NewError("slice: first argument must be a list or string, got %s instead", args[0].Type())
 			}
 		},
 	},
+	{
+		"open",
+		func(args ...Object) Object {
+			var l = len(args)
+
+			if l != 1 && l != 2 {
+				return NewError("open: wrong number of arguments, expected 1 or 2, got %d", l)
+			}
+
+			path, ok := Unwrap(args[0]).(String)
+			if !ok {
+				return NewError("open: first argument must be a string, got %s instead", Unwrap(args[0]).Type())
+			}
+
+			var flag = os.O_RDONLY
+			if l == 2 {
+				mode, ok := Unwrap(args[1]).(String)
+				if !ok {
+					return NewError("open: second argument must be a string, got %s instead", args[1].Type())
+				}
+				parsed, err := parseFlag(string(mode))
+				if err != nil {
+					return NewError("open: %v", err)
+				}
+				flag = parsed
+			}
+
+			ret, err := NewFile(string(path), flag)
+			if err != nil {
+				return NewError("open: %v", err)
+			}
+			return ret
+		},
+	},
+	{
+		"bytes",
+		func(args ...Object) Object {
+			if len(args) != 1 {
+				return NewError("bytes: expected 1 argument but got %d", len(args))
+			}
+
+			switch a := args[0].(type) {
+			case String:
+				return Bytes(a)
+			case Integer:
+				return make(Bytes, a)
+			case List:
+				ret := make(Bytes, len(a))
+				for i, e := range a {
+					b, ok := toByte(e)
+					if !ok {
+						return NewError("bytes: list cannot be converted to bytes")
+					}
+					ret[i] = b
+				}
+				return ret
+			default:
+				return NewError("bytes: %s cannot be converted to bytes", a.Type())
+			}
+		},
+	},
+}
+
+func toByte(o Object) (byte, bool) {
+	switch b := o.(type) {
+	case Integer:
+		return byte(b), true
+	default:
+		return 0, false
+	}
 }
 
 func listify(start, stop, step int) List {
@@ -475,4 +566,21 @@ func toAnySlice(args []Object) []any {
 		ret[i] = a
 	}
 	return ret
+}
+
+func parseFlag(f string) (int, error) {
+	switch f {
+	case "r":
+		return os.O_RDONLY, nil
+	case "w":
+		return os.O_WRONLY|os.O_TRUNC|os.O_CREATE, nil
+	case "a":
+		return os.O_RDWR|os.O_APPEND|os.O_CREATE, nil
+	case "x":
+		return os.O_RDWR|os.O_CREATE|os.O_EXCL, nil
+	case "rw":
+		return os.O_RDWR|os.O_CREATE|os.O_TRUNC, nil
+	default:
+		return 0, fmt.Errorf("invalid file flag %q", f)
+	}
 }

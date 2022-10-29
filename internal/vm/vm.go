@@ -687,9 +687,18 @@ func (vm *VM) execIndex() error {
 			},
 		})
 
+	case assertTypes(left, obj.BytesType) && assertTypes(index, obj.IntType):
+		b := left.(obj.Bytes)
+		i := int(index.(obj.Integer))
+
+		if i < 0 || i >= len(b) {
+			return fmt.Errorf("index out of range")
+		}
+		return vm.push(obj.NewInteger(int64(b[i])))
+
 	case assertTypes(left, obj.StringType) && assertTypes(index, obj.IntType):
-		s := left.(obj.String).Val()
-		i := int(index.(obj.Integer).Val())
+		s := left.(obj.String)
+		i := int(index.(obj.Integer))
 
 		if i < 0 || i >= len(s) {
 			return fmt.Errorf("index out of range")

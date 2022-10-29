@@ -62,6 +62,15 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		}
 		return obj.NewString(string(string(s)[i]))
 
+	case assertTypes(lft, obj.BytesType) && assertTypes(idx, obj.IntType):
+		b := lft.(obj.Bytes)
+		i := idx.(obj.Integer)
+
+		if i < 0 || int(i) >= len(b) {
+			return obj.NewError("intex out of range")
+		}
+		return obj.NewInteger(int64(b[i]))
+
 	case assertTypes(lft, obj.MapType) && assertTypes(idx, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType):
 		m := lft.(obj.Map)
 		k := idx.(obj.Hashable)

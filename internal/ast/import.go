@@ -30,7 +30,7 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 		return name
 	}
 
-	n, ok := name.(*obj.String)
+	n, ok := name.(obj.String)
 	if !ok {
 		return obj.NewError("import: expected string but got %v", name.Type())
 	}

@@ -41,13 +41,13 @@ func (b BitwiseOrAssign) Eval(env *obj.Env) obj.Object {
 	}
 
 	if gs, ok := left.(obj.GetSetter); ok {
-		l := gs.Object().(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := gs.Object().(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		return gs.Set(obj.NewInteger(l | r))
 	}
 
-	l := left.(*obj.Integer).Val()
-	r := right.(*obj.Integer).Val()
+	l := left.(obj.Integer).Val()
+	r := right.(obj.Integer).Val()
 	return env.Set(name, obj.NewInteger(l|r))
 }
 

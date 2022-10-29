@@ -39,13 +39,13 @@ func (m Map) String() string {
 	for _, v := range m {
 		var key, val string
 
-		if s, ok := v.Key.(*String); ok {
+		if s, ok := v.Key.(String); ok {
 			key = s.Quoted()
 		} else {
 			key = v.Key.String()
 		}
 
-		if s, ok := v.Value.(*String); ok {
+		if s, ok := v.Value.(String); ok {
 			val = s.Quoted()
 		} else {
 			val = v.Value.String()

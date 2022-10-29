@@ -80,7 +80,7 @@ func extendEnv(fn *obj.Function, args []obj.Object) *obj.Env {
 }
 
 func unwrapReturn(o obj.Object) obj.Object {
-	if ret, ok := o.(*obj.Return); ok {
+	if ret, ok := o.(obj.Return); ok {
 		return ret.Val()
 	}
 	return o

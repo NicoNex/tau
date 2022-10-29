@@ -179,12 +179,12 @@ var Builtins = []struct {
 				}
 			}
 
-			msg, ok := Unwrap(args[0]).(*String)
+			msg, ok := Unwrap(args[0]).(String)
 			if !ok {
 				return NewError("exit: first argument must be a string")
 			}
 
-			code, ok := Unwrap(args[1]).(*Integer)
+			code, ok := Unwrap(args[1]).(Integer)
 			if !ok {
 				return NewError("exit: second argument must be an int")
 			}
@@ -241,35 +241,35 @@ var Builtins = []struct {
 		func(args ...Object) Object {
 			switch len(args) {
 			case 1:
-				if stop, ok := Unwrap(args[0]).(*Integer); ok {
+				if stop, ok := Unwrap(args[0]).(Integer); ok {
 					return listify(0, int(*stop), 1)
 				}
 				return NewError("range: start value must be an int")
 
 			case 2:
-				start, ok := Unwrap(args[0]).(*Integer)
+				start, ok := Unwrap(args[0]).(Integer)
 				if !ok {
 					return NewError("range: start value must be an int")
 				}
 
-				stop, ok := Unwrap(args[1]).(*Integer)
+				stop, ok := Unwrap(args[1]).(Integer)
 				if !ok {
 					return NewError("range: stop value must be an int")
 				}
 				return listify(int(*start), int(*stop), 1)
 
 			case 3:
-				start, ok := Unwrap(args[0]).(*Integer)
+				start, ok := Unwrap(args[0]).(Integer)
 				if !ok {
 					return NewError("range: start value must be an int")
 				}
 
-				stop, ok := Unwrap(args[1]).(*Integer)
+				stop, ok := Unwrap(args[1]).(Integer)
 				if !ok {
 					return NewError("range: stop value must be an int")
 				}
 
-				step, ok := Unwrap(args[2]).(*Integer)
+				step, ok := Unwrap(args[2]).(Integer)
 				if !ok {
 					return NewError("range: step value must be an int")
 				}
@@ -353,7 +353,7 @@ var Builtins = []struct {
 				return NewError("failed: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			_, ok := Unwrap(args[0]).(*Error)
+			_, ok := Unwrap(args[0]).(Error)
 			return ParseBool(ok)
 		},
 	},
@@ -364,7 +364,7 @@ var Builtins = []struct {
 				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			str, ok := Unwrap(args[0]).(*String)
+			str, ok := Unwrap(args[0]).(String)
 			if !ok {
 				return NewError("plugin: first argument must be a string, got %s instead", Unwrap(args[0]).Type())
 			}
@@ -379,7 +379,7 @@ var Builtins = []struct {
 				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			i, ok := Unwrap(args[0]).(*Integer)
+			i, ok := Unwrap(args[0]).(Integer)
 			if !ok {
 				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
@@ -394,7 +394,7 @@ var Builtins = []struct {
 				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			i, ok := Unwrap(args[0]).(*Integer)
+			i, ok := Unwrap(args[0]).(Integer)
 			if !ok {
 				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
@@ -409,7 +409,7 @@ var Builtins = []struct {
 				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			i, ok := Unwrap(args[0]).(*Integer)
+			i, ok := Unwrap(args[0]).(Integer)
 			if !ok {
 				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
@@ -424,12 +424,12 @@ var Builtins = []struct {
 				return NewError("slice: wrong number of arguments, expected 3, got %d", l)
 			}
 
-			s, ok := Unwrap(args[1]).(*Integer)
+			s, ok := Unwrap(args[1]).(Integer)
 			if !ok {
 				return NewError("slice: second argument must be an int, got %s instead", Unwrap(args[1]).Type())
 			}
 
-			e, ok := Unwrap(args[2]).(*Integer)
+			e, ok := Unwrap(args[2]).(Integer)
 			if !ok {
 				return NewError("slice: third argument must be an int, got %s instead", Unwrap(args[2]).Type())
 			}

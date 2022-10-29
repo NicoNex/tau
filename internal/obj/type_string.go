@@ -14,20 +14,21 @@ func _() {
 	_ = x[FloatType-3]
 	_ = x[BoolType-4]
 	_ = x[StringType-5]
-	_ = x[ObjectType-6]
-	_ = x[ReturnType-7]
-	_ = x[FunctionType-8]
-	_ = x[ClosureType-9]
-	_ = x[BuiltinType-10]
-	_ = x[ListType-11]
-	_ = x[MapType-12]
-	_ = x[ContinueType-13]
-	_ = x[BreakType-14]
+	_ = x[BytesType-6]
+	_ = x[ObjectType-7]
+	_ = x[ReturnType-8]
+	_ = x[FunctionType-9]
+	_ = x[ClosureType-10]
+	_ = x[BuiltinType-11]
+	_ = x[ListType-12]
+	_ = x[MapType-13]
+	_ = x[ContinueType-14]
+	_ = x[BreakType-15]
 }
 
-const _Type_name = "nullerrorintfloatboolstringobjectreturnfunctionclosurebuiltinlistmapcontinuebreak"
+const _Type_name = "nullerrorintfloatboolstringbytesobjectreturnfunctionclosurebuiltinlistmapcontinuebreak"
 
-var _Type_index = [...]uint8{0, 4, 9, 12, 17, 21, 27, 33, 39, 47, 54, 61, 65, 68, 76, 81}
+var _Type_index = [...]uint8{0, 4, 9, 12, 17, 21, 27, 32, 38, 44, 52, 59, 66, 70, 73, 81, 86}
 
 func (i Type) String() string {
 	if i < 0 || i >= Type(len(_Type_index)-1) {

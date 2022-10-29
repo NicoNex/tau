@@ -23,7 +23,7 @@ func NewFile(path string, flag int) (Object, error) {
 			return NewError("Read: %v", err)
 		}
 
-		return NewString(string(b))
+		return Bytes(b)
 	}))
 
 	ret.Set("Write", Builtin(func(args ...Object) Object {

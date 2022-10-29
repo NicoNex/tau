@@ -31,17 +31,24 @@ func NewFile(path string, flag int) (Object, error) {
 			return NewError("Write: wrong number of arguments, expected 1 got %d", l)
 		}
 
-		cnt, ok := Unwrap(args[0]).(*String)
-		if !ok {
-			return NewError("Write: wrong argument type, expected string, got %s instead", args[0].Type())
-		}
+		switch a := Unwrap(args[0]).(type) {
+		case String:
+			i, err := io.WriteString(f, string(a))
+			if err != nil {
+				return NewError("Write: %v", err)
+			}
+			return Integer(i)
 
-		i, err := io.WriteString(f, string(*cnt))
-		if err != nil {
-			return NewError("Write: %v", err)
-		}
+		case Bytes:
+			i, err := f.Write([]byte(a))
+			if err != nil {
+				return NewError("Write: %v", err)
+			}
+			return Integer(i)
 
-		return NewInteger(int64(i))
+		default:
+			return NewError("Write: wrong argument type, expected string or bytes, got %s instead", args[0].Type())
+		}
 	}))
 
 	ret.Set("Sync", Builtin(func(args ...Object) Object {
@@ -60,12 +67,12 @@ func NewFile(path string, flag int) (Object, error) {
 			return NewError("Truncate: wrong number of arguments, expected 1, got %d", len(args))
 		}
 
-		size, ok := Unwrap(args[0]).(*Integer)
+		size, ok := Unwrap(args[0]).(Integer)
 		if !ok {
 			return NewError("Truncate: wrong argument type, expected int, got %s", args[0].Type())
 		}
 
-		if err := f.Truncate(int64(*size)); err != nil {
+		if err := f.Truncate(int64(size)); err != nil {
 			return NewError("Truncate: %v", err)
 		}
 		return NullObj

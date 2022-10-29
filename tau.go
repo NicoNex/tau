@@ -19,7 +19,7 @@ import (
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-const TauVersion = "v1.2.11"
+const TauVersion = "v1.3.0"
 
 var ErrParseError = errors.New("error: parse error")
 

@@ -38,8 +38,8 @@ func (d Divide) Eval(env *obj.Env) obj.Object {
 	}
 
 	left, right = toFloat(left, right)
-	l := left.(*obj.Float).Val()
-	r := right.(*obj.Float).Val()
+	l := left.(obj.Float).Val()
+	r := right.(obj.Float).Val()
 	return obj.NewFloat(l / r)
 }
 

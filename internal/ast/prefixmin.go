@@ -24,10 +24,10 @@ func (p PrefixMinus) Eval(env *obj.Env) obj.Object {
 	}
 
 	switch v := value.(type) {
-	case *obj.Integer:
+	case obj.Integer:
 		return obj.NewInteger(-v.Val())
 
-	case *obj.Float:
+	case obj.Float:
 		return obj.NewFloat(-v.Val())
 
 	default:

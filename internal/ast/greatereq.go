@@ -38,14 +38,14 @@ func (g GreaterEq) Eval(env *obj.Env) obj.Object {
 	}
 
 	if assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType) {
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := left.(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		return obj.ParseBool(l >= r)
 	}
 
 	left, right = toFloat(left, right)
-	l := left.(*obj.Float).Val()
-	r := right.(*obj.Float).Val()
+	l := left.(obj.Float).Val()
+	r := right.(obj.Float).Val()
 	return obj.ParseBool(l >= r)
 }
 

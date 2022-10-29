@@ -68,10 +68,10 @@ func assertTypes(o obj.Object, types ...obj.Type) bool {
 
 func toFloat(l, r obj.Object) (obj.Object, obj.Object) {
 	if i, ok := l.(obj.Integer); ok {
-		l = obj.NewFloat(float64(*i))
+		l = obj.NewFloat(float64(i))
 	}
 	if i, ok := r.(obj.Integer); ok {
-		r = obj.NewFloat(float64(*i))
+		r = obj.NewFloat(float64(i))
 	}
 	return l, r
 }
@@ -173,7 +173,7 @@ func (vm VM) execLoadModule() error {
 		return fmt.Errorf("import: expected string, got %v", taupath.Type())
 	}
 
-	path, err := obj.ImportLookup(filepath.Join(vm.dir, string(*pathObj)))
+	path, err := obj.ImportLookup(filepath.Join(vm.dir, string(pathObj)))
 	if err != nil {
 		return fmt.Errorf("import: %w", err)
 	}
@@ -834,7 +834,7 @@ func (vm *VM) callBuiltin(fn obj.Builtin, nargs int) error {
 
 func (vm *VM) pushClosure(constIdx, numFree int) error {
 	constant := vm.Consts[constIdx]
-	fn, ok := constant.(obj.Function)
+	fn, ok := constant.(*obj.Function)
 	if !ok {
 		return fmt.Errorf("not a function: %+v", constant)
 	}

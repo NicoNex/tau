@@ -57,10 +57,10 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		s := lft.(obj.String)
 		i := idx.(obj.Integer).Val()
 
-		if i < 0 || int(i) >= len(*s) {
+		if i < 0 || int(i) >= len(s) {
 			return obj.NewError("intex out of range")
 		}
-		return obj.NewString(string(string(*s)[i]))
+		return obj.NewString(string(string(s)[i]))
 
 	case assertTypes(lft, obj.MapType) && assertTypes(idx, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType):
 		m := lft.(obj.Map)

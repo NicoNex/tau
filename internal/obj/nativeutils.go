@@ -19,70 +19,70 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected int but %v provided", o.Type())
 		}
-		return reflect.ValueOf(int(*i)), nil
+		return reflect.ValueOf(int(i)), nil
 
 	case reflect.Int8:
 		i, ok := o.(Integer)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected int8 but %v provided", o.Type())
 		}
-		return reflect.ValueOf(int8(*i)), nil
+		return reflect.ValueOf(int8(i)), nil
 
 	case reflect.Int16:
 		i, ok := o.(Integer)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected int16 but %v provided", o.Type())
 		}
-		return reflect.ValueOf(int16(*i)), nil
+		return reflect.ValueOf(int16(i)), nil
 
 	case reflect.Int32:
 		i, ok := o.(Integer)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected int32 but %v provided", o.Type())
 		}
-		return reflect.ValueOf(int32(*i)), nil
+		return reflect.ValueOf(int32(i)), nil
 
 	case reflect.Int64:
 		i, ok := o.(Integer)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected int64 but %v provided", o.Type())
 		}
-		return reflect.ValueOf(int64(*i)), nil
+		return reflect.ValueOf(int64(i)), nil
 
 	case reflect.Uint:
 		i, ok := o.(Integer)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected uint but %v provided", o.Type())
 		}
-		return reflect.ValueOf(uint(*i)), nil
+		return reflect.ValueOf(uint(i)), nil
 
 	case reflect.Uint8:
 		i, ok := o.(Integer)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected uint8 but %v provided", o.Type())
 		}
-		return reflect.ValueOf(uint8(*i)), nil
+		return reflect.ValueOf(uint8(i)), nil
 
 	case reflect.Uint16:
 		i, ok := o.(Integer)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected uint16 but %v provided", o.Type())
 		}
-		return reflect.ValueOf(uint16(*i)), nil
+		return reflect.ValueOf(uint16(i)), nil
 
 	case reflect.Uint32:
 		i, ok := o.(Integer)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected uint32 but %v provided", o.Type())
 		}
-		return reflect.ValueOf(uint32(*i)), nil
+		return reflect.ValueOf(uint32(i)), nil
 
 	case reflect.Uint64:
 		i, ok := o.(Integer)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected uint64 but %v provided", o.Type())
 		}
-		return reflect.ValueOf(uint64(*i)), nil
+		return reflect.ValueOf(uint64(i)), nil
 
 	case reflect.Uintptr:
 		return reflect.Zero(t), fmt.Errorf("unsupported type 'uintptr'")
@@ -92,14 +92,14 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected float32 but %v provided", o.Type())
 		}
-		return reflect.ValueOf(float32(*f)), nil
+		return reflect.ValueOf(float32(f)), nil
 
 	case reflect.Float64:
 		f, ok := o.(Float)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected float64 but %v provided", o.Type())
 		}
-		return reflect.ValueOf(float64(*f)), nil
+		return reflect.ValueOf(float64(f)), nil
 
 	case reflect.Complex64:
 		return reflect.Zero(t), fmt.Errorf("unsupported type 'complex64'")
@@ -208,7 +208,7 @@ func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected string but %v provided", o.Type())
 		}
-		return reflect.ValueOf(string(*s)), nil
+		return reflect.ValueOf(string(s)), nil
 
 	case reflect.Struct:
 		object, ok := o.(Class)

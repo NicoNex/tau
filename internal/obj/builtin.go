@@ -45,8 +45,8 @@ var Builtins = []struct {
 			switch o := Unwrap(args[0]).(type) {
 			case List:
 				return NewInteger(int64(len(o)))
-			case *String:
-				return NewInteger(int64(len(*o)))
+			case String:
+				return NewInteger(int64(len(o)))
 			default:
 				return NewError("len: object of type %q has no length", o.Type())
 			}
@@ -114,14 +114,14 @@ var Builtins = []struct {
 			}
 
 			switch o := Unwrap(args[0]).(type) {
-			case *Integer:
-				return NewInteger(int64(*o))
+			case Integer:
+				return NewInteger(int64(o))
 
-			case *Float:
-				return NewInteger(int64(*o))
+			case Float:
+				return NewInteger(int64(o))
 
-			case *String:
-				if a, err := strconv.ParseFloat(string(*o), 64); err == nil {
+			case String:
+				if a, err := strconv.ParseFloat(string(o), 64); err == nil {
 					return NewInteger(int64(a))
 				}
 				return NewError("%v is not a number", Unwrap(args[0]))
@@ -139,14 +139,14 @@ var Builtins = []struct {
 			}
 
 			switch o := Unwrap(args[0]).(type) {
-			case *Integer:
-				return NewFloat(float64(*o))
+			case Integer:
+				return NewFloat(float64(o))
 
-			case *Float:
-				return NewFloat(float64(*o))
+			case Float:
+				return NewFloat(float64(o))
 
-			case *String:
-				if a, err := strconv.ParseFloat(string(*o), 64); err == nil {
+			case String:
+				if a, err := strconv.ParseFloat(string(o), 64); err == nil {
 					return NewFloat(a)
 				}
 				return NewError("%v is not a number", Unwrap(args[0]))
@@ -167,10 +167,10 @@ var Builtins = []struct {
 				return NewError("exit: wrong number of arguments, max 2, got %d", l)
 			} else if l == 1 {
 				switch o := Unwrap(args[0]).(type) {
-				case *Integer:
-					os.Exit(int(*o))
+				case Integer:
+					os.Exit(int(o))
 
-				case *String, *Error:
+				case String, Error:
 					fmt.Fprintln(Stdout, o)
 					os.Exit(0)
 
@@ -189,8 +189,8 @@ var Builtins = []struct {
 				return NewError("exit: second argument must be an int")
 			}
 
-			fmt.Fprintln(Stdout, string(*msg))
-			os.Exit(int(*code))
+			fmt.Fprintln(Stdout, string(msg))
+			os.Exit(int(code))
 			return NullObj
 		},
 	},
@@ -242,7 +242,7 @@ var Builtins = []struct {
 			switch len(args) {
 			case 1:
 				if stop, ok := Unwrap(args[0]).(Integer); ok {
-					return listify(0, int(*stop), 1)
+					return listify(0, int(stop), 1)
 				}
 				return NewError("range: start value must be an int")
 
@@ -256,7 +256,7 @@ var Builtins = []struct {
 				if !ok {
 					return NewError("range: stop value must be an int")
 				}
-				return listify(int(*start), int(*stop), 1)
+				return listify(int(start), int(stop), 1)
 
 			case 3:
 				start, ok := Unwrap(args[0]).(Integer)
@@ -274,8 +274,8 @@ var Builtins = []struct {
 					return NewError("range: step value must be an int")
 				}
 
-				if s := int(*step); s != 0 {
-					return listify(int(*start), int(*stop), s)
+				if s := int(step); s != 0 {
+					return listify(int(start), int(stop), s)
 				}
 				return NewError("range: step value must not be zero")
 
@@ -294,8 +294,8 @@ var Builtins = []struct {
 			switch o := Unwrap(args[0]).(type) {
 			case List:
 				return o[0]
-			case *String:
-				return NewString(string(string(*o)[0]))
+			case String:
+				return NewString(string(string(o)[0]))
 			default:
 				return NewError("first: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
 			}
@@ -311,8 +311,8 @@ var Builtins = []struct {
 			switch o := Unwrap(args[0]).(type) {
 			case List:
 				return o[len(o)-1]
-			case *String:
-				s := string(*o)
+			case String:
+				s := string(o)
 				return NewString(string(s[len(s)-1]))
 			default:
 				return NewError("last: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
@@ -329,8 +329,8 @@ var Builtins = []struct {
 			switch o := Unwrap(args[0]).(type) {
 			case List:
 				return o[1:]
-			case *String:
-				s := string(*o)
+			case String:
+				s := string(o)
 				return NewString(s[1:])
 			default:
 				return NewError("tail: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
@@ -434,7 +434,7 @@ var Builtins = []struct {
 				return NewError("slice: third argument must be an int, got %s instead", Unwrap(args[2]).Type())
 			}
 
-			var start, end = int(*s), int(*e)
+			var start, end = int(s), int(e)
 
 			switch slice := Unwrap(args[0]).(type) {
 			case List:
@@ -445,13 +445,13 @@ var Builtins = []struct {
 				}
 				return slice[start:end]
 
-			case *String:
+			case String:
 				if start < 0 || end < 0 {
 					return NewError("slice: invalid argument: index arguments must not be negative")
-				} else if end > len(*slice) {
-					return NewError("slice: string bounds out of range %d with capacity %d", end, len(*slice))
+				} else if end > len(slice) {
+					return NewError("slice: string bounds out of range %d with capacity %d", end, len(slice))
 				}
-				return NewString(string(*slice)[start:end])
+				return NewString(string(slice)[start:end])
 
 			default:
 				return NewError("slice: first argument must be a list or string, got %s instead", args[0].Type())

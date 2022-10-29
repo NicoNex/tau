@@ -66,10 +66,10 @@ func assertTypes(o obj.Object, types ...obj.Type) bool {
 
 func toFloat(l, r obj.Object) (obj.Object, obj.Object) {
 	if i, ok := l.(obj.Integer); ok {
-		l = obj.NewFloat(float64(*i))
+		l = obj.NewFloat(float64(i))
 	}
 	if i, ok := r.(obj.Integer); ok {
-		r = obj.NewFloat(float64(*i))
+		r = obj.NewFloat(float64(i))
 	}
 	return l, r
 }

@@ -376,12 +376,12 @@ var Builtins = []struct {
 		"hex",
 		func(args ...Object) Object {
 			if l := len(args); l != 1 {
-				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
+				return NewError("hex: wrong number of arguments, expected 1, got %d", l)
 			}
 
 			i, ok := Unwrap(args[0]).(Integer)
 			if !ok {
-				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
+				return NewError("hex: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
 
 			return NewString(fmt.Sprintf("0x%x", i.Val()))
@@ -391,12 +391,12 @@ var Builtins = []struct {
 		"oct",
 		func(args ...Object) Object {
 			if l := len(args); l != 1 {
-				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
+				return NewError("oct: wrong number of arguments, expected 1, got %d", l)
 			}
 
 			i, ok := Unwrap(args[0]).(Integer)
 			if !ok {
-				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
+				return NewError("oct: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
 
 			return NewString(fmt.Sprintf("%O", i.Val()))
@@ -406,12 +406,12 @@ var Builtins = []struct {
 		"bin",
 		func(args ...Object) Object {
 			if l := len(args); l != 1 {
-				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
+				return NewError("bin: wrong number of arguments, expected 1, got %d", l)
 			}
 
 			i, ok := Unwrap(args[0]).(Integer)
 			if !ok {
-				return NewError("plugin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
+				return NewError("bin: first argument must be an int, got %s instead", Unwrap(args[0]).Type())
 			}
 
 			return NewString(fmt.Sprintf("0b%b", i.Val()))

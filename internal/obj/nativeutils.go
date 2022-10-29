@@ -8,7 +8,7 @@ import (
 func toValue(t reflect.Type, o Object) (reflect.Value, error) {
 	switch t.Kind() {
 	case reflect.Bool:
-		p, ok := o.(Boolean)
+		p, ok := o.(*Boolean)
 		if !ok {
 			return reflect.Zero(t), fmt.Errorf("expected bool but %v provided", o.Type())
 		}

@@ -44,9 +44,9 @@ func isTruthy(o obj.Object) bool {
 	switch val := o.(type) {
 	case *obj.Boolean:
 		return o == obj.True
-	case *obj.Integer:
+	case obj.Integer:
 		return val.Val() != 0
-	case *obj.Float:
+	case obj.Float:
 		return val.Val() != 0
 	case *obj.Null:
 		return false

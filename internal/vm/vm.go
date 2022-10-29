@@ -80,9 +80,9 @@ func isTruthy(o obj.Object) bool {
 	switch val := o.(type) {
 	case *obj.Boolean:
 		return o == obj.True
-	case *obj.Integer:
+	case obj.Integer:
 		return val.Val() != 0
-	case *obj.Float:
+	case obj.Float:
 		return val.Val() != 0
 	case *obj.Null:
 		return false
@@ -575,19 +575,19 @@ func (vm *VM) execIn() error {
 			}
 
 			switch l := left.(type) {
-			case *obj.String:
+			case obj.String:
 				r := o.(obj.String)
 				if l.Val() == r.Val() {
 					return vm.push(obj.True)
 				}
 
-			case *obj.Integer:
+			case obj.Integer:
 				r := o.(obj.Integer)
 				if l.Val() == r.Val() {
 					return vm.push(obj.True)
 				}
 
-			case *obj.Float:
+			case obj.Float:
 				r := o.(obj.Float)
 				if l.Val() == r.Val() {
 					return vm.push(obj.True)
@@ -736,10 +736,10 @@ func (vm *VM) execMinus() error {
 	var right = obj.Unwrap(vm.pop())
 
 	switch r := right.(type) {
-	case *obj.Integer:
+	case obj.Integer:
 		return vm.push(obj.NewInteger(-r.Val()))
 
-	case *obj.Float:
+	case obj.Float:
 		return vm.push(obj.NewFloat(-r.Val()))
 
 	default:

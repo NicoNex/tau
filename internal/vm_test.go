@@ -112,7 +112,7 @@ func testExpectedObject(t *testing.T, expected any, actual obj.Object) {
 			}
 		}
 
-	case *obj.Error:
+	case obj.Error:
 		errObj, ok := actual.(obj.Error)
 		if !ok {
 			t.Errorf("object is not Error: %T (%+v)", actual, actual)

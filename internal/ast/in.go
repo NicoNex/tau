@@ -54,19 +54,19 @@ func (i In) Eval(env *obj.Env) obj.Object {
 			}
 
 			switch l := left.(type) {
-			case *obj.String:
+			case obj.String:
 				r := o.(obj.String)
 				if l.Val() == r.Val() {
 					return obj.True
 				}
 
-			case *obj.Integer:
+			case obj.Integer:
 				r := o.(obj.Integer)
 				if l.Val() == r.Val() {
 					return obj.True
 				}
 
-			case *obj.Float:
+			case obj.Float:
 				r := o.(obj.Float)
 				if l.Val() == r.Val() {
 					return obj.True

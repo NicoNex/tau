@@ -17,7 +17,7 @@ import (
 
 func EvalREPL() {
 	var (
-		env    = obj.NewEnv()
+		env    = obj.NewEnv("<stdin>")
 		reader = bufio.NewReader(os.Stdin)
 	)
 

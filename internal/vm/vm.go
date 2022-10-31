@@ -67,11 +67,11 @@ func assertTypes(o obj.Object, types ...obj.Type) bool {
 }
 
 func toFloat(l, r obj.Object) (obj.Object, obj.Object) {
-	if i, ok := l.(*obj.Integer); ok {
-		l = obj.NewFloat(float64(*i))
+	if i, ok := l.(obj.Integer); ok {
+		l = obj.NewFloat(float64(i))
 	}
-	if i, ok := r.(*obj.Integer); ok {
-		r = obj.NewFloat(float64(*i))
+	if i, ok := r.(obj.Integer); ok {
+		r = obj.NewFloat(float64(i))
 	}
 	return l, r
 }
@@ -80,9 +80,9 @@ func isTruthy(o obj.Object) bool {
 	switch val := o.(type) {
 	case *obj.Boolean:
 		return o == obj.True
-	case *obj.Integer:
+	case obj.Integer:
 		return val.Val() != 0
-	case *obj.Float:
+	case obj.Float:
 		return val.Val() != 0
 	case *obj.Null:
 		return false
@@ -120,7 +120,7 @@ func New(bytecode *compiler.Bytecode) *VM {
 	}
 
 	vm.Consts = bytecode.Constants
-	fn := &obj.Function{Instructions: bytecode.Instructions}
+	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
@@ -134,7 +134,7 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 		State:      state,
 	}
 
-	fn := &obj.Function{Instructions: bytecode.Instructions}
+	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
@@ -168,12 +168,12 @@ func (vm *VM) LastPoppedStackElem() obj.Object {
 func (vm VM) execLoadModule() error {
 	var taupath = vm.pop()
 
-	pathObj, ok := taupath.(*obj.String)
+	pathObj, ok := taupath.(obj.String)
 	if !ok {
 		return fmt.Errorf("import: expected string, got %v", taupath.Type())
 	}
 
-	path, err := obj.ImportLookup(filepath.Join(vm.dir, string(*pathObj)))
+	path, err := obj.ImportLookup(filepath.Join(vm.dir, string(pathObj)))
 	if err != nil {
 		return fmt.Errorf("import: %w", err)
 	}
@@ -288,19 +288,19 @@ func (vm *VM) execAdd() error {
 
 	switch {
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := left.(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		return vm.push(obj.NewInteger(l + r))
 
 	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
-		l := left.(*obj.String).Val()
-		r := right.(*obj.String).Val()
+		l := left.(obj.String).Val()
+		r := right.(obj.String).Val()
 		return vm.push(obj.NewString(l + r))
 
 	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
 		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
+		l := left.(obj.Float).Val()
+		r := right.(obj.Float).Val()
 		return vm.push(obj.NewFloat(l + r))
 
 	default:
@@ -316,14 +316,14 @@ func (vm *VM) execSub() error {
 
 	switch {
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := left.(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		return vm.push(obj.NewInteger(l - r))
 
 	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
 		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
+		l := left.(obj.Float).Val()
+		r := right.(obj.Float).Val()
 		return vm.push(obj.NewFloat(l - r))
 
 	default:
@@ -339,14 +339,14 @@ func (vm *VM) execMul() error {
 
 	switch {
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := left.(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		return vm.push(obj.NewInteger(l * r))
 
 	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
 		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
+		l := left.(obj.Float).Val()
+		r := right.(obj.Float).Val()
 		return vm.push(obj.NewFloat(l * r))
 
 	default:
@@ -365,8 +365,8 @@ func (vm *VM) execDiv() error {
 	}
 
 	left, right = toFloat(left, right)
-	l := left.(*obj.Float).Val()
-	r := right.(*obj.Float).Val()
+	l := left.(obj.Float).Val()
+	r := right.(obj.Float).Val()
 	return vm.push(obj.NewFloat(l / r))
 }
 
@@ -380,8 +380,8 @@ func (vm *VM) execMod() error {
 		return fmt.Errorf("unsupported operator '%%' for types %v and %v", left.Type(), right.Type())
 	}
 
-	l := left.(*obj.Integer).Val()
-	r := right.(*obj.Integer).Val()
+	l := left.(obj.Integer).Val()
+	r := right.(obj.Integer).Val()
 
 	if r == 0 {
 		return fmt.Errorf("can't divide by 0")
@@ -399,8 +399,8 @@ func (vm *VM) execBwAnd() error {
 		return fmt.Errorf("unsupported operator '&' for types %v and %v", left.Type(), right.Type())
 	}
 
-	l := left.(*obj.Integer).Val()
-	r := right.(*obj.Integer).Val()
+	l := left.(obj.Integer).Val()
+	r := right.(obj.Integer).Val()
 	return vm.push(obj.NewInteger(l & r))
 }
 
@@ -414,8 +414,8 @@ func (vm *VM) execBwOr() error {
 		return fmt.Errorf("unsupported operator '|' for types %v and %v", left.Type(), right.Type())
 	}
 
-	l := left.(*obj.Integer).Val()
-	r := right.(*obj.Integer).Val()
+	l := left.(obj.Integer).Val()
+	r := right.(obj.Integer).Val()
 	return vm.push(obj.NewInteger(l | r))
 }
 
@@ -429,8 +429,8 @@ func (vm *VM) execBwXor() error {
 		return fmt.Errorf("unsupported operator '^' for types %v and %v", left.Type(), right.Type())
 	}
 
-	l := left.(*obj.Integer).Val()
-	r := right.(*obj.Integer).Val()
+	l := left.(obj.Integer).Val()
+	r := right.(obj.Integer).Val()
 	return vm.push(obj.NewInteger(l ^ r))
 }
 
@@ -441,7 +441,7 @@ func (vm *VM) execBwNot() error {
 		return fmt.Errorf("unsupported operator '~' for type %v", left.Type())
 	}
 
-	l := left.(*obj.Integer).Val()
+	l := left.(obj.Integer).Val()
 	return vm.push(obj.NewInteger(^l))
 }
 
@@ -455,8 +455,8 @@ func (vm *VM) execBwLShift() error {
 		return fmt.Errorf("unsupported operator '<<' for types %v and %v", left.Type(), right.Type())
 	}
 
-	l := left.(*obj.Integer).Val()
-	r := right.(*obj.Integer).Val()
+	l := left.(obj.Integer).Val()
+	r := right.(obj.Integer).Val()
 	return vm.push(obj.NewInteger(l << r))
 }
 
@@ -470,8 +470,8 @@ func (vm *VM) execBwRShift() error {
 		return fmt.Errorf("unsupported operator '>>' for types %v and %v", left.Type(), right.Type())
 	}
 
-	l := left.(*obj.Integer).Val()
-	r := right.(*obj.Integer).Val()
+	l := left.(obj.Integer).Val()
+	r := right.(obj.Integer).Val()
 	return vm.push(obj.NewInteger(l >> r))
 }
 
@@ -486,19 +486,19 @@ func (vm *VM) execEqual() error {
 		return vm.push(obj.ParseBool(left == right))
 
 	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
-		l := left.(*obj.String).Val()
-		r := right.(*obj.String).Val()
+		l := left.(obj.String).Val()
+		r := right.(obj.String).Val()
 		return vm.push(obj.ParseBool(l == r))
 
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := left.(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		return vm.push(obj.ParseBool(l == r))
 
 	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
 		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
+		l := left.(obj.Float).Val()
+		r := right.(obj.Float).Val()
 		return vm.push(obj.ParseBool(l == r))
 
 	default:
@@ -517,19 +517,19 @@ func (vm *VM) execNotEqual() error {
 		return vm.push(obj.ParseBool(left != right))
 
 	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
-		l := left.(*obj.String).Val()
-		r := right.(*obj.String).Val()
+		l := left.(obj.String).Val()
+		r := right.(obj.String).Val()
 		return vm.push(obj.ParseBool(l != r))
 
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := left.(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		return vm.push(obj.ParseBool(l != r))
 
 	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
 		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
+		l := left.(obj.Float).Val()
+		r := right.(obj.Float).Val()
 		return vm.push(obj.ParseBool(l != r))
 
 	default:
@@ -561,8 +561,8 @@ func (vm *VM) execIn() error {
 
 	switch {
 	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
-		l := left.(*obj.String).Val()
-		r := right.(*obj.String).Val()
+		l := left.(obj.String).Val()
+		r := right.(obj.String).Val()
 		return vm.push(obj.ParseBool(strings.Contains(r, l)))
 
 	case assertTypes(right, obj.ListType):
@@ -575,20 +575,20 @@ func (vm *VM) execIn() error {
 			}
 
 			switch l := left.(type) {
-			case *obj.String:
-				r := o.(*obj.String)
+			case obj.String:
+				r := o.(obj.String)
 				if l.Val() == r.Val() {
 					return vm.push(obj.True)
 				}
 
-			case *obj.Integer:
-				r := o.(*obj.Integer)
+			case obj.Integer:
+				r := o.(obj.Integer)
 				if l.Val() == r.Val() {
 					return vm.push(obj.True)
 				}
 
-			case *obj.Float:
-				r := o.(*obj.Float)
+			case obj.Float:
+				r := o.(obj.Float)
 				if l.Val() == r.Val() {
 					return vm.push(obj.True)
 				}
@@ -621,14 +621,14 @@ func (vm *VM) execGreaterThan() error {
 
 	switch {
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := left.(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		return vm.push(obj.ParseBool(l > r))
 
 	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
 		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
+		l := left.(obj.Float).Val()
+		r := right.(obj.Float).Val()
 		return vm.push(obj.ParseBool(l > r))
 
 	default:
@@ -644,14 +644,14 @@ func (vm *VM) execGreaterThanEqual() error {
 
 	switch {
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := left.(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		return vm.push(obj.ParseBool(l >= r))
 
 	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
 		left, right = toFloat(left, right)
-		l := left.(*obj.Float).Val()
-		r := right.(*obj.Float).Val()
+		l := left.(obj.Float).Val()
+		r := right.(obj.Float).Val()
 		return vm.push(obj.ParseBool(l >= r))
 
 	default:
@@ -668,7 +668,7 @@ func (vm *VM) execIndex() error {
 	switch {
 	case assertTypes(left, obj.ListType) && assertTypes(index, obj.IntType):
 		l := left.(obj.List)
-		i := int(index.(*obj.Integer).Val())
+		i := int(index.(obj.Integer).Val())
 
 		return vm.push(&obj.GetSetterImpl{
 			GetFunc: func() (obj.Object, bool) {
@@ -687,9 +687,18 @@ func (vm *VM) execIndex() error {
 			},
 		})
 
+	case assertTypes(left, obj.BytesType) && assertTypes(index, obj.IntType):
+		b := left.(obj.Bytes)
+		i := int(index.(obj.Integer))
+
+		if i < 0 || i >= len(b) {
+			return fmt.Errorf("index out of range")
+		}
+		return vm.push(obj.NewInteger(int64(b[i])))
+
 	case assertTypes(left, obj.StringType) && assertTypes(index, obj.IntType):
-		s := left.(*obj.String).Val()
-		i := int(index.(*obj.Integer).Val())
+		s := left.(obj.String)
+		i := int(index.(obj.Integer))
 
 		if i < 0 || i >= len(s) {
 			return fmt.Errorf("index out of range")
@@ -736,10 +745,10 @@ func (vm *VM) execMinus() error {
 	var right = obj.Unwrap(vm.pop())
 
 	switch r := right.(type) {
-	case *obj.Integer:
+	case obj.Integer:
 		return vm.push(obj.NewInteger(-r.Val()))
 
-	case *obj.Float:
+	case obj.Float:
 		return vm.push(obj.NewFloat(-r.Val()))
 
 	default:
@@ -834,7 +843,7 @@ func (vm *VM) callBuiltin(fn obj.Builtin, nargs int) error {
 
 func (vm *VM) pushClosure(constIdx, numFree int) error {
 	constant := vm.Consts[constIdx]
-	fn, ok := constant.(*obj.Function)
+	fn, ok := constant.(*obj.CompiledFunction)
 	if !ok {
 		return fmt.Errorf("not a function: %+v", constant)
 	}

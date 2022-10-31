@@ -19,7 +19,7 @@ import (
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-const TauVersion = "v1.2.11"
+const TauVersion = "v1.3.0"
 
 var ErrParseError = errors.New("error: parse error")
 
@@ -57,7 +57,7 @@ func decode(r io.Reader) (*compiler.Bytecode, error) {
 	gob.Register(obj.NewError(""))
 	gob.Register(obj.NewClosure(nil, []obj.Object{}))
 	gob.Register(obj.Builtin(func(arg ...obj.Object) obj.Object { return nil }))
-	gob.Register(obj.NewFunction([]string{}, obj.NewEnv(), nil))
+	gob.Register(obj.NewFunction([]string{}, obj.NewEnv(""), nil))
 
 	return b, dec.Decode(&b)
 }
@@ -140,10 +140,8 @@ func ExecFileVM(f string) (err error) {
 }
 
 func ExecFileEval(f string) error {
-	var env = obj.NewEnv()
-
-	dir, _ := filepath.Split(f)
-	env.SetDir(dir)
+	var env = obj.NewEnv(f)
+	
 	b := readFile(f)
 	res, errs := parser.Parse(string(b))
 	if len(errs) != 0 {

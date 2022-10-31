@@ -278,6 +278,34 @@ println(snuffles.humanage())
 >>> 56
 ```
 
+#### Files
+It's possible to open files with the `open` builtin. 
+The aforementioned builtin supports the following file modes:
+- `r` opens a file read-only and it's the default mode when no mode is specified.
+- `w` opens a file write-only truncating it to zero length. If the file doesn't exist it creates it.
+- `a` opens a file in append mode for reading and writing and it creates it if doesn't exist.
+- `x` opens a file in exclusive mode for reading and writing, if the file doesn't exist it creates it and fails otherwise.
+- `rw` opens a file for reading and writing truncating it to zero length first.
+
+```python
+# file_example.tau
+
+f = open("myfile.txt")
+content = f.Read()
+f.Close()
+```
+
+```python
+# file_example.tau
+
+f = open("myfile.txt", "a")
+content = f.Read()
+f.Write("Hello World")
+f.Close()
+
+println("previous content: {content}")
+```
+
 #### Modules
 ##### Import
 When importing a module only the fields whose name start with an upper-case character will be exported.

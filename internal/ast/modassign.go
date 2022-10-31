@@ -42,16 +42,16 @@ func (m ModAssign) Eval(env *obj.Env) obj.Object {
 	}
 
 	if gs, ok := left.(obj.GetSetter); ok {
-		l := gs.Object().(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := gs.Object().(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		if r == 0 {
 			return obj.NewError("can't divide by 0")
 		}
 		return gs.Set(obj.NewInteger(l % r))
 	}
 
-	l := left.(*obj.Integer).Val()
-	r := right.(*obj.Integer).Val()
+	l := left.(obj.Integer).Val()
+	r := right.(obj.Integer).Val()
 
 	if r == 0 {
 		return obj.NewError("can't divide by 0")

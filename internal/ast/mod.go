@@ -37,8 +37,8 @@ func (m Mod) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("unsupported operator '%%' for type %v", right.Type())
 	}
 
-	l := left.(*obj.Integer).Val()
-	r := right.(*obj.Integer).Val()
+	l := left.(obj.Integer).Val()
+	r := right.(obj.Integer).Val()
 
 	if r == 0 {
 		return obj.NewError("can't divide by 0")

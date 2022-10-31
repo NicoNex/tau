@@ -27,7 +27,7 @@ func (b BitwiseNot) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("unsupported operator '~' for type %v", value.Type())
 	}
 
-	n := value.(*obj.Integer).Val()
+	n := value.(obj.Integer).Val()
 	return obj.NewInteger(^n)
 }
 

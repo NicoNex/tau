@@ -19,7 +19,7 @@ func (l List) String() string {
 	var elements []string
 
 	for _, e := range l {
-		if s, ok := e.(*String); ok {
+		if s, ok := e.(String); ok {
 			elements = append(elements, s.Quoted())
 		} else {
 			elements = append(elements, e.String())

@@ -40,8 +40,8 @@ func (i In) Eval(env *obj.Env) obj.Object {
 
 	switch {
 	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
-		l := left.(*obj.String).Val()
-		r := right.(*obj.String).Val()
+		l := left.(obj.String).Val()
+		r := right.(obj.String).Val()
 		return obj.ParseBool(strings.Contains(r, l))
 
 	case assertTypes(right, obj.ListType):
@@ -54,20 +54,20 @@ func (i In) Eval(env *obj.Env) obj.Object {
 			}
 
 			switch l := left.(type) {
-			case *obj.String:
-				r := o.(*obj.String)
+			case obj.String:
+				r := o.(obj.String)
 				if l.Val() == r.Val() {
 					return obj.True
 				}
 
-			case *obj.Integer:
-				r := o.(*obj.Integer)
+			case obj.Integer:
+				r := o.(obj.Integer)
 				if l.Val() == r.Val() {
 					return obj.True
 				}
 
-			case *obj.Float:
-				r := o.(*obj.Float)
+			case obj.Float:
+				r := o.(obj.Float)
 				if l.Val() == r.Val() {
 					return obj.True
 				}

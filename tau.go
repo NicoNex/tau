@@ -128,9 +128,7 @@ func ExecFileVM(f string) (err error) {
 		return
 	}
 
-	tvm := vm.New(bytecode)
-	dir, _ := filepath.Split(f)
-	tvm.SetDir(dir)
+	tvm := vm.New(f, bytecode)
 	if err = tvm.Run(); err != nil {
 		fmt.Println(err)
 		return

@@ -40,6 +40,7 @@ type VM struct {
 	frames     []*Frame
 	frameIndex int
 	dir        string
+	file string
 	// Keeps track of the locally defined globals.
 	localTable []bool
 	*State
@@ -110,7 +111,7 @@ func parserError(prefix string, errs []string) error {
 	return errors.New(buf.String())
 }
 
-func New(bytecode *compiler.Bytecode) *VM {
+func New(file string, bytecode *compiler.Bytecode) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
@@ -119,13 +120,14 @@ func New(bytecode *compiler.Bytecode) *VM {
 		State:      NewState(),
 	}
 
+	vm.dir, vm.file = filepath.Split(file)
 	vm.Consts = bytecode.Constants
 	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
 
-func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
+func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
@@ -134,13 +136,10 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 		State:      state,
 	}
 
+	vm.dir, vm.file = filepath.Split(file)
 	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
-}
-
-func (vm *VM) SetDir(dir string) {
-	vm.dir = dir
 }
 
 func (vm *VM) isLocal(i int) bool {
@@ -194,7 +193,7 @@ func (vm VM) execLoadModule() error {
 		return err
 	}
 
-	tvm := NewWithState(c.Bytecode(), vm.State)
+	tvm := NewWithState(path, c.Bytecode(), vm.State)
 	tvm.dir, _ = filepath.Split(path)
 	if err := tvm.Run(); err != nil {
 		return err

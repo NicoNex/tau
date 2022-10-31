@@ -54,9 +54,7 @@ func (i Import) Eval(env *obj.Env) obj.Object {
 		)
 	}
 
-	modEnv := obj.NewEnv()
-	dir, _ := filepath.Split(path)
-	modEnv.SetDir(dir)
+	modEnv := obj.NewEnv(path)
 	tree.Eval(modEnv)
 	return modEnv.Module()
 }

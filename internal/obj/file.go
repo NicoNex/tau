@@ -6,7 +6,7 @@ import (
 )
 
 func NewFile(path string, flag int) (Object, error) {
-	var ret = Class{NewEnv()}
+	var ret = Class{NewStore()}
 
 	f, err := os.OpenFile(path, flag, 0644)
 	if err != nil {

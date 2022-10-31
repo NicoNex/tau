@@ -18,7 +18,7 @@ import (
 )
 
 func EvalREPL() error {
-	var env = obj.NewEnv()
+	var env = obj.NewEnv("<stdin>")
 
 	initState, err := term.MakeRaw(0)
 	if err != nil {

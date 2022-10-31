@@ -120,7 +120,7 @@ func New(bytecode *compiler.Bytecode) *VM {
 	}
 
 	vm.Consts = bytecode.Constants
-	fn := &obj.Function{Instructions: bytecode.Instructions}
+	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
@@ -134,7 +134,7 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 		State:      state,
 	}
 
-	fn := &obj.Function{Instructions: bytecode.Instructions}
+	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
@@ -843,7 +843,7 @@ func (vm *VM) callBuiltin(fn obj.Builtin, nargs int) error {
 
 func (vm *VM) pushClosure(constIdx, numFree int) error {
 	constant := vm.Consts[constIdx]
-	fn, ok := constant.(*obj.Function)
+	fn, ok := constant.(*obj.CompiledFunction)
 	if !ok {
 		return fmt.Errorf("not a function: %+v", constant)
 	}

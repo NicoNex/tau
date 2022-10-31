@@ -218,7 +218,7 @@ func testConstants(t *testing.T, expected []any, actual []obj.Object) error {
 			}
 
 		case []code.Instructions:
-			fn, ok := actual[i].(*obj.Function)
+			fn, ok := actual[i].(*obj.CompiledFunction)
 			if !ok {
 				return fmt.Errorf("constant %d - testInstructions failed: %s", i, actual[i])
 			}

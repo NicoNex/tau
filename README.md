@@ -143,6 +143,40 @@ error: zero division error
 $
 ```
 
+#### Concurrency
+Tau supports go-style concurrency. 
+This is obtained by the use of four builtins `pipe`, `send`, `recv` `close`. 
+- `pipe` creates a new FIFO pipe and optionally you can pass an integer to it to create a buffered pipe.
+- `send` is used to send values to the pipe.
+- `recv` is used to receive values from the pipe.
+- `close` closes the pipe.
+
+Pipes can be buffered or unbuffered. Buffered pipes make the tau-routine sleep once `send` is called until at least one value is read from the pipe.
+Once `recv` is called on an empty pipe it will cause the tau-routine to sleep until a new value is sent to the pipe.
+`send` is used to send values to the pipe.
+`close` closes the pipe thus allowing it to be garbage collected. 
+Calling `recv` on a closed pipe will return `null`.
+
+```python
+# concurrency_example.tau
+
+listen = fn(p) {
+	for (val = recv(p)) != null {
+		println(val)
+	}
+	println("bye bye...")
+}
+
+p = pipe()
+tau listen(p)
+
+send(p, "hello")
+send(p, "world")
+send(p, 123)
+send(p, "this is a test")
+close(p)
+```
+
 ##### REPL
 Tau also supports REPL:
 ```
@@ -276,40 +310,6 @@ println(snuffles.humanage())
 ```
 ```
 >>> 56
-```
-
-#### Concurrency
-Tau supports go-style concurrency. 
-This is obtained by the use of four builtins `pipe`, `send`, `recv` `close`. 
-- `pipe` creates a new FIFO pipe and optionally you can pass an integer to it to create a buffered pipe.
-- `send` is used to send values to the pipe.
-- `recv` is used to receive values from the pipe.
-- `close` closes the pipe.
-
-Pipes can be buffered or unbuffered. Buffered pipes make the tau-routine sleep once `send` is called until at least one value is read from the pipe.
-Once `recv` is called on an empty pipe it will cause the tau-routine to sleep until a new value is sent to the pipe.
-`send` is used to send values to the pipe.
-`close` closes the pipe thus allowing it to be garbage collected. 
-Calling `recv` on a closed pipe will return `null`.
-
-```python
-# concurrency_example.tau
-
-listen = fn(p) {
-	for (val = recv(p)) != null {
-		println(val)
-	}
-	println("bye bye...")
-}
-
-p = pipe()
-tau listen(p)
-
-send(p, "hello")
-send(p, "world")
-send(p, 123)
-send(p, "this is a test")
-close(p)
 ```
 
 #### Files

@@ -44,9 +44,9 @@ func isTruthy(o obj.Object) bool {
 	switch val := o.(type) {
 	case *obj.Boolean:
 		return o == obj.True
-	case *obj.Integer:
+	case obj.Integer:
 		return val.Val() != 0
-	case *obj.Float:
+	case obj.Float:
 		return val.Val() != 0
 	case *obj.Null:
 		return false
@@ -65,11 +65,11 @@ func assertTypes(o obj.Object, types ...obj.Type) bool {
 }
 
 func toFloat(l, r obj.Object) (obj.Object, obj.Object) {
-	if i, ok := l.(*obj.Integer); ok {
-		l = obj.NewFloat(float64(*i))
+	if i, ok := l.(obj.Integer); ok {
+		l = obj.NewFloat(float64(i))
 	}
-	if i, ok := r.(*obj.Integer); ok {
-		r = obj.NewFloat(float64(*i))
+	if i, ok := r.(obj.Integer); ok {
+		r = obj.NewFloat(float64(i))
 	}
 	return l, r
 }

@@ -8,8 +8,7 @@ import (
 type String string
 
 func NewString(s string) Object {
-	var ret = String(s)
-	return &ret
+	return String(s)
 }
 
 func (s String) Type() Type {

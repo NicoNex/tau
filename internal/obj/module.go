@@ -39,7 +39,7 @@ func (m Module) String() string {
 	for k, v := range m.Exported {
 		buf.WriteString(k)
 		buf.WriteString(": ")
-		if s, ok := v.(*String); ok {
+		if s, ok := v.(String); ok {
 			buf.WriteString(s.Quoted())
 		} else {
 			buf.WriteString(v.String())

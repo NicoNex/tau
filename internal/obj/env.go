@@ -1,9 +1,6 @@
 package obj
 
-import (
-	"unicode"
-	"unicode/utf8"
-)
+import "path/filepath"
 
 type Moduler interface {
 	Module() *Module
@@ -11,30 +8,37 @@ type Moduler interface {
 
 type Env struct {
 	Outer *Env
-	Store map[string]Object
+	Store Store
+	file  string
 	dir   string
 }
 
-func NewEnv() *Env {
+func NewEnv(path string) *Env {
+	dir, file := filepath.Split(path)
+
 	return &Env{
 		Outer: nil,
-		Store: make(map[string]Object),
+		Store: NewStore(),
+		file:  file,
+		dir:   dir,
 	}
 }
 
 func NewEnvWrap(e *Env) *Env {
 	return &Env{
 		Outer: e,
-		Store: make(map[string]Object),
+		Store: NewStore(),
+		file:  e.file,
+		dir:   e.dir,
 	}
+}
+
+func (e *Env) File() string {
+	return e.file
 }
 
 func (e *Env) Dir() string {
 	return e.dir
-}
-
-func (e *Env) SetDir(dir string) {
-	e.dir = dir
 }
 
 func (e *Env) Get(n string) (Object, bool) {
@@ -51,24 +55,5 @@ func (e *Env) Set(n string, o Object) Object {
 }
 
 func (e *Env) Module() *Module {
-	m := NewModule()
-
-	for n, o := range e.Store {
-		if env, ok := o.(Moduler); ok {
-			o = env.Module()
-		}
-
-		if isExported(n) {
-			m.Exported[n] = o
-		} else {
-			m.Unexported[n] = o
-		}
-	}
-
-	return m
-}
-
-func isExported(n string) bool {
-	r, _ := utf8.DecodeRuneInString(n)
-	return unicode.IsUpper(r)
+	return e.Store.Module()
 }

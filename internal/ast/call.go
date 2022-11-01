@@ -46,7 +46,7 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 		}
 
 		extEnv := extendEnv(fn, args)
-		return unwrapReturn(fn.Body.(Node).Eval(extEnv))
+		return unwrapReturn(fn.Body.Eval(extEnv))
 
 	case obj.Builtin:
 		var args []obj.Object
@@ -80,7 +80,7 @@ func extendEnv(fn *obj.Function, args []obj.Object) *obj.Env {
 }
 
 func unwrapReturn(o obj.Object) obj.Object {
-	if ret, ok := o.(*obj.Return); ok {
+	if ret, ok := o.(obj.Return); ok {
 		return ret.Val()
 	}
 	return o

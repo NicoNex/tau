@@ -44,37 +44,37 @@ func (p PlusAssign) Eval(env *obj.Env) obj.Object {
 	switch {
 	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
 		if gs, ok := left.(obj.GetSetter); ok {
-			l := gs.Object().(*obj.String).Val()
-			r := right.(*obj.String).Val()
+			l := gs.Object().(obj.String).Val()
+			r := right.(obj.String).Val()
 			return gs.Set(obj.NewString(l + r))
 		}
 
-		l := left.(*obj.String).Val()
-		r := right.(*obj.String).Val()
+		l := left.(obj.String).Val()
+		r := right.(obj.String).Val()
 		return env.Set(name, obj.NewString(l+r))
 
 	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
 		if gs, ok := left.(obj.GetSetter); ok {
-			l := gs.Object().(*obj.Integer).Val()
-			r := right.(*obj.Integer).Val()
+			l := gs.Object().(obj.Integer).Val()
+			r := right.(obj.Integer).Val()
 			return gs.Set(obj.NewInteger(l + r))
 		}
 
-		l := left.(*obj.Integer).Val()
-		r := right.(*obj.Integer).Val()
+		l := left.(obj.Integer).Val()
+		r := right.(obj.Integer).Val()
 		return env.Set(name, obj.NewInteger(l+r))
 
 	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
 		if gs, ok := left.(obj.GetSetter); ok {
 			leftFl, rightFl := toFloat(gs.Object(), right)
-			l := leftFl.(*obj.Float).Val()
-			r := rightFl.(*obj.Float).Val()
+			l := leftFl.(obj.Float).Val()
+			r := rightFl.(obj.Float).Val()
 			return gs.Set(obj.NewFloat(l + r))
 		}
 
 		leftFl, rightFl := toFloat(left, right)
-		l := leftFl.(*obj.Float).Val()
-		r := rightFl.(*obj.Float).Val()
+		l := leftFl.(obj.Float).Val()
+		r := rightFl.(obj.Float).Val()
 		return env.Set(name, obj.NewFloat(l+r))
 
 	default:

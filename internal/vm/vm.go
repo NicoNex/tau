@@ -153,52 +153,6 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 	return vm
 }
 
-func (vm *VM) clone() *VM {
-	var tvm = &VM{
-		stack:      make([]obj.Object, StackSize),
-		sp:         vm.sp,
-		dir:        vm.dir,
-		frames:     make([]*Frame, MaxFrames),
-		frameIndex: vm.frameIndex,
-		localTable: make([]bool, GlobalSize),
-		State: &State{
-			Consts:  make([]obj.Object, len(vm.Consts)),
-			Globals: make([]obj.Object, GlobalSize),
-			Symbols: vm.Symbols,
-		},
-	}
-
-	wait(
-		func() {
-			for i := range tvm.stack {
-				tvm.stack[i] = vm.stack[i]
-			}
-		},
-		func() {
-			for i := range tvm.frames {
-				tvm.frames[i] = vm.frames[i]
-			}
-		},
-		func() {
-			for i := range tvm.localTable {
-				tvm.localTable[i] = vm.localTable[i]
-			}
-		},
-		func() {
-			for i := range tvm.Consts {
-				tvm.Consts[i] = vm.Consts[i]
-			}
-		},
-		func() {
-			for i := range tvm.Globals {
-				tvm.Globals[i] = vm.Globals[i]
-			}
-		},
-	)
-
-	return tvm
-}
-
 func (vm *VM) SetDir(dir string) {
 	vm.dir = dir
 }
@@ -880,7 +834,7 @@ func (vm *VM) execConcurrentCall(numArgs int) error {
 
 	tvm.frames[0] = NewFrame(fn, 0)
 	go tvm.Run()
-	return nil
+	return vm.push(Null)
 }
 
 func (vm *VM) buildList(start, end int) obj.Object {

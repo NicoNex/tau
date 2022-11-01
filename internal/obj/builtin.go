@@ -12,6 +12,14 @@ var (
 	Stdin  io.Reader = os.Stdin
 )
 
+func Println(a ...any) {
+	fmt.Fprintln(Stdout, a...)
+}
+
+func Printf(s string, a ...any) {
+	fmt.Fprintf(Stdout, s, a...)
+}
+
 type Builtin func(args ...Object) Object
 
 func (b Builtin) Type() Type {
@@ -639,13 +647,13 @@ func parseFlag(f string) (int, error) {
 	case "r":
 		return os.O_RDONLY, nil
 	case "w":
-		return os.O_WRONLY|os.O_TRUNC|os.O_CREATE, nil
+		return os.O_WRONLY | os.O_TRUNC | os.O_CREATE, nil
 	case "a":
-		return os.O_RDWR|os.O_APPEND|os.O_CREATE, nil
+		return os.O_RDWR | os.O_APPEND | os.O_CREATE, nil
 	case "x":
-		return os.O_RDWR|os.O_CREATE|os.O_EXCL, nil
+		return os.O_RDWR | os.O_CREATE | os.O_EXCL, nil
 	case "rw":
-		return os.O_RDWR|os.O_CREATE|os.O_TRUNC, nil
+		return os.O_RDWR | os.O_CREATE | os.O_TRUNC, nil
 	default:
 		return 0, fmt.Errorf("invalid file flag %q", f)
 	}

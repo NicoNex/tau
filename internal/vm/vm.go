@@ -790,13 +790,11 @@ func (vm *VM) execCurrentClosure() error {
 }
 
 func (vm *VM) call(o obj.Object, numArgs int) error {
-	switch fn := o.(type) {
+	switch fn := obj.Unwrap(o).(type) {
 	case *obj.Closure:
 		return vm.callClosure(fn, numArgs)
 	case obj.Builtin:
 		return vm.callBuiltin(fn, numArgs)
-	case obj.Getter:
-		return vm.call(fn.Object(), numArgs)
 	default:
 		return fmt.Errorf("calling non-function")
 	}
@@ -814,6 +812,7 @@ func (vm *VM) execConcurrentCall(numArgs int) error {
 		localTable: make([]bool, GlobalSize),
 		dir:        vm.dir,
 		file:       vm.file,
+		sp:         vm.sp,
 		State: &State{
 			Consts:  vm.Consts,
 			Globals: make([]obj.Object, GlobalSize),
@@ -827,12 +826,9 @@ func (vm *VM) execConcurrentCall(numArgs int) error {
 		func() { copy(tvm.Globals, vm.Globals) },
 	)
 
-	fn, ok := vm.stack[vm.sp-1-numArgs].(*obj.Closure)
-	if !ok {
-		return fmt.Errorf("cannot call non-function")
+	if err := tvm.call(vm.stack[vm.sp-1-numArgs], numArgs); err != nil {
+		return err
 	}
-
-	tvm.frames[0] = NewFrame(fn, 0)
 	go tvm.Run()
 	return vm.push(Null)
 }

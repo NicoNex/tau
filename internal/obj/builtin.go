@@ -440,7 +440,10 @@ var Builtins = []struct {
 				return NewError("recv: first argument must be a pipe, got %s instead", args[0].Type())
 			}
 
-			return <-p
+			if ret := <-p; ret != nil {
+				return ret
+			}
+			return NullObj
 		},
 	},
 	{

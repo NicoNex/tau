@@ -41,7 +41,7 @@ type VM struct {
 	frames     []*Frame
 	frameIndex int
 	dir        string
-	file string
+	file       string
 	// Keeps track of the locally defined globals.
 	localTable []bool
 	*State
@@ -853,8 +853,33 @@ func (vm *VM) execCall(numArgs int) error {
 }
 
 func (vm *VM) execConcurrentCall(numArgs int) error {
-	tvm := vm.clone()
-	go tvm.call(tvm.stack[tvm.sp-1-numArgs], numArgs)
+	tvm := &VM{
+		stack:      make([]obj.Object, StackSize),
+		frames:     make([]*Frame, MaxFrames),
+		frameIndex: 1,
+		localTable: make([]bool, GlobalSize),
+		dir:        vm.dir,
+		file:       vm.file,
+		State: &State{
+			Consts:  vm.Consts,
+			Globals: make([]obj.Object, GlobalSize),
+			Symbols: vm.Symbols,
+		},
+	}
+
+	wait(
+		func() { copy(tvm.stack, vm.stack) },
+		func() { copy(tvm.localTable, vm.localTable) },
+		func() { copy(tvm.Globals, vm.Globals) },
+	)
+
+	fn, ok := vm.stack[vm.sp-1-numArgs].(*obj.Closure)
+	if !ok {
+		return fmt.Errorf("cannot call non-function")
+	}
+
+	tvm.frames[0] = NewFrame(fn, 0)
+	go tvm.Run()
 	return nil
 }
 

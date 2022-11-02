@@ -39,10 +39,12 @@ func ResolveBuiltin(name string) (Builtin, bool) {
 	return nil, false
 }
 
-var Builtins = []struct {
+type BuiltinImpl struct {
 	Name    string
 	Builtin Builtin
-}{
+}
+
+var Builtins = []BuiltinImpl{
 	{
 		"len",
 		func(args ...Object) Object {
@@ -300,65 +302,6 @@ var Builtins = []struct {
 		},
 	},
 	{
-		"first",
-		func(args ...Object) Object {
-			if l := len(args); l != 1 {
-				return NewError("first: wrong number of arguments, expected 1, got %d", l)
-			}
-
-			switch o := Unwrap(args[0]).(type) {
-			case List:
-				return o[0]
-			case String:
-				return NewString(string(string(o)[0]))
-			case Bytes:
-				return Integer(o[0])
-			default:
-				return NewError("first: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
-			}
-		},
-	},
-	{
-		"last",
-		func(args ...Object) Object {
-			if l := len(args); l != 1 {
-				return NewError("last: wrong number of arguments, expected 1, got %d", l)
-			}
-
-			switch o := Unwrap(args[0]).(type) {
-			case List:
-				return o[len(o)-1]
-			case String:
-				s := string(o)
-				return NewString(string(s[len(s)-1]))
-			case Bytes:
-				return Integer(o[len(o)-1])
-			default:
-				return NewError("last: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
-			}
-		},
-	},
-	{
-		"tail",
-		func(args ...Object) Object {
-			if l := len(args); l != 1 {
-				return NewError("tail: wrong number of arguments, expected 1, got %d", l)
-			}
-
-			switch o := Unwrap(args[0]).(type) {
-			case List:
-				return o[1:]
-			case String:
-				s := string(o)
-				return NewString(s[1:])
-			case Bytes:
-				return Bytes(o[1:])
-			default:
-				return NewError("tail: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
-			}
-		},
-	},
-	{
 		"new",
 		func(args ...Object) Object {
 			if l := len(args); l != 0 {
@@ -404,12 +347,12 @@ var Builtins = []struct {
 				return NewPipe()
 			}
 
-			n, ok := args[0].(*Integer)
+			n, ok := args[0].(Integer)
 			if !ok {
 				return NewError("pipe: first argument must be an int, got %s instead", args[0].Type())
 			}
 
-			return NewPipeBuffered(int(*n))
+			return NewPipeBuffered(int(n))
 		},
 	},
 	{
@@ -605,11 +548,11 @@ var Builtins = []struct {
 			case List:
 				ret := make(Bytes, len(a))
 				for i, e := range a {
-					b, ok := toByte(e)
+					integer, ok := e.(Integer)
 					if !ok {
 						return NewError("bytes: list cannot be converted to bytes")
 					}
-					ret[i] = b
+					ret[i] = byte(integer)
 				}
 				return ret
 			default:
@@ -617,15 +560,6 @@ var Builtins = []struct {
 			}
 		},
 	},
-}
-
-func toByte(o Object) (byte, bool) {
-	switch b := o.(type) {
-	case Integer:
-		return byte(b), true
-	default:
-		return 0, false
-	}
 }
 
 func listify(start, stop, step int) List {

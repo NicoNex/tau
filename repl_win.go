@@ -78,7 +78,7 @@ func VmREPL() {
 			fmt.Println(err)
 			continue
 		}
-		tvm := vm.NewWithState(c.Bytecode(), state)
+		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)
 
 		if err := tvm.Run(); err != nil {
 			fmt.Printf("runtime error: %v\n", err)

@@ -13,9 +13,9 @@ Match = fn(input) {
 	items = lexer.Lex(input)
 	
 	for (i = recv(items)) != null {
-		println(i)
 		if failed(i) {
-			return
+			return i
 		}
+		println(i.String())
 	}
 }

@@ -153,10 +153,6 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 	return vm
 }
 
-func (vm *VM) SetDir(dir string) {
-	vm.dir = dir
-}
-
 func (vm *VM) isLocal(i int) bool {
 	return vm.localTable[i]
 }
@@ -209,7 +205,6 @@ func (vm VM) execLoadModule() error {
 	}
 
 	tvm := NewWithState(path, c.Bytecode(), vm.State)
-	tvm.dir, _ = filepath.Split(path)
 	if err := tvm.Run(); err != nil {
 		return err
 	}

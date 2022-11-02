@@ -10,12 +10,12 @@ escapedCharacters		   = 6
 collationBracket		   = 7
 
 Match = fn(input) {
-	lex = lexer.New(input)
-	if failed(toks = lex.Run()) {
-		return toks
-	}
-
-	for i = 0; i < len(toks); ++i {
-		println(toks[i].String())
+	items = lexer.Lex(input)
+	
+	for (i = recv(items)) != null {
+		println(i)
+		if failed(i) {
+			return
+		}
 	}
 }

@@ -17,13 +17,13 @@ isAlphaNumeric = fn(c) {
 
 isNumber = fn(c) { contains("0123456789", c) }
 
-New = fn(input) {
+newLexer = fn(input) {
 	l = new()
 	l.input = input
 	l.start = 0
 	l.pos = 0
 	l.width = 1
-	l.items = []
+	l.items = pipe()
 
 	l.next = fn() {
 		if l.pos >= len(l.input) {
@@ -47,7 +47,8 @@ New = fn(input) {
 	}
 
 	l.emit = fn(type) {
-		l.items = append(l.items, item.New(type, slice(l.input, l.start, l.pos)))
+		println("dio cane")
+		send(l.items, item.New(type, slice(l.input, l.start, l.pos)))
 		l.start = l.pos
 	}
 
@@ -149,14 +150,20 @@ New = fn(input) {
 		return l.lexExpression
 	}
 
-	l.Run = fn() {
+	l.run = fn() {
 		for state = l.lexExpression; state != null; state = state() {
 			if failed(state) {
 				return state
 			}
 		}
-		return l.items
+		close(l.items)
 	}
 
 	return l
+}
+
+Lex = fn(input) {
+	lexer = newLexer(input)
+	tau lexer.run()
+	return lexer.items
 }

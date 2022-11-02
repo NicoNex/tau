@@ -12,7 +12,7 @@ first_line_match: |-
 
 variables:
   ident: \b(?!{{keyword}})[[:alpha:]_][[:alnum:]_]*\b
-  keyword: '\b(if|else|for|return|continue|break|tau)\b'
+  keyword: '\b(tau|if|else|for|return|continue|break)\b'
   dec_exponent: (?:[eE][-+]??{{dec_digits}})
   hex_exponent: (?:[pP][-+]??{{dec_digits}})
   # Matches a digit with any number of numeric separators, while
@@ -26,7 +26,7 @@ variables:
   bin_digits: (?:_?[01]+(?:_[01]+)*)
   char_escape: \\x\h{2}|\\u\h{4}|\\U\h{8}|\\[0-7]{3}|\\.
   noise: (?:\s)*
-  predeclared_func: \b(?:print|println|len|input|string|int|float|exit|new|append|push|range|new|error|type|failed|plugin|import|oct|hex|bin|slice|pipe|send|recv|close|open|bytes)\b
+  predeclared_func: \b(?:print|println|len|input|string|int|float|exit|new|append|push|range|new|error|type|failed|plugin|import|oct|hex|bin|slice|pipe|send|recv|close|open|bytes|import)\b
 
 contexts:
   main:
@@ -96,7 +96,7 @@ contexts:
       scope: keyword.declaration.function.tau
 
   match-keywords:
-    - match: '\b(if|else|for|return|continue|break)\b'
+    - match: '{{keyword}}'
       scope: keyword.control.tau
 
   match-punctuation:

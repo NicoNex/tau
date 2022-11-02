@@ -47,7 +47,6 @@ newLexer = fn(input) {
 	}
 
 	l.emit = fn(type) {
-		println("dio cane")
 		send(l.items, item.New(type, slice(l.input, l.start, l.pos)))
 		l.start = l.pos
 	}

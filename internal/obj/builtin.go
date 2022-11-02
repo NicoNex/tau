@@ -12,6 +12,14 @@ var (
 	Stdin  io.Reader = os.Stdin
 )
 
+func Println(a ...any) {
+	fmt.Fprintln(Stdout, a...)
+}
+
+func Printf(s string, a ...any) {
+	fmt.Fprintf(Stdout, s, a...)
+}
+
 type Builtin func(args ...Object) Object
 
 func (b Builtin) Type() Type {
@@ -31,10 +39,12 @@ func ResolveBuiltin(name string) (Builtin, bool) {
 	return nil, false
 }
 
-var Builtins = []struct {
+type BuiltinImpl struct {
 	Name    string
 	Builtin Builtin
-}{
+}
+
+var Builtins = []BuiltinImpl{
 	{
 		"len",
 		func(args ...Object) Object {
@@ -292,65 +302,6 @@ var Builtins = []struct {
 		},
 	},
 	{
-		"first",
-		func(args ...Object) Object {
-			if l := len(args); l != 1 {
-				return NewError("first: wrong number of arguments, expected 1, got %d", l)
-			}
-
-			switch o := Unwrap(args[0]).(type) {
-			case List:
-				return o[0]
-			case String:
-				return NewString(string(string(o)[0]))
-			case Bytes:
-				return Integer(o[0])
-			default:
-				return NewError("first: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
-			}
-		},
-	},
-	{
-		"last",
-		func(args ...Object) Object {
-			if l := len(args); l != 1 {
-				return NewError("last: wrong number of arguments, expected 1, got %d", l)
-			}
-
-			switch o := Unwrap(args[0]).(type) {
-			case List:
-				return o[len(o)-1]
-			case String:
-				s := string(o)
-				return NewString(string(s[len(s)-1]))
-			case Bytes:
-				return Integer(o[len(o)-1])
-			default:
-				return NewError("last: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
-			}
-		},
-	},
-	{
-		"tail",
-		func(args ...Object) Object {
-			if l := len(args); l != 1 {
-				return NewError("tail: wrong number of arguments, expected 1, got %d", l)
-			}
-
-			switch o := Unwrap(args[0]).(type) {
-			case List:
-				return o[1:]
-			case String:
-				s := string(o)
-				return NewString(s[1:])
-			case Bytes:
-				return Bytes(o[1:])
-			default:
-				return NewError("tail: wrong argument type, expected list, got %s", Unwrap(args[0]).Type())
-			}
-		},
-	},
-	{
 		"new",
 		func(args ...Object) Object {
 			if l := len(args); l != 0 {
@@ -383,6 +334,75 @@ var Builtins = []struct {
 			}
 
 			return NewNativePlugin(str.String())
+		},
+	},
+	{
+		"pipe",
+		func(args ...Object) Object {
+			if l := len(args); l > 1 {
+				return NewError("pipe: wrong number of arguments, expected 0 or 1, got %d", l)
+			}
+
+			if len(args) == 0 {
+				return NewPipe()
+			}
+
+			n, ok := args[0].(Integer)
+			if !ok {
+				return NewError("pipe: first argument must be an int, got %s instead", args[0].Type())
+			}
+
+			return NewPipeBuffered(int(n))
+		},
+	},
+	{
+		"send",
+		func(args ...Object) (o Object) {
+			if l := len(args); l != 2 {
+				return NewError("send: wrong number of arguments, expected 2, got %d", l)
+			}
+
+			p, ok := args[0].(Pipe)
+			if !ok {
+				return NewError("send: first argument must be a pipe, got %s instead", args[0].Type())
+			}
+
+			p <- args[1]
+			return args[1]
+		},
+	},
+	{
+		"recv",
+		func(args ...Object) (o Object) {
+			if l := len(args); l != 1 {
+				return NewError("recv: wrong number of arguments, expected 1, got %d", l)
+			}
+
+			p, ok := args[0].(Pipe)
+			if !ok {
+				return NewError("recv: first argument must be a pipe, got %s instead", args[0].Type())
+			}
+
+			if ret := <-p; ret != nil {
+				return ret
+			}
+			return NullObj
+		},
+	},
+	{
+		"close",
+		func(args ...Object) (o Object) {
+			if l := len(args); l != 1 {
+				return NewError("close: wrong number of arguments, expected 1, got %d", l)
+			}
+
+			p, ok := args[0].(Pipe)
+			if !ok {
+				return NewError("close: first argument must be a pipe, got %s instead", args[0].Type())
+			}
+
+			close(p)
+			return NullObj
 		},
 	},
 	{
@@ -528,11 +548,11 @@ var Builtins = []struct {
 			case List:
 				ret := make(Bytes, len(a))
 				for i, e := range a {
-					b, ok := toByte(e)
+					integer, ok := e.(Integer)
 					if !ok {
 						return NewError("bytes: list cannot be converted to bytes")
 					}
-					ret[i] = b
+					ret[i] = byte(integer)
 				}
 				return ret
 			default:
@@ -540,15 +560,6 @@ var Builtins = []struct {
 			}
 		},
 	},
-}
-
-func toByte(o Object) (byte, bool) {
-	switch b := o.(type) {
-	case Integer:
-		return byte(b), true
-	default:
-		return 0, false
-	}
 }
 
 func listify(start, stop, step int) List {
@@ -573,13 +584,13 @@ func parseFlag(f string) (int, error) {
 	case "r":
 		return os.O_RDONLY, nil
 	case "w":
-		return os.O_WRONLY|os.O_TRUNC|os.O_CREATE, nil
+		return os.O_WRONLY | os.O_TRUNC | os.O_CREATE, nil
 	case "a":
-		return os.O_RDWR|os.O_APPEND|os.O_CREATE, nil
+		return os.O_RDWR | os.O_APPEND | os.O_CREATE, nil
 	case "x":
-		return os.O_RDWR|os.O_CREATE|os.O_EXCL, nil
+		return os.O_RDWR | os.O_CREATE | os.O_EXCL, nil
 	case "rw":
-		return os.O_RDWR|os.O_CREATE|os.O_TRUNC, nil
+		return os.O_RDWR | os.O_CREATE | os.O_TRUNC, nil
 	default:
 		return 0, fmt.Errorf("invalid file flag %q", f)
 	}

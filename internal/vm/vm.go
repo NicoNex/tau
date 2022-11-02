@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"unicode"
 	"unicode/utf8"
 
@@ -40,6 +41,7 @@ type VM struct {
 	frames     []*Frame
 	frameIndex int
 	dir        string
+	file       string
 	// Keeps track of the locally defined globals.
 	localTable []bool
 	*State
@@ -110,7 +112,17 @@ func parserError(prefix string, errs []string) error {
 	return errors.New(buf.String())
 }
 
-func New(bytecode *compiler.Bytecode) *VM {
+func wait(fns ...func()) {
+	var wg sync.WaitGroup
+
+	wg.Add(len(fns))
+	for _, fn := range fns {
+		go func(fn func()) { fn(); wg.Done() }(fn)
+	}
+	wg.Wait()
+}
+
+func New(file string, bytecode *compiler.Bytecode) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
@@ -119,13 +131,14 @@ func New(bytecode *compiler.Bytecode) *VM {
 		State:      NewState(),
 	}
 
+	vm.dir, vm.file = filepath.Split(file)
 	vm.Consts = bytecode.Constants
 	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
 
-func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
+func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
@@ -134,13 +147,10 @@ func NewWithState(bytecode *compiler.Bytecode, state *State) *VM {
 		State:      state,
 	}
 
+	vm.dir, vm.file = filepath.Split(file)
 	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
-}
-
-func (vm *VM) SetDir(dir string) {
-	vm.dir = dir
 }
 
 func (vm *VM) isLocal(i int) bool {
@@ -194,8 +204,7 @@ func (vm VM) execLoadModule() error {
 		return err
 	}
 
-	tvm := NewWithState(c.Bytecode(), vm.State)
-	tvm.dir, _ = filepath.Split(path)
+	tvm := NewWithState(path, c.Bytecode(), vm.State)
 	if err := tvm.Run(); err != nil {
 		return err
 	}
@@ -776,13 +785,11 @@ func (vm *VM) execCurrentClosure() error {
 }
 
 func (vm *VM) call(o obj.Object, numArgs int) error {
-	switch fn := o.(type) {
+	switch fn := obj.Unwrap(o).(type) {
 	case *obj.Closure:
 		return vm.callClosure(fn, numArgs)
 	case obj.Builtin:
 		return vm.callBuiltin(fn, numArgs)
-	case obj.Getter:
-		return vm.call(fn.Object(), numArgs)
 	default:
 		return fmt.Errorf("calling non-function")
 	}
@@ -790,6 +797,35 @@ func (vm *VM) call(o obj.Object, numArgs int) error {
 
 func (vm *VM) execCall(numArgs int) error {
 	return vm.call(vm.stack[vm.sp-1-numArgs], numArgs)
+}
+
+func (vm *VM) execConcurrentCall(numArgs int) error {
+	tvm := &VM{
+		stack:      make([]obj.Object, StackSize),
+		frames:     make([]*Frame, MaxFrames),
+		frameIndex: 1,
+		localTable: make([]bool, GlobalSize),
+		dir:        vm.dir,
+		file:       vm.file,
+		sp:         vm.sp,
+		State: &State{
+			Consts:  vm.Consts,
+			Globals: make([]obj.Object, GlobalSize),
+			Symbols: vm.Symbols,
+		},
+	}
+
+	wait(
+		func() { copy(tvm.stack, vm.stack) },
+		func() { copy(tvm.localTable, vm.localTable) },
+		func() { copy(tvm.Globals, vm.Globals) },
+	)
+
+	if err := tvm.call(vm.stack[vm.sp-1-numArgs], numArgs); err != nil {
+		return err
+	}
+	go tvm.Run()
+	return vm.push(Null)
 }
 
 func (vm *VM) buildList(start, end int) obj.Object {
@@ -942,6 +978,11 @@ func (vm *VM) Run() (err error) {
 			numArgs := code.ReadUint8(ins[ip+1:])
 			vm.currentFrame().ip += 1
 			err = vm.execCall(int(numArgs))
+
+		case code.OpConcurrentCall:
+			numArgs := code.ReadUint8(ins[ip+1:])
+			vm.currentFrame().ip += 1
+			err = vm.execConcurrentCall(int(numArgs))
 
 		case code.OpGetBuiltin:
 			idx := code.ReadUint8(ins[ip+1:])

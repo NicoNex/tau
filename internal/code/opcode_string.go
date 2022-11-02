@@ -38,26 +38,27 @@ func _() {
 	_ = x[OpBang-27]
 	_ = x[OpIndex-28]
 	_ = x[OpCall-29]
-	_ = x[OpReturn-30]
-	_ = x[OpReturnValue-31]
-	_ = x[OpJump-32]
-	_ = x[OpJumpNotTruthy-33]
-	_ = x[OpDot-34]
-	_ = x[OpDefine-35]
-	_ = x[OpGetGlobal-36]
-	_ = x[OpSetGlobal-37]
-	_ = x[OpGetLocal-38]
-	_ = x[OpSetLocal-39]
-	_ = x[OpGetBuiltin-40]
-	_ = x[OpGetFree-41]
-	_ = x[OpLoadModule-42]
-	_ = x[OpInterpolate-43]
-	_ = x[OpPop-44]
+	_ = x[OpConcurrentCall-30]
+	_ = x[OpReturn-31]
+	_ = x[OpReturnValue-32]
+	_ = x[OpJump-33]
+	_ = x[OpJumpNotTruthy-34]
+	_ = x[OpDot-35]
+	_ = x[OpDefine-36]
+	_ = x[OpGetGlobal-37]
+	_ = x[OpSetGlobal-38]
+	_ = x[OpGetLocal-39]
+	_ = x[OpSetLocal-40]
+	_ = x[OpGetBuiltin-41]
+	_ = x[OpGetFree-42]
+	_ = x[OpLoadModule-43]
+	_ = x[OpInterpolate-44]
+	_ = x[OpPop-45]
 }
 
-const _Opcode_name = "OpConstantOpTrueOpFalseOpNullOpListOpMapOpClosureOpCurrentClosureOpAddOpSubOpMulOpDivOpModOpBwAndOpBwOrOpBwXorOpBwNotOpBwLShiftOpBwRShiftOpAndOpOrOpEqualOpNotEqualOpGreaterThanOpGreaterThanEqualOpInOpMinusOpBangOpIndexOpCallOpReturnOpReturnValueOpJumpOpJumpNotTruthyOpDotOpDefineOpGetGlobalOpSetGlobalOpGetLocalOpSetLocalOpGetBuiltinOpGetFreeOpLoadModuleOpInterpolateOpPop"
+const _Opcode_name = "OpConstantOpTrueOpFalseOpNullOpListOpMapOpClosureOpCurrentClosureOpAddOpSubOpMulOpDivOpModOpBwAndOpBwOrOpBwXorOpBwNotOpBwLShiftOpBwRShiftOpAndOpOrOpEqualOpNotEqualOpGreaterThanOpGreaterThanEqualOpInOpMinusOpBangOpIndexOpCallOpConcurrentCallOpReturnOpReturnValueOpJumpOpJumpNotTruthyOpDotOpDefineOpGetGlobalOpSetGlobalOpGetLocalOpSetLocalOpGetBuiltinOpGetFreeOpLoadModuleOpInterpolateOpPop"
 
-var _Opcode_index = [...]uint16{0, 10, 16, 23, 29, 35, 40, 49, 65, 70, 75, 80, 85, 90, 97, 103, 110, 117, 127, 137, 142, 146, 153, 163, 176, 194, 198, 205, 211, 218, 224, 232, 245, 251, 266, 271, 279, 290, 301, 311, 321, 333, 342, 354, 367, 372}
+var _Opcode_index = [...]uint16{0, 10, 16, 23, 29, 35, 40, 49, 65, 70, 75, 80, 85, 90, 97, 103, 110, 117, 127, 137, 142, 146, 153, 163, 176, 194, 198, 205, 211, 218, 224, 240, 248, 261, 267, 282, 287, 295, 306, 317, 327, 337, 349, 358, 370, 383, 388}
 
 func (i Opcode) String() string {
 	if i >= Opcode(len(_Opcode_index)-1) {

@@ -74,6 +74,7 @@ const (
 	False
 	Return
 	Import
+	Tau
 )
 
 var typemap = map[Type]string{
@@ -163,6 +164,7 @@ var keywords = map[string]Type{
 	"return":   Return,
 	"null":     Null,
 	"import":   Import,
+	"tau":      Tau,
 }
 
 func (t Type) String() string {

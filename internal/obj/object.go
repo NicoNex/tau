@@ -54,7 +54,7 @@ const (
 	FloatType                // float
 	BoolType                 // bool
 	StringType               // string
-	BytesType 				 // bytes
+	BytesType                // bytes
 	ObjectType               // object
 	ReturnType               // return
 	FunctionType             // function
@@ -64,6 +64,7 @@ const (
 	MapType                  // map
 	ContinueType             // continue
 	BreakType                // break
+	PipeType                 // pipe
 )
 
 var (

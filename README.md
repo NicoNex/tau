@@ -161,7 +161,7 @@ Calling `recv` on a closed pipe will return `null`.
 # concurrency_example.tau
 
 listen = fn(p) {
-	for (val = recv(p)) != null {
+	for val = recv(p) {
 		println(val)
 	}
 	println("bye bye...")

@@ -1,0 +1,169 @@
+Clone = fn(str) {
+	ret = ""
+
+	for i = 0; i < len(str); ++i {
+		ret += str[i]
+	}
+
+	return ret
+}
+
+Contains = fn(str, sub) {
+	maxAttempts = len(str) - len(sub)
+	for i = 0; i <= maxAttempts; ++i {
+		if sub == slice(str, i, i + len(sub)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+ContainsAny = fn(str, chars) {
+	for i = 0; i < len(chars); ++i {
+		if Contains(str, chars[i]) {
+			return true
+		}
+	}
+
+	return false
+}
+
+Count = fn(str, sub) {
+	total = 0
+
+	maxAttempts = len(str) - len(sub)
+	for i = 0; i < maxAttempts; ++i {
+		if sub == slice(str, i, i + len(sub)) {
+			++total
+		}
+	}
+
+	return total
+}
+
+cutResult = fn(before, after, found) {
+	res = new()
+	res.Before = before
+	res.After = after
+	res.Found = found
+
+	return res
+}
+
+Cut = fn(str, sub) {
+	maxAttempts = len(str) - len(sub)
+	for i = 0; i < maxAttempts; ++i {
+		if sub == slice(str, i, i + len(sub)) {
+			return cutResult(
+				slice(str, 0, i),
+				slice(str, i + len(sub), len(str)),
+				true
+			)
+		}
+	}
+
+	return cutResult(str, "", false)
+}
+
+HasPrefix = fn(str, pre) {
+	if len(pre) > len(str) {
+		return false
+	}
+
+	return slice(str, 0, len(pre)) == pre
+}
+
+HasSuffix = fn(str, sub) {
+	if len(sub) > len(str) {
+		return false
+	}
+
+	return slice(str, len(str) - len(sub), len(str)) == sub
+}
+
+Index = fn(str, sub) {
+	maxAttempts = len(str) - len(sub)
+	for i = 0; i <= maxAttempts; ++i {
+		if sub == slice(str, i, i + len(sub)) {
+			return i
+		}
+	}
+
+	return -1
+}
+
+IndexAny = fn(str, chars) {
+	index = -1
+	for i = 0; i < len(chars); ++i {
+		tmp = Index(str, chars[i])
+		if tmp != -1 && index > tmp || index == -1 {
+			index = tmp
+		}
+	}
+
+	return index
+}
+
+Join = fn(arr, sep) {
+	str = ""
+	for i = 0; i < len(arr); ++i {
+		if type(arr[i]) != "string" {
+			return error("array element at index {i} is not a string")
+		}
+
+		str += if i < len(arr) - 1 { arr[i] + sep } else { arr[i] }
+	}
+
+	return str
+}
+
+LastIndex = fn(str, sub) {
+	for i = len(str); i >= 0; --i {
+		if sub == slice(str, i - len(sub), i) {
+			return i - len(sub)
+		}
+	}
+
+	return -1
+}
+
+LastIndexAny = fn(str, chars) {
+	index = -1
+	for i = 0; i < len(chars); ++i {
+		tmp = LastIndex(str, chars[i])
+		if tmp != -1 && tmp > index || index == -1 {
+			index = tmp
+		}
+	}
+
+	return index
+}
+
+Repeat = fn(str, n) {
+	ret = ""
+	for i = 0; i < n; ++i {
+		ret += str
+	}
+
+	return ret
+}
+
+Reverse = fn(str) {
+	ret = ""
+	for i = len(str) - 1; i >= 0; --i {
+		ret += str[i]
+	}
+
+	return ret
+}
+
+Split = fn(str, sep) {
+	ret = []
+	for (i = Index(str, sep)) != -1 {
+		ret = append(ret, slice(str, 0, i))
+		str = slice(str, i + 1, len(str))
+	}
+
+	return append(ret, str)
+}

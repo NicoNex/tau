@@ -11,3 +11,4 @@
 /tau
 /cmd/tau/tau
 !/examples/*.tau
+!/stdlib/*.tau

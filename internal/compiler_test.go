@@ -642,7 +642,7 @@ a = new();
 a.a = 2`,
 			expectedConstants: []any{"a", 2},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpGetBuiltin, 16),
+				code.Make(code.OpGetBuiltin, 13),
 				code.Make(code.OpCall, 0),
 				code.Make(code.OpSetGlobal, 0),
 				code.Make(code.OpPop),

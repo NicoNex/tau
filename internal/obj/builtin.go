@@ -54,9 +54,11 @@ var Builtins = []BuiltinImpl{
 
 			switch o := Unwrap(args[0]).(type) {
 			case List:
-				return NewInteger(int64(len(o)))
+				return Integer(len(o))
 			case String:
-				return NewInteger(int64(len(o)))
+				return Integer(len(o))
+			case Bytes:
+				return Integer(len(o))
 			default:
 				return NewError("len: object of type %q has no length", o.Type())
 			}
@@ -135,14 +137,14 @@ var Builtins = []BuiltinImpl{
 			args = UnwrapAll(args)
 			switch o := args[0].(type) {
 			case Integer:
-				return NewInteger(int64(o))
+				return Integer(o)
 
 			case Float:
-				return NewInteger(int64(o))
+				return Integer(o)
 
 			case String:
 				if a, err := strconv.ParseInt(string(o), 10, 64); err == nil {
-					return NewInteger(int64(a))
+					return Integer(a)
 				}
 				return NewError("%v is not a number", args[0])
 
@@ -161,14 +163,14 @@ var Builtins = []BuiltinImpl{
 			args = UnwrapAll(args)
 			switch o := args[0].(type) {
 			case Integer:
-				return NewFloat(float64(o))
+				return Float(o)
 
 			case Float:
-				return NewFloat(float64(o))
+				return Float(o)
 
 			case String:
 				if a, err := strconv.ParseFloat(string(o), 64); err == nil {
-					return NewFloat(a)
+					return Float(a)
 				}
 				return NewError("%v is not a number", args[0])
 

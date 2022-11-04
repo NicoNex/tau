@@ -157,3 +157,87 @@ Split = fn(str, sep) {
 
 	return append(ret, str)
 }
+
+TrimPrefix = fn(str, pre) {
+	return if len(pre) > len(str) || pre != slice(str, 0, len(pre)) {
+		str
+	} else {
+		slice(str, len(pre), len(str))
+	}
+}
+
+TrimSuffix = fn(str, sub) {
+	return if len(sub) > len(str) || sub != slice(str, len(str)-len(sub), len(str)) {
+		str
+	} else {
+		slice(str, 0, len(str)-len(sub))
+	}
+}
+
+ReplaceAll = fn(str, old, new) { Join(Split(str, old), new) }
+
+Replace = fn(str, old, new, n) {
+	if n < 0 {
+		return ReplaceAll(str, old, new)
+	}
+
+	ret = ""
+	for i = 0; i < n; ++i {
+		if (idx = Index(str, old)) == -1 {
+			break
+		}
+		ret += slice(str, 0, idx) + new
+		str = slice(str, idx+len(old), len(str))
+	}
+
+	return ret + str
+}
+
+isalpha = fn(char) { char >= 97 && char <= 122 || char >= 65 && char <= 90 }
+islower = fn(char) { char >= 97 && char <= 122 }
+isupper = fn(char) { char >= 65 && char <= 90 }
+toupper = fn(char) { char - 32 }
+tolower = fn(char) { char + 32 }
+
+ToUpper = fn(str) {
+	b = bytes(str)
+	ret = []
+
+	for i = 0; i < len(b); ++i {
+		char = b[i]
+		ret = append(ret, if islower(char) { toupper(char) } else { char })
+	}
+
+	return string(bytes(ret))
+}
+
+ToLower = fn(str) {
+	b = bytes(str)
+	ret = []
+
+	for i = 0; i < len(b); ++i {
+		char = b[i]
+		ret = append(ret, if isupper(char) { tolower(char) } else { char })
+	}
+
+	return string(bytes(ret))
+}
+
+ToTitle = fn(str) {
+	toks = Split(str, " ")
+	ret = []
+
+	for i = 0; i < len(toks); ++i {
+		b = bytes(toks[i])
+		tmp = []
+
+		tmp = append(tmp, if islower(b[0]) { toupper(b[0]) } else { b[0] })
+		for j = 1; j < len(b); ++j {
+			tmp = append(tmp, b[j])
+		}
+
+		ret = append(ret, string(bytes(tmp)))
+	}
+
+	return Join(ret, " ")
+}

@@ -1,3 +1,5 @@
+spaces = "\t\n\v\f\r "
+
 Contains = fn(str, sub) {
 	maxAttempts = len(str) - len(sub)
 	for i = 0; i <= maxAttempts; ++i {
@@ -158,6 +160,16 @@ Split = fn(str, sep) {
 	return append(ret, str)
 }
 
+Fields = fn(str) {
+	ret = []
+	for (i = IndexAny(str, spaces)) != -1 {
+		ret = append(ret, slice(str, 0, i))
+		str = slice(str, i + 1, len(str))
+	}
+
+	return append(ret, str)
+}
+
 TrimPrefix = fn(str, pre) {
 	return if len(pre) > len(str) || pre != slice(str, 0, len(pre)) {
 		str
@@ -241,3 +253,27 @@ ToTitle = fn(str) {
 
 	return Join(ret, " ")
 }
+
+TrimLeft = fn(str, cutset) {
+	for start = 0; start < len(str); ++start {
+		if !Contains(cutset, str[start]) {
+			break
+		}
+	}
+
+	return slice(str, start, len(str))
+}
+
+TrimRight = fn(str, cutset) {
+	for stop = len(str); stop > 0; --stop {
+		if !Contains(cutset, str[stop-1]) {
+			break
+		}
+	}
+
+	return slice(str, 0, stop)
+}
+
+Trim = fn(str, cutset) { TrimRight(TrimLeft(str, cutset), cutset) }
+
+TrimSpace = fn(str) { Trim(str, spaces) }

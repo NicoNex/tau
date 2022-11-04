@@ -1,0 +1,17 @@
+Contains = fn(list, item) {
+	for i = 0; i < len(list); ++i {
+		if list[i] == item {
+			return true
+		}
+	}
+	return false
+}
+
+Index = fn(list, item) {
+	for i = 0; i < len(list); ++i {
+		if list[i] == item {
+			return i
+		}
+	}
+	return -1
+}

@@ -30,23 +30,26 @@ func (g GreaterEq) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '>=' for type %v", left.Type())
-	}
-	if !assertTypes(right, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '>=' for type %v", right.Type())
-	}
-
-	if assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType) {
-		l := left.(obj.Integer).Val()
-		r := right.(obj.Integer).Val()
+	switch {
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
+		l := left.(obj.Integer)
+		r := right.(obj.Integer)
 		return obj.ParseBool(l >= r)
-	}
 
-	left, right = toFloat(left, right)
-	l := left.(obj.Float).Val()
-	r := right.(obj.Float).Val()
-	return obj.ParseBool(l >= r)
+	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
+		left, right = obj.ToFloat(left, right)
+		l := left.(obj.Float)
+		r := right.(obj.Float)
+		return obj.ParseBool(l >= r)
+
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
+		l := left.(obj.String)
+		r := right.(obj.String)
+		return obj.ParseBool(l >= r)
+
+	default:
+		return obj.NewError("unsupported operator '>=' for types %v and %v", left.Type(), right.Type())
+	}
 }
 
 func (g GreaterEq) String() string {

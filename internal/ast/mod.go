@@ -30,20 +30,20 @@ func (m Mod) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.IntType) {
+	if !obj.AssertTypes(left, obj.IntType) {
 		return obj.NewError("unsupported operator '%%' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.IntType) {
+	if !obj.AssertTypes(right, obj.IntType) {
 		return obj.NewError("unsupported operator '%%' for type %v", right.Type())
 	}
 
-	l := left.(obj.Integer).Val()
-	r := right.(obj.Integer).Val()
+	l := left.(obj.Integer)
+	r := right.(obj.Integer)
 
 	if r == 0 {
 		return obj.NewError("can't divide by 0")
 	}
-	return obj.NewInteger(l % r)
+	return obj.Integer(l % r)
 }
 
 func (m Mod) String() string {

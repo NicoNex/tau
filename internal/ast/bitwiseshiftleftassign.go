@@ -34,22 +34,22 @@ func (b BitwiseShiftLeftAssign) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.IntType) {
+	if !obj.AssertTypes(left, obj.IntType) {
 		return obj.NewError("unsupported operator '<<=' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.IntType) {
+	if !obj.AssertTypes(right, obj.IntType) {
 		return obj.NewError("unsupported operator '<<=' for type %v", right.Type())
 	}
 
 	if gs, ok := left.(obj.GetSetter); ok {
-		l := gs.Object().(obj.Integer).Val()
-		r := right.(obj.Integer).Val()
-		return gs.Set(obj.NewInteger(l << r))
+		l := gs.Object().(obj.Integer)
+		r := right.(obj.Integer)
+		return gs.Set(obj.Integer(l << r))
 	}
 
-	l := left.(obj.Integer).Val()
-	r := right.(obj.Integer).Val()
-	return env.Set(name, obj.NewInteger(l<<r))
+	l := left.(obj.Integer)
+	r := right.(obj.Integer)
+	return env.Set(name, obj.Integer(l<<r))
 }
 
 func (b BitwiseShiftLeftAssign) String() string {

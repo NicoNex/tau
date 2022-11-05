@@ -30,16 +30,16 @@ func (b BitwiseLeftShift) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.IntType) {
+	if !obj.AssertTypes(left, obj.IntType) {
 		return obj.NewError("unsupported operator '<<' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.IntType) {
+	if !obj.AssertTypes(right, obj.IntType) {
 		return obj.NewError("unsupported operator '<<' for type %v", right.Type())
 	}
 
-	l := left.(obj.Integer).Val()
-	r := right.(obj.Integer).Val()
-	return obj.NewInteger(l << r)
+	l := left.(obj.Integer)
+	r := right.(obj.Integer)
+	return obj.Integer(l << r)
 }
 
 func (b BitwiseLeftShift) String() string {

@@ -34,37 +34,37 @@ func (m MinusAssign) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.IntType, obj.FloatType) {
+	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '-=' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.IntType, obj.FloatType) {
+	if !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '-=' for type %v", right.Type())
 	}
 
 	switch {
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
 		if gs, ok := left.(obj.GetSetter); ok {
-			l := gs.Object().(obj.Integer).Val()
-			r := right.(obj.Integer).Val()
-			return gs.Set(obj.NewInteger(l - r))
+			l := gs.Object().(obj.Integer)
+			r := right.(obj.Integer)
+			return gs.Set(obj.Integer(l - r))
 		}
 
-		l := left.(obj.Integer).Val()
-		r := right.(obj.Integer).Val()
-		return env.Set(name, obj.NewInteger(l-r))
+		l := left.(obj.Integer)
+		r := right.(obj.Integer)
+		return env.Set(name, obj.Integer(l-r))
 
-	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
+	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
 		if gs, ok := left.(obj.GetSetter); ok {
-			leftFl, rightFl := toFloat(gs.Object(), right)
-			l := leftFl.(obj.Float).Val()
-			r := rightFl.(obj.Float).Val()
-			return gs.Set(obj.NewFloat(l - r))
+			leftFl, rightFl := obj.ToFloat(gs.Object(), right)
+			l := leftFl.(obj.Float)
+			r := rightFl.(obj.Float)
+			return gs.Set(obj.Float(l - r))
 		}
 
-		leftFl, rightFl := toFloat(left, right)
-		l := leftFl.(obj.Float).Val()
-		r := rightFl.(obj.Float).Val()
-		return env.Set(name, obj.NewFloat(l-r))
+		leftFl, rightFl := obj.ToFloat(left, right)
+		l := leftFl.(obj.Float)
+		r := rightFl.(obj.Float)
+		return env.Set(name, obj.Float(l-r))
 
 	default:
 		return obj.NewError(

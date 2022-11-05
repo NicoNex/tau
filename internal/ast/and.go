@@ -30,7 +30,7 @@ func (a And) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	return obj.ParseBool(isTruthy(left) && isTruthy(right))
+	return obj.ParseBool(obj.IsTruthy(left) && obj.IsTruthy(right))
 }
 
 func (a And) String() string {

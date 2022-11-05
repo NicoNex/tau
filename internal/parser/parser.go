@@ -10,13 +10,13 @@ import (
 )
 
 type Parser struct {
-	cur           item.Item
-	peek          item.Item
 	items         chan item.Item
-	errs          []string
-	nestedLoops   uint
 	prefixParsers map[item.Type]parsePrefixFn
 	infixParsers  map[item.Type]parseInfixFn
+	cur           item.Item
+	peek          item.Item
+	errs          []string
+	nestedLoops   uint
 }
 
 type (

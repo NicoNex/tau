@@ -17,9 +17,9 @@ import (
 )
 
 type State struct {
+	Symbols *compiler.SymbolTable
 	Consts  []obj.Object
 	Globals []obj.Object
-	Symbols *compiler.SymbolTable
 }
 
 func NewState() *State {
@@ -36,15 +36,14 @@ func NewState() *State {
 }
 
 type VM struct {
-	stack      []obj.Object
-	sp         int
-	frames     []*Frame
-	frameIndex int
+	*State
 	dir        string
 	file       string
-	// Keeps track of the locally defined globals.
+	stack      []obj.Object
+	frames     []*Frame
 	localTable []bool
-	*State
+	sp         int
+	frameIndex int
 }
 
 const (

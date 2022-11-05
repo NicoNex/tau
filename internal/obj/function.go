@@ -12,9 +12,9 @@ type Evaluable interface {
 }
 
 type Function struct {
-	Params       []string
-	Body         Evaluable
-	Env          *Env
+	Body   Evaluable
+	Env    *Env
+	Params []string
 }
 
 func NewFunction(params []string, env *Env, body Evaluable) Object {
@@ -31,8 +31,8 @@ func (f Function) String() string {
 
 type CompiledFunction struct {
 	Instructions code.Instructions
-	NumLocals int
-	NumParams int
+	NumLocals    int
+	NumParams    int
 }
 
 func NewFunctionCompiled(i code.Instructions, nLocals, nParams int) Object {

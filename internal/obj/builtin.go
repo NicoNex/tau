@@ -40,14 +40,14 @@ func ResolveBuiltin(name string) (Builtin, bool) {
 }
 
 type BuiltinImpl struct {
-	Name    string
 	Builtin Builtin
+	Name    string
 }
 
 var Builtins = []BuiltinImpl{
 	{
-		"len",
-		func(args ...Object) Object {
+		Name: "len",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 1 {
 				return NewError("len: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -65,22 +65,22 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"println",
-		func(args ...Object) Object {
+		Name: "println",
+		Builtin: func(args ...Object) Object {
 			fmt.Fprintln(Stdout, toAnySlice(args)...)
 			return NullObj
 		},
 	},
 	{
-		"print",
-		func(args ...Object) Object {
+		Name: "print",
+		Builtin: func(args ...Object) Object {
 			fmt.Fprint(Stdout, toAnySlice(args)...)
 			return NullObj
 		},
 	},
 	{
-		"input",
-		func(args ...Object) Object {
+		Name: "input",
+		Builtin: func(args ...Object) Object {
 			var tmp string
 
 			args = UnwrapAll(args)
@@ -99,8 +99,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"string",
-		func(args ...Object) Object {
+		Name: "string",
+		Builtin: func(args ...Object) Object {
 			if len(args) == 0 {
 				return NewError("string: no argument provided")
 			}
@@ -113,14 +113,14 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"error",
-		func(args ...Object) Object {
+		Name: "error",
+		Builtin: func(args ...Object) Object {
 			return NewError(fmt.Sprint(toAnySlice(args)...))
 		},
 	},
 	{
-		"type",
-		func(args ...Object) Object {
+		Name: "type",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 1 {
 				return NewError("type: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -128,8 +128,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"int",
-		func(args ...Object) Object {
+		Name: "int",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 1 {
 				return NewError("int: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -154,8 +154,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"float",
-		func(args ...Object) Object {
+		Name: "float",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 1 {
 				return NewError("float: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -180,8 +180,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"exit",
-		func(args ...Object) Object {
+		Name: "exit",
+		Builtin: func(args ...Object) Object {
 			args = UnwrapAll(args)
 
 			switch l := len(args); l {
@@ -221,8 +221,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"append",
-		func(args ...Object) Object {
+		Name: "append",
+		Builtin: func(args ...Object) Object {
 			if len(args) == 0 {
 				return NewError("append: no argument provided")
 			}
@@ -240,8 +240,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"push",
-		func(args ...Object) Object {
+		Name: "push",
+		Builtin: func(args ...Object) Object {
 			if len(args) == 0 {
 				return NewError("push: no argument provided")
 			}
@@ -265,8 +265,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"range",
-		func(args ...Object) Object {
+		Name: "range",
+		Builtin: func(args ...Object) Object {
 			args = UnwrapAll(args)
 
 			switch len(args) {
@@ -315,8 +315,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"new",
-		func(args ...Object) Object {
+		Name: "new",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 0 {
 				return NewError("new: wrong number of arguments, expected 0, got %d", l)
 			}
@@ -324,8 +324,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"failed",
-		func(args ...Object) Object {
+		Name: "failed",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 1 {
 				return NewError("failed: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -335,8 +335,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"plugin",
-		func(args ...Object) Object {
+		Name: "plugin",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 1 {
 				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -350,8 +350,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"pipe",
-		func(args ...Object) Object {
+		Name: "pipe",
+		Builtin: func(args ...Object) Object {
 			switch l := len(args); l {
 			case 0:
 				return NewPipe()
@@ -369,8 +369,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"send",
-		func(args ...Object) (o Object) {
+		Name: "send",
+		Builtin: func(args ...Object) (o Object) {
 			if l := len(args); l != 2 {
 				return NewError("send: wrong number of arguments, expected 2, got %d", l)
 			}
@@ -386,8 +386,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"recv",
-		func(args ...Object) (o Object) {
+		Name: "recv",
+		Builtin: func(args ...Object) (o Object) {
 			if l := len(args); l != 1 {
 				return NewError("recv: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -404,8 +404,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"close",
-		func(args ...Object) (o Object) {
+		Name: "close",
+		Builtin: func(args ...Object) (o Object) {
 			if l := len(args); l != 1 {
 				return NewError("close: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -420,8 +420,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"hex",
-		func(args ...Object) Object {
+		Name: "hex",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 1 {
 				return NewError("hex: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -435,8 +435,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"oct",
-		func(args ...Object) Object {
+		Name: "oct",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 1 {
 				return NewError("oct: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -450,8 +450,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"bin",
-		func(args ...Object) Object {
+		Name: "bin",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 1 {
 				return NewError("bin: wrong number of arguments, expected 1, got %d", l)
 			}
@@ -465,8 +465,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"slice",
-		func(args ...Object) Object {
+		Name: "slice",
+		Builtin: func(args ...Object) Object {
 			if l := len(args); l != 3 {
 				return NewError("slice: wrong number of arguments, expected 3, got %d", l)
 			}
@@ -515,8 +515,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"open",
-		func(args ...Object) Object {
+		Name: "open",
+		Builtin: func(args ...Object) Object {
 			var l = len(args)
 
 			if l != 1 && l != 2 {
@@ -550,8 +550,8 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		"bytes",
-		func(args ...Object) Object {
+		Name: "bytes",
+		Builtin: func(args ...Object) Object {
 			if len(args) != 1 {
 				return NewError("bytes: expected 1 argument but got %d", len(args))
 			}

@@ -10,11 +10,11 @@ import (
 )
 
 type lexer struct {
+	items chan item.Item
 	input string
 	start int
 	pos   int
 	width int
-	items chan item.Item
 }
 
 type stateFn func(*lexer) stateFn

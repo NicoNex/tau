@@ -141,14 +141,14 @@ const eof = -1
 var errBadInterpolationSyntax = errors.New("bad interpolation syntax")
 
 type interpolator struct {
-	s          string
+	parse parseFn
+	s     string
+	strings.Builder
 	pos        int
 	width      int
 	nblocks    int
 	inQuotes   bool
 	inBacktick bool
-	parse      parseFn
-	strings.Builder
 }
 
 func newInterpolator(s string, parse parseFn) interpolator {

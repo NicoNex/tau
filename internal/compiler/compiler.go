@@ -24,10 +24,10 @@ type CompilationScope struct {
 }
 
 type Compiler struct {
-	constants  *[]obj.Object
+	constants *[]obj.Object
+	*SymbolTable
 	scopes     []CompilationScope
 	scopeIndex int
-	*SymbolTable
 }
 
 type Bytecode struct {

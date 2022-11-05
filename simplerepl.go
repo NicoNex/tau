@@ -1,6 +1,3 @@
-//go:build windows
-// +build windows
-
 package tau
 
 import (
@@ -15,7 +12,7 @@ import (
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-func EvalREPL() {
+func SimpleEvalREPL() {
 	var (
 		env    = obj.NewEnv("<stdin>")
 		reader = bufio.NewReader(os.Stdin)
@@ -25,12 +22,12 @@ func EvalREPL() {
 	for {
 		fmt.Print(">>> ")
 		input, err := reader.ReadString('\n')
-		check(err)
+		simpleCheck(err)
 
 		input = strings.TrimRight(input, " \n")
 		if len(input) > 0 && input[len(input)-1] == '{' {
-			input, err = acceptUntil(reader, input, "\n\n")
-			check(err)
+			input, err = simpleAcceptUntil(reader, input, "\n\n")
+			simpleCheck(err)
 		}
 
 		res, errs := parser.Parse(input)
@@ -47,7 +44,7 @@ func EvalREPL() {
 	}
 }
 
-func VmREPL() {
+func SimpleVmREPL() {
 	var (
 		state  = vm.NewState()
 		reader = bufio.NewReader(os.Stdin)
@@ -57,12 +54,12 @@ func VmREPL() {
 	for {
 		fmt.Print(">>> ")
 		input, err := reader.ReadString('\n')
-		check(err)
+		simpleCheck(err)
 
 		input = strings.TrimRight(input, " \n")
 		if len(input) > 0 && input[len(input)-1] == '{' {
-			input, err = acceptUntil(reader, input, "\n\n")
-			check(err)
+			input, err = simpleAcceptUntil(reader, input, "\n\n")
+			simpleCheck(err)
 		}
 
 		res, errs := parser.Parse(input)
@@ -91,14 +88,14 @@ func VmREPL() {
 	}
 }
 
-func check(err error) {
+func simpleCheck(err error) {
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(0)
 	}
 }
 
-func acceptUntil(r *bufio.Reader, start, end string) (string, error) {
+func simpleAcceptUntil(r *bufio.Reader, start, end string) (string, error) {
 	var buf strings.Builder
 
 	buf.WriteString(start)

@@ -38,14 +38,14 @@ func (g Greater) Eval(env *obj.Env) obj.Object {
 	}
 
 	if obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType) {
-		l := left.(obj.Integer).Val()
-		r := right.(obj.Integer).Val()
+		l := left.(obj.Integer)
+		r := right.(obj.Integer)
 		return obj.ParseBool(l > r)
 	}
 
 	left, right = obj.ToFloat(left, right)
-	l := left.(obj.Float).Val()
-	r := right.(obj.Float).Val()
+	l := left.(obj.Float)
+	r := right.(obj.Float)
 	return obj.ParseBool(l > r)
 }
 

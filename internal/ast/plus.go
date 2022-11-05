@@ -39,20 +39,20 @@ func (p Plus) Eval(env *obj.Env) obj.Object {
 
 	switch {
 	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String).Val()
-		r := right.(obj.String).Val()
-		return obj.NewString(l + r)
+		l := left.(obj.String)
+		r := right.(obj.String)
+		return obj.String(l + r)
 
 	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
-		l := left.(obj.Integer).Val()
-		r := right.(obj.Integer).Val()
-		return obj.NewInteger(l + r)
+		l := left.(obj.Integer)
+		r := right.(obj.Integer)
+		return obj.Integer(l + r)
 
 	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
 		left, right = obj.ToFloat(left, right)
-		l := left.(obj.Float).Val()
-		r := right.(obj.Float).Val()
-		return obj.NewFloat(l + r)
+		l := left.(obj.Float)
+		r := right.(obj.Float)
+		return obj.Float(l + r)
 
 	default:
 		return obj.NewError(

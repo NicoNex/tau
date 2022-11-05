@@ -25,10 +25,10 @@ func (p PrefixMinus) Eval(env *obj.Env) obj.Object {
 
 	switch v := value.(type) {
 	case obj.Integer:
-		return obj.NewInteger(-v.Val())
+		return obj.Integer(-v.Val())
 
 	case obj.Float:
-		return obj.NewFloat(-v.Val())
+		return obj.Float(-v.Val())
 
 	default:
 		return obj.NewError("unsupported prefix operator '-' for type %v", value.Type())

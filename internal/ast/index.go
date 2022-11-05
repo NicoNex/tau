@@ -33,7 +33,7 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 	switch {
 	case obj.AssertTypes(lft, obj.ListType) && obj.AssertTypes(idx, obj.IntType):
 		l := lft.(obj.List)
-		i := idx.(obj.Integer).Val()
+		i := idx.(obj.Integer)
 
 		return &obj.GetSetterImpl{
 			GetFunc: func() (obj.Object, bool) {
@@ -55,12 +55,12 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 
 	case obj.AssertTypes(lft, obj.StringType) && obj.AssertTypes(idx, obj.IntType):
 		s := lft.(obj.String)
-		i := idx.(obj.Integer).Val()
+		i := idx.(obj.Integer)
 
 		if i < 0 || int(i) >= len(s) {
 			return obj.NewError("intex out of range")
 		}
-		return obj.NewString(string(string(s)[i]))
+		return obj.String(string(string(s)[i]))
 
 	case obj.AssertTypes(lft, obj.BytesType) && obj.AssertTypes(idx, obj.IntType):
 		b := lft.(obj.Bytes)
@@ -69,7 +69,7 @@ func (i Index) Eval(env *obj.Env) obj.Object {
 		if i < 0 || int(i) >= len(b) {
 			return obj.NewError("intex out of range")
 		}
-		return obj.NewInteger(int64(b[i]))
+		return obj.Integer(int64(b[i]))
 
 	case obj.AssertTypes(lft, obj.MapType) && obj.AssertTypes(idx, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType):
 		m := lft.(obj.Map)

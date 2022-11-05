@@ -43,15 +43,15 @@ func (d DivideAssign) Eval(env *obj.Env) obj.Object {
 
 	if gs, ok := left.(obj.GetSetter); ok {
 		leftFl, rightFl := obj.ToFloat(gs.Object(), right)
-		l := leftFl.(obj.Float).Val()
-		r := rightFl.(obj.Float).Val()
-		return gs.Set(obj.NewFloat(l / r))
+		l := leftFl.(obj.Float)
+		r := rightFl.(obj.Float)
+		return gs.Set(obj.Float(l / r))
 	}
 
 	leftFl, rightFl := obj.ToFloat(left, right)
-	l := leftFl.(obj.Float).Val()
-	r := rightFl.(obj.Float).Val()
-	return env.Set(name, obj.NewFloat(l/r))
+	l := leftFl.(obj.Float)
+	r := rightFl.(obj.Float)
+	return env.Set(name, obj.Float(l/r))
 }
 
 func (d DivideAssign) String() string {

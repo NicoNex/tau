@@ -38,9 +38,9 @@ func (d Divide) Eval(env *obj.Env) obj.Object {
 	}
 
 	left, right = obj.ToFloat(left, right)
-	l := left.(obj.Float).Val()
-	r := right.(obj.Float).Val()
-	return obj.NewFloat(l / r)
+	l := left.(obj.Float)
+	r := right.(obj.Float)
+	return obj.Float(l / r)
 }
 
 func (d Divide) String() string {

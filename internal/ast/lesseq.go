@@ -38,14 +38,14 @@ func (l LessEq) Eval(env *obj.Env) obj.Object {
 	}
 
 	if obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType) {
-		le := left.(obj.Integer).Val()
-		ri := right.(obj.Integer).Val()
+		le := left.(obj.Integer)
+		ri := right.(obj.Integer)
 		return obj.ParseBool(le <= ri)
 	}
 
 	left, right = obj.ToFloat(left, right)
-	le := left.(obj.Float).Val()
-	ri := right.(obj.Float).Val()
+	le := left.(obj.Float)
+	ri := right.(obj.Float)
 	return obj.ParseBool(le <= ri)
 }
 

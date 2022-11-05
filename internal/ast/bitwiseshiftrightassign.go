@@ -42,14 +42,14 @@ func (b BitwiseShiftRightAssign) Eval(env *obj.Env) obj.Object {
 	}
 
 	if gs, ok := left.(obj.GetSetter); ok {
-		l := gs.Object().(obj.Integer).Val()
-		r := right.(obj.Integer).Val()
-		return gs.Set(obj.NewInteger(l >> r))
+		l := gs.Object().(obj.Integer)
+		r := right.(obj.Integer)
+		return gs.Set(obj.Integer(l >> r))
 	}
 
-	l := left.(obj.Integer).Val()
-	r := right.(obj.Integer).Val()
-	return env.Set(name, obj.NewInteger(l>>r))
+	l := left.(obj.Integer)
+	r := right.(obj.Integer)
+	return env.Set(name, obj.Integer(l>>r))
 }
 
 func (b BitwiseShiftRightAssign) String() string {

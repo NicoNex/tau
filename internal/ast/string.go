@@ -33,7 +33,7 @@ func NewString(s string, parse parseFn) (Node, error) {
 
 func (s String) Eval(env *obj.Env) obj.Object {
 	if len(s.substr) == 0 {
-		return obj.NewString(s.s)
+		return obj.String(s.s)
 	}
 
 	var subs = make([]any, len(s.substr))
@@ -41,7 +41,7 @@ func (s String) Eval(env *obj.Env) obj.Object {
 		subs[i] = sub.Eval(env)
 	}
 
-	return obj.NewString(fmt.Sprintf(s.s, subs...))
+	return obj.String(fmt.Sprintf(s.s, subs...))
 }
 
 func (s String) String() string {
@@ -54,7 +54,7 @@ func (s String) Quoted() string {
 
 func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 	if len(s.substr) == 0 {
-		return c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s))), nil
+		return c.Emit(code.OpConstant, c.AddConstant(obj.String(s.s))), nil
 	}
 
 	for _, sub := range s.substr {
@@ -64,7 +64,7 @@ func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 		c.RemoveLast()
 	}
 
-	return c.Emit(code.OpInterpolate, c.AddConstant(obj.NewString(s.s)), len(s.substr)), nil
+	return c.Emit(code.OpInterpolate, c.AddConstant(obj.String(s.s)), len(s.substr)), nil
 }
 
 func (s String) IsConstExpression() bool {

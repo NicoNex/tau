@@ -42,19 +42,19 @@ func (e Equals) Eval(env *obj.Env) obj.Object {
 		return obj.ParseBool(left == right)
 
 	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String).Val()
-		r := right.(obj.String).Val()
+		l := left.(obj.String)
+		r := right.(obj.String)
 		return obj.ParseBool(l == r)
 
 	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
-		l := left.(obj.Integer).Val()
-		r := right.(obj.Integer).Val()
+		l := left.(obj.Integer)
+		r := right.(obj.Integer)
 		return obj.ParseBool(l == r)
 
 	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
 		left, right = obj.ToFloat(left, right)
-		l := left.(obj.Float).Val()
-		r := right.(obj.Float).Val()
+		l := left.(obj.Float)
+		r := right.(obj.Float)
 		return obj.ParseBool(l == r)
 
 	default:

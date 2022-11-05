@@ -38,15 +38,15 @@ func (m Minus) Eval(env *obj.Env) obj.Object {
 	}
 
 	if obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType) {
-		l := left.(obj.Integer).Val()
-		r := right.(obj.Integer).Val()
-		return obj.NewInteger(l - r)
+		l := left.(obj.Integer)
+		r := right.(obj.Integer)
+		return obj.Integer(l - r)
 	}
 
 	left, right = obj.ToFloat(left, right)
-	l := left.(obj.Float).Val()
-	r := right.(obj.Float).Val()
-	return obj.NewFloat(l - r)
+	l := left.(obj.Float)
+	r := right.(obj.Float)
+	return obj.Float(l - r)
 }
 
 func (m Minus) String() string {

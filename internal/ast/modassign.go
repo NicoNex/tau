@@ -42,21 +42,21 @@ func (m ModAssign) Eval(env *obj.Env) obj.Object {
 	}
 
 	if gs, ok := left.(obj.GetSetter); ok {
-		l := gs.Object().(obj.Integer).Val()
-		r := right.(obj.Integer).Val()
+		l := gs.Object().(obj.Integer)
+		r := right.(obj.Integer)
 		if r == 0 {
 			return obj.NewError("can't divide by 0")
 		}
-		return gs.Set(obj.NewInteger(l % r))
+		return gs.Set(obj.Integer(l % r))
 	}
 
-	l := left.(obj.Integer).Val()
-	r := right.(obj.Integer).Val()
+	l := left.(obj.Integer)
+	r := right.(obj.Integer)
 
 	if r == 0 {
 		return obj.NewError("can't divide by 0")
 	}
-	return env.Set(name, obj.NewInteger(l%r))
+	return env.Set(name, obj.Integer(l%r))
 }
 
 func (m ModAssign) String() string {

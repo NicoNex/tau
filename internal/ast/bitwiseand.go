@@ -37,9 +37,9 @@ func (b BitwiseAnd) Eval(env *obj.Env) obj.Object {
 		return obj.NewError("unsupported operator '&' for type %v", right.Type())
 	}
 
-	l := left.(obj.Integer).Val()
-	r := right.(obj.Integer).Val()
-	return obj.NewInteger(l & r)
+	l := left.(obj.Integer)
+	r := right.(obj.Integer)
+	return obj.Integer(l & r)
 }
 
 func (b BitwiseAnd) String() string {

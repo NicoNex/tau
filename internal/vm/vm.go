@@ -606,6 +606,11 @@ func (vm *VM) execGreaterThan() error {
 		r := right.(obj.Float)
 		return vm.push(obj.ParseBool(l > r))
 
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
+		l := left.(obj.String)
+		r := right.(obj.String)
+		return vm.push(obj.ParseBool(l > r))
+
 	default:
 		return fmt.Errorf("unsupported operator '>' for types %v and %v", left.Type(), right.Type())
 	}
@@ -627,6 +632,11 @@ func (vm *VM) execGreaterThanEqual() error {
 		left, right = obj.ToFloat(left, right)
 		l := left.(obj.Float)
 		r := right.(obj.Float)
+		return vm.push(obj.ParseBool(l >= r))
+
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
+		l := left.(obj.String)
+		r := right.(obj.String)
 		return vm.push(obj.ParseBool(l >= r))
 
 	default:

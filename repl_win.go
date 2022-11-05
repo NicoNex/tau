@@ -41,7 +41,7 @@ func EvalREPL() {
 			continue
 		}
 
-		if val := res.Eval(env); val != nil && val != obj.NullObj {
+		if val := res.Eval(env); val != nil && obj.IsPrimitive(val) {
 			fmt.Println(val)
 		}
 	}
@@ -85,7 +85,9 @@ func VmREPL() {
 			continue
 		}
 
-		fmt.Println(tvm.LastPoppedStackElem())
+		if val := tvm.LastPoppedStackElem(); val != nil && obj.IsPrimitive(val) {
+			fmt.Println(val)
+		}
 	}
 }
 

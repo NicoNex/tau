@@ -59,40 +59,6 @@ var (
 	Null  = obj.NullObj
 )
 
-func assertTypes(o obj.Object, types ...obj.Type) bool {
-	for _, t := range types {
-		if t == o.Type() {
-			return true
-		}
-	}
-	return false
-}
-
-func toFloat(l, r obj.Object) (obj.Object, obj.Object) {
-	if i, ok := l.(obj.Integer); ok {
-		l = obj.NewFloat(float64(i))
-	}
-	if i, ok := r.(obj.Integer); ok {
-		r = obj.NewFloat(float64(i))
-	}
-	return l, r
-}
-
-func isTruthy(o obj.Object) bool {
-	switch val := o.(type) {
-	case *obj.Boolean:
-		return o == obj.True
-	case obj.Integer:
-		return val.Val() != 0
-	case obj.Float:
-		return val.Val() != 0
-	case *obj.Null:
-		return false
-	default:
-		return true
-	}
-}
-
 func isExported(n string) bool {
 	r, _ := utf8.DecodeRuneInString(n)
 	return unicode.IsUpper(r)
@@ -296,18 +262,18 @@ func (vm *VM) execAdd() error {
 	)
 
 	switch {
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
 		l := left.(obj.Integer).Val()
 		r := right.(obj.Integer).Val()
 		return vm.push(obj.NewInteger(l + r))
 
-	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
 		l := left.(obj.String).Val()
 		r := right.(obj.String).Val()
 		return vm.push(obj.NewString(l + r))
 
-	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
-		left, right = toFloat(left, right)
+	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
+		left, right = obj.ToFloat(left, right)
 		l := left.(obj.Float).Val()
 		r := right.(obj.Float).Val()
 		return vm.push(obj.NewFloat(l + r))
@@ -324,13 +290,13 @@ func (vm *VM) execSub() error {
 	)
 
 	switch {
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
 		l := left.(obj.Integer).Val()
 		r := right.(obj.Integer).Val()
 		return vm.push(obj.NewInteger(l - r))
 
-	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
-		left, right = toFloat(left, right)
+	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
+		left, right = obj.ToFloat(left, right)
 		l := left.(obj.Float).Val()
 		r := right.(obj.Float).Val()
 		return vm.push(obj.NewFloat(l - r))
@@ -347,13 +313,13 @@ func (vm *VM) execMul() error {
 	)
 
 	switch {
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
 		l := left.(obj.Integer).Val()
 		r := right.(obj.Integer).Val()
 		return vm.push(obj.NewInteger(l * r))
 
-	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
-		left, right = toFloat(left, right)
+	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
+		left, right = obj.ToFloat(left, right)
 		l := left.(obj.Float).Val()
 		r := right.(obj.Float).Val()
 		return vm.push(obj.NewFloat(l * r))
@@ -369,11 +335,11 @@ func (vm *VM) execDiv() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	if !assertTypes(left, obj.IntType, obj.FloatType) || !assertTypes(right, obj.IntType, obj.FloatType) {
+	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) || !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
 		return fmt.Errorf("unsupported operator '/' for types %v and %v", left.Type(), right.Type())
 	}
 
-	left, right = toFloat(left, right)
+	left, right = obj.ToFloat(left, right)
 	l := left.(obj.Float).Val()
 	r := right.(obj.Float).Val()
 	return vm.push(obj.NewFloat(l / r))
@@ -385,7 +351,7 @@ func (vm *VM) execMod() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
 		return fmt.Errorf("unsupported operator '%%' for types %v and %v", left.Type(), right.Type())
 	}
 
@@ -404,7 +370,7 @@ func (vm *VM) execBwAnd() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
 		return fmt.Errorf("unsupported operator '&' for types %v and %v", left.Type(), right.Type())
 	}
 
@@ -419,7 +385,7 @@ func (vm *VM) execBwOr() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
 		return fmt.Errorf("unsupported operator '|' for types %v and %v", left.Type(), right.Type())
 	}
 
@@ -434,7 +400,7 @@ func (vm *VM) execBwXor() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
 		return fmt.Errorf("unsupported operator '^' for types %v and %v", left.Type(), right.Type())
 	}
 
@@ -446,7 +412,7 @@ func (vm *VM) execBwXor() error {
 func (vm *VM) execBwNot() error {
 	var left = obj.Unwrap(vm.pop())
 
-	if !assertTypes(left, obj.IntType) {
+	if !obj.AssertTypes(left, obj.IntType) {
 		return fmt.Errorf("unsupported operator '~' for type %v", left.Type())
 	}
 
@@ -460,7 +426,7 @@ func (vm *VM) execBwLShift() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
 		return fmt.Errorf("unsupported operator '<<' for types %v and %v", left.Type(), right.Type())
 	}
 
@@ -475,7 +441,7 @@ func (vm *VM) execBwRShift() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	if !assertTypes(left, obj.IntType) || !assertTypes(right, obj.IntType) {
+	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
 		return fmt.Errorf("unsupported operator '>>' for types %v and %v", left.Type(), right.Type())
 	}
 
@@ -491,21 +457,21 @@ func (vm *VM) execEqual() error {
 	)
 
 	switch {
-	case assertTypes(left, obj.BoolType, obj.NullType) || assertTypes(right, obj.BoolType, obj.NullType):
+	case obj.AssertTypes(left, obj.BoolType, obj.NullType) || obj.AssertTypes(right, obj.BoolType, obj.NullType):
 		return vm.push(obj.ParseBool(left == right))
 
-	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
 		l := left.(obj.String).Val()
 		r := right.(obj.String).Val()
 		return vm.push(obj.ParseBool(l == r))
 
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
 		l := left.(obj.Integer).Val()
 		r := right.(obj.Integer).Val()
 		return vm.push(obj.ParseBool(l == r))
 
-	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
-		left, right = toFloat(left, right)
+	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
+		left, right = obj.ToFloat(left, right)
 		l := left.(obj.Float).Val()
 		r := right.(obj.Float).Val()
 		return vm.push(obj.ParseBool(l == r))
@@ -522,21 +488,21 @@ func (vm *VM) execNotEqual() error {
 	)
 
 	switch {
-	case assertTypes(left, obj.BoolType, obj.NullType) || assertTypes(right, obj.BoolType, obj.NullType):
+	case obj.AssertTypes(left, obj.BoolType, obj.NullType) || obj.AssertTypes(right, obj.BoolType, obj.NullType):
 		return vm.push(obj.ParseBool(left != right))
 
-	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
 		l := left.(obj.String).Val()
 		r := right.(obj.String).Val()
 		return vm.push(obj.ParseBool(l != r))
 
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
 		l := left.(obj.Integer).Val()
 		r := right.(obj.Integer).Val()
 		return vm.push(obj.ParseBool(l != r))
 
-	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
-		left, right = toFloat(left, right)
+	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
+		left, right = obj.ToFloat(left, right)
 		l := left.(obj.Float).Val()
 		r := right.(obj.Float).Val()
 		return vm.push(obj.ParseBool(l != r))
@@ -552,7 +518,7 @@ func (vm *VM) execAnd() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	return vm.push(obj.ParseBool(isTruthy(left) && isTruthy(right)))
+	return vm.push(obj.ParseBool(obj.IsTruthy(left) && obj.IsTruthy(right)))
 }
 
 func (vm *VM) execIn() error {
@@ -561,25 +527,25 @@ func (vm *VM) execIn() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	if !assertTypes(left, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
+	if !obj.AssertTypes(left, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
 		return fmt.Errorf("unsupported operator 'in' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.ListType, obj.StringType) {
+	if !obj.AssertTypes(right, obj.ListType, obj.StringType) {
 		return fmt.Errorf("unsupported operator 'in' for type %v", right.Type())
 	}
 
 	switch {
-	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
 		l := left.(obj.String).Val()
 		r := right.(obj.String).Val()
 		return vm.push(obj.ParseBool(strings.Contains(r, l)))
 
-	case assertTypes(right, obj.ListType):
+	case obj.AssertTypes(right, obj.ListType):
 		for _, o := range right.(obj.List).Val() {
-			if !assertTypes(left, o.Type()) {
+			if !obj.AssertTypes(left, o.Type()) {
 				continue
 			}
-			if assertTypes(left, obj.BoolType, obj.NullType) && left == o {
+			if obj.AssertTypes(left, obj.BoolType, obj.NullType) && left == o {
 				return vm.push(obj.True)
 			}
 
@@ -619,7 +585,7 @@ func (vm *VM) execOr() error {
 		left  = obj.Unwrap(vm.pop())
 	)
 
-	return vm.push(obj.ParseBool(isTruthy(left) || isTruthy(right)))
+	return vm.push(obj.ParseBool(obj.IsTruthy(left) || obj.IsTruthy(right)))
 }
 
 func (vm *VM) execGreaterThan() error {
@@ -629,13 +595,13 @@ func (vm *VM) execGreaterThan() error {
 	)
 
 	switch {
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
 		l := left.(obj.Integer).Val()
 		r := right.(obj.Integer).Val()
 		return vm.push(obj.ParseBool(l > r))
 
-	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
-		left, right = toFloat(left, right)
+	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
+		left, right = obj.ToFloat(left, right)
 		l := left.(obj.Float).Val()
 		r := right.(obj.Float).Val()
 		return vm.push(obj.ParseBool(l > r))
@@ -652,13 +618,13 @@ func (vm *VM) execGreaterThanEqual() error {
 	)
 
 	switch {
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
 		l := left.(obj.Integer).Val()
 		r := right.(obj.Integer).Val()
 		return vm.push(obj.ParseBool(l >= r))
 
-	case assertTypes(left, obj.IntType, obj.FloatType) && assertTypes(right, obj.IntType, obj.FloatType):
-		left, right = toFloat(left, right)
+	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
+		left, right = obj.ToFloat(left, right)
 		l := left.(obj.Float).Val()
 		r := right.(obj.Float).Val()
 		return vm.push(obj.ParseBool(l >= r))
@@ -675,7 +641,7 @@ func (vm *VM) execIndex() error {
 	)
 
 	switch {
-	case assertTypes(left, obj.ListType) && assertTypes(index, obj.IntType):
+	case obj.AssertTypes(left, obj.ListType) && obj.AssertTypes(index, obj.IntType):
 		l := left.(obj.List)
 		i := int(index.(obj.Integer).Val())
 
@@ -696,7 +662,7 @@ func (vm *VM) execIndex() error {
 			},
 		})
 
-	case assertTypes(left, obj.BytesType) && assertTypes(index, obj.IntType):
+	case obj.AssertTypes(left, obj.BytesType) && obj.AssertTypes(index, obj.IntType):
 		b := left.(obj.Bytes)
 		i := int(index.(obj.Integer))
 
@@ -705,7 +671,7 @@ func (vm *VM) execIndex() error {
 		}
 		return vm.push(obj.NewInteger(int64(b[i])))
 
-	case assertTypes(left, obj.StringType) && assertTypes(index, obj.IntType):
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(index, obj.IntType):
 		s := left.(obj.String)
 		i := int(index.(obj.Integer))
 
@@ -714,7 +680,7 @@ func (vm *VM) execIndex() error {
 		}
 		return vm.push(obj.NewString(string(s[i])))
 
-	case assertTypes(left, obj.MapType) && assertTypes(index, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType):
+	case obj.AssertTypes(left, obj.MapType) && obj.AssertTypes(index, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType):
 		m := left.(obj.Map)
 		k := index.(obj.Hashable)
 
@@ -926,7 +892,7 @@ func (vm *VM) Run() (err error) {
 			pos := int(code.ReadUint16(ins[ip+1:]))
 			vm.currentFrame().ip += 2
 
-			if cond := obj.Unwrap(vm.pop()); !isTruthy(cond) {
+			if cond := obj.Unwrap(vm.pop()); !obj.IsTruthy(cond) {
 				vm.currentFrame().ip = pos - 1
 			}
 
@@ -1115,8 +1081,8 @@ func (vm *VM) push(o obj.Object) error {
 }
 
 func (vm *VM) pop() obj.Object {
-	o := vm.stack[vm.sp-1]
 	vm.sp--
+	o := vm.stack[vm.sp]
 	return o
 }
 

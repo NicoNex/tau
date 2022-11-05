@@ -23,7 +23,7 @@ func (b BitwiseNot) Eval(env *obj.Env) obj.Object {
 		return value
 	}
 
-	if !assertTypes(value, obj.IntType) {
+	if !obj.AssertTypes(value, obj.IntType) {
 		return obj.NewError("unsupported operator '~' for type %v", value.Type())
 	}
 

@@ -39,37 +39,3 @@ func isContinue(o obj.Object) bool {
 func isBreak(o obj.Object) bool {
 	return o == obj.BreakObj
 }
-
-func isTruthy(o obj.Object) bool {
-	switch val := o.(type) {
-	case *obj.Boolean:
-		return o == obj.True
-	case obj.Integer:
-		return val.Val() != 0
-	case obj.Float:
-		return val.Val() != 0
-	case *obj.Null:
-		return false
-	default:
-		return true
-	}
-}
-
-func assertTypes(o obj.Object, types ...obj.Type) bool {
-	for _, t := range types {
-		if t == o.Type() {
-			return true
-		}
-	}
-	return false
-}
-
-func toFloat(l, r obj.Object) (obj.Object, obj.Object) {
-	if i, ok := l.(obj.Integer); ok {
-		l = obj.NewFloat(float64(i))
-	}
-	if i, ok := r.(obj.Integer); ok {
-		r = obj.NewFloat(float64(i))
-	}
-	return l, r
-}

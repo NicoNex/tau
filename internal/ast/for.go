@@ -25,7 +25,7 @@ func (f For) Eval(env *obj.Env) obj.Object {
 	}
 
 loop:
-	for isTruthy(obj.Unwrap(f.cond.Eval(env))) {
+	for obj.IsTruthy(obj.Unwrap(f.cond.Eval(env))) {
 		switch o := obj.Unwrap(f.body.Eval(env)); {
 		case o == nil:
 			break

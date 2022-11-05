@@ -34,15 +34,15 @@ func (t TimesAssign) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.IntType, obj.FloatType) {
+	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '*=' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.IntType, obj.FloatType) {
+	if !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '*=' for type %v", right.Type())
 	}
 
 	switch {
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
 		if gs, ok := left.(obj.GetSetter); ok {
 			l := gs.Object().(obj.Integer).Val()
 			r := right.(obj.Integer).Val()
@@ -53,15 +53,15 @@ func (t TimesAssign) Eval(env *obj.Env) obj.Object {
 		r := right.(obj.Integer).Val()
 		return env.Set(name, obj.NewInteger(l*r))
 
-	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
+	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
 		if gs, ok := left.(obj.GetSetter); ok {
-			leftFl, rightFl := toFloat(gs.Object(), right)
+			leftFl, rightFl := obj.ToFloat(gs.Object(), right)
 			l := leftFl.(obj.Float).Val()
 			r := rightFl.(obj.Float).Val()
 			return gs.Set(obj.NewFloat(l * r))
 		}
 
-		leftFl, rightFl := toFloat(left, right)
+		leftFl, rightFl := obj.ToFloat(left, right)
 		l := leftFl.(obj.Float).Val()
 		r := rightFl.(obj.Float).Val()
 		return env.Set(name, obj.NewFloat(l*r))

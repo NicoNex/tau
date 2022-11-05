@@ -30,20 +30,20 @@ func (l LessEq) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.IntType, obj.FloatType) {
+	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '<=' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.IntType, obj.FloatType) {
+	if !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
 		return obj.NewError("unsupported operator '<=' for type %v", right.Type())
 	}
 
-	if assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType) {
+	if obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType) {
 		le := left.(obj.Integer).Val()
 		ri := right.(obj.Integer).Val()
 		return obj.ParseBool(le <= ri)
 	}
 
-	left, right = toFloat(left, right)
+	left, right = obj.ToFloat(left, right)
 	le := left.(obj.Float).Val()
 	ri := right.(obj.Float).Val()
 	return obj.ParseBool(le <= ri)

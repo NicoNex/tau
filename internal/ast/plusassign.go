@@ -34,15 +34,15 @@ func (p PlusAssign) Eval(env *obj.Env) obj.Object {
 		return right
 	}
 
-	if !assertTypes(left, obj.IntType, obj.FloatType, obj.StringType) {
+	if !obj.AssertTypes(left, obj.IntType, obj.FloatType, obj.StringType) {
 		return obj.NewError("unsupported operator '+=' for type %v", left.Type())
 	}
-	if !assertTypes(right, obj.IntType, obj.FloatType, obj.StringType) {
+	if !obj.AssertTypes(right, obj.IntType, obj.FloatType, obj.StringType) {
 		return obj.NewError("unsupported operator '+=' for type %v", right.Type())
 	}
 
 	switch {
-	case assertTypes(left, obj.StringType) && assertTypes(right, obj.StringType):
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
 		if gs, ok := left.(obj.GetSetter); ok {
 			l := gs.Object().(obj.String).Val()
 			r := right.(obj.String).Val()
@@ -53,7 +53,7 @@ func (p PlusAssign) Eval(env *obj.Env) obj.Object {
 		r := right.(obj.String).Val()
 		return env.Set(name, obj.NewString(l+r))
 
-	case assertTypes(left, obj.IntType) && assertTypes(right, obj.IntType):
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
 		if gs, ok := left.(obj.GetSetter); ok {
 			l := gs.Object().(obj.Integer).Val()
 			r := right.(obj.Integer).Val()
@@ -64,15 +64,15 @@ func (p PlusAssign) Eval(env *obj.Env) obj.Object {
 		r := right.(obj.Integer).Val()
 		return env.Set(name, obj.NewInteger(l+r))
 
-	case assertTypes(left, obj.FloatType, obj.IntType) && assertTypes(right, obj.FloatType, obj.IntType):
+	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
 		if gs, ok := left.(obj.GetSetter); ok {
-			leftFl, rightFl := toFloat(gs.Object(), right)
+			leftFl, rightFl := obj.ToFloat(gs.Object(), right)
 			l := leftFl.(obj.Float).Val()
 			r := rightFl.(obj.Float).Val()
 			return gs.Set(obj.NewFloat(l + r))
 		}
 
-		leftFl, rightFl := toFloat(left, right)
+		leftFl, rightFl := obj.ToFloat(left, right)
 		l := leftFl.(obj.Float).Val()
 		r := rightFl.(obj.Float).Val()
 		return env.Set(name, obj.NewFloat(l+r))

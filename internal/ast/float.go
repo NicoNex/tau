@@ -15,7 +15,7 @@ func NewFloat(f float64) Node {
 }
 
 func (f Float) Eval(env *obj.Env) obj.Object {
-	return obj.NewFloat(float64(f))
+	return obj.Float(float64(f))
 }
 
 func (f Float) String() string {
@@ -23,7 +23,7 @@ func (f Float) String() string {
 }
 
 func (f Float) Compile(c *compiler.Compiler) (position int, err error) {
-	return c.Emit(code.OpConstant, c.AddConstant(obj.NewFloat(float64(f)))), nil
+	return c.Emit(code.OpConstant, c.AddConstant(obj.Float(float64(f)))), nil
 }
 
 func (f Float) IsConstExpression() bool {

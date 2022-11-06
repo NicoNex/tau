@@ -23,7 +23,7 @@ func runVmTests(t *testing.T, tests []vmTestCase) {
 		if err != nil {
 			t.Fatalf("compiler error: %s", err)
 		}
-		vm := vm.New(comp.Bytecode())
+		vm := vm.New("<test input>", comp.Bytecode())
 		err = vm.Run()
 		if err != nil {
 			t.Fatalf("vm error: %s", err)
@@ -112,8 +112,8 @@ func testExpectedObject(t *testing.T, expected any, actual obj.Object) {
 			}
 		}
 
-	case *obj.Error:
-		errObj, ok := actual.(*obj.Error)
+	case obj.Error:
+		errObj, ok := actual.(obj.Error)
 		if !ok {
 			t.Errorf("object is not Error: %T (%+v)", actual, actual)
 			return
@@ -125,7 +125,7 @@ func testExpectedObject(t *testing.T, expected any, actual obj.Object) {
 }
 
 func testCompilerStringObject(expected string, actual obj.Object) error {
-	result, ok := actual.(*obj.String)
+	result, ok := actual.(obj.String)
 	if !ok {
 		return fmt.Errorf("object is not string. got=%T (%+v)", actual, actual)
 	}
@@ -288,15 +288,15 @@ func TestVMMapLiterals(t *testing.T) {
 		{
 			"{1: 2, 2: 3}",
 			map[obj.KeyHash]int64{
-				obj.NewInteger(1).(*obj.Integer).KeyHash(): 2,
-				obj.NewInteger(2).(*obj.Integer).KeyHash(): 3,
+				obj.NewInteger(1).(obj.Integer).KeyHash(): 2,
+				obj.NewInteger(2).(obj.Integer).KeyHash(): 3,
 			},
 		},
 		{
 			"{1 + 1: 2 * 2, 3 + 3: 4 * 4}",
 			map[obj.KeyHash]int64{
-				obj.NewInteger(2).(*obj.Integer).KeyHash(): 4,
-				obj.NewInteger(6).(*obj.Integer).KeyHash(): 16,
+				obj.NewInteger(2).(obj.Integer).KeyHash(): 4,
+				obj.NewInteger(6).(obj.Integer).KeyHash(): 16,
 			},
 		},
 	}
@@ -550,7 +550,7 @@ func TestCallingFunctionsWithWrongArguments(t *testing.T) {
 		if err != nil {
 			t.Fatalf("compiler error: %s", err)
 		}
-		vm := vm.New(comp.Bytecode())
+		vm := vm.New("<test input>", comp.Bytecode())
 		err = vm.Run()
 		if err == nil {
 			t.Fatalf("expected VM error but resulted in none.")

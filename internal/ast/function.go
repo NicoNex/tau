@@ -10,10 +10,10 @@ import (
 )
 
 type Function struct {
-	params []Identifier
 	body   Node
 	Name   string
 	pos    int
+	params []Identifier
 }
 
 func NewFunction(params []Identifier, body Node, pos int) Node {

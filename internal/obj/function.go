@@ -12,9 +12,9 @@ type Evaluable interface {
 }
 
 type Function struct {
-	Params []string
 	Body   Evaluable
 	Env    *Env
+	Params []string
 }
 
 func NewFunction(params []string, env *Env, body Evaluable) Object {
@@ -43,10 +43,10 @@ func NewFunctionCompiled(i code.Instructions, nLocals, nParams int) Object {
 	}
 }
 
-func (f CompiledFunction) Type() Type {
+func (c CompiledFunction) Type() Type {
 	return FunctionType
 }
 
-func (f CompiledFunction) String() string {
+func (c CompiledFunction) String() string {
 	return "<compiled function>"
 }

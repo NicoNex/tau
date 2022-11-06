@@ -54,6 +54,7 @@ const (
 	FloatType                // float
 	BoolType                 // bool
 	StringType               // string
+	BytesType                // bytes
 	ObjectType               // object
 	ReturnType               // return
 	FunctionType             // function
@@ -63,6 +64,7 @@ const (
 	MapType                  // map
 	ContinueType             // continue
 	BreakType                // break
+	PipeType                 // pipe
 )
 
 var (
@@ -85,6 +87,44 @@ func Unwrap(o Object) Object {
 		return g.Object()
 	}
 	return o
+}
+
+func AssertTypes(o Object, types ...Type) bool {
+	for _, t := range types {
+		if t == o.Type() {
+			return true
+		}
+	}
+	return false
+}
+
+func IsPrimitive(o Object) bool {
+	return AssertTypes(o, BoolType, ErrorType, FloatType, IntType, StringType)
+}
+
+func ToFloat(l, r Object) (Object, Object) {
+	if i, ok := l.(Integer); ok {
+		l = Float(i)
+	}
+	if i, ok := r.(Integer); ok {
+		r = Float(i)
+	}
+	return l, r
+}
+
+func IsTruthy(o Object) bool {
+	switch val := o.(type) {
+	case *Boolean:
+		return o == True
+	case Integer:
+		return val != 0
+	case Float:
+		return val != 0
+	case *Null:
+		return false
+	default:
+		return true
+	}
 }
 
 var (

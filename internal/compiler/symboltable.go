@@ -19,8 +19,8 @@ type Symbol struct {
 type SymbolTable struct {
 	outer       *SymbolTable
 	Store       map[string]Symbol
-	NumDefs     int
 	FreeSymbols []Symbol
+	NumDefs     int
 }
 
 func NewSymbolTable() *SymbolTable {

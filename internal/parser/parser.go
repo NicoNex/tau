@@ -11,15 +11,15 @@ import (
 )
 
 type Parser struct {
-	cur           item.Item
-	peek          item.Item
 	items         chan item.Item
 	file          string
 	input         string
-	errs          []error
-	nestedLoops   uint
 	prefixParsers map[item.Type]parsePrefixFn
 	infixParsers  map[item.Type]parseInfixFn
+	cur           item.Item
+	peek          item.Item
+	errs          []error
+	nestedLoops   uint
 }
 
 type (
@@ -119,6 +119,7 @@ func newParser(file, input string, items chan item.Item) *Parser {
 	p.registerPrefix(item.Break, p.parseBreak)
 	p.registerPrefix(item.Import, p.parseImport)
 	p.registerPrefix(item.Error, p.parseError)
+	p.registerPrefix(item.Tau, p.parseTauCall)
 
 	p.registerInfix(item.Equals, p.parseEquals)
 	p.registerInfix(item.NotEquals, p.parseNotEquals)
@@ -699,6 +700,19 @@ func (p *Parser) parseRShiftAssign(left ast.Node) ast.Node {
 	pos := p.cur.Pos
 	p.next()
 	return ast.NewBitwiseShiftRightAssign(left, p.parseExpr(Lowest), pos)
+}
+
+func (p *Parser) parseTauCall() ast.Node {
+	p.next()
+
+	n := p.parseExpr(Lowest)
+	c, ok := n.(ast.Call)
+	if !ok {
+		p.errs = append(p.errs, errors.New("expected function call after tau"))
+		return nil
+	}
+
+	return ast.NewConcurrentCall(c.Fn, c.Args)
 }
 
 func (p *Parser) parseCall(fn ast.Node) ast.Node {

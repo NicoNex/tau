@@ -3,8 +3,8 @@ package item
 import "fmt"
 
 type Item struct {
-	Typ Type
 	Val string
+	Typ Type
 	Pos int
 }
 

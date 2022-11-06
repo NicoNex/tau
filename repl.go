@@ -1,6 +1,3 @@
-//go:build !windows
-// +build !windows
-
 package tau
 
 import (
@@ -51,7 +48,7 @@ func EvalREPL() error {
 			continue
 		}
 
-		if val := res.Eval(env); val != nil && val != obj.NullObj {
+		if val := res.Eval(env); val != nil && obj.IsPrimitive(val) {
 			fmt.Fprintln(t, val)
 		}
 	}
@@ -106,7 +103,7 @@ func VmREPL() error {
 			continue
 		}
 
-		if val := tvm.LastPoppedStackElem(); val != nil && val != obj.NullObj {
+		if val := tvm.LastPoppedStackElem(); val != nil && obj.IsPrimitive(val) {
 			fmt.Fprintln(t, val)
 		}
 	}

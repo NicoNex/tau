@@ -32,7 +32,7 @@ func NewString(file, s string, parse parseFn, pos int) (Node, error) {
 
 func (s String) Eval(env *obj.Env) obj.Object {
 	if len(s.substr) == 0 {
-		return obj.NewString(s.s)
+		return obj.String(s.s)
 	}
 
 	var subs = make([]any, len(s.substr))
@@ -40,7 +40,7 @@ func (s String) Eval(env *obj.Env) obj.Object {
 		subs[i] = sub.Eval(env)
 	}
 
-	return obj.NewString(fmt.Sprintf(s.s, subs...))
+	return obj.String(fmt.Sprintf(s.s, subs...))
 }
 
 func (s String) String() string {
@@ -146,12 +146,12 @@ var errBadInterpolationSyntax = errors.New("bad interpolation syntax")
 type interpolator struct {
 	s          string
 	file       string
+	parse      parseFn
 	pos        int
 	width      int
 	nblocks    int
 	inQuotes   bool
 	inBacktick bool
-	parse      parseFn
 	strings.Builder
 }
 

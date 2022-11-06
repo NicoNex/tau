@@ -45,7 +45,7 @@ func testInstructions(expected []code.Instructions, actual code.Instructions) er
 }
 
 func testStringObject(expected string, actual obj.Object) error {
-	result, ok := actual.(*obj.String)
+	result, ok := actual.(obj.String)
 	if !ok {
 		return fmt.Errorf("object is not string. got=%T (%+v)", actual, actual)
 	}
@@ -209,8 +209,7 @@ func testConstants(t *testing.T, expected []any, actual []obj.Object) error {
 		case int:
 			err := testIntegerObject(int64(constant), actual[i])
 			if err != nil {
-				return fmt.Errorf("constant %d - testIntegerObject failed: %s",
-					i, err)
+				return fmt.Errorf("constant %d - testIntegerObject failed: %s", i, err)
 			}
 
 		case string:
@@ -219,7 +218,7 @@ func testConstants(t *testing.T, expected []any, actual []obj.Object) error {
 			}
 
 		case []code.Instructions:
-			fn, ok := actual[i].(*obj.Function)
+			fn, ok := actual[i].(*obj.CompiledFunction)
 			if !ok {
 				return fmt.Errorf("constant %d - testInstructions failed: %s", i, actual[i])
 			}
@@ -234,7 +233,7 @@ func testConstants(t *testing.T, expected []any, actual []obj.Object) error {
 }
 
 func testIntegerObject(expected int64, actual obj.Object) error {
-	result, ok := actual.(*obj.Integer)
+	result, ok := actual.(obj.Integer)
 	if !ok {
 		return fmt.Errorf("object is not integer. got=%T (%+v)", actual, actual)
 	}
@@ -245,7 +244,7 @@ func testIntegerObject(expected int64, actual obj.Object) error {
 }
 
 func testFloatObject(expected float64, actual obj.Object) error {
-	result, ok := actual.(*obj.Float)
+	result, ok := actual.(obj.Float)
 	if !ok {
 		return fmt.Errorf("object is not float. got=%T (%+v)", actual, actual)
 	}
@@ -643,7 +642,7 @@ a = new();
 a.a = 2`,
 			expectedConstants: []any{"a", 2},
 			expectedInstructions: []code.Instructions{
-				code.Make(code.OpGetBuiltin, 16),
+				code.Make(code.OpGetBuiltin, 13),
 				code.Make(code.OpCall, 0),
 				code.Make(code.OpSetGlobal, 0),
 				code.Make(code.OpPop),

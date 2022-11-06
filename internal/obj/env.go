@@ -14,7 +14,7 @@ type Env struct {
 }
 
 func NewEnv(path string) *Env {
-	file, dir := filepath.Split(path)
+	dir, file := filepath.Split(path)
 
 	return &Env{
 		Outer: nil,

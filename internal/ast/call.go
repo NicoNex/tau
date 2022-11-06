@@ -10,21 +10,21 @@ import (
 )
 
 type Call struct {
-	fn   Node
-	args []Node
+	Fn   Node
+	Args []Node
 	pos  int
 }
 
 func NewCall(fn Node, args []Node, pos int) Node {
 	return Call{
-		fn:   fn,
-		args: args,
+		Fn:   fn,
+		Args: args,
 		pos:  pos,
 	}
 }
 
 func (c Call) Eval(env *obj.Env) obj.Object {
-	var fnObj = obj.Unwrap(c.fn.Eval(env))
+	var fnObj = obj.Unwrap(c.Fn.Eval(env))
 
 	if takesPrecedence(fnObj) {
 		return fnObj
@@ -34,15 +34,15 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 	case *obj.Function:
 		var args []obj.Object
 
-		if len(c.args) != len(fn.Params) {
+		if len(c.Args) != len(fn.Params) {
 			return obj.NewError(
 				"wrong number of arguments: expected %d, got %d",
 				len(fn.Params),
-				len(c.args),
+				len(c.Args),
 			)
 		}
 
-		for _, a := range c.args {
+		for _, a := range c.Args {
 			o := obj.Unwrap(a.Eval(env))
 			if takesPrecedence(o) {
 				return o
@@ -56,7 +56,7 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 	case obj.Builtin:
 		var args []obj.Object
 
-		for _, a := range c.args {
+		for _, a := range c.Args {
 			args = append(args, obj.Unwrap(a.Eval(env)))
 		}
 		return fn(args...)
@@ -69,10 +69,10 @@ func (c Call) Eval(env *obj.Env) obj.Object {
 func (c Call) String() string {
 	var args []string
 
-	for _, a := range c.args {
+	for _, a := range c.Args {
 		args = append(args, a.String())
 	}
-	return fmt.Sprintf("%v(%s)", c.fn, strings.Join(args, ", "))
+	return fmt.Sprintf("%v(%s)", c.Fn, strings.Join(args, ", "))
 }
 
 func extendEnv(fn *obj.Function, args []obj.Object) *obj.Env {
@@ -85,24 +85,24 @@ func extendEnv(fn *obj.Function, args []obj.Object) *obj.Env {
 }
 
 func unwrapReturn(o obj.Object) obj.Object {
-	if ret, ok := o.(*obj.Return); ok {
+	if ret, ok := o.(obj.Return); ok {
 		return ret.Val()
 	}
 	return o
 }
 
 func (c Call) Compile(comp *compiler.Compiler) (position int, err error) {
-	if position, err = c.fn.Compile(comp); err != nil {
+	if position, err = c.Fn.Compile(comp); err != nil {
 		return
 	}
 
-	for _, a := range c.args {
+	for _, a := range c.Args {
 		if position, err = a.Compile(comp); err != nil {
 			return
 		}
 	}
 
-	position = comp.Emit(code.OpCall, len(c.args))
+	position = comp.Emit(code.OpCall, len(c.Args))
 	comp.Bookmark(c.pos)
 	return
 }

@@ -150,15 +150,45 @@ Reverse = fn(str) {
 	return ret
 }
 
-Split = fn(str, sep) {
+split = fn(str, sep, n, after) {
 	ret = []
-	for (i = Index(str, sep)) != -1 {
-		ret = append(ret, slice(str, 0, i))
-		str = slice(str, i + 1, len(str))
+
+	if n == 0 {
+		return ret
 	}
 
-	return append(ret, str)
+	x = if after { 1 } else { 0 }
+
+	if n < 0 {
+		for (idx = Index(str, sep)) != -1 {
+			ret = append(ret, slice(str, 0, idx + x))
+			str = slice(str, idx + 1, len(str))
+		}
+
+		return append(ret, str)
+	}
+
+	if n > 0 {
+		for i = 1; i < n; ++i {
+			if (idx = Index(str, sep)) != -1 {
+				ret = append(ret, slice(str, 0, idx + x))
+				str = slice(str, idx + 1, len(str))
+			} else {
+				break
+			}
+		}
+
+		return append(ret, str)
+	}
 }
+
+SplitAfterN = fn(str, sep, n) {	return split(str, sep, n, true) }
+
+SplitAfter = fn(str, sep) { return split(str, sep, -1, true) }
+
+SplitN = fn(str, sep, n) { return split(str, sep, n, false) }
+
+Split = fn(str, sep) { return split(str, sep, -1, false) }
 
 Fields = fn(str) {
 	ret = []

@@ -159,36 +159,22 @@ split = fn(str, sep, n, after) {
 
 	x = if after { 1 } else { 0 }
 
-	if n < 0 {
-		for (idx = Index(str, sep)) != -1 {
-			ret = append(ret, slice(str, 0, idx + x))
-			str = slice(str, idx + 1, len(str))
-		}
-
-		return append(ret, str)
+	for (idx = Index(str, sep)) != -1 && n != 0 {
+		ret = append(ret, slice(str, 0, idx + x))
+		str = slice(str, idx + 1, len(str))
+		--n
 	}
 
-	if n > 0 {
-		for i = 1; i < n; ++i {
-			if (idx = Index(str, sep)) != -1 {
-				ret = append(ret, slice(str, 0, idx + x))
-				str = slice(str, idx + 1, len(str))
-			} else {
-				break
-			}
-		}
-
-		return append(ret, str)
-	}
+	return append(ret, str)
 }
 
-SplitAfterN = fn(str, sep, n) {	return split(str, sep, n, true) }
+SplitAfterN = fn(str, sep, n) {	split(str, sep, n, true) }
 
-SplitAfter = fn(str, sep) { return split(str, sep, -1, true) }
+SplitAfter = fn(str, sep) { split(str, sep, -1, true) }
 
-SplitN = fn(str, sep, n) { return split(str, sep, n, false) }
+SplitN = fn(str, sep, n) { split(str, sep, n, false) }
 
-Split = fn(str, sep) { return split(str, sep, -1, false) }
+Split = fn(str, sep) { split(str, sep, -1, false) }
 
 Fields = fn(str) {
 	ret = []

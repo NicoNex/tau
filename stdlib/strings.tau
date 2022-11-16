@@ -150,7 +150,24 @@ Reverse = fn(str) {
 	return ret
 }
 
-split = fn(str, sep, n) {
+SplitAfterN = fn(str, sep, n) {
+	if sep == "" {
+		return error("splitAfter: empty separator")
+	}
+
+	ret = []
+	for (idx = Index(str, sep)) != -1 && n != 0 {
+		ret = append(ret, slice(str, 0, idx + len(sep)))
+		str = slice(str, idx + len(sep), len(str))
+		--n
+	}
+
+	return append(ret, str)
+}
+
+SplitAfter = fn(str, sep) { SplitAfterN(str, sep, -1) }
+
+SplitN = fn(str, sep, n) {
 	if sep == "" {
 		return error("split: empty separator")
 	}
@@ -167,28 +184,7 @@ split = fn(str, sep, n) {
 	return append(ret, str)
 }
 
-splitAfter = fn(str, sep, n) {
-	if sep == "" {
-		return error("splitAfter: empty separator")
-	}
-
-	ret = []
-	for (idx = Index(str, sep)) != -1 && n != 0 {
-		ret = append(ret, slice(str, 0, idx + len(sep)))
-		str = slice(str, idx + len(sep), len(str))
-		--n
-	}
-
-	return append(ret, str)
-}
-
-SplitAfterN = fn(str, sep, n) {	splitAfter(str, sep, n) }
-
-SplitAfter = fn(str, sep) { splitAfter(str, sep, -1) }
-
-SplitN = fn(str, sep, n) { split(str, sep, n) }
-
-Split = fn(str, sep) { split(str, sep, -1) }
+Split = fn(str, sep) { SplitN(str, sep, -1) }
 
 Fields = fn(str) {
 	ret = []

@@ -1,13 +1,3 @@
-Clone = fn(str) {
-	ret = ""
-
-	for i = 0; i < len(str); ++i {
-		ret += str[i]
-	}
-
-	return ret
-}
-
 Contains = fn(str, sub) {
 	maxAttempts = len(str) - len(sub)
 	for i = 0; i <= maxAttempts; ++i {

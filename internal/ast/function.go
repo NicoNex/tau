@@ -67,13 +67,13 @@ func (f Function) Compile(c *compiler.Compiler) (position int, err error) {
 
 	freeSymbols := c.FreeSymbols
 	nLocals := c.NumDefs
-	ins := c.LeaveScope()
+	ins, bookmarks := c.LeaveScope()
 
 	for _, s := range freeSymbols {
 		position = c.LoadSymbol(s)
 	}
 
-	fn := obj.NewFunctionCompiled(ins, nLocals, len(f.params))
+	fn := obj.NewFunctionCompiled(ins, nLocals, len(f.params), bookmarks)
 	position = c.Emit(code.OpClosure, c.AddConstant(fn), len(freeSymbols))
 	c.Bookmark(f.pos)
 	return

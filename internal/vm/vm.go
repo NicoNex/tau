@@ -45,7 +45,6 @@ type VM struct {
 	localTable []bool
 	sp         int
 	frameIndex int
-	bookmarks  map[int][]tauerr.Bookmark
 }
 
 const (
@@ -93,13 +92,15 @@ func New(file string, bytecode *compiler.Bytecode) *VM {
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
 		localTable: make([]bool, GlobalSize),
-		bookmarks:  bytecode.Bookmarks,
 		State:      NewState(),
 	}
 
 	vm.dir, vm.file = filepath.Split(file)
 	vm.Consts = bytecode.Constants
-	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
+	fn := &obj.CompiledFunction{
+		Instructions: bytecode.Instructions,
+		Bookmarks:    bytecode.Bookmarks,
+	}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
@@ -110,12 +111,14 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
 		localTable: make([]bool, GlobalSize),
-		bookmarks:  bytecode.Bookmarks,
 		State:      state,
 	}
 
 	vm.dir, vm.file = filepath.Split(file)
-	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
+	fn := &obj.CompiledFunction{
+		Instructions: bytecode.Instructions,
+		Bookmarks:    bytecode.Bookmarks,
+	}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
@@ -144,10 +147,13 @@ func (vm *VM) LastPoppedStackElem() obj.Object {
 
 // Returns the bookmark corresponding to the current position in the bytecode.
 func (vm *VM) bookmark() tauerr.Bookmark {
-	var offset = vm.currentFrame().ip
+	var (
+		frame     = vm.currentFrame()
+		offset    = frame.ip
+		bookmarks = frame.cl.Fn.Bookmarks
+	)
 
-	bookmarks, ok := vm.bookmarks[vm.frameIndex-1]
-	if !ok || len(bookmarks) == 0 {
+	if len(bookmarks) == 0 {
 		return tauerr.Bookmark{}
 	}
 

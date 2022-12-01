@@ -22,6 +22,7 @@ type CompilationScope struct {
 	instructions code.Instructions
 	lastInst     EmittedInst
 	prevInst     EmittedInst
+	bookmarks    []tauerr.Bookmark
 }
 
 type Compiler struct {
@@ -29,14 +30,13 @@ type Compiler struct {
 	scopes      []CompilationScope
 	scopeIndex  int
 	fileContent string
-	bookmarks   map[int][]tauerr.Bookmark
 	*SymbolTable
 }
 
 type Bytecode struct {
 	Instructions code.Instructions
 	Constants    []obj.Object
-	Bookmarks    map[int][]tauerr.Bookmark
+	Bookmarks    []tauerr.Bookmark
 }
 
 const (
@@ -55,7 +55,6 @@ func New() *Compiler {
 		SymbolTable: st,
 		scopes:      []CompilationScope{{}},
 		constants:   &[]obj.Object{},
-		bookmarks:   make(map[int][]tauerr.Bookmark),
 	}
 }
 
@@ -64,7 +63,6 @@ func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
 		SymbolTable: s,
 		scopes:      []CompilationScope{{}},
 		constants:   constants,
-		bookmarks:   make(map[int][]tauerr.Bookmark),
 	}
 }
 
@@ -190,13 +188,14 @@ func (c *Compiler) EnterScope() {
 	c.SymbolTable = NewEnclosedSymbolTable(c.SymbolTable)
 }
 
-func (c *Compiler) LeaveScope() code.Instructions {
+func (c *Compiler) LeaveScope() (code.Instructions, []tauerr.Bookmark) {
 	ins := c.scopes[c.scopeIndex].instructions
+	bookmarks := c.scopes[c.scopeIndex].bookmarks
 	c.scopes = c.scopes[:len(c.scopes)-1]
 	c.scopeIndex--
 	c.SymbolTable = c.SymbolTable.outer
 
-	return ins
+	return ins, bookmarks
 }
 
 // Returns the position to the last instruction.
@@ -209,10 +208,8 @@ func (c *Compiler) Bookmark(pos int) {
 		return
 	}
 
-	c.bookmarks[c.scopeIndex] = append(
-		c.bookmarks[c.scopeIndex],
-		tauerr.NewBookmark(c.fileContent, pos, c.Pos()),
-	)
+	b := tauerr.NewBookmark(c.fileContent, pos, c.Pos())
+	c.scopes[c.scopeIndex].bookmarks = append(c.scopes[c.scopeIndex].bookmarks, b)
 }
 
 func (c *Compiler) Compile(node Compilable) error {
@@ -224,7 +221,7 @@ func (c *Compiler) Bytecode() *Bytecode {
 	return &Bytecode{
 		Instructions: c.scopes[c.scopeIndex].instructions,
 		Constants:    *c.constants,
-		Bookmarks:    c.bookmarks,
+		Bookmarks:    c.scopes[c.scopeIndex].bookmarks,
 	}
 }
 

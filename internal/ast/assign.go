@@ -52,7 +52,7 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 
 	switch left := a.l.(type) {
 	case Identifier:
-		symbol := c.Define(string(left))
+		symbol := c.Define(left.String())
 		if position, err = a.r.Compile(c); err != nil {
 			return
 		}

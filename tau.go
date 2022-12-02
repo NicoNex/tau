@@ -102,7 +102,7 @@ func compile(path string) (bc *compiler.Bytecode, err error) {
 	}
 
 	c := compiler.New()
-	c.SetFileContent(input)
+	c.SetFileInfo(path, input)
 	if err = c.Compile(res); err != nil {
 		return
 	}

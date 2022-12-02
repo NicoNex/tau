@@ -72,7 +72,7 @@ func SimpleVmREPL() {
 		}
 
 		c := compiler.NewWithState(state.Symbols, &state.Consts)
-		c.SetFileContent(input)
+		c.SetFileInfo("<stdin>", input)
 		if err := c.Compile(res); err != nil {
 			if ce, ok := err.(*compiler.CompilerError); ok {
 				fmt.Println(tauerr.New("<stdin>", input, ce.Pos(), ce.Error()))

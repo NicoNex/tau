@@ -349,12 +349,12 @@ func (p *Parser) parseFunctionParams() []ast.Identifier {
 	}
 
 	p.next()
-	ret = append(ret, ast.Identifier(p.cur.Val))
+	ret = append(ret, ast.NewIdentifier(p.cur.Val, p.cur.Pos))
 
 	for p.peek.Is(item.Comma) {
 		p.next()
 		p.next()
-		ret = append(ret, ast.Identifier(p.cur.Val))
+		ret = append(ret, ast.NewIdentifier(p.cur.Val, p.cur.Pos))
 	}
 
 	if !p.expectPeek(item.RParen) {

@@ -2,6 +2,7 @@ package compiler
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/obj"
@@ -29,6 +30,7 @@ type Compiler struct {
 	constants   *[]obj.Object
 	scopes      []CompilationScope
 	scopeIndex  int
+	fileName    string
 	fileContent string
 	*SymbolTable
 }
@@ -212,6 +214,14 @@ func (c *Compiler) Bookmark(pos int) {
 	c.scopes[c.scopeIndex].bookmarks = append(c.scopes[c.scopeIndex].bookmarks, b)
 }
 
+func (c *Compiler) UnresolvedError(name string, pos int) error {
+	if c.fileName == "" || c.fileContent == "" {
+		return fmt.Errorf("undefined variable %s", name)
+	}
+
+	return tauerr.New(c.fileName, c.fileContent, pos, "undefined variable %s", name)
+}
+
 func (c *Compiler) Compile(node Compilable) error {
 	_, err := node.Compile(c)
 	return err
@@ -230,8 +240,9 @@ func (c *Compiler) SetBytecode(b *Bytecode) {
 	*c.constants = b.Constants
 }
 
-func (c *Compiler) SetFileContent(cnt string) {
-	c.fileContent = cnt
+func (c *Compiler) SetFileInfo(name, content string) {
+	c.fileName = name
+	c.fileContent = content
 }
 
 func (c *Compiler) LoadSymbol(s Symbol) int {

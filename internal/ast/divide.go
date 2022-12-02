@@ -55,8 +55,8 @@ func (d Divide) String() string {
 func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
 	if d.IsConstExpression() {
 		o := d.Eval(nil)
-		if e, ok := o.(*obj.Error); ok {
-			return 0, compiler.NewError(d.pos, string(*e))
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(d.pos, string(e))
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(d.pos)

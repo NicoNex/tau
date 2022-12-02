@@ -61,8 +61,8 @@ func (t Times) String() string {
 func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
 	if t.IsConstExpression() {
 		o := t.Eval(nil)
-		if e, ok := o.(*obj.Error); ok {
-			return 0, compiler.NewError(t.pos, string(*e))
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(t.pos, string(e))
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(t.pos)

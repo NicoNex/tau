@@ -64,8 +64,8 @@ func (l LessEq) String() string {
 func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if l.IsConstExpression() {
 		o := l.Eval(nil)
-		if e, ok := o.(*obj.Error); ok {
-			return 0, compiler.NewError(l.pos, string(*e))
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(l.pos, string(e))
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(l.pos)

@@ -9,7 +9,6 @@ import (
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
-	"github.com/NicoNex/tau/internal/tauerr"
 	"github.com/NicoNex/tau/internal/vm"
 )
 
@@ -74,11 +73,7 @@ func SimpleVmREPL() {
 		c := compiler.NewWithState(state.Symbols, &state.Consts)
 		c.SetFileInfo("<stdin>", input)
 		if err := c.Compile(res); err != nil {
-			if ce, ok := err.(*compiler.CompilerError); ok {
-				fmt.Println(tauerr.New("<stdin>", input, ce.Pos(), ce.Error()))
-			} else {
-				fmt.Println(err)
-			}
+			fmt.Println(err)
 			continue
 		}
 		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)

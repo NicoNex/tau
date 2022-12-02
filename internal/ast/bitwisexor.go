@@ -54,8 +54,8 @@ func (b BitwiseXor) String() string {
 func (b BitwiseXor) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
 		o := b.Eval(nil)
-		if e, ok := o.(*obj.Error); ok {
-			return 0, compiler.NewError(b.pos, string(*e))
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(b.pos, string(e))
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(b.pos)

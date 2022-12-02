@@ -11,7 +11,6 @@ import (
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
-	"github.com/NicoNex/tau/internal/tauerr"
 	"github.com/NicoNex/tau/internal/vm"
 )
 
@@ -89,11 +88,7 @@ func VmREPL() error {
 
 		c := compiler.NewWithState(state.Symbols, &state.Consts)
 		if err := c.Compile(res); err != nil {
-			if ce, ok := err.(*compiler.CompilerError); ok {
-				fmt.Fprintln(t, tauerr.New("<stdin>", input, ce.Pos(), ce.Error()))
-			} else {
-				fmt.Fprintln(t, err)
-			}
+			fmt.Fprintln(t, err)
 			continue
 		}
 

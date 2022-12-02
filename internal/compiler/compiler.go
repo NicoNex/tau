@@ -222,6 +222,14 @@ func (c *Compiler) UnresolvedError(name string, pos int) error {
 	return tauerr.New(c.fileName, c.fileContent, pos, "undefined variable %s", name)
 }
 
+func (c *Compiler) NewError(pos int, s string, a ...any) error {
+	if c.fileName == "" || c.fileContent == "" {
+		return fmt.Errorf(s, a...)
+	}
+
+	return tauerr.New(c.fileName, c.fileContent, pos, s, a...)
+}
+
 func (c *Compiler) Compile(node Compilable) error {
 	_, err := node.Compile(c)
 	return err

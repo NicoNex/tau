@@ -58,8 +58,8 @@ func (m Mod) String() string {
 func (m Mod) Compile(c *compiler.Compiler) (position int, err error) {
 	if m.IsConstExpression() {
 		o := m.Eval(nil)
-		if e, ok := o.(*obj.Error); ok {
-			return 0, compiler.NewError(m.pos, string(*e))
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(m.pos, string(e))
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(m.pos)

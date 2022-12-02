@@ -74,8 +74,8 @@ func (p Plus) String() string {
 func (p Plus) Compile(c *compiler.Compiler) (position int, err error) {
 	if p.IsConstExpression() {
 		o := p.Eval(nil)
-		if e, ok := o.(*obj.Error); ok {
-			return 0, compiler.NewError(p.pos, string(*e))
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(p.pos, string(e))
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(p.pos)

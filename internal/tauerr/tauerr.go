@@ -40,26 +40,25 @@ func line(input string, pos int) (line string, lineno, relative int) {
 	s, e := start(input, pos), end(input, pos)
 	l := input[s:e]
 	line = strings.TrimLeft(l, " \t")
-	return line, lineNo(input, pos), pos - s - (len(l) - len(line))
+	return line, lineNo(input, pos), len(line) - (e - pos)
 }
 
-func start(s string, pos int) (beg int) {
+func start(s string, pos int) int {
 	for i := pos - 1; i >= 0; i-- {
 		if s[i] == '\n' {
 			return i + 1
 		}
 	}
-	return
+	return 0
 }
 
-func end(s string, pos int) (end int) {
-	end = len(s)
+func end(s string, pos int) int {
 	for i := pos; i < len(s); i++ {
 		if s[i] == '\n' {
 			return i
 		}
 	}
-	return
+	return len(s)
 }
 
 func lineNo(s string, pos int) int {

@@ -159,7 +159,9 @@ func (vm *VM) bookmark() tauerr.Bookmark {
 
 	prev := bookmarks[0]
 	for _, cur := range bookmarks[1:] {
-		if offset > prev.Offset && offset <= cur.Offset {
+		if offset < prev.Offset {
+			return prev
+		} else if offset > prev.Offset && offset <= cur.Offset {
 			return cur
 		}
 		prev = cur

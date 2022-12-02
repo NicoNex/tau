@@ -143,6 +143,23 @@ error: zero division error
 $
 ```
 
+##### Beautiful error messages
+```python
+# errtest.tau
+
+increment = fn(n) {
+	return n + 1
+}
+
+increment("this will raise a runtime error")
+```
+```
+error in file errtest.tau at line 4:
+    return n + 1
+             ^
+unsupported operator '+' for types string and int
+```
+
 #### Concurrency
 Tau supports go-style concurrency. 
 This is obtained by the use of four builtins `pipe`, `send`, `recv` `close`. 

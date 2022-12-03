@@ -13,10 +13,17 @@ type For struct {
 	after  Node
 	cond   Node
 	body   Node
+	pos    int
 }
 
-func NewFor(cond, body, before, after Node) Node {
-	return For{before, after, cond, body}
+func NewFor(cond, body, before, after Node, pos int) Node {
+	return For{
+		before: before,
+		after:  after,
+		cond:   cond,
+		body:   body,
+		pos:    pos,
+	}
 }
 
 func (f For) Eval(env *obj.Env) obj.Object {
@@ -88,6 +95,7 @@ func (f For) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 
+	c.Bookmark(f.pos)
 	return endPos, nil
 }
 

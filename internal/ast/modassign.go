@@ -8,12 +8,17 @@ import (
 )
 
 type ModAssign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewModAssign(l, r Node) Node {
-	return ModAssign{l, r}
+func NewModAssign(l, r Node, pos int) Node {
+	return ModAssign{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (m ModAssign) Eval(env *obj.Env) obj.Object {
@@ -64,8 +69,10 @@ func (m ModAssign) String() string {
 }
 
 func (m ModAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{m.l, Mod{m.l, m.r}}
-	return n.Compile(c)
+	n := Assign{l: m.l, r: Mod{l: m.l, r: m.r, pos: m.pos}, pos: m.pos}
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (m ModAssign) IsConstExpression() bool {

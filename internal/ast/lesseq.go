@@ -9,12 +9,17 @@ import (
 )
 
 type LessEq struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewLessEq(l, r Node) Node {
-	return LessEq{l, r}
+func NewLessEq(l, r Node, pos int) Node {
+	return LessEq{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (l LessEq) Eval(env *obj.Env) obj.Object {
@@ -58,7 +63,13 @@ func (l LessEq) String() string {
 
 func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if l.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(l.Eval(nil))), nil
+		o := l.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(l.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(l.pos)
+		return
 	}
 
 	if position, err = l.r.Compile(c); err != nil {
@@ -67,7 +78,9 @@ func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = l.l.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpGreaterThanEqual), nil
+	position = c.Emit(code.OpGreaterThanEqual)
+	c.Bookmark(l.pos)
+	return
 }
 
 func (l LessEq) IsConstExpression() bool {

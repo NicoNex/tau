@@ -9,12 +9,17 @@ import (
 )
 
 type BitwiseRightShift struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewBitwiseRightShift(l, r Node) Node {
-	return BitwiseRightShift{l, r}
+func NewBitwiseRightShift(l, r Node, pos int) Node {
+	return BitwiseRightShift{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (b BitwiseRightShift) Eval(env *obj.Env) obj.Object {
@@ -48,7 +53,13 @@ func (b BitwiseRightShift) String() string {
 
 func (b BitwiseRightShift) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+		o := b.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(b.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(b.pos)
+		return
 	}
 
 	if position, err = b.l.Compile(c); err != nil {
@@ -57,7 +68,9 @@ func (b BitwiseRightShift) Compile(c *compiler.Compiler) (position int, err erro
 	if position, err = b.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpBwRShift), nil
+	position = c.Emit(code.OpBwRShift)
+	c.Bookmark(b.pos)
+	return
 }
 
 func (b BitwiseRightShift) IsConstExpression() bool {

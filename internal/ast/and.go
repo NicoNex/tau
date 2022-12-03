@@ -9,12 +9,17 @@ import (
 )
 
 type And struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewAnd(l, r Node) Node {
-	return And{l, r}
+func NewAnd(l, r Node, pos int) Node {
+	return And{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (a And) Eval(env *obj.Env) obj.Object {
@@ -39,7 +44,13 @@ func (a And) String() string {
 
 func (a And) Compile(c *compiler.Compiler) (position int, err error) {
 	if a.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(a.Eval(nil))), nil
+		o := a.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(a.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(a.pos)
+		return
 	}
 
 	if position, err = a.l.Compile(c); err != nil {
@@ -48,7 +59,9 @@ func (a And) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = a.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpAnd), nil
+	position = c.Emit(code.OpAnd)
+	c.Bookmark(a.pos)
+	return
 }
 
 func (a And) IsConstExpression() bool {

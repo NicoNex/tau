@@ -2,9 +2,11 @@ package compiler
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/tauerr"
 )
 
 type Compilable interface {
@@ -21,18 +23,22 @@ type CompilationScope struct {
 	instructions code.Instructions
 	lastInst     EmittedInst
 	prevInst     EmittedInst
+	bookmarks    []tauerr.Bookmark
 }
 
 type Compiler struct {
-	constants *[]obj.Object
+	constants   *[]obj.Object
+	scopes      []CompilationScope
+	scopeIndex  int
+	fileName    string
+	fileContent string
 	*SymbolTable
-	scopes     []CompilationScope
-	scopeIndex int
 }
 
 type Bytecode struct {
 	Instructions code.Instructions
 	Constants    []obj.Object
+	Bookmarks    []tauerr.Bookmark
 }
 
 const (
@@ -184,18 +190,44 @@ func (c *Compiler) EnterScope() {
 	c.SymbolTable = NewEnclosedSymbolTable(c.SymbolTable)
 }
 
-func (c *Compiler) LeaveScope() code.Instructions {
+func (c *Compiler) LeaveScope() (code.Instructions, []tauerr.Bookmark) {
 	ins := c.scopes[c.scopeIndex].instructions
+	bookmarks := c.scopes[c.scopeIndex].bookmarks
 	c.scopes = c.scopes[:len(c.scopes)-1]
 	c.scopeIndex--
 	c.SymbolTable = c.SymbolTable.outer
 
-	return ins
+	return ins, bookmarks
 }
 
 // Returns the position to the last instruction.
 func (c *Compiler) Pos() int {
 	return len(c.scopes[c.scopeIndex].instructions)
+}
+
+func (c *Compiler) Bookmark(pos int) {
+	if c.fileContent == "" {
+		return
+	}
+
+	b := tauerr.NewBookmark(c.fileContent, pos, c.Pos())
+	c.scopes[c.scopeIndex].bookmarks = append(c.scopes[c.scopeIndex].bookmarks, b)
+}
+
+func (c *Compiler) UnresolvedError(name string, pos int) error {
+	if c.fileName == "" || c.fileContent == "" {
+		return fmt.Errorf("undefined variable %s", name)
+	}
+
+	return tauerr.New(c.fileName, c.fileContent, pos, "undefined variable %s", name)
+}
+
+func (c *Compiler) NewError(pos int, s string, a ...any) error {
+	if c.fileName == "" || c.fileContent == "" {
+		return fmt.Errorf(s, a...)
+	}
+
+	return tauerr.New(c.fileName, c.fileContent, pos, s, a...)
 }
 
 func (c *Compiler) Compile(node Compilable) error {
@@ -207,12 +239,18 @@ func (c *Compiler) Bytecode() *Bytecode {
 	return &Bytecode{
 		Instructions: c.scopes[c.scopeIndex].instructions,
 		Constants:    *c.constants,
+		Bookmarks:    c.scopes[c.scopeIndex].bookmarks,
 	}
 }
 
 func (c *Compiler) SetBytecode(b *Bytecode) {
 	c.scopes[c.scopeIndex].instructions = b.Instructions
 	*c.constants = b.Constants
+}
+
+func (c *Compiler) SetFileInfo(name, content string) {
+	c.fileName = name
+	c.fileContent = content
 }
 
 func (c *Compiler) LoadSymbol(s Symbol) int {

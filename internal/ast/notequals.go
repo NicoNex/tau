@@ -9,12 +9,17 @@ import (
 )
 
 type NotEquals struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewNotEquals(l, r Node) Node {
-	return NotEquals{l, r}
+func NewNotEquals(l, r Node, pos int) Node {
+	return NotEquals{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (n NotEquals) Eval(env *obj.Env) obj.Object {
@@ -68,7 +73,13 @@ func (n NotEquals) String() string {
 
 func (n NotEquals) Compile(c *compiler.Compiler) (position int, err error) {
 	if n.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(n.Eval(nil))), nil
+		o := n.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(n.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(n.pos)
+		return
 	}
 
 	if position, err = n.l.Compile(c); err != nil {
@@ -77,7 +88,9 @@ func (n NotEquals) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = n.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpNotEqual), nil
+	position = c.Emit(code.OpNotEqual)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (n NotEquals) IsConstExpression() bool {

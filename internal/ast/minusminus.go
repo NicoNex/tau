@@ -8,11 +8,15 @@ import (
 )
 
 type MinusMinus struct {
-	r Node
+	r   Node
+	pos int
 }
 
-func NewMinusMinus(r Node) Node {
-	return MinusMinus{r}
+func NewMinusMinus(r Node, pos int) Node {
+	return MinusMinus{
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (m MinusMinus) Eval(env *obj.Env) obj.Object {
@@ -59,8 +63,10 @@ func (m MinusMinus) String() string {
 }
 
 func (m MinusMinus) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{m.r, Minus{m.r, Integer(1)}}
-	return n.Compile(c)
+	n := Assign{l: m.r, r: Minus{l: m.r, r: Integer(1), pos: m.pos}, pos: m.pos}
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (m MinusMinus) IsConstExpression() bool {

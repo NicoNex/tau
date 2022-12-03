@@ -9,12 +9,17 @@ import (
 )
 
 type Equals struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewEquals(l, r Node) Node {
-	return Equals{l, r}
+func NewEquals(l, r Node, pos int) Node {
+	return Equals{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (e Equals) Eval(env *obj.Env) obj.Object {
@@ -68,7 +73,13 @@ func (e Equals) String() string {
 
 func (e Equals) Compile(c *compiler.Compiler) (position int, err error) {
 	if e.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(e.Eval(nil))), nil
+		o := e.Eval(nil)
+		if oerr, ok := o.(obj.Error); ok {
+			return 0, c.NewError(e.pos, string(oerr))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(e.pos)
+		return
 	}
 
 	if position, err = e.l.Compile(c); err != nil {
@@ -77,7 +88,9 @@ func (e Equals) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = e.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpEqual), nil
+	position = c.Emit(code.OpEqual)
+	c.Bookmark(e.pos)
+	return
 }
 
 func (e Equals) IsConstExpression() bool {

@@ -8,12 +8,17 @@ import (
 )
 
 type DivideAssign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewDivideAssign(l, r Node) Node {
-	return DivideAssign{l, r}
+func NewDivideAssign(l, r Node, pos int) Node {
+	return DivideAssign{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (d DivideAssign) Eval(env *obj.Env) obj.Object {
@@ -59,8 +64,10 @@ func (d DivideAssign) String() string {
 }
 
 func (d DivideAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{d.l, Divide{d.l, d.r}}
-	return n.Compile(c)
+	n := Assign{l: d.l, r: Divide{l: d.l, r: d.r, pos: d.pos}, pos: d.pos}
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (d DivideAssign) IsConstExpression() bool {

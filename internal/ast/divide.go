@@ -9,12 +9,17 @@ import (
 )
 
 type Divide struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewDivide(l, r Node) Node {
-	return Divide{l, r}
+func NewDivide(l, r Node, pos int) Node {
+	return Divide{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (d Divide) Eval(env *obj.Env) obj.Object {
@@ -49,7 +54,13 @@ func (d Divide) String() string {
 
 func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
 	if d.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(d.Eval(nil))), nil
+		o := d.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(d.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(d.pos)
+		return
 	}
 
 	if position, err = d.l.Compile(c); err != nil {
@@ -58,7 +69,9 @@ func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = d.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpDiv), nil
+	position = c.Emit(code.OpDiv)
+	c.Bookmark(d.pos)
+	return
 }
 
 func (d Divide) IsConstExpression() bool {

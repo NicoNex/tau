@@ -5,6 +5,8 @@ import (
 	"github.com/NicoNex/tau/internal/obj"
 )
 
+type parseFn func(string, string) (Node, []error)
+
 type Node interface {
 	Eval(*obj.Env) obj.Object
 	String() string

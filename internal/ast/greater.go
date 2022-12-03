@@ -9,12 +9,17 @@ import (
 )
 
 type Greater struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewGreater(l, r Node) Node {
-	return Greater{l, r}
+func NewGreater(l, r Node, pos int) Node {
+	return Greater{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (g Greater) Eval(env *obj.Env) obj.Object {
@@ -58,7 +63,13 @@ func (g Greater) String() string {
 
 func (g Greater) Compile(c *compiler.Compiler) (position int, err error) {
 	if g.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(g.Eval(nil))), nil
+		o := g.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(g.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(g.pos)
+		return
 	}
 
 	if position, err = g.l.Compile(c); err != nil {
@@ -67,7 +78,9 @@ func (g Greater) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = g.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpGreaterThan), nil
+	position = c.Emit(code.OpGreaterThan)
+	c.Bookmark(g.pos)
+	return
 }
 
 func (g Greater) IsConstExpression() bool {

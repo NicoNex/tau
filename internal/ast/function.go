@@ -12,11 +12,16 @@ import (
 type Function struct {
 	body   Node
 	Name   string
+	pos    int
 	params []Identifier
 }
 
-func NewFunction(params []Identifier, body Node) Node {
-	return Function{params: params, body: body}
+func NewFunction(params []Identifier, body Node, pos int) Node {
+	return Function{
+		params: params,
+		body:   body,
+		pos:    pos,
+	}
 }
 
 func (f Function) Eval(env *obj.Env) obj.Object {
@@ -62,14 +67,16 @@ func (f Function) Compile(c *compiler.Compiler) (position int, err error) {
 
 	freeSymbols := c.FreeSymbols
 	nLocals := c.NumDefs
-	ins := c.LeaveScope()
+	ins, bookmarks := c.LeaveScope()
 
 	for _, s := range freeSymbols {
 		position = c.LoadSymbol(s)
 	}
 
-	fn := obj.NewFunctionCompiled(ins, nLocals, len(f.params))
-	return c.Emit(code.OpClosure, c.AddConstant(fn), len(freeSymbols)), nil
+	fn := obj.NewFunctionCompiled(ins, nLocals, len(f.params), bookmarks)
+	position = c.Emit(code.OpClosure, c.AddConstant(fn), len(freeSymbols))
+	c.Bookmark(f.pos)
+	return
 }
 
 func (f Function) IsConstExpression() bool {

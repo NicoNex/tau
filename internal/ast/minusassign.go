@@ -8,12 +8,17 @@ import (
 )
 
 type MinusAssign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewMinusAssign(l, r Node) Node {
-	return MinusAssign{l, r}
+func NewMinusAssign(l, r Node, pos int) Node {
+	return MinusAssign{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (m MinusAssign) Eval(env *obj.Env) obj.Object {
@@ -79,8 +84,10 @@ func (m MinusAssign) String() string {
 }
 
 func (m MinusAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{m.l, Minus{m.l, m.r}}
-	return n.Compile(c)
+	n := Assign{l: m.l, r: Minus{l: m.l, r: m.r, pos: m.pos}, pos: m.pos}
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (m MinusAssign) IsConstExpression() bool {

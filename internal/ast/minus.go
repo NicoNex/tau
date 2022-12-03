@@ -9,12 +9,17 @@ import (
 )
 
 type Minus struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewMinus(l, r Node) Node {
-	return Minus{l, r}
+func NewMinus(l, r Node, pos int) Node {
+	return Minus{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (m Minus) Eval(env *obj.Env) obj.Object {
@@ -55,7 +60,13 @@ func (m Minus) String() string {
 
 func (m Minus) Compile(c *compiler.Compiler) (position int, err error) {
 	if m.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(m.Eval(nil))), nil
+		o := m.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(m.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(m.pos)
+		return
 	}
 
 	if position, err = m.l.Compile(c); err != nil {
@@ -64,7 +75,9 @@ func (m Minus) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = m.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpSub), nil
+	position = c.Emit(code.OpSub)
+	c.Bookmark(m.pos)
+	return
 }
 
 func (m Minus) IsConstExpression() bool {

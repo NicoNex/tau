@@ -17,7 +17,7 @@ type compilerTestCase struct {
 }
 
 func parse(input string) compiler.Compilable {
-	res, _ := parser.Parse(input)
+	res, _ := parser.Parse("<test>", input)
 	return res
 }
 

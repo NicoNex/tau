@@ -10,12 +10,17 @@ import (
 )
 
 type In struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewIn(l, r Node) Node {
-	return In{l, r}
+func NewIn(l, r Node, pos int) Node {
+	return In{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (i In) Eval(env *obj.Env) obj.Object {
@@ -94,7 +99,9 @@ func (i In) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = i.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpIn), nil
+	position = c.Emit(code.OpIn)
+	c.Bookmark(i.pos)
+	return
 }
 
 func (i In) IsConstExpression() bool {

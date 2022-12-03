@@ -3,14 +3,14 @@ package obj
 import "strings"
 
 type Module struct {
-	Exported   map[string]Object
-	Unexported map[string]Object
+	Exported   Store
+	Unexported Store
 }
 
 func NewModule() *Module {
 	return &Module{
-		Exported:   make(map[string]Object),
-		Unexported: make(map[string]Object),
+		Exported:   NewStore(),
+		Unexported: NewStore(),
 	}
 }
 

@@ -9,12 +9,17 @@ import (
 )
 
 type BitwiseXor struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewBitwiseXor(l, r Node) Node {
-	return BitwiseXor{l, r}
+func NewBitwiseXor(l, r Node, pos int) Node {
+	return BitwiseXor{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (b BitwiseXor) Eval(env *obj.Env) obj.Object {
@@ -48,7 +53,13 @@ func (b BitwiseXor) String() string {
 
 func (b BitwiseXor) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+		o := b.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(b.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(b.pos)
+		return
 	}
 
 	if position, err = b.l.Compile(c); err != nil {
@@ -57,7 +68,9 @@ func (b BitwiseXor) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = b.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpBwXor), nil
+	position = c.Emit(code.OpBwXor)
+	c.Bookmark(b.pos)
+	return
 }
 
 func (b BitwiseXor) IsConstExpression() bool {

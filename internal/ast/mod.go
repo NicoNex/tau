@@ -9,12 +9,17 @@ import (
 )
 
 type Mod struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewMod(l, r Node) Node {
-	return Mod{l, r}
+func NewMod(l, r Node, pos int) Node {
+	return Mod{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (m Mod) Eval(env *obj.Env) obj.Object {
@@ -52,7 +57,13 @@ func (m Mod) String() string {
 
 func (m Mod) Compile(c *compiler.Compiler) (position int, err error) {
 	if m.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(m.Eval(nil))), nil
+		o := m.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(m.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(m.pos)
+		return
 	}
 
 	if position, err = m.l.Compile(c); err != nil {
@@ -61,7 +72,9 @@ func (m Mod) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = m.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpMod), nil
+	position = c.Emit(code.OpMod)
+	c.Bookmark(m.pos)
+	return
 }
 
 func (m Mod) IsConstExpression() bool {

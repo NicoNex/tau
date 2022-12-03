@@ -9,12 +9,17 @@ import (
 )
 
 type BitwiseAnd struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewBitwiseAnd(l, r Node) Node {
-	return BitwiseAnd{l, r}
+func NewBitwiseAnd(l, r Node, pos int) Node {
+	return BitwiseAnd{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (b BitwiseAnd) Eval(env *obj.Env) obj.Object {
@@ -48,7 +53,13 @@ func (b BitwiseAnd) String() string {
 
 func (b BitwiseAnd) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+		o := b.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(b.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(b.pos)
+		return
 	}
 
 	if position, err = b.l.Compile(c); err != nil {
@@ -57,7 +68,9 @@ func (b BitwiseAnd) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = b.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpBwAnd), nil
+	position = c.Emit(code.OpBwAnd)
+	c.Bookmark(b.pos)
+	return
 }
 
 func (b BitwiseAnd) IsConstExpression() bool {

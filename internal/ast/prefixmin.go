@@ -9,11 +9,15 @@ import (
 )
 
 type PrefixMinus struct {
-	n Node
+	n   Node
+	pos int
 }
 
-func NewPrefixMinus(n Node) Node {
-	return PrefixMinus{n}
+func NewPrefixMinus(n Node, pos int) Node {
+	return PrefixMinus{
+		n:   n,
+		pos: pos,
+	}
 }
 
 func (p PrefixMinus) Eval(env *obj.Env) obj.Object {
@@ -42,13 +46,21 @@ func (p PrefixMinus) String() string {
 
 func (p PrefixMinus) Compile(c *compiler.Compiler) (position int, err error) {
 	if p.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(p.Eval(nil))), nil
+		o := p.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(p.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(p.pos)
+		return
 	}
 
 	if position, err = p.n.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpMinus), nil
+	position = c.Emit(code.OpMinus)
+	c.Bookmark(p.pos)
+	return
 }
 
 func (p PrefixMinus) IsConstExpression() bool {

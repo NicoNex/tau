@@ -9,12 +9,17 @@ import (
 )
 
 type Or struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewOr(l, r Node) Node {
-	return Or{l, r}
+func NewOr(l, r Node, pos int) Node {
+	return Or{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (o Or) Eval(env *obj.Env) obj.Object {
@@ -39,7 +44,13 @@ func (o Or) String() string {
 
 func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
 	if o.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(o.Eval(nil))), nil
+		object := o.Eval(nil)
+		if e, ok := object.(obj.Error); ok {
+			return 0, c.NewError(o.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(object))
+		c.Bookmark(o.pos)
+		return
 	}
 
 	if position, err = o.l.Compile(c); err != nil {
@@ -48,7 +59,9 @@ func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = o.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpOr), nil
+	position = c.Emit(code.OpOr)
+	c.Bookmark(o.pos)
+	return
 }
 
 func (o Or) IsConstExpression() bool {

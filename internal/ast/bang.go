@@ -9,11 +9,15 @@ import (
 )
 
 type Bang struct {
-	n Node
+	n   Node
+	pos int
 }
 
-func NewBang(n Node) Node {
-	return Bang{n}
+func NewBang(n Node, pos int) Node {
+	return Bang{
+		n:   n,
+		pos: pos,
+	}
 }
 
 func (b Bang) Eval(env *obj.Env) obj.Object {
@@ -41,13 +45,21 @@ func (b Bang) String() string {
 
 func (b Bang) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+		o := b.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(b.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(b.pos)
+		return
 	}
 
 	if position, err = b.n.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpBang), nil
+	position = c.Emit(code.OpBang)
+	c.Bookmark(b.pos)
+	return
 }
 
 func (b Bang) IsConstExpression() bool {

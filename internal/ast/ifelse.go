@@ -12,10 +12,16 @@ type IfExpr struct {
 	cond   Node
 	body   Node
 	altern Node
+	pos    int
 }
 
-func NewIfExpr(cond, body, alt Node) Node {
-	return IfExpr{cond, body, alt}
+func NewIfExpr(cond, body, alt Node, pos int) Node {
+	return IfExpr{
+		cond:   cond,
+		body:   body,
+		altern: alt,
+		pos:    pos,
+	}
 }
 
 func (i IfExpr) Eval(env *obj.Env) obj.Object {

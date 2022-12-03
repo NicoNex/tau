@@ -30,7 +30,7 @@ func SimpleEvalREPL() {
 			simpleCheck(err)
 		}
 
-		res, errs := parser.Parse(input)
+		res, errs := parser.Parse("<stdin>", input)
 		if len(errs) != 0 {
 			for _, e := range errs {
 				fmt.Println(e)
@@ -62,7 +62,7 @@ func SimpleVmREPL() {
 			simpleCheck(err)
 		}
 
-		res, errs := parser.Parse(input)
+		res, errs := parser.Parse("<stdin>", input)
 		if len(errs) != 0 {
 			for _, e := range errs {
 				fmt.Println(e)
@@ -71,6 +71,7 @@ func SimpleVmREPL() {
 		}
 
 		c := compiler.NewWithState(state.Symbols, &state.Consts)
+		c.SetFileInfo("<stdin>", input)
 		if err := c.Compile(res); err != nil {
 			fmt.Println(err)
 			continue

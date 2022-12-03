@@ -24,9 +24,7 @@ func (b Boolean) String() string {
 }
 
 func (b Boolean) Compile(c *compiler.Compiler) (position int, err error) {
-	isTrue := bool(b)
-
-	if isTrue {
+	if bool(b) {
 		return c.Emit(code.OpTrue), nil
 	} else {
 		return c.Emit(code.OpFalse), nil

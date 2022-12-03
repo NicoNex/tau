@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/NicoNex/tau/internal/code"
+	"github.com/NicoNex/tau/internal/tauerr"
 )
 
 type Evaluable interface {
@@ -33,13 +34,15 @@ type CompiledFunction struct {
 	Instructions code.Instructions
 	NumLocals    int
 	NumParams    int
+	Bookmarks    []tauerr.Bookmark
 }
 
-func NewFunctionCompiled(i code.Instructions, nLocals, nParams int) Object {
+func NewFunctionCompiled(i code.Instructions, nLocals, nParams int, bookmarks []tauerr.Bookmark) Object {
 	return &CompiledFunction{
 		Instructions: i,
 		NumLocals:    nLocals,
 		NumParams:    nParams,
+		Bookmarks:    bookmarks,
 	}
 }
 

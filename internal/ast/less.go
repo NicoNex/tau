@@ -9,12 +9,17 @@ import (
 )
 
 type Less struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewLess(l, r Node) Node {
-	return Less{l, r}
+func NewLess(l, r Node, pos int) Node {
+	return Less{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (l Less) Eval(env *obj.Env) obj.Object {
@@ -58,7 +63,13 @@ func (l Less) String() string {
 
 func (l Less) Compile(c *compiler.Compiler) (position int, err error) {
 	if l.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(l.Eval(nil))), nil
+		o := l.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(l.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(l.pos)
+		return
 	}
 
 	// the order of the compilation of the operands is inverted because we reuse
@@ -69,7 +80,9 @@ func (l Less) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = l.l.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpGreaterThan), nil
+	position = c.Emit(code.OpGreaterThan)
+	c.Bookmark(l.pos)
+	return
 }
 
 func (l Less) IsConstExpression() bool {

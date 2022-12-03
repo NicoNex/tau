@@ -9,12 +9,17 @@ import (
 )
 
 type Times struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewTimes(l, r Node) Node {
-	return Times{l, r}
+func NewTimes(l, r Node, pos int) Node {
+	return Times{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (t Times) Eval(env *obj.Env) obj.Object {
@@ -55,7 +60,13 @@ func (t Times) String() string {
 
 func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
 	if t.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(t.Eval(nil))), nil
+		o := t.Eval(nil)
+		if e, ok := o.(obj.Error); ok {
+			return 0, c.NewError(t.pos, string(e))
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(t.pos)
+		return
 	}
 
 	if position, err = t.l.Compile(c); err != nil {
@@ -64,7 +75,9 @@ func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = t.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpMul), nil
+	position = c.Emit(code.OpMul)
+	c.Bookmark(t.pos)
+	return
 }
 
 func (t Times) IsConstExpression() bool {

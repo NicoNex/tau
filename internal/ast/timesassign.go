@@ -8,12 +8,17 @@ import (
 )
 
 type TimesAssign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewTimesAssign(l, r Node) Node {
-	return TimesAssign{l, r}
+func NewTimesAssign(l, r Node, pos int) Node {
+	return TimesAssign{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
 func (t TimesAssign) Eval(env *obj.Env) obj.Object {
@@ -79,8 +84,10 @@ func (t TimesAssign) String() string {
 }
 
 func (t TimesAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{t.l, Times{t.l, t.r}}
-	return n.Compile(c)
+	n := Assign{l: t.l, r: Times{l: t.l, r: t.r, pos: t.pos}, pos: t.pos}
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (t TimesAssign) IsConstExpression() bool {

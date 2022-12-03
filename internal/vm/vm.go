@@ -14,6 +14,7 @@ import (
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
+	"github.com/NicoNex/tau/internal/tauerr"
 )
 
 type State struct {
@@ -63,15 +64,13 @@ func isExported(n string) bool {
 	return unicode.IsUpper(r)
 }
 
-func parserError(prefix string, errs []string) error {
+func parserError(prefix string, errs []error) error {
 	var buf strings.Builder
 
 	buf.WriteString(prefix)
-	buf.WriteRune('\n')
+	buf.WriteByte('\n')
 	for _, e := range errs {
-		buf.WriteRune('\t')
-		buf.WriteString(e)
-		buf.WriteRune('\n')
+		buf.WriteString(e.Error())
 	}
 
 	return errors.New(buf.String())
@@ -98,7 +97,10 @@ func New(file string, bytecode *compiler.Bytecode) *VM {
 
 	vm.dir, vm.file = filepath.Split(file)
 	vm.Consts = bytecode.Constants
-	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
+	fn := &obj.CompiledFunction{
+		Instructions: bytecode.Instructions,
+		Bookmarks:    bytecode.Bookmarks,
+	}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
@@ -113,7 +115,10 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 	}
 
 	vm.dir, vm.file = filepath.Split(file)
-	fn := &obj.CompiledFunction{Instructions: bytecode.Instructions}
+	fn := &obj.CompiledFunction{
+		Instructions: bytecode.Instructions,
+		Bookmarks:    bytecode.Bookmarks,
+	}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
 }
@@ -140,17 +145,44 @@ func (vm *VM) LastPoppedStackElem() obj.Object {
 	return vm.stack[vm.sp]
 }
 
-func (vm VM) execLoadModule() error {
+// Returns the bookmark corresponding to the current position in the bytecode.
+func (vm *VM) bookmark() tauerr.Bookmark {
+	var (
+		frame     = vm.currentFrame()
+		offset    = frame.ip
+		bookmarks = frame.cl.Fn.Bookmarks
+	)
+
+	if len(bookmarks) > 0 {
+		for _, b := range bookmarks {
+			if offset <= b.Offset {
+				return b
+			}
+		}
+	}
+	return tauerr.Bookmark{}
+}
+
+func (vm *VM) errorf(s string, a ...any) error {
+	return tauerr.NewFromBookmark(
+		filepath.Join(vm.dir, vm.file),
+		vm.bookmark(),
+		s,
+		a...,
+	)
+}
+
+func (vm *VM) execLoadModule() error {
 	var taupath = vm.pop()
 
 	pathObj, ok := taupath.(obj.String)
 	if !ok {
-		return fmt.Errorf("import: expected string, got %v", taupath.Type())
+		return vm.errorf("import: expected string, got %v", taupath.Type())
 	}
 
 	path, err := obj.ImportLookup(filepath.Join(vm.dir, string(pathObj)))
 	if err != nil {
-		return fmt.Errorf("import: %w", err)
+		return vm.errorf("import: %w", err)
 	}
 
 	b, err := os.ReadFile(path)
@@ -158,13 +190,14 @@ func (vm VM) execLoadModule() error {
 		return err
 	}
 
-	tree, errs := parser.Parse(string(b))
+	tree, errs := parser.Parse(path, string(b))
 	if len(errs) > 0 {
 		p := fmt.Sprintf("import: multiple errors in module %s:", path)
 		return parserError(p, errs)
 	}
 
 	c := compiler.NewWithState(vm.Symbols, &vm.Consts)
+	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
 		return err
 	}
@@ -237,7 +270,7 @@ func (vm *VM) execDot() error {
 		})
 
 	default:
-		return fmt.Errorf("%v object has no attribute %s", left.Type(), right)
+		return vm.errorf("%v object has no attribute %s", left.Type(), right)
 	}
 }
 
@@ -249,7 +282,7 @@ func (vm *VM) execDefine() error {
 
 	l, ok := left.(obj.Setter)
 	if !ok {
-		return fmt.Errorf("cannot assign to type %v", left.Type())
+		return vm.errorf("cannot assign to type %v", left.Type())
 	}
 	return vm.push(l.Set(right))
 }
@@ -278,7 +311,7 @@ func (vm *VM) execAdd() error {
 		return vm.push(obj.Float(l + r))
 
 	default:
-		return fmt.Errorf("unsupported operator '+' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '+' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -301,7 +334,7 @@ func (vm *VM) execSub() error {
 		return vm.push(obj.Float(l - r))
 
 	default:
-		return fmt.Errorf("unsupported operator '-' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '-' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -324,7 +357,7 @@ func (vm *VM) execMul() error {
 		return vm.push(obj.Float(l * r))
 
 	default:
-		return fmt.Errorf("unsupported operator '*' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '*' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -358,7 +391,7 @@ func (vm *VM) execMod() error {
 	r := right.(obj.Integer)
 
 	if r == 0 {
-		return fmt.Errorf("can't divide by 0")
+		return vm.errorf("can't divide by 0")
 	}
 	return vm.push(obj.Integer(l % r))
 }
@@ -571,7 +604,7 @@ func (vm *VM) execIn() error {
 		return vm.push(obj.False)
 
 	default:
-		return fmt.Errorf(
+		return vm.errorf(
 			"invalid operation %v in %v (wrong types %v and %v)",
 			left, right, left.Type(), right.Type(),
 		)
@@ -611,7 +644,7 @@ func (vm *VM) execGreaterThan() error {
 		return vm.push(obj.ParseBool(l > r))
 
 	default:
-		return fmt.Errorf("unsupported operator '>' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '>' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -639,7 +672,7 @@ func (vm *VM) execGreaterThanEqual() error {
 		return vm.push(obj.ParseBool(l >= r))
 
 	default:
-		return fmt.Errorf("unsupported operator '>=' for types %v and %v", left.Type(), right.Type())
+		return vm.errorf("unsupported operator '>=' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -685,7 +718,7 @@ func (vm *VM) execIndex() error {
 		i := int(index.(obj.Integer))
 
 		if i < 0 || i >= len(s) {
-			return fmt.Errorf("index out of range")
+			return vm.errorf("index out of range")
 		}
 		return vm.push(obj.NewString(string(s[i])))
 
@@ -706,7 +739,7 @@ func (vm *VM) execIndex() error {
 		})
 
 	default:
-		return fmt.Errorf("invalid index operator for types %v and %v", left.Type(), index.Type())
+		return vm.errorf("invalid index operator for types %v and %v", left.Type(), index.Type())
 	}
 }
 
@@ -736,7 +769,7 @@ func (vm *VM) execMinus() error {
 		return vm.push(obj.Float(-r))
 
 	default:
-		return fmt.Errorf("unsupported prefix operator '-' for type %v", r.Type())
+		return vm.errorf("unsupported prefix operator '-' for type %v", r.Type())
 	}
 }
 
@@ -766,7 +799,7 @@ func (vm *VM) call(o obj.Object, numArgs int) error {
 	case obj.Builtin:
 		return vm.callBuiltin(fn, numArgs)
 	default:
-		return fmt.Errorf("calling non-function")
+		return vm.errorf("calling non-function")
 	}
 }
 
@@ -822,7 +855,7 @@ func (vm *VM) buildMap(start, end int) (obj.Object, error) {
 		pair := obj.MapPair{Key: key, Value: val}
 		mapKey, ok := key.(obj.Hashable)
 		if !ok {
-			return nil, fmt.Errorf("invalid map key type %v", key.Type())
+			return nil, vm.errorf("invalid map key type %v", key.Type())
 		}
 		m.Set(mapKey.KeyHash(), pair)
 	}
@@ -832,7 +865,7 @@ func (vm *VM) buildMap(start, end int) (obj.Object, error) {
 
 func (vm *VM) callClosure(cl *obj.Closure, nargs int) error {
 	if nargs != cl.Fn.NumParams {
-		return fmt.Errorf("wrong number of arguments: expected %d, got %d", cl.Fn.NumParams, nargs)
+		return vm.errorf("wrong number of arguments: expected %d, got %d", cl.Fn.NumParams, nargs)
 	}
 
 	frame := NewFrame(cl, vm.sp-nargs)
@@ -856,7 +889,7 @@ func (vm *VM) pushClosure(constIdx, numFree int) error {
 	constant := vm.Consts[constIdx]
 	fn, ok := constant.(*obj.CompiledFunction)
 	if !ok {
-		return fmt.Errorf("not a function: %+v", constant)
+		return vm.errorf("not a function: %+v", constant)
 	}
 
 	free := make([]obj.Object, numFree)
@@ -1081,7 +1114,7 @@ func (vm *VM) Run() (err error) {
 
 func (vm *VM) push(o obj.Object) error {
 	if vm.sp >= StackSize {
-		return fmt.Errorf("stack overflow")
+		return vm.errorf("stack overflow")
 	}
 
 	vm.stack[vm.sp] = o

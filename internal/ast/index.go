@@ -11,10 +11,15 @@ import (
 type Index struct {
 	left  Node
 	index Node
+	pos   int
 }
 
-func NewIndex(l, i Node) Node {
-	return Index{l, i}
+func NewIndex(l, i Node, pos int) Node {
+	return Index{
+		left:  l,
+		index: i,
+		pos:   pos,
+	}
 }
 
 func (i Index) Eval(env *obj.Env) obj.Object {
@@ -106,7 +111,9 @@ func (i Index) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = i.index.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpIndex), nil
+	position = c.Emit(code.OpIndex)
+	c.Bookmark(i.pos)
+	return
 }
 
 func (i Index) IsConstExpression() bool {

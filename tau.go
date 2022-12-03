@@ -19,7 +19,7 @@ import (
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-const TauVersion = "v1.4.6"
+const TauVersion = "v1.5.0"
 
 var ErrParseError = errors.New("error: parse error")
 
@@ -88,27 +88,23 @@ func precompiledBytecode(path string) (*compiler.Bytecode, error) {
 	return decode(bufio.NewReader(file))
 }
 
-func compile(path string) (*compiler.Bytecode, error) {
-	b := readFile(path)
-	res, errs := parser.Parse(string(b))
+func compile(path string) (bc *compiler.Bytecode, err error) {
+	input := string(readFile(path))
+	res, errs := parser.Parse(path, input)
 	if len(errs) > 0 {
 		var buf strings.Builder
 
-		buf.WriteString("error parsing module ")
-		buf.WriteString(path)
-		buf.WriteRune(':')
-
 		for _, e := range errs {
-			buf.WriteRune('\t')
-			buf.WriteString(e)
+			buf.WriteString(e.Error())
+			buf.WriteByte('\n')
 		}
-
 		return nil, errors.New(buf.String())
 	}
 
 	c := compiler.New()
-	if err := c.Compile(res); err != nil {
-		return nil, err
+	c.SetFileInfo(path, input)
+	if err = c.Compile(res); err != nil {
+		return
 	}
 
 	return c.Bytecode(), nil
@@ -141,7 +137,7 @@ func ExecFileEval(f string) error {
 	var env = obj.NewEnv(f)
 
 	b := readFile(f)
-	res, errs := parser.Parse(string(b))
+	res, errs := parser.Parse(f, string(b))
 	if len(errs) != 0 {
 		for _, e := range errs {
 			fmt.Println(e)
@@ -158,7 +154,7 @@ func CompileFiles(files []string) error {
 	for _, f := range files {
 		b := readFile(f)
 
-		res, errs := parser.Parse(string(b))
+		res, errs := parser.Parse(f, string(b))
 		if len(errs) != 0 {
 			for _, e := range errs {
 				fmt.Println(e)
@@ -190,14 +186,13 @@ func PrintVersionInfo(w io.Writer) {
 }
 
 func Parse(src string) (ast.Node, error) {
-	tree, errs := parser.Parse(src)
+	tree, errs := parser.Parse("<input>", src)
 	if len(errs) > 0 {
 		var buf strings.Builder
 
 		buf.WriteString("parser error:\n")
 		for _, e := range errs {
-			buf.WriteString("    ")
-			buf.WriteString(e)
+			buf.WriteString(e.Error())
 			buf.WriteByte('\n')
 		}
 

@@ -153,20 +153,14 @@ func (vm *VM) bookmark() tauerr.Bookmark {
 		bookmarks = frame.cl.Fn.Bookmarks
 	)
 
-	if len(bookmarks) == 0 {
-		return tauerr.Bookmark{}
-	}
-
-	prev := bookmarks[0]
-	for _, cur := range bookmarks[1:] {
-		if offset < prev.Offset {
-			return prev
-		} else if offset > prev.Offset && offset <= cur.Offset {
-			return cur
+	if len(bookmarks) > 0 {
+		for _, b := range bookmarks {
+			if offset <= b.Offset {
+				return b
+			}
 		}
-		prev = cur
 	}
-	return prev
+	return tauerr.Bookmark{}
 }
 
 func (vm *VM) errorf(s string, a ...any) error {

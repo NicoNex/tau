@@ -792,8 +792,8 @@ func (vm *VM) execCurrentClosure() error {
 	return vm.push(vm.currentFrame().cl)
 }
 
-func (vm *VM) call(o obj.Object, numArgs int) error {
-	switch fn := obj.Unwrap(o).(type) {
+func (vm *VM) execCall(numArgs int) error {
+	switch fn := obj.Unwrap(vm.stack[vm.sp-1-numArgs]).(type) {
 	case *obj.Closure:
 		return vm.callClosure(fn, numArgs)
 	case obj.Builtin:
@@ -801,10 +801,6 @@ func (vm *VM) call(o obj.Object, numArgs int) error {
 	default:
 		return vm.errorf("calling non-function")
 	}
-}
-
-func (vm *VM) execCall(numArgs int) error {
-	return vm.call(vm.stack[vm.sp-1-numArgs], numArgs)
 }
 
 func (vm *VM) execConcurrentCall(numArgs int) error {
@@ -829,7 +825,7 @@ func (vm *VM) execConcurrentCall(numArgs int) error {
 		func() { copy(tvm.Globals, vm.Globals) },
 	)
 
-	if err := tvm.call(vm.stack[vm.sp-1-numArgs], numArgs); err != nil {
+	if err := tvm.execCall(numArgs); err != nil {
 		return err
 	}
 	go tvm.Run()

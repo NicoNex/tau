@@ -56,15 +56,15 @@ const (
 	StringType               // string
 	BytesType                // bytes
 	ObjectType               // object
-	ReturnType               // return
 	FunctionType             // function
 	ClosureType              // closure
 	BuiltinType              // builtin
 	ListType                 // list
 	MapType                  // map
+	PipeType                 // pipe
+	ReturnType               // return
 	ContinueType             // continue
 	BreakType                // break
-	PipeType                 // pipe
 )
 
 var (

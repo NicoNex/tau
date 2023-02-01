@@ -3,12 +3,10 @@ package tau
 import (
 	"bufio"
 	"bytes"
-	"encoding/binary"
 	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
-	"math"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -62,92 +60,6 @@ func decode(r io.Reader) (*compiler.Bytecode, error) {
 	gob.Register(obj.NewFunction([]string{}, obj.NewEnv(""), nil))
 
 	return b, dec.Decode(&b)
-}
-
-func encodeObjects(buf bytes.Buffer, objs []obj.Object) (err error) {
-loop:
-	for _, o := range objs {
-		if err != nil {
-			return
-		}
-
-		buf.WriteByte(byte(o.Type()))
-
-		switch o.Type() {
-		case obj.NullType:
-			continue loop
-		case obj.BoolType:
-			if o == obj.True {
-				buf.WriteByte(1)
-			} else {
-				buf.WriteByte(0)
-			}
-		case obj.IntType:
-			i := uint64(o.(obj.Integer))
-			val := make([]byte, 8)
-			binary.BigEndian.PutUint64(val, i)
-			buf.Write(val)
-		case obj.StringType:
-			s := []byte(o.(obj.String))
-			length := make([]byte, 4)
-			binary.BigEndian.PutUint32(length, uint32(len(s)))
-			buf.Write(length)
-			buf.Write(s)
-		case obj.ErrorType:
-			e := []byte(o.(obj.Error))
-			length := make([]byte, 4)
-			binary.BigEndian.PutUint32(length, uint32(len(e)))
-			buf.Write(length)
-			buf.Write(e)
-		case obj.FloatType:
-			f := float64(o.(obj.Float))
-			val := make([]byte, 8)
-			binary.BigEndian.PutUint64(val, math.Float64bits(f))
-			buf.Write(val)
-		case obj.ClosureType:
-			c := o.(*obj.Closure)
-			length := make([]byte, 4)
-			binary.BigEndian.PutUint32(length, uint32(len(c.Free)))
-			buf.Write(length)
-			err = encodeObjects(buf, c.Free)
-			o = c.Fn
-			fallthrough
-		case obj.FunctionType:
-			f := o.(*obj.CompiledFunction)
-			data := make([]byte, 12)
-			binary.BigEndian.PutUint32(data, uint32(f.NumParams))
-			binary.BigEndian.PutUint32(data[4:], uint32(f.NumLocals))
-			binary.BigEndian.PutUint32(data[8:], uint32(len(f.Instructions)))
-			buf.Write(data)
-			buf.Write(f.Instructions)
-		case obj.ListType:
-			l := o.(obj.List).Val()
-			length := make([]byte, 4)
-			binary.BigEndian.PutUint32(length, uint32(len(l)))
-			buf.Write(length)
-			err = encodeObjects(buf, l)
-		default:
-			return fmt.Errorf("unsupported encoding for type %v", o.Type())
-		}
-	}
-
-	return
-}
-
-func tauEncode(bcode *compiler.Bytecode) ([]byte, error) {
-	var buf bytes.Buffer
-
-	// Write the length of the instructions on the first 4 bytes of the buffer.
-	length := make([]byte, 4)
-	binary.BigEndian.PutUint32(length, uint32(len(bcode.Instructions)))
-	buf.Write(length)
-
-	// Write the encoded constants on the tail of the buffer.
-	if err := encodeObjects(buf, bcode.Constants); err != nil {
-		return []byte{}, err
-	}
-
-	return buf.Bytes(), nil
 }
 
 func readFile(fname string) []byte {

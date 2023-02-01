@@ -14,7 +14,7 @@ import (
 
 var bin = binary.BigEndian
 
-func encodeObjects(buf bytes.Buffer, objs []obj.Object) (err error) {
+func encodeObjects(buf *bytes.Buffer, objs []obj.Object) (err error) {
 loop:
 	for _, o := range objs {
 		if err != nil {
@@ -22,7 +22,6 @@ loop:
 		}
 
 		buf.WriteByte(byte(o.Type()))
-
 		switch o.Type() {
 		case obj.NullType:
 			continue loop
@@ -84,24 +83,8 @@ loop:
 	return
 }
 
-func tauEncode(bcode *compiler.Bytecode) ([]byte, error) {
-	var buf bytes.Buffer
-
-	// Write the length of the instructions on the first 4 bytes of the buffer.
-	length := make([]byte, 4)
-	binary.BigEndian.PutUint32(length, uint32(len(bcode.Instructions)))
-	buf.Write(length)
-
-	// Write the encoded constants on the tail of the buffer.
-	if err := encodeObjects(buf, bcode.Constants); err != nil {
-		return []byte{}, err
-	}
-
-	return buf.Bytes(), nil
-}
-
 func decodeObjects(b []byte, n int) (objs []obj.Object, pos int, err error) {
-	for pos := 0; pos < len(b) && n != 0; n-- {
+	for ; pos < len(b) && n != 0; n-- {
 		t := obj.Type(b[pos])
 		pos++
 
@@ -120,12 +103,12 @@ func decodeObjects(b []byte, n int) (objs []obj.Object, pos int, err error) {
 			pos += 8
 		case obj.StringType:
 			l := int(bin.Uint32(b[pos:]))
-			s := string(b[pos+4 : l])
+			s := string(b[pos+4 : pos+4+l])
 			objs = append(objs, obj.NewString(s))
 			pos += 4 + l
 		case obj.ErrorType:
 			l := int(bin.Uint32(b[pos:]))
-			s := string(b[pos+4 : l])
+			s := string(b[pos+4 : pos+4+l])
 			objs = append(objs, obj.NewError(s))
 			pos += 4 + l
 		case obj.ListType:
@@ -150,7 +133,7 @@ func decodeObjects(b []byte, n int) (objs []obj.Object, pos int, err error) {
 			numLocals := int(bin.Uint32(b[pos+4:]))
 			insLen := int(bin.Uint32(b[pos+8:]))
 			pos += 12
-			ins := code.Instructions(b[pos:insLen])
+			ins := code.Instructions(b[pos : pos+insLen])
 			cl.Fn = &obj.CompiledFunction{
 				Instructions: ins,
 				NumLocals:    numLocals,
@@ -163,7 +146,7 @@ func decodeObjects(b []byte, n int) (objs []obj.Object, pos int, err error) {
 			numLocals := int(bin.Uint32(b[pos+4:]))
 			insLen := int(bin.Uint32(b[pos+8:]))
 			pos += 12
-			ins := code.Instructions(b[pos:insLen])
+			ins := code.Instructions(b[pos : pos+insLen])
 			objs = append(objs, obj.NewFunctionCompiled(ins, numLocals, numParams, nil))
 			pos += insLen
 		default:
@@ -172,6 +155,23 @@ func decodeObjects(b []byte, n int) (objs []obj.Object, pos int, err error) {
 	}
 
 	return
+}
+
+func tauEncode(bcode *compiler.Bytecode) ([]byte, error) {
+	var buf = new(bytes.Buffer)
+
+	// Write the length of the instructions on the first 4 bytes of the buffer.
+	length := make([]byte, 4)
+	bin.PutUint32(length, uint32(len(bcode.Instructions)))
+	buf.Write(length)
+	buf.Write(bcode.Instructions)
+
+	// Write the encoded constants on the tail of the buffer.
+	if err := encodeObjects(buf, bcode.Constants); err != nil {
+		return []byte{}, err
+	}
+
+	return buf.Bytes(), nil
 }
 
 func tauDecode(b []byte) (*compiler.Bytecode, error) {
@@ -183,7 +183,7 @@ func tauDecode(b []byte) (*compiler.Bytecode, error) {
 
 	// Read the first 4 bytes to determine the instructions length.
 	ilen := bin.Uint32(b)
-	bcode.Instructions = code.Instructions(b[4:ilen])
+	bcode.Instructions = code.Instructions(b[4 : 4+ilen])
 
 	consts, _, err := decodeObjects(b[4+ilen:], -1)
 	if err != nil {

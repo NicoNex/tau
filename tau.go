@@ -1,9 +1,6 @@
 package tau
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -23,45 +20,6 @@ const TauVersion = "v1.5.0"
 
 var ErrParseError = errors.New("error: parse error")
 
-func encode(bcode *compiler.Bytecode) ([]byte, error) {
-	var (
-		buf bytes.Buffer
-		enc = gob.NewEncoder(&buf)
-	)
-
-	for _, c := range bcode.Constants {
-		gob.Register(c)
-	}
-
-	if err := enc.Encode(bcode); err != nil {
-		return []byte{}, err
-	}
-	return buf.Bytes(), nil
-}
-
-func decode(r io.Reader) (*compiler.Bytecode, error) {
-	var (
-		b   *compiler.Bytecode
-		dec = gob.NewDecoder(r)
-	)
-
-	gob.Register(obj.NewInteger(0))
-	gob.Register(obj.NewBoolean(false))
-	gob.Register(obj.NewNull())
-	gob.Register(obj.NewClass())
-	gob.Register(obj.NewReturn(nil))
-	gob.Register(obj.NewFloat(0))
-	gob.Register(obj.NewList())
-	gob.Register(obj.NewMap())
-	gob.Register(obj.NewString(""))
-	gob.Register(obj.NewError(""))
-	gob.Register(obj.NewClosure(nil, []obj.Object{}))
-	gob.Register(obj.Builtin(func(arg ...obj.Object) obj.Object { return nil }))
-	gob.Register(obj.NewFunction([]string{}, obj.NewEnv(""), nil))
-
-	return b, dec.Decode(&b)
-}
-
 func readFile(fname string) []byte {
 	b, err := os.ReadFile(fname)
 	if err != nil {
@@ -79,13 +37,12 @@ func writeFile(fname string, cont []byte) {
 }
 
 func precompiledBytecode(path string) (*compiler.Bytecode, error) {
-	file, err := os.Open(path)
+	b, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Println(err)
 		return nil, fmt.Errorf("error opening file %q: %w", path, err)
 	}
-	defer file.Close()
-	return decode(bufio.NewReader(file))
+	return tauDecode(b)
 }
 
 func compile(path string) (bc *compiler.Bytecode, err error) {
@@ -168,7 +125,7 @@ func CompileFiles(files []string) error {
 			continue
 		}
 
-		cnt, err := encode(c.Bytecode())
+		cnt, err := tauEncode(c.Bytecode())
 		if err != nil {
 			fmt.Println(err)
 			continue

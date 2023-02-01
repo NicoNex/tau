@@ -53,14 +53,6 @@ loop:
 			val := make([]byte, 8)
 			bin.PutUint64(val, math.Float64bits(f))
 			buf.Write(val)
-		case obj.ClosureType:
-			c := o.(*obj.Closure)
-			length := make([]byte, 4)
-			bin.PutUint32(length, uint32(len(c.Free)))
-			buf.Write(length)
-			err = encodeObjects(buf, c.Free)
-			o = c.Fn
-			fallthrough
 		case obj.FunctionType:
 			f := o.(*obj.CompiledFunction)
 			data := make([]byte, 12)
@@ -69,12 +61,6 @@ loop:
 			bin.PutUint32(data[8:], uint32(len(f.Instructions)))
 			buf.Write(data)
 			buf.Write(f.Instructions)
-		case obj.ListType:
-			l := o.(obj.List).Val()
-			length := make([]byte, 4)
-			bin.PutUint32(length, uint32(len(l)))
-			buf.Write(length)
-			err = encodeObjects(buf, l)
 		default:
 			return fmt.Errorf("unsupported encoding for type %v", o.Type())
 		}
@@ -111,36 +97,6 @@ func decodeObjects(b []byte, n int) (objs []obj.Object, pos int, err error) {
 			s := string(b[pos+4 : pos+4+l])
 			objs = append(objs, obj.NewError(s))
 			pos += 4 + l
-		case obj.ListType:
-			l := int(bin.Uint32(b[pos:]))
-			list, p, err := decodeObjects(b[pos+4:], l)
-			if err != nil {
-				return []obj.Object{}, p, err
-			}
-			objs = append(objs, obj.NewList(list...))
-			pos += 4 + p
-		case obj.ClosureType:
-			cl := &obj.Closure{}
-			l := int(bin.Uint32(b[pos:]))
-			o, p, err := decodeObjects(b[pos+4:], l)
-			if err != nil {
-				return []obj.Object{}, p, err
-			}
-			cl.Free = o
-			pos += 4 + p
-
-			numParams := int(bin.Uint32(b[pos:]))
-			numLocals := int(bin.Uint32(b[pos+4:]))
-			insLen := int(bin.Uint32(b[pos+8:]))
-			pos += 12
-			ins := code.Instructions(b[pos : pos+insLen])
-			cl.Fn = &obj.CompiledFunction{
-				Instructions: ins,
-				NumLocals:    numLocals,
-				NumParams:    numParams,
-			}
-			objs = append(objs, cl)
-			pos += insLen
 		case obj.FunctionType:
 			numParams := int(bin.Uint32(b[pos:]))
 			numLocals := int(bin.Uint32(b[pos+4:]))

@@ -120,6 +120,7 @@ func CompileFiles(files []string) error {
 		}
 
 		c := compiler.New()
+		c.SetFileInfo(f, string(b))
 		if err := c.Compile(res); err != nil {
 			fmt.Println(err)
 			continue

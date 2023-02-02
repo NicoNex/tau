@@ -205,6 +205,5 @@ func tauDecode(b []byte) (*compiler.Bytecode, error) {
 	blen := btoi(b[pos:])
 	bmarks, _ := decodeBookmarks(b[pos+4:], blen)
 	bcode.Bookmarks = bmarks
-	fmt.Println(len(bmarks))
 	return bcode, nil
 }

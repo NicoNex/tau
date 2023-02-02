@@ -31,7 +31,7 @@ func NewFromBookmark(file string, b Bookmark, s string, a ...any) error {
 		file,
 		b.LineNo,
 		b.Line,
-		arrow(b.pos),
+		arrow(b.Pos),
 		fmt.Sprintf(s, a...),
 	)
 }

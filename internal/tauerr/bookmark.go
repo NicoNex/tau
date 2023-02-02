@@ -3,7 +3,7 @@ package tauerr
 type Bookmark struct {
 	Offset int
 	LineNo int
-	pos    int
+	Pos    int
 	Line   string
 }
 
@@ -14,6 +14,6 @@ func NewBookmark(fileCnt string, filePos, offset int) Bookmark {
 		Offset: offset,
 		Line:   line,
 		LineNo: lineNo,
-		pos:    relative,
+		Pos:    relative,
 	}
 }

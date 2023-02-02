@@ -6,6 +6,7 @@ import (
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/tauerr"
 )
 
 var (
@@ -16,6 +17,14 @@ var (
 			obj.String("testing Tau encoding"),
 			obj.True,
 			obj.NewFloat(123.666),
+		},
+		Bookmarks: []tauerr.Bookmark{
+			{
+				Offset: 123,
+				LineNo: 10,
+				Pos:    3,
+				Line:   "this is a bookmark test",
+			},
 		},
 	}
 )
@@ -77,7 +86,7 @@ func TestEncode(t *testing.T) {
 
 	ilen := int(bin.Uint32(b))
 	if ilen != len(bcode.Instructions) {
-		t.Fatalf("instruction length mismatch: expected %d, got %d", len(bcode.Instructions), ilen)
+		t.Fatalf("instruction length mismatch, expected %d, got %d", len(bcode.Instructions), ilen)
 	}
 	pos += 4
 
@@ -94,6 +103,21 @@ func TestEncode(t *testing.T) {
 	}
 	pos += ilen
 
-	objs, _, err := decodeObjects(b[pos:], -1)
+	clen := int(bin.Uint32(b[pos:]))
+	objs, p, err := decodeObjects(b[pos+4:], clen)
+	pos += 4 + p
 	testObjects(t, bcode.Constants, objs)
+
+	blen := int(bin.Uint32(b[pos:]))
+	bmarks, _ := decodeBookmarks(b[pos+4:], blen)
+
+	if len(bmarks) != len(bcode.Bookmarks) {
+		t.Fatalf("bookmarks length mistmatch, expected %d, got %d", len(bcode.Bookmarks), len(bmarks))
+	}
+
+	for i, b := range bmarks {
+		if b != bcode.Bookmarks[i] {
+			t.Fatalf("bookmark mismatch at index %d", i)
+		}
+	}
 }

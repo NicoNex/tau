@@ -10,6 +10,7 @@ import (
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/tauerr"
 )
 
 var bin = binary.BigEndian
@@ -61,6 +62,7 @@ loop:
 			bin.PutUint32(data[8:], uint32(len(f.Instructions)))
 			buf.Write(data)
 			buf.Write(f.Instructions)
+			encodeBookmarks(buf, f.Bookmarks)
 		default:
 			return fmt.Errorf("unsupported encoding for type %v", o.Type())
 		}
@@ -102,9 +104,14 @@ func decodeObjects(b []byte, n int) (objs []obj.Object, pos int, err error) {
 			numLocals := int(bin.Uint32(b[pos+4:]))
 			insLen := int(bin.Uint32(b[pos+8:]))
 			pos += 12
+
 			ins := code.Instructions(b[pos : pos+insLen])
-			objs = append(objs, obj.NewFunctionCompiled(ins, numLocals, numParams, nil))
 			pos += insLen
+
+			nbmark := int(bin.Uint32(b[pos:]))
+			bmarks, bpos := decodeBookmarks(b[pos+4:], nbmark)
+			objs = append(objs, obj.NewFunctionCompiled(ins, numLocals, numParams, bmarks))
+			pos += 4 + bpos
 		default:
 			return nil, pos, fmt.Errorf("unsupported decoding for type %v", t)
 		}
@@ -113,39 +120,91 @@ func decodeObjects(b []byte, n int) (objs []obj.Object, pos int, err error) {
 	return
 }
 
+func decodeBookmarks(b []byte, n int) (bmarks []tauerr.Bookmark, pos int) {
+	for ; pos < len(b) && n > 0; n-- {
+		offset := btoi(b[pos:])
+		lineno := btoi(b[pos+4:])
+		bpos := btoi(b[pos+8:])
+		slen := btoi(b[pos+12:])
+		line := string(b[pos+16 : pos+16+slen])
+		bmarks = append(bmarks, tauerr.Bookmark{
+			Offset: offset,
+			LineNo: lineno,
+			Pos:    bpos,
+			Line:   line,
+		})
+		pos += 16 + slen
+	}
+	return
+}
+
+func encodeBookmarks(buf *bytes.Buffer, bmarks []tauerr.Bookmark) {
+	buf.Write(itob(len(bmarks)))
+
+	for _, b := range bmarks {
+		data := make([]byte, 16)
+		bin.PutUint32(data, uint32(b.Offset))
+		bin.PutUint32(data[4:], uint32(b.LineNo))
+		bin.PutUint32(data[8:], uint32(b.Pos))
+		bin.PutUint32(data[12:], uint32(len(b.Line)))
+		buf.Write(data)
+		buf.WriteString(b.Line)
+	}
+}
+
+func itob(i int) (b []byte) {
+	b = make([]byte, 4)
+	bin.PutUint32(b, uint32(i))
+	return
+}
+
+func btoi(b []byte) int {
+	return int(bin.Uint32(b))
+}
+
 func tauEncode(bcode *compiler.Bytecode) ([]byte, error) {
 	var buf = new(bytes.Buffer)
 
-	// Write the length of the instructions on the first 4 bytes of the buffer.
-	length := make([]byte, 4)
-	bin.PutUint32(length, uint32(len(bcode.Instructions)))
-	buf.Write(length)
+	// Write the length of the instructions to the first 4 bytes of the buffer.
+	buf.Write(itob(len(bcode.Instructions)))
 	buf.Write(bcode.Instructions)
 
-	// Write the encoded constants on the tail of the buffer.
+	// Write the length and the encoded constants to the tail of the buffer.
+	buf.Write(itob(len(bcode.Constants)))
 	if err := encodeObjects(buf, bcode.Constants); err != nil {
 		return []byte{}, err
 	}
-
+	// Write the encoded bookmarks to the tail of the buffer.
+	encodeBookmarks(buf, bcode.Bookmarks)
 	return buf.Bytes(), nil
 }
 
 func tauDecode(b []byte) (*compiler.Bytecode, error) {
-	var bcode = new(compiler.Bytecode)
-
 	if len(b) == 0 {
 		return nil, errors.New("decode: empty bytecode")
 	}
 
-	// Read the first 4 bytes to determine the instructions length.
-	ilen := bin.Uint32(b)
-	bcode.Instructions = code.Instructions(b[4 : 4+ilen])
+	var (
+		pos   int
+		bcode = new(compiler.Bytecode)
+	)
 
-	consts, _, err := decodeObjects(b[4+ilen:], -1)
+	// Read the first 4 bytes to determine the instructions length.
+	ilen := btoi(b)
+	bcode.Instructions = code.Instructions(b[4 : 4+ilen])
+	pos += 4 + ilen
+
+	clen := btoi(b[pos:])
+	consts, clen, err := decodeObjects(b[pos+4:], clen)
 	if err != nil {
 		return nil, err
 	}
-
 	bcode.Constants = consts
+	pos += 4 + clen
+
+	blen := btoi(b[pos:])
+	bmarks, _ := decodeBookmarks(b[pos+4:], blen)
+	bcode.Bookmarks = bmarks
+	fmt.Println(len(bmarks))
 	return bcode, nil
 }

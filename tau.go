@@ -14,6 +14,7 @@ import (
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
+	"github.com/NicoNex/tau/internal/vm/cvm"
 )
 
 const TauVersion = "v1.5.0"
@@ -108,7 +109,7 @@ func ExecFileFastVM(f string) (err error) {
 		return
 	}
 
-	tvm := vm.NewFastVM(bytecode)
+	tvm := cvm.New(bytecode)
 	tvm.Run()
 	return nil
 }

@@ -19,8 +19,7 @@ enum obj_type {
 	obj_list,
 	obj_map,
 	obj_pipe,
-	obj_class,
-	obj_getsetter
+	obj_getsetter,
 };
 
 struct function {
@@ -59,10 +58,13 @@ struct object *new_function_obj(uint8_t *insts, size_t len, int num_locals, int 
 struct object *new_closure_obj(struct function *fn, struct object **free, size_t num_free);
 struct object *new_boolean_obj(int b);
 struct object *new_integer_obj(int64_t val);
+struct object *new_error_obj(char *msg, size_t len);
+struct object *new_string_obj(char *str, size_t len);
 struct object *new_float_obj(double val);
 struct object *parse_bool(int b);
 char *otype_str(enum obj_type t);
 
+void print_obj(struct object *o);
 void print_boolean_obj(struct object *o);
 
 extern struct object *true_obj;

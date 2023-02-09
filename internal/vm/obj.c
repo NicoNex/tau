@@ -53,3 +53,7 @@ char *otype_str(enum obj_type t) {
 
 	return strings[t];
 }
+
+void print_obj(struct object *o) {
+	o->print(o);
+}

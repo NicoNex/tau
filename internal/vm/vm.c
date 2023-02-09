@@ -1,10 +1,11 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include "vm.h"
-#include "../obj/obj.h"
-#include "../code/code.h"
+#include "obj.h"
+#include "code.h"
 
 #define vm_current_frame(vm) (&vm->frames[vm->frame_idx])
 #define vm_push_frame(vm, frame) vm->frames[++vm->frame_idx] = frame
@@ -16,7 +17,7 @@
 #define vm_stack_peek(vm) (vm->stack[vm->sp-1])
 
 #define DISPATCH() goto *jump_table[*frame->ip++]
-#define UNHANDLED() puts("unhandled opcode"); return -1
+#define UNHANDLED() printf("unhandled opcode %s\n", opcode_str(*(frame->ip-1))); return -1
 
 #define ASSERT(obj, t) (obj->type == t)
 #define ASSERT2(obj, t1, t2) (ASSERT(obj, t1) || ASSERT(obj, t2))
@@ -34,7 +35,7 @@ static inline struct frame new_frame(struct object *cl, uint32_t base_ptr) {
 
 struct state new_state() {
 	return (struct state) {
-		.st = new_symbol_table(),
+		.st = NULL,
 		.consts = calloc(0, sizeof(struct object *)),
 		.nconsts = 0,
 		.globals = {0}
@@ -141,11 +142,13 @@ static inline void vm_exec_add(struct vm * restrict vm) {
 		double r = to_double(right);
 		vm_stack_push(vm, new_float_obj(l + r));
 	} else if (M_ASSERT(left, right, obj_string)) {
-		puts("adding two strings is not yet supported!");
-		exit(1);
+		size_t slen = left->len + right->len;
+		char *str = malloc(sizeof(char) * (slen + 1));
+		char *start = strcpy(str, left->data.str);
+		strcpy(start, right->data.str);
+		vm_stack_push(vm, new_string_obj(str, slen));
 	} else {
-		puts("unsupported operator '+' for the two types");
-		exit(1);
+		unsupported_operator_error("+", left, right);
 	}
 }
 

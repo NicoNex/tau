@@ -2,12 +2,18 @@
 #define VM_H_
 
 #include <stdint.h>
-#include "../obj/obj.h"
-#include "../compiler/compiler.h"
+#include "obj.h"
 
 #define STACK_SIZE 2048
 #define GLOBAL_SIZE 65536
 #define MAX_FRAMES 1024
+
+struct bytecode {
+	uint8_t *insts;
+	struct object **consts;
+	size_t len;
+	size_t nconsts;
+};
 
 struct frame {
 	struct object *cl;

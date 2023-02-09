@@ -129,7 +129,6 @@ func newParser(file, input string, items chan item.Item) *Parser {
 	p.registerInfix(item.GTEQ, p.parseGreaterEq)
 	p.registerInfix(item.And, p.parseAnd)
 	p.registerInfix(item.Or, p.parseOr)
-	p.registerInfix(item.In, p.parseIn)
 	p.registerInfix(item.Plus, p.parsePlus)
 	p.registerInfix(item.Minus, p.parseMinus)
 	p.registerInfix(item.Slash, p.parseSlash)
@@ -618,13 +617,6 @@ func (p *Parser) parseOr(left ast.Node) ast.Node {
 	prec := p.precedence()
 	p.next()
 	return ast.NewOr(left, p.parseExpr(prec), pos)
-}
-
-func (p *Parser) parseIn(left ast.Node) ast.Node {
-	pos := p.cur.Pos
-	prec := p.precedence()
-	p.next()
-	return ast.NewIn(left, p.parseExpr(prec), pos)
 }
 
 func (p *Parser) parseAssign(left ast.Node) ast.Node {

@@ -46,7 +46,6 @@ const (
 	OpNotEqual
 	OpGreaterThan
 	OpGreaterThanEqual
-	OpIn
 
 	OpMinus
 	OpBang
@@ -72,6 +71,7 @@ const (
 	OpInterpolate
 
 	OpPop
+	OpHalt
 )
 
 var definitions = map[Opcode]*Definition{
@@ -103,7 +103,6 @@ var definitions = map[Opcode]*Definition{
 	OpNotEqual:         {"OpNotEqual", []int{}},
 	OpGreaterThan:      {"OpGreaterThan", []int{}},
 	OpGreaterThanEqual: {"OpGreaterThanEqual", []int{}},
-	OpIn:               {"OpIn", []int{}},
 
 	OpMinus: {"OpMinus", []int{}},
 	OpBang:  {"OpBang", []int{}},
@@ -128,7 +127,8 @@ var definitions = map[Opcode]*Definition{
 	OpLoadModule:  {"OpLoadModule", []int{}},
 	OpInterpolate: {"OpInterpolate", []int{2, 2}},
 
-	OpPop: {"OpPop", []int{}},
+	OpPop:  {"OpPop", []int{}},
+	OpHalt: {"OpHalt", []int{}},
 }
 
 func (ins Instructions) String() string {

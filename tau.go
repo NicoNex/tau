@@ -90,6 +90,29 @@ func ExecFileVM(f string) (err error) {
 	return
 }
 
+func ExecFileFastVM(f string) (err error) {
+	var bytecode []byte
+
+	if filepath.Ext(f) == ".tauc" {
+		bytecode = readFile(f)
+	} else {
+		bc, err := compile(f)
+		if bytecode, err = tauEncode(bc); err != nil {
+			fmt.Println(err)
+			return err
+		}
+	}
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	tvm := vm.NewFastVM(bytecode)
+	tvm.Run()
+	return nil
+}
+
 func ExecFileEval(f string) error {
 	var env = obj.NewEnv(f)
 

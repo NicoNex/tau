@@ -553,64 +553,6 @@ func (vm *VM) execAnd() error {
 	return vm.push(obj.ParseBool(obj.IsTruthy(left) && obj.IsTruthy(right)))
 }
 
-func (vm *VM) execIn() error {
-	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
-	)
-
-	if !obj.AssertTypes(left, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
-		return fmt.Errorf("unsupported operator 'in' for type %v", left.Type())
-	}
-	if !obj.AssertTypes(right, obj.ListType, obj.StringType) {
-		return fmt.Errorf("unsupported operator 'in' for type %v", right.Type())
-	}
-
-	switch {
-	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String).Val()
-		r := right.(obj.String).Val()
-		return vm.push(obj.ParseBool(strings.Contains(r, l)))
-
-	case obj.AssertTypes(right, obj.ListType):
-		for _, o := range right.(obj.List) {
-			if !obj.AssertTypes(left, o.Type()) {
-				continue
-			}
-			if obj.AssertTypes(left, obj.BoolType, obj.NullType) && left == o {
-				return vm.push(obj.True)
-			}
-
-			switch l := left.(type) {
-			case obj.String:
-				r := o.(obj.String)
-				if l == r {
-					return vm.push(obj.True)
-				}
-
-			case obj.Integer:
-				r := o.(obj.Integer)
-				if l == r {
-					return vm.push(obj.True)
-				}
-
-			case obj.Float:
-				r := o.(obj.Float)
-				if l == r {
-					return vm.push(obj.True)
-				}
-			}
-		}
-		return vm.push(obj.False)
-
-	default:
-		return vm.errorf(
-			"invalid operation %v in %v (wrong types %v and %v)",
-			left, right, left.Type(), right.Type(),
-		)
-	}
-}
-
 func (vm *VM) execOr() error {
 	var (
 		right = obj.Unwrap(vm.pop())
@@ -909,7 +851,7 @@ func (vm *VM) Run() (err error) {
 		}
 	}()
 
-	for vm.currentFrame().ip < len(vm.currentFrame().Instructions())-1 && err == nil {
+	for err == nil {
 		vm.currentFrame().ip++
 
 		ip = vm.currentFrame().ip
@@ -1088,9 +1030,6 @@ func (vm *VM) Run() (err error) {
 		case code.OpAnd:
 			err = vm.execAnd()
 
-		case code.OpIn:
-			err = vm.execIn()
-
 		case code.OpOr:
 			err = vm.execOr()
 
@@ -1102,6 +1041,9 @@ func (vm *VM) Run() (err error) {
 
 		case code.OpPop:
 			vm.pop()
+
+		case code.OpHalt:
+			return
 		}
 
 	}

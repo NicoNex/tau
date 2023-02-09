@@ -232,6 +232,7 @@ func (c *Compiler) NewError(pos int, s string, a ...any) error {
 
 func (c *Compiler) Compile(node Compilable) error {
 	_, err := node.Compile(c)
+	c.Emit(code.OpHalt)
 	return err
 }
 

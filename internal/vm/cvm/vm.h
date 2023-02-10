@@ -1,8 +1,13 @@
 #pragma once
 
-#include <bits/stdint-uintn.h>
 #include <stdint.h>
 #include "obj.h"
+
+#ifdef __GLIBC__
+#include <bits/stdint-uintn.h>
+#define uint32_t uint_fast32_t
+#endif
+
 
 #define STACK_SIZE 2048
 #define GLOBAL_SIZE 65536
@@ -25,7 +30,7 @@ struct frame {
 struct state {
 	struct symbol_table *st;
 	struct object *consts;
-	uint_fast32_t nconsts;
+	uint32_t nconsts;
 	struct object globals[GLOBAL_SIZE];
 };
 
@@ -33,8 +38,8 @@ struct vm {
 	struct object stack[STACK_SIZE];
 	struct frame frames[MAX_FRAMES];
 	struct state state;
-	uint_fast32_t sp;
-	uint_fast32_t frame_idx;
+	uint32_t sp;
+	uint32_t frame_idx;
 };
 
 struct state new_state();

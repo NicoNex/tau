@@ -1,6 +1,6 @@
 package cvm
 
-// #cgo CFLAGS: -Werror -Wall -Ifast -g -Ofast -march=native -mtune=native
+// #cgo CFLAGS: -Werror -Wall -g -Ofast -mtune=native
 // #include "vm.h"
 // #include "decoder.h"
 import "C"

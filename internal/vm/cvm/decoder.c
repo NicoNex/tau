@@ -31,7 +31,7 @@ static int skip_bookmarks(uint8_t *data) {
 }
 
 #include <stdio.h>
-static int decode_objects(struct object **objs, uint8_t *data, size_t n) {
+static int decode_objects(struct object *objs, uint8_t *data, size_t n) {
 	int pos = 0;
 
 	for (int i = 0; i < n; i++) {
@@ -109,7 +109,7 @@ struct bytecode tau_decode(uint8_t *data, size_t len) {
 	pos += 4 + bc.len;
 
 	bc.nconsts = read_uint32(&data[pos]);
-	bc.consts = malloc(sizeof(struct object *) * bc.nconsts);
+	bc.consts = malloc(sizeof(struct object) * bc.nconsts);
 	pos += 4;
 	int obj_end = decode_objects(bc.consts, &data[pos], bc.nconsts);
 	if (obj_end == -1) {

@@ -82,18 +82,6 @@ size_t make_bcode(uint8_t **code, size_t code_len, enum opcode op, ...) {
 	return pos;
 }
 
-inline uint8_t read_uint8(uint8_t *ins) {
-	return ins[0];
-}
-
-inline uint16_t read_uint16(uint8_t *ins) {
-	return (ins[0] << 8) | ins[1];
-}
-
-inline uint32_t read_uint32(uint8_t *ins) {
-	return (ins[0] << 24) | (ins[1] << 16) | (ins[2] << 8) | ins[3];
-}
-
 // Decodes the operands of a bytecode instruction.
 int read_operands(struct definition def, uint8_t *ins, int **operands) {
 	*operands = realloc(*operands, sizeof(int) * def.noperands);

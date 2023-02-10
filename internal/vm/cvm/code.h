@@ -7,6 +7,10 @@
 
 #define NUM_OPCODES 46
 
+#define read_uint8(b) ((b)[0])
+#define read_uint16(b) (((b)[0] << 8) | (b)[1])
+#define read_uint32(b) (((b)[0] << 24) | ((b)[1] << 16) | ((b)[2] << 8) | (b)[3])
+
 enum opcode {
 	op_constant,
 	op_true,
@@ -77,9 +81,5 @@ size_t make_bcode(uint8_t **code, size_t code_len, enum opcode op, ...);
 size_t vmake_bcode(uint8_t **code, size_t code_len, enum opcode op, va_list operands);
 int read_operands(struct definition def, uint8_t *ins, int **operands);
 char *opcode_str(enum opcode op);
-
-uint8_t read_uint8(uint8_t *ins);
-uint16_t read_uint16(uint8_t *ins);
-uint32_t read_uint32(uint8_t *ins);
 
 #endif

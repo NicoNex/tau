@@ -33,7 +33,7 @@ typedef struct object object;
 
 struct closure {
 	struct function *fn;
-	struct object **free;
+	struct object *free;
 	size_t num_free;
 };
 
@@ -54,21 +54,21 @@ struct object {
 	void (*print)(struct object *o);
 };
 
-struct object *new_function_obj(uint8_t *insts, size_t len, int num_locals, int num_params);
-struct object *new_closure_obj(struct function *fn, struct object **free, size_t num_free);
-struct object *new_boolean_obj(int b);
-struct object *new_integer_obj(int64_t val);
-struct object *new_error_obj(char *msg, size_t len);
-struct object *new_string_obj(char *str, size_t len);
-struct object *new_float_obj(double val);
-struct object *parse_bool(int b);
+struct object new_function_obj(uint8_t *insts, size_t len, int num_locals, int num_params);
+struct object new_closure_obj(struct function *fn, struct object *free, size_t num_free);
+struct object new_boolean_obj(int b);
+struct object new_integer_obj(int64_t val);
+struct object new_error_obj(char *msg, size_t len);
+struct object new_string_obj(char *str, size_t len);
+struct object new_float_obj(double val);
+struct object parse_bool(int b);
 char *otype_str(enum obj_type t);
 
-void print_obj(struct object *o);
+void print_obj(struct object o);
 void print_boolean_obj(struct object *o);
 
-extern struct object *true_obj;
-extern struct object *false_obj;
-extern struct object *null_obj;
+extern struct object true_obj;
+extern struct object false_obj;
+extern struct object null_obj;
 
 #endif

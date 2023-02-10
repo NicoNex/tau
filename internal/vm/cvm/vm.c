@@ -4,8 +4,12 @@
 #include <stdlib.h>
 
 #include "vm.h"
+#include "opcode.h"
 #include "obj.h"
-#include "code.h"
+
+#define read_uint8(b) ((b)[0])
+#define read_uint16(b) (((b)[0] << 8) | (b)[1])
+#define read_uint32(b) (((b)[0] << 24) | ((b)[1] << 16) | ((b)[2] << 8) | (b)[3])
 
 #define vm_current_frame(vm) (&vm->frames[vm->frame_idx])
 #define vm_push_frame(vm, frame) vm->frames[++vm->frame_idx] = frame

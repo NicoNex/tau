@@ -1,5 +1,4 @@
-#ifndef JUMP_TABLE_H_
-#define JUMP_TABLE_H_
+#pragma once
 
 static const void *jump_table[] = {
 	&&TARGET_CONST,
@@ -57,7 +56,3 @@ static const void *jump_table[] = {
 	&&TARGET_POP,
 	&&TARGET_HALT
 };
-
-
-#endif // JUMP_TABLE_H_
-

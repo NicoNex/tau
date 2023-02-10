@@ -1,5 +1,4 @@
-#ifndef VM_H_
-#define VM_H_
+#pragma once
 
 #include <bits/stdint-uintn.h>
 #include <stdint.h>
@@ -44,5 +43,3 @@ struct vm *new_vm_with_state(struct bytecode bytecode, struct state state);
 int vm_run(struct vm * restrict vm);
 struct object vm_last_popped_stack_elem(struct vm * restrict vm);
 void vm_dispose(struct vm *vm);
-
-#endif

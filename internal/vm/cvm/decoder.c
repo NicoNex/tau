@@ -14,6 +14,7 @@ static inline uint64_t read_uint64(uint8_t *ins) {
 	return ((uint64_t) read_uint32(ins) << 32) | ((uint64_t) read_uint32(&ins[4]));
 }
 
+// TODO: fix this.
 static inline double read_double(uint8_t *ins) {
 	return *(double *) ins;
 }
@@ -30,7 +31,6 @@ static int skip_bookmarks(uint8_t *data) {
 	return pos;
 }
 
-#include <stdio.h>
 static int decode_objects(struct object *objs, uint8_t *data, size_t n) {
 	int pos = 0;
 
@@ -95,7 +95,6 @@ static int decode_objects(struct object *objs, uint8_t *data, size_t n) {
 	return pos;
 }
 
-#include <stdio.h>
 struct bytecode tau_decode(uint8_t *data, size_t len) {
 	struct bytecode bc = {0};
 	if (len == 0) {

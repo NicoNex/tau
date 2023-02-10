@@ -1,5 +1,4 @@
-#ifndef OBJ_H_
-#define OBJ_H_
+#pragma once
 
 #include <stdint.h>
 #include <stddef.h>
@@ -70,5 +69,3 @@ void print_boolean_obj(struct object *o);
 extern struct object true_obj;
 extern struct object false_obj;
 extern struct object null_obj;
-
-#endif

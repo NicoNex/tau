@@ -22,12 +22,10 @@ static inline void put_uint32(uint8_t *code, uint32_t i) {
 	code[3] = i & 0xff;
 }
 
-#include <stdio.h>
 size_t vmake_bcode(uint8_t **code, size_t code_len, enum opcode op, va_list operands) {
 	struct definition def;
 
 	if (!lookup_def(op, &def)) {
-		puts("dio cane");
 		return code_len;
 	}
 

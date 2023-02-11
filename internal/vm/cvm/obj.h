@@ -49,8 +49,8 @@ struct object {
 	union data data;
 	enum obj_type type;
 	size_t len;
-	void (*dispose)(struct object *o);
-	void (*print)(struct object *o);
+	void (*dispose)(struct object o);
+	char *(*string)(struct object o);
 };
 
 struct object new_function_obj(uint8_t *insts, size_t len, int num_locals, int num_params);
@@ -61,10 +61,10 @@ struct object new_error_obj(char *msg, size_t len);
 struct object new_string_obj(char *str, size_t len);
 struct object new_float_obj(double val);
 struct object parse_bool(int b);
-char *otype_str(enum obj_type t);
 
+char *otype_str(enum obj_type t);
+char *object_str(struct object o);
 void print_obj(struct object o);
-void print_boolean_obj(struct object *o);
 
 extern struct object true_obj;
 extern struct object false_obj;

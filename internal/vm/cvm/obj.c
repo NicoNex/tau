@@ -5,7 +5,7 @@
 
 static void dummy_dispose(struct object o) {}
 
-/* ============================= CLOSURE OBJECT ============================= */
+// ============================= CLOSURE OBJECT =============================
 static void dispose_closure_obj(struct object o) {
 	free(o.data.cl->fn->instructions);
 	free(o.data.cl->fn);
@@ -33,7 +33,7 @@ struct object new_closure_obj(struct function *fn, struct object *free, size_t n
 	};
 }
 
-/* ============================= ERROR OBJECT ============================= */
+// ============================= ERROR OBJECT =============================
 static void dispose_error_obj(struct object o) {
 	free(o.data.str);
 }
@@ -55,7 +55,7 @@ struct object new_error_obj(char *str, size_t len) {
 	};
 }
 
-/* ============================= FLOAT OBJECT ============================= */
+// ============================= FLOAT OBJECT =============================
 static char *float_str(struct object o) {
 	char *str = calloc(35, sizeof(char));
 	sprintf(str, "%f", o.data.f);
@@ -72,7 +72,7 @@ struct object new_float_obj(double val) {
 	};
 }
 
-/* ============================= FUNCTION OBJECT ============================= */
+// ============================= FUNCTION OBJECT =============================
 static void dispose_function_obj(struct object o) {
 	free(o.data.fn->instructions);
 	free(o.data.fn);
@@ -100,14 +100,14 @@ struct object new_function_obj(uint8_t *insts, size_t len, int num_params, int n
 	};
 }
 
-/* ============================= INTEGER OBJECT ============================= */
+// ============================= INTEGER OBJECT =============================
 static char *integer_str(struct object o) {
 	char *str = calloc(30, sizeof(char));
 
-#ifdef __APPLE__
-	sprintf(str, "%lld", o.data.i);
-#else
+#ifdef __unix__
 	sprintf(str, "%ld", o.data.i);
+#else
+	sprintf(str, "%lld", o.data.i);
 #endif
 
 	return str;
@@ -122,7 +122,7 @@ struct object new_integer_obj(int64_t val) {
 	};
 }
 
-/* ============================= STRING OBJECT ============================= */
+// ============================= STRING OBJECT =============================
 static void dispose_string_obj(struct object o) {
 	free(o.data.str);
 }
@@ -144,7 +144,7 @@ struct object new_string_obj(char *str, size_t len) {
 	};
 }
 
-/* ============================= STATIC OBJECTS ============================= */
+// ============================= STATIC OBJECTS =============================
 static char *boolean_str(struct object o) {
 	char *str = calloc(6, sizeof(char));
 	strcpy(str, o.data.i == 1 ? "true" : "false");

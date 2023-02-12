@@ -222,6 +222,65 @@ static inline void vm_exec_or(struct vm * restrict vm) {
 	vm_stack_push(vm, parse_bool(is_truthy(left) || is_truthy(right)));
 }
 
+static inline void vm_exec_bw_and(struct vm * restrict vm) {
+	struct object *right = unwrap(&vm_stack_pop(vm));
+	struct object *left = unwrap(&vm_stack_peek(vm));
+
+	if (!M_ASSERT(left, right, obj_integer)) {
+		unsupported_operator_error("&", left, right);
+	}
+	left->data.i &= right->data.i;
+}
+
+static inline void vm_exec_bw_or(struct vm * restrict vm) {
+	struct object *right = unwrap(&vm_stack_pop(vm));
+	struct object *left = unwrap(&vm_stack_peek(vm));
+
+	if (!M_ASSERT(left, right, obj_integer)) {
+		unsupported_operator_error("|", left, right);
+	}
+	left->data.i |= right->data.i;
+}
+
+static inline void vm_exec_bw_xor(struct vm * restrict vm) {
+	struct object *right = unwrap(&vm_stack_pop(vm));
+	struct object *left = unwrap(&vm_stack_peek(vm));
+
+	if (!M_ASSERT(left, right, obj_integer)) {
+		unsupported_operator_error("^", left, right);
+	}
+	left->data.i ^= right->data.i;
+}
+
+static inline void vm_exec_bw_not(struct vm * restrict vm) {
+	struct object *right = unwrap(&vm_stack_peek(vm));
+
+	if (!ASSERT(right, obj_integer)) {
+		unsupported_prefix_operator_error("~", right);
+	}
+	right->data.i = ~right->data.i;
+}
+
+static inline void vm_exec_bw_lshift(struct vm * restrict vm) {
+	struct object *right = unwrap(&vm_stack_pop(vm));
+	struct object *left = unwrap(&vm_stack_peek(vm));
+
+	if (!M_ASSERT(left, right, obj_integer)) {
+		unsupported_operator_error("<<", left, right);
+	}
+	left->data.i <<= right->data.i;
+}
+
+static inline void vm_exec_bw_rshift(struct vm * restrict vm) {
+	struct object *right = unwrap(&vm_stack_pop(vm));
+	struct object *left = unwrap(&vm_stack_peek(vm));
+
+	if (!M_ASSERT(left, right, obj_integer)) {
+		unsupported_operator_error(">>", left, right);
+	}
+	left->data.i >>= right->data.i;
+}
+
 static inline void vm_exec_eq(struct vm * restrict vm) {
 	struct object *right = unwrap(&vm_stack_pop(vm));
 	struct object *left = unwrap(&vm_stack_peek(vm));
@@ -511,32 +570,32 @@ int vm_run(struct vm * restrict vm) {
 	}
 
 	TARGET_BW_AND: {
-		vm_exec_and(vm);
+		vm_exec_bw_and(vm);
 		DISPATCH();
 	}
 
 	TARGET_BW_OR: {
-		vm_exec_or(vm);
+		vm_exec_bw_or(vm);
 		DISPATCH();
 	}
 
 	TARGET_BW_XOR: {
-		UNHANDLED();
+		vm_exec_bw_xor(vm);
 		DISPATCH();
 	}
 
 	TARGET_BW_NOT: {
-		UNHANDLED();
+		vm_exec_bw_not(vm);
 		DISPATCH();
 	}
 
 	TARGET_BW_LSHIFT: {
-		UNHANDLED();
+		vm_exec_bw_lshift(vm);
 		DISPATCH();
 	}
 
 	TARGET_BW_RSHIFT: {
-		UNHANDLED();
+		vm_exec_bw_rshift(vm);
 		DISPATCH();
 	}
 

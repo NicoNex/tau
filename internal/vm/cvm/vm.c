@@ -72,7 +72,7 @@ void vm_dispose(struct vm *vm) {
 	free(vm);
 }
 
-static inline void vm_push_closure(struct vm *restrict vm, uint32_t const_idx, uint32_t num_free) {
+static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, uint32_t num_free) {
 	struct object cnst = vm->state.consts[const_idx];
 
 	if (cnst.type != obj_function) {
@@ -88,6 +88,15 @@ static inline void vm_push_closure(struct vm *restrict vm, uint32_t const_idx, u
 	struct object cl = new_closure_obj(cnst.data.fn, free, num_free);
 	vm->sp -= num_free;
 	vm_stack_push(vm, cl);
+}
+
+static inline void vm_push_list(struct vm * restrict vm, uint32_t start, uint32_t end) {
+	struct object *list = malloc(sizeof(struct object) * (end - start));
+
+	for (uint32_t i = start; i < end; i++) {
+		list[i-start] = vm->stack[i];
+	}
+	vm_stack_push(vm, new_list_obj(list, end-start));
 }
 
 static inline struct object *unwrap(struct object *o) {
@@ -521,8 +530,12 @@ int vm_run(struct vm * restrict vm) {
 		DISPATCH();
 	}
 
+	// TODO: fix this.
 	TARGET_LIST: {
-		UNHANDLED();
+		uint32_t len = read_uint16(frame->ip);
+		frame->ip += 2;
+		vm_push_list(vm, vm->sp-len, vm->sp);
+		vm->sp -= len;
 		DISPATCH();
 	}
 

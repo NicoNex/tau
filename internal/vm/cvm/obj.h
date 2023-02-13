@@ -40,7 +40,7 @@ union data {
 	int64_t i;
 	double f;
 	char *str;
-	struct object **list;
+	struct object *list;
 	struct function *fn;
 	struct closure *cl;
 };
@@ -60,6 +60,7 @@ struct object new_integer_obj(int64_t val);
 struct object new_error_obj(char *msg, size_t len);
 struct object new_string_obj(char *str, size_t len);
 struct object new_float_obj(double val);
+struct object new_list_obj(struct object *list, size_t len);
 struct object parse_bool(int b);
 
 char *otype_str(enum obj_type t);

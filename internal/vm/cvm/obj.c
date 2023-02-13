@@ -39,10 +39,7 @@ static void dispose_error_obj(struct object o) {
 }
 
 static char *error_str(struct object o) {
-	char *str = calloc(o.len+1, sizeof(char));
-	strncpy(str, o.data.str, o.len);
-
-	return str;
+	return strdup(o.data.str);
 }
 
 struct object new_error_obj(char *str, size_t len) {
@@ -128,10 +125,7 @@ static void dispose_string_obj(struct object o) {
 }
 
 static char *string_str(struct object o) {
-	char *str = calloc(o.len+1, sizeof(char));
-	strncpy(str, o.data.str, o.len);
-
-	return str;
+	return strdup(o.data.str);
 }
 
 struct object new_string_obj(char *str, size_t len) {
@@ -141,6 +135,45 @@ struct object new_string_obj(char *str, size_t len) {
 		.type = obj_string,
 		.dispose = dispose_string_obj,
 		.string = string_str
+	};
+}
+
+// ============================= LIST OBJECT =============================
+static void dispose_list_obj(struct object o) {
+	free(o.data.list);
+}
+
+// TODO: optimise this.
+static char *list_str(struct object o) {
+	char *strings[o.len];
+	size_t total_len = 3;
+
+	for (int i = 0; i < o.len; i++) {
+		char *s = object_str(o.data.list[i]);
+		strings[i] = s;
+		total_len += i < o.len-1 ? strlen(s) + 2 : strlen(s);
+	}
+
+	char *str = calloc(total_len, sizeof(char));
+	str[0] = '[';
+
+	for (int i = 0; i < o.len; i++) {
+		strcat(str, strings[i]);
+		if (i < o.len-1) strcat(str, ", ");
+		free(strings[i]);
+	}
+	strcat(str, "]");
+
+	return str;
+}
+
+struct object new_list_obj(struct object *list, size_t len) {
+	return (struct object) {
+		.data.list = list,
+		.len = len,
+		.type = obj_list,
+		.dispose = dispose_list_obj,
+		.string = list_str
 	};
 }
 

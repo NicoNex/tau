@@ -109,7 +109,7 @@ func ExecFileFastVM(f string) (err error) {
 		return
 	}
 
-	tvm := cvm.New(bytecode)
+	tvm := cvm.New(f, bytecode)
 	tvm.Run()
 	return nil
 }

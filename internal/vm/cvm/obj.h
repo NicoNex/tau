@@ -21,11 +21,21 @@ enum obj_type {
 	obj_getsetter,
 };
 
+struct bookmark {
+	uint32_t offset;
+	uint32_t lineno;
+	uint32_t pos;
+	size_t len;
+	char *line;
+};
+
 struct function {
 	uint8_t *instructions;
 	size_t len;
-	int num_locals;
-	int num_params;
+	uint32_t num_locals;
+	uint32_t num_params;
+	uint32_t bklen;
+	struct bookmark *bookmarks;
 };
 
 typedef struct object object;
@@ -53,15 +63,15 @@ struct object {
 	char *(*string)(struct object o);
 };
 
-struct object new_function_obj(uint8_t *insts, size_t len, int num_locals, int num_params);
+struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t num_bookmarks);
 struct object new_closure_obj(struct function *fn, struct object *free, size_t num_free);
-struct object new_boolean_obj(int b);
+struct object new_boolean_obj(uint32_t b);
 struct object new_integer_obj(int64_t val);
 struct object new_error_obj(char *msg, size_t len);
 struct object new_string_obj(char *str, size_t len);
 struct object new_float_obj(double val);
 struct object new_list_obj(struct object *list, size_t len);
-struct object parse_bool(int b);
+struct object parse_bool(uint32_t b);
 
 char *otype_str(enum obj_type t);
 char *object_str(struct object o);

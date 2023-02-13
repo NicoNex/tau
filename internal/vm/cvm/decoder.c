@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "decoder.h"
 #include "vm.h"
@@ -14,85 +15,105 @@ static inline uint64_t read_uint64(uint8_t *ins) {
 	return ((uint64_t) read_uint32(ins) << 32) | ((uint64_t) read_uint32(&ins[4]));
 }
 
-// TODO: fix this.
-static inline double read_double(uint8_t *ins) {
-	return *(double *) ins;
+static inline __attribute__((always_inline))
+char *string(size_t len) {
+	char *s = malloc(sizeof(char) * (len+1));
+	s[len] = '\0';
+
+	return s;
 }
 
-static int skip_bookmarks(uint8_t *data) {
-	int len = read_uint32(data);
-	int pos = 4;
-
+static uint8_t *read_bookmarks(uint8_t *data, struct bookmark *bmarks, size_t len) {
 	for (int i = 0; i < len; i++) {
-		int slen = read_uint32(&data[pos+12]);
-		pos += 16 + slen;
+		uint32_t offset = read_uint32(data); data += 4;
+		uint32_t lineno = read_uint32(data); data += 4;
+		uint32_t pos = read_uint32(data); data += 4;
+		uint32_t len = read_uint32(data); data += 4;
+		char *line = string(len);
+
+		memcpy(line, data, len);
+		data += len;
+		bmarks[i] = (struct bookmark) {
+			.offset = offset,
+			.lineno = lineno,
+			.pos = pos,
+			.len = len,
+			.line = line
+		};
 	}
 
-	return pos;
+	return data;
 }
 
-static int decode_objects(struct object *objs, uint8_t *data, size_t n) {
-	int pos = 0;
-
+static uint8_t *decode_objects(uint8_t *data, struct object *objs, size_t n) {
 	for (int i = 0; i < n; i++) {
-		switch (data[pos++]) {
+		switch (*data++) {
 		case obj_null:
 			objs[i] = null_obj;
 			break;
 
 		case obj_error: {
-			int len = read_uint32(&data[pos]);
-			pos += 4;
-			char *msg = calloc(len+1, sizeof(char));
-			memcpy(msg, &data[pos], len);
+			size_t len = read_uint32(data);
+			data += 4;
+			char *msg = string(len);
+			memcpy(msg, data, len);
+			data += len;
 			objs[i] = new_error_obj(msg, len);
 			break;
 		}
 
 		case obj_integer:
-			objs[i] = new_integer_obj(read_uint64(&data[pos]));
-			pos += 8;
+			objs[i] = new_integer_obj(read_uint64(data));
+			data += 8;
 			break;
 
-		case obj_float:
-			objs[i] = new_float_obj(read_double(&data[pos]));
-			pos += 8;
+		case obj_float: {
+			struct object f = new_float_obj(0);
+			f.data.i = read_uint64(data);
+			objs[i] = f;
+			data += 8;
 			break;
+		}
 
 		case obj_boolean:
-			objs[i] = parse_bool(data[pos++]);
+			objs[i] = parse_bool(*data++);
 			break;
 
 		case obj_string: {
-			int len = read_uint32(&data[pos]);
-			pos += 4;
-			char *str = calloc(len+1, sizeof(char));
-			memcpy(str, &data[pos], len);
+			size_t len = read_uint32(data);
+			data += 4;
+			char *str = string(len);
+			memcpy(str, data, len);
+			data += len;
 			objs[i] = new_string_obj(str, len);
 			break;
 		}
 
 		case obj_function: {
-			int num_params = read_uint32(&data[pos]);
-			int num_locals = read_uint32(&data[pos+4]);
-			int ilen = read_uint32(&data[pos+8]);
-			pos += 12;
+			size_t num_params = read_uint32(data);
+			data += 4;
+			size_t num_locals = read_uint32(data);
+			data += 4;
+			size_t ilen = read_uint32(data);
+			data += 4;
 
 			uint8_t *inst = malloc(sizeof(uint8_t) * ilen);
-			memcpy(inst, &data[pos], ilen);
-			pos += ilen;
-			pos += skip_bookmarks(&data[pos]);
-			// TODO: also decode bookmarks.
-
-			objs[i] = new_function_obj(inst, ilen, num_locals, num_params);
+			memcpy(inst, data, ilen);
+			data += ilen;
+			size_t blen = read_uint32(data);
+			data += 4;
+			struct bookmark *bookmarks = malloc(sizeof(struct bookmark) * blen);
+			data = read_bookmarks(data, bookmarks, blen);
+			objs[i] = new_function_obj(inst, ilen, num_locals, num_params, bookmarks, blen);
 			break;
 		}
 
 		default:
-			return -1;
+			puts("decoder: unsupported type");
+			return NULL;
 		}
 	}
-	return pos;
+	return data;
 }
 
 struct bytecode tau_decode(uint8_t *data, size_t len) {
@@ -101,22 +122,23 @@ struct bytecode tau_decode(uint8_t *data, size_t len) {
 		return bc;
 	}
 
-	int pos = 0;
-	bc.len = read_uint32(data);
+	// Decode instructions.
+	bc.len = read_uint32(data); data += 4;
 	bc.insts = malloc(sizeof(uint8_t) * bc.len);
-	memcpy(bc.insts, &data[4], bc.len);
-	pos += 4 + bc.len;
+	memcpy(bc.insts, data, bc.len);
+	data += bc.len;
 
-	bc.nconsts = read_uint32(&data[pos]);
+	// Decode constants.
+	bc.nconsts = read_uint32(data); data += 4;
 	bc.consts = malloc(sizeof(struct object) * bc.nconsts);
-	pos += 4;
-	int obj_end = decode_objects(bc.consts, &data[pos], bc.nconsts);
-	if (obj_end == -1) {
+	if ((data = decode_objects(data, bc.consts, bc.nconsts)) == NULL) {
 		return (struct bytecode) {0};
 	}
-	pos += obj_end;
 
-	// TODO: also decode bookmarks.
+	// Decode bookmarks.
+	bc.bklen = read_uint32(data); data += 4;
+	bc.bookmarks = malloc(sizeof(struct bookmark) * bc.bklen);
+	data = read_bookmarks(data, bc.bookmarks, bc.bklen);
 
 	return bc;
 }

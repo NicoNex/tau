@@ -10,10 +10,10 @@ type CVM struct {
 	vm *C.struct_vm
 }
 
-func New(data []byte) CVM {
+func New(file string, data []byte) CVM {
 	d := (*C.uchar)(unsafe.Pointer(&data[0]))
 	bcode := C.tau_decode(d, C.ulong(len(data)))
-	return CVM{C.new_vm(bcode)}
+	return CVM{C.new_vm(C.CString(file), bcode)}
 }
 
 func (cvm CVM) Run() {

@@ -46,22 +46,12 @@ struct state new_state() {
 	};
 }
 
-struct vm *new_vm(struct bytecode bytecode) {
+struct vm *new_vm(char *file, struct bytecode bc) {
 	struct vm *vm = calloc(1, sizeof(struct vm));
-	vm->state.consts = bytecode.consts;
+	vm->file = file;
+	vm->state.consts = bc.consts;
 
-	struct object fn = new_function_obj(bytecode.insts, bytecode.len, 0, 0);
-	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
-	vm->frames[0] = new_frame(cl, 0);
-
-	return vm;
-}
-
-struct vm *new_vm_with_state(struct bytecode bytecode, struct state state) {
-	struct vm *vm = calloc(1, sizeof(struct vm));
-	vm->state = state;
-
-	struct object fn = new_function_obj(bytecode.insts, bytecode.len, 0, 0);
+	struct object fn = new_function_obj(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
 	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
 	vm->frames[0] = new_frame(cl, 0);
 
@@ -69,15 +59,65 @@ struct vm *new_vm_with_state(struct bytecode bytecode, struct state state) {
 }
 
 void vm_dispose(struct vm *vm) {
+	free(vm->file);
 	free(vm);
+}
+
+static struct bookmark *vm_get_bookmark(struct vm * restrict vm) {
+	struct frame *frame = vm_current_frame(vm);
+	uint32_t offset = frame->ip - frame->start;
+	size_t blen = frame->cl.data.fn->bklen;
+	struct bookmark *bookmarks = frame->cl.data.fn->bookmarks;
+
+	if (blen > 0) {
+		for (int i = 0; i < blen; i++) {
+			struct bookmark *b = &bookmarks[i];
+			if (offset <= b->offset) {
+				return b;
+			}
+		}
+	}
+	return NULL;
+}
+
+static void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
+	struct bookmark *b = vm_get_bookmark(vm);
+
+	if (b == NULL) {
+		va_list args;
+		va_start(args, fmt);
+		vprintf(fmt, args);
+		va_end(args);
+		exit(1);
+	}
+
+	char msg[512];
+	va_list args;
+	va_start(args, fmt);
+	vsnprintf(msg, 512, fmt, args);
+	va_end(args);
+
+	char arrow[b->pos+2];
+	memset(arrow, ' ', b->pos+2);
+	arrow[b->pos] = '^';
+	arrow[b->pos+1] = '\0';
+
+	printf(
+		"error in file %s at line %d:\n    %s\n    %s\n%s\n",
+		vm->file,
+		b->lineno,
+		b->line,
+		arrow,
+		msg
+	);
+	exit(1);
 }
 
 static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, uint32_t num_free) {
 	struct object cnst = vm->state.consts[const_idx];
 
 	if (cnst.type != obj_function) {
-		printf("vm_push_closure: expected closure, but got %d\n", cnst.type);
-		exit(1);
+		vm_errorf(vm, "not a function %s", object_str(cnst));
 	}
 	
 	struct object *free = malloc(sizeof(struct object) * num_free);
@@ -128,14 +168,22 @@ static inline uint32_t is_truthy(struct object * restrict o) {
 	}
 }
 
-static inline void unsupported_operator_error(char *op, struct object *l, struct object *r) {
-	printf("unsupported operator '%s' for types %s and %s\n", op, otype_str(l->type), otype_str(r->type));
-	exit(1);
+static inline void unsupported_operator_error(struct vm * restrict vm, char *op, struct object *l, struct object *r) {
+	vm_errorf(
+		vm,
+		"unsupported operator '%s' for types %s and %s\n",
+		otype_str(l->type),
+		otype_str(r->type)
+	);
 }
 
-static inline void unsupported_prefix_operator_error(char *op, struct object *o) {
-	printf("unsupported operator '%s' for type %s\n", op, otype_str(o->type));
-	exit(1);
+static inline void unsupported_prefix_operator_error(struct vm * restrict vm, char *op, struct object *o) {
+	vm_errorf(
+		vm,
+		"unsupported operator '%s' for type %s\n",
+		op,
+		otype_str(o->type)
+	);
 }
 
 static inline void vm_exec_add(struct vm * restrict vm) {
@@ -157,7 +205,7 @@ static inline void vm_exec_add(struct vm * restrict vm) {
 		vm_stack_pop_ignore(vm);
 		vm_stack_push(vm, new_string_obj(str, slen));
 	} else {
-		unsupported_operator_error("+", left, right);
+		unsupported_operator_error(vm, "+", left, right);
 	}
 }
 
@@ -173,7 +221,7 @@ static inline void vm_exec_sub(struct vm * restrict vm) {
 		left->data.f = l + r;
 		left->type = obj_float;
 	} else {
-		unsupported_operator_error("-", left, right);
+		unsupported_operator_error(vm, "-", left, right);
 	}
 }
 
@@ -189,7 +237,7 @@ static inline void vm_exec_mul(struct vm * restrict vm) {
 		left->data.f = l * r;
 		left->type = obj_float;
 	} else {
-		unsupported_operator_error("*", left, right);
+		unsupported_operator_error(vm, "*", left, right);
 	}
 }
 
@@ -203,7 +251,7 @@ static inline void vm_exec_div(struct vm * restrict vm) {
 		left->data.i = l / r;
 		left->type = obj_float;
 	} else {
-		unsupported_operator_error("/", left, right);
+		unsupported_operator_error(vm, "/", left, right);
 	}
 }
 
@@ -212,7 +260,7 @@ static inline void vm_exec_mod(struct vm * restrict vm) {
 	struct object *left = unwrap(&vm_stack_peek(vm));
 
 	if (!M_ASSERT(left, right, obj_integer)) {
-		unsupported_operator_error("%", left, right);
+		unsupported_operator_error(vm, "%", left, right);
 	}
 	left->data.i %= right->data.i;
 }
@@ -236,7 +284,7 @@ static inline void vm_exec_bw_and(struct vm * restrict vm) {
 	struct object *left = unwrap(&vm_stack_peek(vm));
 
 	if (!M_ASSERT(left, right, obj_integer)) {
-		unsupported_operator_error("&", left, right);
+		unsupported_operator_error(vm, "&", left, right);
 	}
 	left->data.i &= right->data.i;
 }
@@ -246,7 +294,7 @@ static inline void vm_exec_bw_or(struct vm * restrict vm) {
 	struct object *left = unwrap(&vm_stack_peek(vm));
 
 	if (!M_ASSERT(left, right, obj_integer)) {
-		unsupported_operator_error("|", left, right);
+		unsupported_operator_error(vm, "|", left, right);
 	}
 	left->data.i |= right->data.i;
 }
@@ -256,7 +304,7 @@ static inline void vm_exec_bw_xor(struct vm * restrict vm) {
 	struct object *left = unwrap(&vm_stack_peek(vm));
 
 	if (!M_ASSERT(left, right, obj_integer)) {
-		unsupported_operator_error("^", left, right);
+		unsupported_operator_error(vm, "^", left, right);
 	}
 	left->data.i ^= right->data.i;
 }
@@ -265,7 +313,7 @@ static inline void vm_exec_bw_not(struct vm * restrict vm) {
 	struct object *right = unwrap(&vm_stack_peek(vm));
 
 	if (!ASSERT(right, obj_integer)) {
-		unsupported_prefix_operator_error("~", right);
+		unsupported_prefix_operator_error(vm, "~", right);
 	}
 	right->data.i = ~right->data.i;
 }
@@ -275,7 +323,7 @@ static inline void vm_exec_bw_lshift(struct vm * restrict vm) {
 	struct object *left = unwrap(&vm_stack_peek(vm));
 
 	if (!M_ASSERT(left, right, obj_integer)) {
-		unsupported_operator_error("<<", left, right);
+		unsupported_operator_error(vm, "<<", left, right);
 	}
 	left->data.i <<= right->data.i;
 }
@@ -285,7 +333,7 @@ static inline void vm_exec_bw_rshift(struct vm * restrict vm) {
 	struct object *left = unwrap(&vm_stack_peek(vm));
 
 	if (!M_ASSERT(left, right, obj_integer)) {
-		unsupported_operator_error(">>", left, right);
+		unsupported_operator_error(vm, ">>", left, right);
 	}
 	left->data.i >>= right->data.i;
 }
@@ -360,7 +408,7 @@ static inline void vm_exec_greater_than(struct vm * restrict vm) {
 		vm_stack_pop_ignore(vm);
 		vm_stack_push(vm, parse_bool(strcmp(l, r) > 0));
 	} else {
-		unsupported_operator_error(">", left, right);
+		unsupported_operator_error(vm, ">", left, right);
 	}
 }
 
@@ -382,7 +430,7 @@ static inline void vm_exec_greater_than_eq(struct vm * restrict vm) {
 		vm_stack_pop_ignore(vm);
 		vm_stack_push(vm, parse_bool(strcmp(l, r) >= 0));
 	} else {
-		unsupported_operator_error(">", left, right);
+		unsupported_operator_error(vm, ">", left, right);
 	}
 }
 
@@ -397,7 +445,7 @@ static inline void vm_exec_minus(struct vm * restrict vm) {
 		right->data.f = -right->data.f;
 		break;
 	default:
-		unsupported_prefix_operator_error("-", right);
+		unsupported_prefix_operator_error(vm, "-", right);
 		break;
 	}
 }

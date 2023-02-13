@@ -71,6 +71,10 @@ struct object new_float_obj(double val) {
 
 // ============================= FUNCTION OBJECT =============================
 static void dispose_function_obj(struct object o) {
+	for (int i = 0; i < o.data.fn->bklen; i++) {
+		free(o.data.fn->bookmarks[i].line);
+	}
+	free(o.data.fn->bookmarks);
 	free(o.data.fn->instructions);
 	free(o.data.fn);
 }
@@ -82,12 +86,14 @@ static char *function_str(struct object o) {
 	return str;
 }
 
-struct object new_function_obj(uint8_t *insts, size_t len, int num_params, int num_locals) {
+struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_params, uint32_t num_locals, struct bookmark *bmarks, uint32_t bklen) {
 	struct function *fn = malloc(sizeof(struct function));
 	fn->instructions = insts;
 	fn->len = len;
 	fn->num_locals = num_locals;
 	fn->num_params = num_params;
+	fn->bookmarks = bmarks;
+	fn->bklen = bklen;
 
 	return (struct object) {
 		.data.fn = fn,
@@ -185,7 +191,7 @@ static char *boolean_str(struct object o) {
 	return str;
 }
 
-struct object parse_bool(int b) {
+struct object parse_bool(uint32_t b) {
 	return b ? true_obj : false_obj;
 }
 

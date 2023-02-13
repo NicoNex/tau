@@ -18,6 +18,8 @@ struct bytecode {
 	struct object *consts;
 	size_t len;
 	size_t nconsts;
+	size_t bklen;
+	struct bookmark *bookmarks;
 };
 
 struct frame {
@@ -40,11 +42,11 @@ struct vm {
 	struct state state;
 	uint32_t sp;
 	uint32_t frame_idx;
+	char *file;
 };
 
 struct state new_state();
-struct vm *new_vm(struct bytecode bytecode);
-struct vm *new_vm_with_state(struct bytecode bytecode, struct state state);
+struct vm *new_vm(char *file, struct bytecode bytecode);
 int vm_run(struct vm * restrict vm);
 struct object vm_last_popped_stack_elem(struct vm * restrict vm);
 void vm_dispose(struct vm *vm);

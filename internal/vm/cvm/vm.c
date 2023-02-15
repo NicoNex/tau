@@ -66,14 +66,14 @@ void vm_dispose(struct vm *vm) {
 static struct bookmark *vm_get_bookmark(struct vm * restrict vm) {
 	struct frame *frame = vm_current_frame(vm);
 	uint32_t offset = frame->ip - frame->start;
-	size_t blen = frame->cl.data.fn->bklen;
-	struct bookmark *bookmarks = frame->cl.data.fn->bookmarks;
+	size_t blen = frame->cl.data.cl->fn->bklen;
+	struct bookmark *bookmarks = frame->cl.data.cl->fn->bookmarks;
 
 	if (blen > 0) {
 		for (int i = 0; i < blen; i++) {
-			struct bookmark *b = &bookmarks[i];
-			if (offset <= b->offset) {
-				return b;
+			struct bookmark b = bookmarks[i];
+			if (offset <= b.offset) {
+				return &bookmarks[i];
 			}
 		}
 	}
@@ -114,10 +114,10 @@ static void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 }
 
 static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, uint32_t num_free) {
-	struct object cnst = vm->state.consts[const_idx];
+	struct object fn = vm->state.consts[const_idx];
 
-	if (cnst.type != obj_function) {
-		vm_errorf(vm, "not a function %s", object_str(cnst));
+	if (fn.type != obj_function) {
+		vm_errorf(vm, "not a function %s", object_str(fn));
 	}
 	
 	struct object *free = malloc(sizeof(struct object) * num_free);
@@ -125,7 +125,7 @@ static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, 
 		free[i] = vm->stack[vm->sp-num_free+i];
 	}
 
-	struct object cl = new_closure_obj(cnst.data.fn, free, num_free);
+	struct object cl = new_closure_obj(fn.data.fn, free, num_free);
 	vm->sp -= num_free;
 	vm_stack_push(vm, cl);
 }
@@ -171,7 +171,8 @@ static inline uint32_t is_truthy(struct object * restrict o) {
 static inline void unsupported_operator_error(struct vm * restrict vm, char *op, struct object *l, struct object *r) {
 	vm_errorf(
 		vm,
-		"unsupported operator '%s' for types %s and %s\n",
+		"unsupported operator '%s' for types %s and %s",
+		op,
 		otype_str(l->type),
 		otype_str(r->type)
 	);
@@ -180,7 +181,7 @@ static inline void unsupported_operator_error(struct vm * restrict vm, char *op,
 static inline void unsupported_prefix_operator_error(struct vm * restrict vm, char *op, struct object *o) {
 	vm_errorf(
 		vm,
-		"unsupported operator '%s' for type %s\n",
+		"unsupported operator '%s' for type %s",
 		op,
 		otype_str(o->type)
 	);
@@ -470,8 +471,7 @@ static inline void vm_call_closure(struct vm * restrict vm, struct object *cl, s
 	int num_params = cl->data.cl->fn->num_params;
 
 	if (num_params != numargs) {
-		printf("wrong number of arguments: expected %d, got %lu\n", num_params, numargs);
-		exit(1);
+		vm_errorf(vm, "wrong number of arguments: expected %d, got %lu", num_params, numargs);
 	}
 
 	struct frame frame = new_frame(*cl, vm->sp-numargs);
@@ -486,11 +486,9 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 	case obj_closure:
 		return vm_call_closure(vm, o, numargs);
 	case obj_builtin:
-		puts("calling builtins is not yet supported");
-		exit(1);
+		vm_errorf(vm, "calling builtins is not yet supported");
 	default:
-		puts("calling non-function");
-		exit(1);
+		vm_errorf(vm, "calling non-function");
 	}
 }
 

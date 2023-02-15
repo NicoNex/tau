@@ -229,21 +229,20 @@ struct object null_obj = (struct object) {
 char *otype_str(enum obj_type t) {
 	static char *strings[] = {
 		"null",
-		"error",
-		"integer",
+		"bool",
+		"int",
 		"float",
-		"boolean",
 		"string",
-		"bytes",
-		"object",
-		"function",
-		"closure",
-		"builtin",
+		"error",
 		"list",
 		"map",
+		"builtin",
+		"function",
+		"closure",
+		"object",
 		"pipe",
-		"class",
-		"getsetter"
+		"bytes",
+		"getsetter",
 	};
 
 	return strings[t];

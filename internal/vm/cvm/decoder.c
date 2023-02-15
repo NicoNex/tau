@@ -15,8 +15,7 @@ static inline uint64_t read_uint64(uint8_t *ins) {
 	return ((uint64_t) read_uint32(ins) << 32) | ((uint64_t) read_uint32(&ins[4]));
 }
 
-static inline __attribute__((always_inline))
-char *string(size_t len) {
+static inline char *string(size_t len) {
 	char *s = malloc(sizeof(char) * (len+1));
 	s[len] = '\0';
 
@@ -90,12 +89,9 @@ static uint8_t *decode_objects(uint8_t *data, struct object *objs, size_t n) {
 		}
 
 		case obj_function: {
-			size_t num_params = read_uint32(data);
-			data += 4;
-			size_t num_locals = read_uint32(data);
-			data += 4;
-			size_t ilen = read_uint32(data);
-			data += 4;
+			size_t num_params = read_uint32(data); data += 4;
+			size_t num_locals = read_uint32(data); data += 4;
+			size_t ilen = read_uint32(data); data += 4;
 
 			uint8_t *inst = malloc(sizeof(uint8_t) * ilen);
 			memcpy(inst, data, ilen);

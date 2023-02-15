@@ -5,19 +5,19 @@
 
 enum obj_type {
 	obj_null,
-	obj_error,
+	obj_boolean,
 	obj_integer,
 	obj_float,
-	obj_boolean,
 	obj_string,
-	obj_bytes,
-	obj_object,
-	obj_function,
-	obj_closure,
-	obj_builtin,
+	obj_error,
 	obj_list,
 	obj_map,
+	obj_builtin,
+	obj_function,
+	obj_closure,
+	obj_object,
 	obj_pipe,
+	obj_bytes,
 	obj_getsetter,
 };
 

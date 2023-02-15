@@ -49,19 +49,19 @@ type Type int
 
 const (
 	NullType     Type = iota // null
-	ErrorType                // error
+	BoolType                 // bool
 	IntType                  // int
 	FloatType                // float
-	BoolType                 // bool
 	StringType               // string
-	BytesType                // bytes
-	ObjectType               // object
-	FunctionType             // function
-	ClosureType              // closure
-	BuiltinType              // builtin
+	ErrorType                // error
 	ListType                 // list
 	MapType                  // map
+	BuiltinType              // builtin
+	FunctionType             // function
+	ClosureType              // closure
+	ObjectType               // object
 	PipeType                 // pipe
+	BytesType                // bytes
 	ReturnType               // return
 	ContinueType             // continue
 	BreakType                // break

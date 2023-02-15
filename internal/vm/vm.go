@@ -906,7 +906,7 @@ func (vm *VM) Run() (err error) {
 			vm.currentFrame().ip += 2
 
 			list := vm.buildList(vm.sp-nElements, vm.sp)
-			vm.sp = vm.sp - nElements
+			vm.sp -= nElements
 			err = vm.push(list)
 
 		case code.OpMap:

@@ -131,12 +131,14 @@ static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, 
 }
 
 static inline void vm_push_list(struct vm * restrict vm, uint32_t start, uint32_t end) {
-	struct object *list = malloc(sizeof(struct object) * (end - start));
+	uint32_t len = end - start;
+	struct object *list = malloc(sizeof(struct object) * len);
 
 	for (uint32_t i = start; i < end; i++) {
 		list[i-start] = vm->stack[i];
 	}
-	vm_stack_push(vm, new_list_obj(list, end-start));
+	vm->sp -= len;
+	vm_stack_push(vm, new_list_obj(list, len));
 }
 
 static inline struct object *unwrap(struct object *o) {
@@ -576,12 +578,10 @@ int vm_run(struct vm * restrict vm) {
 		DISPATCH();
 	}
 
-	// TODO: fix this.
 	TARGET_LIST: {
 		uint32_t len = read_uint16(frame->ip);
 		frame->ip += 2;
 		vm_push_list(vm, vm->sp-len, vm->sp);
-		vm->sp -= len;
 		DISPATCH();
 	}
 

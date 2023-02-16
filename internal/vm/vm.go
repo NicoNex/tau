@@ -228,16 +228,18 @@ func (vm *VM) execLoadModule() error {
 
 func (vm *VM) pushInterpolated(strIdx, numSub int) error {
 	var (
-		str    = vm.Consts[strIdx].String()
-		substr = make([]any, numSub)
+		buf strings.Builder
+		str = vm.Consts[strIdx].String()
 	)
 
-	for i := numSub - 1; i >= 0; i-- {
-		substr[i] = vm.pop()
+	for _, c := range []byte(str) {
+		if c == 0xff {
+			buf.WriteString(vm.pop().String())
+			continue
+		}
+		buf.WriteByte(c)
 	}
-
-	str = fmt.Sprintf(str, substr...)
-	return vm.push(obj.String(str))
+	return vm.push(obj.String(buf.String()))
 }
 
 func (vm *VM) execDot() error {

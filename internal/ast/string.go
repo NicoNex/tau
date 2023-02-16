@@ -264,7 +264,7 @@ func (i *interpolator) nodes() ([]Node, string, error) {
 			}
 
 			nodes = append(nodes, tree)
-			i.WriteString("%v")
+			i.WriteByte(0xff)
 			continue
 		} else if r == '}' {
 			if i.peek() != '}' {

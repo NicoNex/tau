@@ -141,6 +141,43 @@ static inline void vm_push_list(struct vm * restrict vm, uint32_t start, uint32_
 	vm_stack_push(vm, new_list_obj(list, len));
 }
 
+static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_idx, uint32_t num_args) {
+	struct object o = vm->state.consts[str_idx];
+	char *str = o.data.str;
+	char *subs[num_args];
+	uint32_t len_table[num_args];
+	uint32_t sub_len = 0;
+
+	for (uint32_t i = 0; i < num_args; i++) {
+		char *s = object_str(vm_stack_pop(vm));
+		subs[i] = s;
+		uint32_t len = strlen(s);
+		len_table[i] = len;
+		sub_len += len;
+	}
+
+	uint32_t len = o.len + sub_len - num_args + 1;
+	char *ret = malloc(sizeof(char) * len);
+	ret[len-1] = '\0';
+	uint32_t retidx = 0;
+	uint32_t subidx = 0;
+
+	for (uint32_t i = 0; str[i] != '\0'; i++) {
+		char c = str[i];
+
+		if (c == 0xff) {
+			strncpy(&ret[retidx], subs[subidx], len_table[subidx]);
+			retidx += len_table[subidx];
+			free(subs[subidx]);
+			subidx++;
+			continue;
+		}
+		ret[retidx++] = c;
+	}
+
+	vm_stack_push(vm, new_string_obj(ret, len));
+}
+
 static inline struct object *unwrap(struct object *o) {
 	if (o->type == obj_getsetter) {
 		// TODO: fill this.
@@ -798,7 +835,10 @@ int vm_run(struct vm * restrict vm) {
 	}
 
 	TARGET_INTERPOLATE: {
-		UNHANDLED();
+		uint32_t str_idx = read_uint16(frame->ip);
+		uint32_t num_args = read_uint16(frame->ip+2);
+		frame->ip += 4;
+		vm_push_interpolated(vm, str_idx, num_args);
 		DISPATCH();
 	}
 

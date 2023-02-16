@@ -162,17 +162,15 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 	uint32_t retidx = 0;
 	uint32_t subidx = 0;
 
-	for (uint32_t i = 0; str[i] != '\0'; i++) {
-		char c = str[i];
-
-		if (c == 0xff) {
+	for (char *s = str; *s != '\0'; s++) {
+		if (*s == 0xff) {
 			strncpy(&ret[retidx], subs[subidx], len_table[subidx]);
 			retidx += len_table[subidx];
 			free(subs[subidx]);
 			subidx++;
 			continue;
 		}
-		ret[retidx++] = c;
+		ret[retidx++] = *s;
 	}
 
 	vm_stack_push(vm, new_string_obj(ret, len));

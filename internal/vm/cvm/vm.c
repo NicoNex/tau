@@ -162,7 +162,7 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 	uint32_t retidx = 0;
 	uint32_t subidx = 0;
 
-	for (char *s = str; *s != '\0'; s++) {
+	for (uint8_t *s = (uint8_t *) str; *s != '\0'; s++) {
 		if (*s == 0xff) {
 			strncpy(&ret[retidx], subs[subidx], len_table[subidx]);
 			retidx += len_table[subidx];

@@ -517,14 +517,8 @@ static inline void vm_call_closure(struct vm * restrict vm, struct object *cl, s
 }
 
 static inline void vm_call_builtin(struct vm * restrict vm, builtin fn, size_t numargs) {
-	struct object *args = malloc(sizeof(struct object) * numargs);
+	struct object res = fn(&vm->stack[vm->sp-numargs], numargs);
 
-	for (int i = numargs-1; i >= 0; i--) {
-		args[i] = vm_stack_pop(vm);
-	}
-
-	struct object res = fn(args, numargs);
-	free(args);
 	vm->sp -= numargs - 1;
 	vm_stack_push(vm, res);
 }

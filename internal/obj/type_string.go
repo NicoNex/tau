@@ -12,11 +12,11 @@ func _() {
 	_ = x[BoolType-1]
 	_ = x[IntType-2]
 	_ = x[FloatType-3]
-	_ = x[StringType-4]
-	_ = x[ErrorType-5]
-	_ = x[ListType-6]
-	_ = x[MapType-7]
-	_ = x[BuiltinType-8]
+	_ = x[BuiltinType-4]
+	_ = x[StringType-5]
+	_ = x[ErrorType-6]
+	_ = x[ListType-7]
+	_ = x[MapType-8]
 	_ = x[FunctionType-9]
 	_ = x[ClosureType-10]
 	_ = x[ObjectType-11]
@@ -27,9 +27,9 @@ func _() {
 	_ = x[BreakType-16]
 }
 
-const _Type_name = "nullboolintfloatstringerrorlistmapbuiltinfunctionclosureobjectpipebytesreturncontinuebreak"
+const _Type_name = "nullboolintfloatbuiltinstringerrorlistmapfunctionclosureobjectpipebytesreturncontinuebreak"
 
-var _Type_index = [...]uint8{0, 4, 8, 11, 16, 22, 27, 31, 34, 41, 49, 56, 62, 66, 71, 77, 85, 90}
+var _Type_index = [...]uint8{0, 4, 8, 11, 16, 23, 29, 34, 38, 41, 49, 56, 62, 66, 71, 77, 85, 90}
 
 func (i Type) String() string {
 	if i < 0 || i >= Type(len(_Type_index)-1) {

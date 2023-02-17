@@ -52,11 +52,11 @@ const (
 	BoolType                 // bool
 	IntType                  // int
 	FloatType                // float
+	BuiltinType              // builtin
 	StringType               // string
 	ErrorType                // error
 	ListType                 // list
 	MapType                  // map
-	BuiltinType              // builtin
 	FunctionType             // function
 	ClosureType              // closure
 	ObjectType               // object

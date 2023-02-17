@@ -148,7 +148,7 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 	uint32_t len_table[num_args];
 	uint32_t sub_len = 0;
 
-	for (uint32_t i = 0; i < num_args; i++) {
+	for (int i = num_args-1; i >= 0; i--) {
 		char *s = object_str(vm_stack_pop(vm));
 		subs[i] = s;
 		uint32_t len = strlen(s);
@@ -516,6 +516,19 @@ static inline void vm_call_closure(struct vm * restrict vm, struct object *cl, s
 	vm->sp = frame.base_ptr + cl->data.cl->fn->num_locals;
 }
 
+static inline void vm_call_builtin(struct vm * restrict vm, builtin fn, size_t numargs) {
+	struct object *args = malloc(sizeof(struct object) * numargs);
+
+	for (int i = numargs-1; i >= 0; i--) {
+		args[i] = vm_stack_pop(vm);
+	}
+
+	struct object res = fn(args, numargs);
+	free(args);
+	vm->sp -= numargs - 1;
+	vm_stack_push(vm, res);
+}
+
 static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 	struct object *o = unwrap(&vm->stack[vm->sp-1-numargs]);
 
@@ -523,7 +536,7 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 	case obj_closure:
 		return vm_call_closure(vm, o, numargs);
 	case obj_builtin:
-		vm_errorf(vm, "calling builtins is not yet supported");
+		return vm_call_builtin(vm, o->data.builtin, numargs);
 	default:
 		vm_errorf(vm, "calling non-function");
 	}
@@ -790,38 +803,39 @@ int vm_run(struct vm * restrict vm) {
 	}
 
 	TARGET_GET_GLOBAL: {
-		int global_idx = read_uint16(frame->ip);
+		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
 		vm_stack_push(vm, vm->state.globals[global_idx]);
 		DISPATCH();
 	}
 
 	TARGET_SET_GLOBAL: {
-		int global_idx = read_uint16(frame->ip);
+		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
 		vm->state.globals[global_idx] = vm_stack_peek(vm);
 		DISPATCH();
 	}
 
 	TARGET_GET_LOCAL: {
-		int local_idx = read_uint8(frame->ip++);
+		uint32_t local_idx = read_uint8(frame->ip++);
 		vm_stack_push(vm, vm->stack[frame->base_ptr+local_idx]);
 		DISPATCH();
 	}
 
 	TARGET_SET_LOCAL: {
-		int local_idx = read_uint8(frame->ip++);
+		uint32_t local_idx = read_uint8(frame->ip++);
 		vm->stack[frame->base_ptr+local_idx] = vm_stack_peek(vm);
 		DISPATCH();
 	}
 
 	TARGET_GET_BUILTIN: {
-		UNHANDLED();
+		uint32_t idx = read_uint8(frame->ip++);
+		vm_stack_push(vm, new_builtin_obj(builtins[idx]));
 		DISPATCH();
 	}
 
 	TARGET_GET_FREE: {
-		int free_idx = read_uint8(frame->ip++);
+		uint32_t free_idx = read_uint8(frame->ip++);
 		struct object cl = frame->cl;
 		vm_stack_push(vm, cl.data.cl->free[free_idx]);
 		DISPATCH();

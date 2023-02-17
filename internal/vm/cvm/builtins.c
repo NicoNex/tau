@@ -1,0 +1,175 @@
+#include <stdio.h>
+#include <stdint.h>
+#include <stdarg.h>
+#include <stdlib.h>
+#include <string.h>
+#include <errno.h>
+
+#include "obj.h"
+
+#define BUILTIN(name) static struct object _##name(struct object *args, size_t len)
+
+static struct object errorf(char *fmt, ...) {
+	char *msg = malloc(sizeof(char) * 256);
+	msg[255] = '\n';
+
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(msg, 256, fmt, ap);
+	va_end(ap);
+
+	return new_error_obj(msg, strlen(msg));
+}
+
+BUILTIN(len) {
+	if (len != 1) {
+		return errorf("len: wrong number of arguments, expected 1, got %lu", len);
+	}
+
+	switch (args[0].type) {
+	case obj_list:
+	case obj_string:
+	case obj_bytes:
+	case obj_error:
+		return new_integer_obj(args[0].len);
+	default:
+		return errorf("len: object of type \"%s\" has no length", otype_str(args[0].type));
+	}
+}
+
+BUILTIN(println) {
+	for (uint32_t i = 0; i < len; i++) {
+		char *s = object_str(args[i]);
+		fputs(s, stdout);
+		free(s);
+		if (i < len-1) putc(' ', stdout);
+	}
+	putc('\n', stdout);
+	return null_obj;
+}
+
+BUILTIN(print) {
+	for (uint32_t i = 0; i < len; i++) {
+		char *s = object_str(args[i]);
+		fputs(s, stdout);
+		free(s);
+		if (i < len-1) putc(' ', stdout);
+	}
+	return null_obj;
+}
+
+BUILTIN(input) {
+	return errorf("input: unimplemented");
+}
+
+BUILTIN(string) {
+	if (len != 1) {
+		return errorf("string: wrong number of arguments, expected 1, got %lu", len);
+	}
+
+	char *s = object_str(args[0]);
+	return new_string_obj(s, strlen(s));
+}
+
+BUILTIN(error) {
+	if (len != 1) {
+		return errorf("error: wrong number of arguments, expected 1, got %lu", len);
+	} else if (args[0].type != obj_string) {
+		return errorf("error: argument must be a string, got %s", otype_str(args[0].type));
+	}
+	return new_error_obj(strdup(args[0].data.str), args[0].len);
+}
+
+BUILTIN(type) {
+	if (len != 1) {
+		return errorf("type: wrong number of arguments, expected 1, got %lu", len);
+	}
+
+	char *s = otype_str(args[0].type);
+	return new_string_obj(strdup(s), strlen(s));
+}
+
+BUILTIN(int_b) {
+	if (len != 1) {
+		return errorf("int: wrong number of arguments, expected 1, got %lu", len);
+	}
+
+	switch (args[0].type) {
+	case obj_integer:
+		return args[0];
+	case obj_float:
+		args[0].data.i = (int64_t) args[0].data.f;
+		args[0].type = obj_integer;
+		return args[0];
+	case obj_string: {
+		errno = 0;
+		int64_t i = strtol(args[0].data.str, NULL, 10);
+		if (errno != EINVAL && errno != ERANGE) {
+			return new_integer_obj(i);
+		}
+	}
+	default: {
+		char *s = object_str(args[0]);
+		struct object err = errorf("int: %s is not a number", s);
+		free(s);
+		return err;
+	}
+	}
+}
+
+BUILTIN(float_b) {
+	if (len != 1) {
+		return errorf("int: wrong number of arguments, expected 1, got %lu", len);
+	}
+
+	switch (args[0].type) {
+	case obj_integer:
+		args[0].data.f = (double) args[0].data.i;
+		args[0].type = obj_float;
+		return args[0];
+	case obj_float:
+		return args[0];
+	case obj_string: {
+		errno = 0;
+		double f = strtod(args[0].data.str, NULL);
+		if (errno != ERANGE) {
+			return new_float_obj(f);
+		}
+	}
+	default: {
+		char *s = object_str(args[0]);
+		struct object err = errorf("float: %s is not a number", s);
+		free(s);
+		return err;
+	}
+	}
+}
+
+const builtin builtins[NUM_BUILTINS] = {
+	_len,
+	_println,
+	_print,
+	_input,
+	_string,
+	_error,
+	_type,
+	_int_b,
+	_float_b,
+	NULL, // exit
+	NULL, // append
+	NULL, // push
+	NULL, // range
+	NULL, // new
+	NULL, // failed
+	NULL, // plugin
+	NULL, // pipe
+	NULL, // send
+	NULL, // recv
+	NULL, // close
+	NULL, // hex
+	NULL, // oct
+	NULL, // bin
+	NULL, // slice
+	NULL, // open
+	NULL // bytes
+};

@@ -3,16 +3,18 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#define NUM_BUILTINS 26
+
 enum obj_type {
 	obj_null,
 	obj_boolean,
 	obj_integer,
 	obj_float,
+	obj_builtin,
 	obj_string,
 	obj_error,
 	obj_list,
 	obj_map,
-	obj_builtin,
 	obj_function,
 	obj_closure,
 	obj_object,
@@ -53,6 +55,7 @@ union data {
 	struct object *list;
 	struct function *fn;
 	struct closure *cl;
+	struct object (*builtin)(struct object *args, size_t len);
 };
 
 struct object {
@@ -70,6 +73,7 @@ struct object new_integer_obj(int64_t val);
 struct object new_error_obj(char *msg, size_t len);
 struct object new_string_obj(char *str, size_t len);
 struct object new_float_obj(double val);
+struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len));
 struct object new_list_obj(struct object *list, size_t len);
 struct object parse_bool(uint32_t b);
 
@@ -80,3 +84,6 @@ void print_obj(struct object o);
 extern struct object true_obj;
 extern struct object false_obj;
 extern struct object null_obj;
+
+typedef struct object (*builtin)(struct object *args, size_t len);
+extern const builtin builtins[NUM_BUILTINS];

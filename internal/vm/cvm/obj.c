@@ -50,6 +50,37 @@ static char *function_str(struct object o) {
 	return str;
 }
 
+struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_params, uint32_t num_locals, struct bookmark *bmarks, uint32_t bklen) {
+	struct function *fn = malloc(sizeof(struct function));
+	fn->instructions = insts;
+	fn->len = len;
+	fn->num_locals = num_locals;
+	fn->num_params = num_params;
+	fn->bookmarks = bmarks;
+	fn->bklen = bklen;
+
+	return (struct object) {
+		.data.fn = fn,
+		.type = obj_function,
+		.dispose = dispose_function_obj,
+		.string = function_str
+	};
+}
+
+// ============================= BUILTIN OBJECT =============================
+static char *builtin_str(struct object o) {
+	return strdup("<builtin function>");
+}
+
+struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len)) {
+	return (struct object) {
+		.data.builtin = builtin,
+		.type = obj_builtin,
+		.dispose = dummy_dispose,
+		.string = builtin_str
+	};
+}
+
 // ============================= ERROR OBJECT =============================
 static void dispose_error_obj(struct object o) {
 	free(o.data.str);
@@ -83,23 +114,6 @@ struct object new_float_obj(double val) {
 		.type = obj_float,
 		.dispose = dummy_dispose,
 		.string = float_str
-	};
-}
-
-struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_params, uint32_t num_locals, struct bookmark *bmarks, uint32_t bklen) {
-	struct function *fn = malloc(sizeof(struct function));
-	fn->instructions = insts;
-	fn->len = len;
-	fn->num_locals = num_locals;
-	fn->num_params = num_params;
-	fn->bookmarks = bmarks;
-	fn->bklen = bklen;
-
-	return (struct object) {
-		.data.fn = fn,
-		.type = obj_function,
-		.dispose = dispose_function_obj,
-		.string = function_str
 	};
 }
 
@@ -232,11 +246,11 @@ char *otype_str(enum obj_type t) {
 		"bool",
 		"int",
 		"float",
+		"builtin",
 		"string",
 		"error",
 		"list",
 		"map",
-		"builtin",
 		"function",
 		"closure",
 		"object",

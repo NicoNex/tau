@@ -523,6 +523,7 @@ static inline void vm_call_builtin(struct vm * restrict vm, builtin fn, size_t n
 	vm_stack_push(vm, res);
 }
 
+// TODO: fix bug that prevents calling nested functions.
 static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 	struct object *o = unwrap(&vm->stack[vm->sp-1-numargs]);
 

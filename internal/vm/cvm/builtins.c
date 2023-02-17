@@ -7,7 +7,7 @@
 
 #include "obj.h"
 
-#define BUILTIN(name) static struct object _##name(struct object *args, size_t len)
+#define BUILTIN(name) static struct object name(struct object *args, size_t len)
 
 static struct object errorf(char *fmt, ...) {
 	char *msg = malloc(sizeof(char) * 256);
@@ -21,7 +21,7 @@ static struct object errorf(char *fmt, ...) {
 	return new_error_obj(msg, strlen(msg));
 }
 
-BUILTIN(len) {
+BUILTIN(_len_b) {
 	if (len != 1) {
 		return errorf("len: wrong number of arguments, expected 1, got %lu", len);
 	}
@@ -37,7 +37,7 @@ BUILTIN(len) {
 	}
 }
 
-BUILTIN(println) {
+BUILTIN(_println_b) {
 	for (uint32_t i = 0; i < len; i++) {
 		char *s = object_str(args[i]);
 		fputs(s, stdout);
@@ -48,7 +48,7 @@ BUILTIN(println) {
 	return null_obj;
 }
 
-BUILTIN(print) {
+BUILTIN(_print_b) {
 	for (uint32_t i = 0; i < len; i++) {
 		char *s = object_str(args[i]);
 		fputs(s, stdout);
@@ -58,11 +58,11 @@ BUILTIN(print) {
 	return null_obj;
 }
 
-BUILTIN(input) {
+BUILTIN(_input_b) {
 	return errorf("input: unimplemented");
 }
 
-BUILTIN(string) {
+BUILTIN(_string_b) {
 	if (len != 1) {
 		return errorf("string: wrong number of arguments, expected 1, got %lu", len);
 	}
@@ -71,7 +71,7 @@ BUILTIN(string) {
 	return new_string_obj(s, strlen(s));
 }
 
-BUILTIN(error) {
+BUILTIN(_error_b) {
 	if (len != 1) {
 		return errorf("error: wrong number of arguments, expected 1, got %lu", len);
 	} else if (args[0].type != obj_string) {
@@ -80,7 +80,7 @@ BUILTIN(error) {
 	return new_error_obj(strdup(args[0].data.str), args[0].len);
 }
 
-BUILTIN(type) {
+BUILTIN(_type_b) {
 	if (len != 1) {
 		return errorf("type: wrong number of arguments, expected 1, got %lu", len);
 	}
@@ -89,7 +89,7 @@ BUILTIN(type) {
 	return new_string_obj(strdup(s), strlen(s));
 }
 
-BUILTIN(int_b) {
+BUILTIN(_int_b) {
 	if (len != 1) {
 		return errorf("int: wrong number of arguments, expected 1, got %lu", len);
 	}
@@ -117,7 +117,7 @@ BUILTIN(int_b) {
 	}
 }
 
-BUILTIN(float_b) {
+BUILTIN(_float_b) {
 	if (len != 1) {
 		return errorf("int: wrong number of arguments, expected 1, got %lu", len);
 	}
@@ -145,22 +145,63 @@ BUILTIN(float_b) {
 	}
 }
 
+BUILTIN(_exit_b) {
+	switch (len) {
+	case 0:
+		exit(0);
+
+	case 1:
+		switch (args[0].type) {
+		case obj_integer:
+			exit(args[0].data.i);
+		case obj_string:
+		case obj_error:
+			puts(args[0].data.str);
+			exit(0);
+		default:
+			return errorf("exit: argument must be an integer, string or error");
+		}
+
+	case 2:
+		if (args[0].type != obj_string) {
+			return errorf("exit: first argument must be a string");
+		}
+		if (args[1].type != obj_integer) {
+			return errorf("exit: second argument must be an int");
+		}
+
+		puts(args[0].data.str);
+		exit(args[1].data.i);
+
+	default:
+		return errorf("exit: wrong number of arguments, max 2, got %lu", len);
+	}
+}
+
+BUILTIN(_failed_b) {
+	if (len != 1) {
+		return errorf("failed: wrong number of arguments, expected 1, got %lu", len);
+	}
+
+	return parse_bool(args[0].type == obj_error);
+}
+
 const builtin builtins[NUM_BUILTINS] = {
-	_len,
-	_println,
-	_print,
-	_input,
-	_string,
-	_error,
-	_type,
+	_len_b,
+	_println_b,
+	_print_b,
+	_input_b,
+	_string_b,
+	_error_b,
+	_type_b,
 	_int_b,
 	_float_b,
-	NULL, // exit
+	_exit_b, // exit
 	NULL, // append
 	NULL, // push
 	NULL, // range
 	NULL, // new
-	NULL, // failed
+	_failed_b, // failed
 	NULL, // plugin
 	NULL, // pipe
 	NULL, // send

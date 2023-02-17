@@ -205,6 +205,7 @@ static char *boolean_str(struct object o) {
 	return str;
 }
 
+inline __attribute__((always_inline))
 struct object parse_bool(uint32_t b) {
 	return b ? true_obj : false_obj;
 }

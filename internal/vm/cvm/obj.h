@@ -55,6 +55,7 @@ union data {
 	struct object *list;
 	struct function *fn;
 	struct closure *cl;
+	struct map_node *node;
 	struct object (*builtin)(struct object *args, size_t len);
 };
 
@@ -64,6 +65,23 @@ struct object {
 	size_t len;
 	void (*dispose)(struct object o);
 	char *(*string)(struct object o);
+};
+
+struct key_hash {
+	enum obj_type type;
+	uint64_t val;
+};
+
+struct map_pair {
+	struct object key;
+	struct object val;
+};
+
+struct map_node {
+	struct key_hash key;
+	struct map_pair val;
+	struct map_node *l;
+	struct map_node *r;
 };
 
 struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t num_bookmarks);
@@ -80,6 +98,10 @@ struct object parse_bool(uint32_t b);
 char *otype_str(enum obj_type t);
 char *object_str(struct object o);
 void print_obj(struct object o);
+
+struct object new_map();
+struct map_pair map_get(struct object map, struct object o);
+struct map_pair map_set(struct object *map, struct object k, struct object v);
 
 extern struct object true_obj;
 extern struct object false_obj;

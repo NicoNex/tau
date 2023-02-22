@@ -141,6 +141,29 @@ static inline void vm_push_list(struct vm * restrict vm, uint32_t start, uint32_
 	vm_stack_push(vm, new_list_obj(list, len));
 }
 
+static inline void vm_push_map(struct vm * restrict vm, uint32_t start, uint32_t end) {
+	struct object map = new_map();
+
+	for (uint32_t i = start; i < end; i += 2) {
+		struct object key = vm->stack[i];
+		struct object val = vm->stack[i+1];
+
+		switch (key.type) {
+		case obj_integer:
+		case obj_float:
+		case obj_boolean:
+		case obj_string:
+			map_set(&map, key, val);
+			break;
+		default:
+			vm_errorf(vm, "invalid map key type %s", otype_str(key.type));
+		}
+	}
+
+	vm->sp -= end - start;
+	vm_stack_push(vm, map);
+}
+
 static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_idx, uint32_t num_args) {
 	struct object o = vm->state.consts[str_idx];
 	char *str = o.data.str;
@@ -628,7 +651,9 @@ int vm_run(struct vm * restrict vm) {
 	}
 
 	TARGET_MAP: {
-		UNHANDLED();
+		uint32_t len = read_uint16(frame->ip);
+		frame->ip += 2;
+		vm_push_map(vm, vm->sp-len, vm->sp);
 		DISPATCH();
 	}
 

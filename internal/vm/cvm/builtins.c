@@ -196,12 +196,12 @@ const builtin builtins[NUM_BUILTINS] = {
 	_type_b,
 	_int_b,
 	_float_b,
-	_exit_b, // exit
+	_exit_b,
 	NULL, // append
 	NULL, // push
 	NULL, // range
 	NULL, // new
-	_failed_b, // failed
+	_failed_b,
 	NULL, // plugin
 	NULL, // pipe
 	NULL, // send

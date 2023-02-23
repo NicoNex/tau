@@ -40,32 +40,55 @@ struct function {
 	struct bookmark *bookmarks;
 };
 
-typedef struct object object;
-
 struct closure {
 	struct function *fn;
 	struct object *free;
 	size_t num_free;
 };
 
+struct map {
+	struct map_node *root;
+	size_t len;
+};
+
+struct list {
+	struct object *list;
+	size_t len;
+};
+
+struct string {
+	char *str;
+	size_t len;
+};
+
 union data {
 	int64_t i;
 	double f;
-	char *str;
-	struct object *list;
 	struct function *fn;
 	struct closure *cl;
-	struct map_node *node;
+	struct string *str;
+	struct list *list;
+	struct map *map;
+	struct getsetter *gs;
 	struct object (*builtin)(struct object *args, size_t len);
 };
 
 struct object {
 	union data data;
 	enum obj_type type;
-	size_t len;
 	void (*dispose)(struct object o);
 	char *(*string)(struct object o);
 };
+
+struct getsetter {
+	struct object l;
+	struct object r;
+	struct object (*get)(struct getsetter *gs);
+	struct object (*set)(struct getsetter *gs, struct object o);
+};
+
+typedef struct object (*getfn)(struct getsetter *gs);
+typedef struct object (*setfn)(struct getsetter *gs, struct object o);
 
 struct key_hash {
 	enum obj_type type;
@@ -100,12 +123,18 @@ char *object_str(struct object o);
 void print_obj(struct object o);
 
 struct object new_map();
-struct map_pair map_get(struct object map, struct object o);
-struct map_pair map_set(struct object *map, struct object k, struct object v);
+struct map_pair map_get(struct object map, struct object k);
+struct map_pair map_set(struct object map, struct object k, struct object v);
 
+struct object new_getsetter_obj(struct object l, struct object r, getfn get, setfn set);
+struct object map_getsetter_get(struct getsetter *gs);
+struct object map_getsetter_set(struct getsetter *gs, struct object val);
+struct object list_getsetter_get(struct getsetter *gs);
+struct object list_getsetter_set(struct getsetter *gs, struct object val);
+
+extern struct object null_obj;
 extern struct object true_obj;
 extern struct object false_obj;
-extern struct object null_obj;
 
 typedef struct object (*builtin)(struct object *args, size_t len);
 extern const builtin builtins[NUM_BUILTINS];

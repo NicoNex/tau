@@ -83,17 +83,21 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 
 // ============================= ERROR OBJECT =============================
 static void dispose_error_obj(struct object o) {
+	free(o.data.str->str);
 	free(o.data.str);
 }
 
 static char *error_str(struct object o) {
-	return strdup(o.data.str);
+	return strdup(o.data.str->str);
 }
 
 struct object new_error_obj(char *str, size_t len) {
+	struct string *s = malloc(sizeof(struct string));
+	s->str = str;
+	s->len = len;
+
 	return (struct object) {
-		.data.str = str,
-		.len = len,
+		.data.str = s,
 		.type = obj_error,
 		.dispose = dispose_error_obj,
 		.string = error_str
@@ -141,45 +145,110 @@ struct object new_integer_obj(int64_t val) {
 
 // ============================= STRING OBJECT =============================
 static void dispose_string_obj(struct object o) {
+	free(o.data.str->str);
 	free(o.data.str);
 }
 
 static char *string_str(struct object o) {
-	return strdup(o.data.str);
+	return strdup(o.data.str->str);
 }
 
 struct object new_string_obj(char *str, size_t len) {
+	struct string *s = malloc(sizeof(struct string));
+	s->str = str;
+	s->len = len;
+
 	return (struct object) {
-		.data.str = str,
-		.len = len,
+		.data.str = s,
 		.type = obj_string,
 		.dispose = dispose_string_obj,
 		.string = string_str
 	};
 }
 
+// ============================= GETSETTER OBJECT =============================
+static void dispose_getsetter_obj(struct object o) {
+	free(o.data.gs);
+}
+
+static char *getsetter_str(struct object o) {
+	struct getsetter *gs = o.data.gs;
+	return object_str(gs->get(gs));
+}
+
+struct object new_getsetter_obj(struct object l, struct object r, getfn get, setfn set) {
+	struct getsetter *gs = malloc(sizeof(struct getsetter));
+	gs->l = l;
+	gs->r = r;
+	gs->get = get;
+	gs->set = set;
+
+	return (struct object) {
+		.data.gs = gs,
+		.type = obj_getsetter,
+		.dispose = dispose_getsetter_obj,
+		.string = getsetter_str
+	};
+}
+
+struct object map_getsetter_get(struct getsetter *gs) {
+	struct map_pair mp = map_get(gs->l, gs->r);
+	return mp.val;
+}
+
+struct object map_getsetter_set(struct getsetter *gs, struct object val) {
+	struct map_pair mp = map_set(gs->l, gs->r, val);
+	return mp.val;
+}
+
+struct object list_getsetter_get(struct getsetter *gs) {
+	struct object *list = gs->l.data.list->list;
+	size_t listlen = gs->l.data.list->len;
+	int64_t idx = gs->r.data.i;
+
+	if (idx < 0 || idx >= listlen) {
+		return new_error_obj(strdup("index out of range"), 18);
+	}
+	return list[idx];
+}
+
+struct object list_getsetter_set(struct getsetter *gs, struct object val) {
+	struct object *list = gs->l.data.list->list;
+	size_t listlen = gs->l.data.list->len;
+	int64_t idx = gs->r.data.i;
+
+	if (idx < 0 || idx >= listlen) {
+		return new_error_obj(strdup("index out of range"), 18);
+	}
+	list[idx] = val;
+	return val;
+}
+
 // ============================= LIST OBJECT =============================
 static void dispose_list_obj(struct object o) {
+	free(o.data.list->list);
 	free(o.data.list);
 }
 
 // TODO: optimise this.
 static char *list_str(struct object o) {
-	char *strings[o.len];
-	size_t total_len = 3;
+	size_t len = o.data.list->len;
+	struct object *list = o.data.list->list;
+	char *strings[len];
+	size_t string_len = 3;
 
-	for (int i = 0; i < o.len; i++) {
-		char *s = object_str(o.data.list[i]);
+	for (int i = 0; i < len; i++) {
+		char *s = object_str(list[i]);
 		strings[i] = s;
-		total_len += i < o.len-1 ? strlen(s) + 2 : strlen(s);
+		string_len += i < len-1 ? strlen(s) + 2 : strlen(s);
 	}
 
-	char *str = calloc(total_len, sizeof(char));
+	char *str = calloc(string_len, sizeof(char));
 	str[0] = '[';
 
-	for (int i = 0; i < o.len; i++) {
+	for (int i = 0; i < len; i++) {
 		strcat(str, strings[i]);
-		if (i < o.len-1) strcat(str, ", ");
+		if (i < len-1) strcat(str, ", ");
 		free(strings[i]);
 	}
 	strcat(str, "]");
@@ -188,9 +257,12 @@ static char *list_str(struct object o) {
 }
 
 struct object new_list_obj(struct object *list, size_t len) {
+	struct list *l = malloc(sizeof(struct list));
+	l->list = list;
+	l->len = len;
+
 	return (struct object) {
-		.data.list = list,
-		.len = len,
+		.data.list = l,
 		.type = obj_list,
 		.dispose = dispose_list_obj,
 		.string = list_str
@@ -220,7 +292,6 @@ static char *null_str(struct object o) {
 struct object true_obj = (struct object) {
 	.data.i = 1,
 	.type = obj_boolean,
-	.len = 0,
 	.dispose = dummy_dispose,
 	.string = boolean_str
 };
@@ -228,7 +299,6 @@ struct object true_obj = (struct object) {
 struct object false_obj = (struct object) {
 	.data.i = 0,
 	.type = obj_boolean,
-	.len = 0,
 	.dispose = dummy_dispose,
 	.string = boolean_str
 };
@@ -236,7 +306,6 @@ struct object false_obj = (struct object) {
 struct object null_obj = (struct object) {
 	.data.i = 0,
 	.type = obj_null,
-	.len = 0,
 	.dispose = dummy_dispose,
 	.string = null_str
 };

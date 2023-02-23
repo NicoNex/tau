@@ -30,10 +30,11 @@ struct key_hash hash(struct object o) {
 			.type = o.type,
 			.val = o.data.i
 		};
+	case obj_error:
 	case obj_string:
 		return (struct key_hash) {
 			.type = o.type,
-			.val = fnv64a(o.data.str)
+			.val = fnv64a(o.data.str->str)
 		};
 	case obj_float:
 		return (struct key_hash) {
@@ -94,36 +95,36 @@ static inline void _map_dispose(struct map_node *n) {
 }
 
 struct map_pair map_get(struct object map, struct object o) {
-	return _map_get(map.data.node, hash(o));
+	return _map_get(map.data.map->root, hash(o));
 }
 
-struct map_pair map_set(struct object *map, struct object k, struct object v) {
+struct map_pair map_set(struct object map, struct object k, struct object v) {
 	struct map_pair p = (struct map_pair) {.key = k, .val = v};
 
-	_map_set(&map->data.node, hash(k), p);
-	map->len++;
+	_map_set(&map.data.map->root, hash(k), p);
+	map.data.map->len++;
 	return p;
 }
 
 static void dispose_map_obj(struct object map) {
-	_map_dispose(map.data.node);
+	_map_dispose(map.data.map->root);
+	free(map.data.map);
 }
 
 // TODO: actually return map content as string.
 static char *map_str(struct object map) {
 	char *str = malloc(sizeof(char) * 64);
 	str[63] = '\0';
-	sprintf(str, "map[%p]", map.data.node);
+	sprintf(str, "map[%p]", map.data.map->root);
 
 	return str;
 }
 
 struct object new_map() {
 	return (struct object) {
-		.data.node = NULL,
+		.data.map = calloc(1, sizeof(struct map_node)),
 		.type = obj_map,
-		.len = 0,
 		.dispose = dispose_map_obj,
-		.string = map_str,
+		.string = map_str
 	};
 }

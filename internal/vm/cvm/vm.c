@@ -25,6 +25,7 @@
 
 #define ASSERT(obj, t) (obj->type == t)
 #define ASSERT2(obj, t1, t2) (ASSERT(obj, t1) || ASSERT(obj, t2))
+#define ASSERT4(obj, t1, t2, t3, t4) (ASSERT(obj, t1) || ASSERT(obj, t2) || ASSERT(obj, t3) || ASSERT(obj, t4))
 #define M_ASSERT(o1, o2, t) (ASSERT(o1, t) && ASSERT(o2, t))
 #define M_ASSERT2(o1, o2, t1, t2) (ASSERT2(o1, t1, t2) && ASSERT2(o2, t1, t2))
 
@@ -113,6 +114,28 @@ static void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 	exit(1);
 }
 
+static inline __attribute__((always_inline))
+struct object *unwrap(struct object *o) {
+	if (o->type == obj_getsetter) {
+		struct getsetter *gs = o->data.gs;
+		*o = gs->get(gs);
+		free(gs);
+	}
+	return o;
+}
+
+static inline void vm_exec_define(struct vm * restrict vm) {
+	struct object *right = unwrap(&vm_stack_pop(vm));
+	struct object *left = &vm_stack_pop(vm);
+
+	if (!ASSERT(left, obj_getsetter)) {
+		vm_errorf(vm, "cannot assign to type \"%s\"", otype_str(left->type));
+	}
+	struct getsetter *gs = left->data.gs;
+	vm_stack_push(vm, gs->set(gs, *right));
+	free(gs);
+}
+
 static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, uint32_t num_free) {
 	struct object fn = vm->state.consts[const_idx];
 
@@ -153,7 +176,8 @@ static inline void vm_push_map(struct vm * restrict vm, uint32_t start, uint32_t
 		case obj_float:
 		case obj_boolean:
 		case obj_string:
-			map_set(&map, key, val);
+		case obj_error:
+			map_set(map, key, val);
 			break;
 		default:
 			vm_errorf(vm, "invalid map key type %s", otype_str(key.type));
@@ -166,7 +190,8 @@ static inline void vm_push_map(struct vm * restrict vm, uint32_t start, uint32_t
 
 static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_idx, uint32_t num_args) {
 	struct object o = vm->state.consts[str_idx];
-	char *str = o.data.str;
+	char *str = o.data.str->str;
+	size_t fmt_len = o.data.str->len;
 	char *subs[num_args];
 	uint32_t len_table[num_args];
 	uint32_t sub_len = 0;
@@ -179,7 +204,7 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 		sub_len += len;
 	}
 
-	uint32_t len = o.len + sub_len - num_args + 1;
+	uint32_t len = fmt_len + sub_len - num_args + 1;
 	char *ret = malloc(sizeof(char) * len);
 	ret[len-1] = '\0';
 	uint32_t retidx = 0;
@@ -197,13 +222,6 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 	}
 
 	vm_stack_push(vm, new_string_obj(ret, len));
-}
-
-static inline struct object *unwrap(struct object *o) {
-	if (o->type == obj_getsetter) {
-		// TODO: fill this.
-	}
-	return o;
 }
 
 static inline double to_double(struct object * restrict o) {
@@ -259,10 +277,10 @@ static inline void vm_exec_add(struct vm * restrict vm) {
 		left->data.f = l + r;
 		left->type = obj_float;
 	} else if (M_ASSERT(left, right, obj_string)) {
-		size_t slen = left->len + right->len;
+		size_t slen = left->data.str->len + right->data.str->len;
 		char *str = malloc(sizeof(char) * (slen + 1));
-		char *start = strcpy(str, left->data.str);
-		strcpy(start, right->data.str);
+		char *start = strcpy(str, left->data.str->str);
+		strcpy(start, right->data.str->str);
 		vm_stack_pop_ignore(vm);
 		vm_stack_push(vm, new_string_obj(str, slen));
 	} else {
@@ -415,9 +433,11 @@ static inline void vm_exec_eq(struct vm * restrict vm) {
 		left->data.i = l == r;
 		left->type = obj_boolean;
 	} else if (M_ASSERT(left, right, obj_string)) {
-		char *l = left->data.str;
-		char *r = right->data.str;
-		struct object res = left->len == right->len ? parse_bool(strcmp(l, r) == 0) : false_obj;
+		char *l = left->data.str->str;
+		char *r = right->data.str->str;
+		size_t lenl = left->data.str->len;
+		size_t lenr = right->data.str->len;
+		struct object res = (lenl == lenr) ? parse_bool(strcmp(l, r) == 0) : false_obj;
 		vm_stack_pop_ignore(vm);
 		vm_stack_push(vm, res);
 	} else {
@@ -441,9 +461,11 @@ static inline void vm_exec_not_eq(struct vm * restrict vm) {
 		left->data.i = l != r;
 		left->type = obj_boolean;
 	} else if (M_ASSERT(left, right, obj_string)) {
-		char *l = left->data.str;
-		char *r = right->data.str;
-		struct object res = left->len == right->len ? parse_bool(strcmp(l, r) != 0) : false_obj;
+		char *l = left->data.str->str;
+		char *r = right->data.str->str;
+		size_t lenl = left->data.str->len;
+		size_t lenr = right->data.str->len;
+		struct object res = (lenl == lenr) ? parse_bool(strcmp(l, r) != 0) : false_obj;
 		vm_stack_pop_ignore(vm);
 		vm_stack_push(vm, res);
 	} else {
@@ -464,8 +486,8 @@ static inline void vm_exec_greater_than(struct vm * restrict vm) {
 		left->data.i = l > r;
 		left->type = obj_boolean;
 	} else if (M_ASSERT(left, right, obj_string)) {
-		char *l = left->data.str;
-		char *r = right->data.str;
+		char *l = left->data.str->str;
+		char *r = right->data.str->str;
 		vm_stack_pop_ignore(vm);
 		vm_stack_push(vm, parse_bool(strcmp(l, r) > 0));
 	} else {
@@ -486,8 +508,8 @@ static inline void vm_exec_greater_than_eq(struct vm * restrict vm) {
 		left->data.i = l >= r;
 		left->type = obj_boolean;
 	} else if (M_ASSERT(left, right, obj_string)) {
-		char *l = left->data.str;
-		char *r = right->data.str;
+		char *l = left->data.str->str;
+		char *r = right->data.str->str;
 		vm_stack_pop_ignore(vm);
 		vm_stack_push(vm, parse_bool(strcmp(l, r) >= 0));
 	} else {
@@ -524,6 +546,15 @@ static inline void vm_exec_bang(struct vm * restrict vm) {
 	default:
 		vm_stack_push(vm, false_obj);
 		break;
+	}
+}
+
+static inline void vm_exec_index(struct vm * restrict vm) {
+	struct object *index = unwrap(&vm_stack_pop(vm));
+	struct object *left = unwrap(&vm_stack_pop(vm));
+
+	if (ASSERT(left, obj_list) && ASSERT(index, obj_integer)) {
+		vm_stack_push(vm, new_getsetter_obj(*left, *index, list_getsetter_get, list_getsetter_set));
 	}
 }
 
@@ -766,7 +797,7 @@ int vm_run(struct vm * restrict vm) {
 	}
 
 	TARGET_INDEX: {
-		UNHANDLED();
+		vm_exec_index(vm);
 		DISPATCH();
 	}
 
@@ -817,7 +848,7 @@ int vm_run(struct vm * restrict vm) {
 	}
 
 	TARGET_DEFINE: {
-		UNHANDLED();
+		vm_exec_define(vm);
 		DISPATCH();
 	}
 

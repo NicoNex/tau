@@ -25,15 +25,18 @@ BUILTIN(_len_b) {
 	if (len != 1) {
 		return errorf("len: wrong number of arguments, expected 1, got %lu", len);
 	}
+	struct object arg = args[0];
 
-	switch (args[0].type) {
+	switch (arg.type) {
 	case obj_list:
-	case obj_string:
-	case obj_bytes:
+		return new_integer_obj(arg.data.list->len);
 	case obj_error:
-		return new_integer_obj(args[0].len);
+	case obj_string:
+		return new_integer_obj(arg.data.str->len);
+	// case obj_bytes:
+	// 	return new_integer_obj(arg.data.bytes->len);
 	default:
-		return errorf("len: object of type \"%s\" has no length", otype_str(args[0].type));
+		return errorf("len: object of type \"%s\" has no length", otype_str(arg.type));
 	}
 }
 
@@ -77,7 +80,7 @@ BUILTIN(_error_b) {
 	} else if (args[0].type != obj_string) {
 		return errorf("error: argument must be a string, got %s", otype_str(args[0].type));
 	}
-	return new_error_obj(strdup(args[0].data.str), args[0].len);
+	return new_error_obj(strdup(args[0].data.str->str), args[0].data.str->len);
 }
 
 BUILTIN(_type_b) {
@@ -103,7 +106,7 @@ BUILTIN(_int_b) {
 		return args[0];
 	case obj_string: {
 		errno = 0;
-		int64_t i = strtol(args[0].data.str, NULL, 10);
+		int64_t i = strtol(args[0].data.str->str, NULL, 10);
 		if (errno != EINVAL && errno != ERANGE) {
 			return new_integer_obj(i);
 		}
@@ -131,7 +134,7 @@ BUILTIN(_float_b) {
 		return args[0];
 	case obj_string: {
 		errno = 0;
-		double f = strtod(args[0].data.str, NULL);
+		double f = strtod(args[0].data.str->str, NULL);
 		if (errno != ERANGE) {
 			return new_float_obj(f);
 		}
@@ -156,7 +159,7 @@ BUILTIN(_exit_b) {
 			exit(args[0].data.i);
 		case obj_string:
 		case obj_error:
-			puts(args[0].data.str);
+			puts(args[0].data.str->str);
 			exit(0);
 		default:
 			return errorf("exit: argument must be an integer, string or error");
@@ -170,7 +173,7 @@ BUILTIN(_exit_b) {
 			return errorf("exit: second argument must be an int");
 		}
 
-		puts(args[0].data.str);
+		puts(args[0].data.str->str);
 		exit(args[1].data.i);
 
 	default:

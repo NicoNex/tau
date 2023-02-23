@@ -45,7 +45,7 @@ func main() {
 	cpuf, err := os.Create("cpu.prof")
 	check(err)
 
-	tree, errs := parser.Parse(fileOrDefault())
+	tree, errs := parser.Parse("<profiler>", fileOrDefault())
 	if len(errs) > 0 {
 		panic("parser errors")
 	}

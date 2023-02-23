@@ -18,6 +18,4 @@ func New(file string, data []byte) CVM {
 
 func (cvm CVM) Run() {
 	C.vm_run(cvm.vm)
-	o := C.vm_last_popped_stack_elem(cvm.vm)
-	C.print_obj(o)
 }

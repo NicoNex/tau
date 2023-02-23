@@ -5,7 +5,7 @@
 #include "obj.h"
 
 // Taken from: https://github.com/haipome/fnv/blob/master/fnv.c#L368
-static inline uint64_t fnv64a(char *s) {
+inline uint64_t fnv64a(char *s) {
 	uint64_t hash = 0xcbf29ce484222325ULL;
 
 	while (*s) {

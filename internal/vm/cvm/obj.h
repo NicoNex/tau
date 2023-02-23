@@ -69,6 +69,7 @@ union data {
 	struct string *str;
 	struct list *list;
 	struct map *map;
+	struct object_node **obj;
 	struct getsetter *gs;
 	struct object (*builtin)(struct object *args, size_t len);
 };
@@ -107,6 +108,13 @@ struct map_node {
 	struct map_node *r;
 };
 
+struct object_node {
+	uint64_t key;
+	struct object val;
+	struct object_node *l;
+	struct object_node *r;
+};
+
 struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t num_bookmarks);
 struct object new_closure_obj(struct function *fn, struct object *free, size_t num_free);
 struct object new_boolean_obj(uint32_t b);
@@ -122,6 +130,12 @@ char *otype_str(enum obj_type t);
 char *object_str(struct object o);
 void print_obj(struct object o);
 
+uint64_t fnv64a(char *s);
+
+struct object new_object();
+struct object object_get(struct object obj, char *name);
+struct object object_set(struct object obj, char *name, struct object val);
+
 struct object new_map();
 struct map_pair map_get(struct object map, struct object k);
 struct map_pair map_set(struct object map, struct object k, struct object v);
@@ -131,6 +145,8 @@ struct object map_getsetter_get(struct getsetter *gs);
 struct object map_getsetter_set(struct getsetter *gs, struct object val);
 struct object list_getsetter_get(struct getsetter *gs);
 struct object list_getsetter_set(struct getsetter *gs, struct object val);
+struct object object_getsetter_get(struct getsetter *gs);
+struct object object_getsetter_set(struct getsetter *gs, struct object val);
 
 extern struct object null_obj;
 extern struct object true_obj;

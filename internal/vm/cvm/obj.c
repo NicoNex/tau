@@ -191,6 +191,15 @@ struct object new_getsetter_obj(struct object l, struct object r, getfn get, set
 	};
 }
 
+struct object object_getsetter_get(struct getsetter *gs) {
+	return object_get(gs->l, gs->r.data.str->str);
+}
+
+struct object object_getsetter_set(struct getsetter *gs, struct object val) {
+	object_set(gs->l, gs->r.data.str->str, val);
+	return val;
+}
+
 struct object map_getsetter_get(struct getsetter *gs) {
 	struct map_pair mp = map_get(gs->l, gs->r);
 	return mp.val;

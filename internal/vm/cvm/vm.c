@@ -124,6 +124,17 @@ struct object *unwrap(struct object *o) {
 	return o;
 }
 
+static inline void vm_exec_dot(struct vm * restrict vm) {
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = unwrap(&vm_stack_pop(vm));
+
+	if (!ASSERT(left, obj_object) || !ASSERT(right, obj_string)) {
+		vm_errorf(vm, "%s object has no attribute %s", otype_str(left->type), object_str(*right));
+	}
+
+	vm_stack_push(vm, new_getsetter_obj(*left, *right, object_getsetter_get, object_getsetter_set));
+}
+
 static inline void vm_exec_define(struct vm * restrict vm) {
 	struct object *right = unwrap(&vm_stack_pop(vm));
 	struct object *left = &vm_stack_pop(vm);
@@ -849,7 +860,7 @@ int vm_run(struct vm * restrict vm) {
 	}
 
 	TARGET_DOT: {
-		UNHANDLED();
+		vm_exec_dot(vm);
 		DISPATCH();
 	}
 

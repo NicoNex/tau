@@ -181,6 +181,13 @@ BUILTIN(_exit_b) {
 	}
 }
 
+BUILTIN(_new_b) {
+	if (len != 0) {
+		return errorf("new: wrong number of arguments, expected 0, got %lu", len);
+	}
+	return new_object();
+}
+
 BUILTIN(_failed_b) {
 	if (len != 1) {
 		return errorf("failed: wrong number of arguments, expected 1, got %lu", len);
@@ -203,7 +210,7 @@ const builtin builtins[NUM_BUILTINS] = {
 	NULL, // append
 	NULL, // push
 	NULL, // range
-	NULL, // new
+	_new_b,
 	_failed_b,
 	NULL, // plugin
 	NULL, // pipe

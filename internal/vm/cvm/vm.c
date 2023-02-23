@@ -247,22 +247,11 @@ static inline uint32_t is_truthy(struct object * restrict o) {
 }
 
 static inline void unsupported_operator_error(struct vm * restrict vm, char *op, struct object *l, struct object *r) {
-	vm_errorf(
-		vm,
-		"unsupported operator '%s' for types %s and %s",
-		op,
-		otype_str(l->type),
-		otype_str(r->type)
-	);
+	vm_errorf(vm, "unsupported operator '%s' for types %s and %s", op, otype_str(l->type), otype_str(r->type));
 }
 
 static inline void unsupported_prefix_operator_error(struct vm * restrict vm, char *op, struct object *o) {
-	vm_errorf(
-		vm,
-		"unsupported operator '%s' for type %s",
-		op,
-		otype_str(o->type)
-	);
+	vm_errorf(vm, "unsupported operator '%s' for type %s", op, otype_str(o->type));
 }
 
 static inline void vm_exec_add(struct vm * restrict vm) {
@@ -549,12 +538,29 @@ static inline void vm_exec_bang(struct vm * restrict vm) {
 	}
 }
 
+// TODO: add support for bytes.
 static inline void vm_exec_index(struct vm * restrict vm) {
 	struct object *index = unwrap(&vm_stack_pop(vm));
 	struct object *left = unwrap(&vm_stack_pop(vm));
 
 	if (ASSERT(left, obj_list) && ASSERT(index, obj_integer)) {
 		vm_stack_push(vm, new_getsetter_obj(*left, *index, list_getsetter_get, list_getsetter_set));
+	} else if (ASSERT(left, obj_string) && ASSERT(index, obj_integer)) {
+		char *str = left->data.str->str;
+		size_t len = left->data.str->len;
+		int64_t idx = index->data.i;
+
+		if (idx < 0 || idx > len) {
+			vm_errorf(vm, "index out of range");
+		}
+		char *new_str = malloc(sizeof(char) * 2);
+		new_str[0] = str[idx];
+		new_str[1] = '\0';
+		vm_stack_push(vm, new_string_obj(new_str, 2));
+	} else if (ASSERT(left, obj_map) && ASSERT4(index, obj_integer, obj_float, obj_string, obj_boolean)) {
+		vm_stack_push(vm, new_getsetter_obj(*left, *index, map_getsetter_get, map_getsetter_set));
+	} else {
+		vm_errorf(vm, "invalid index operator for types %s and %s", otype_str(left->type), otype_str(index->type));
 	}
 }
 

@@ -59,6 +59,13 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 	return vm;
 }
 
+struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state) {
+	struct vm *vm = new_vm(file, bc);
+	vm->state = state;
+
+	return vm;
+}
+
 void vm_dispose(struct vm *vm) {
 	free(vm->file);
 	free(vm);
@@ -607,6 +614,35 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 	}
 }
 
+int vm_run(struct vm * restrict vm);
+
+static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num_args) {
+	struct vm *tvm = calloc(1, sizeof(struct vm));
+	tvm->file = vm->file;
+	tvm->state.consts = vm->state.consts;
+	tvm->state.nconsts = vm->state.nconsts;
+	tvm->sp = vm->sp;
+	tvm->frame_idx = 1;
+
+	#pragma omp parallel default(none) shared(vm, tvm)
+	#pragma omp single
+	{
+		#pragma omp task
+		memcpy(tvm->stack, vm->stack, STACK_SIZE);
+		#pragma omp task
+		memcpy(tvm->state.globals, vm->state.globals, GLOBAL_SIZE);
+		#pragma omp taskwait
+	}
+	vm_exec_call(tvm, num_args);
+
+	#pragma omp single
+	{
+		vm_run(tvm);
+		free(tvm);
+	}
+	vm_stack_push(vm, null_obj);
+}
+
 static inline void vm_exec_return(struct vm * restrict vm) {
 	struct frame *frame = vm_pop_frame(vm);
 	vm->sp = frame->base_ptr - 1;
@@ -826,7 +862,8 @@ int vm_run(struct vm * restrict vm) {
 	}
 
 	TARGET_CONCURRENT_CALL: {
-		UNHANDLED();
+		uint8_t num_args = read_uint8(frame->ip++);
+		vm_exec_concurrent_call(vm, num_args);
 		DISPATCH();
 	}
 
@@ -839,6 +876,7 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_RETURN_VALUE: {
 		vm_exec_return_value(vm);
 		frame = vm_current_frame(vm);
+		if (frame->ip == NULL) goto TARGET_HALT;
 		DISPATCH();
 	}
 

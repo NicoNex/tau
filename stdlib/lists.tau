@@ -1,0 +1,67 @@
+Reduce = fn(list, acc, func) {
+    for i = 0; i < len(list); ++i {
+        acc = func(i, list[i], acc)
+    }
+    acc
+}
+
+Map = fn(list, func) {
+    l = []
+    for i = 0; i < len(list); ++i {
+        l = append(l, func(i, list[i]))
+    }
+    l
+}
+
+Filter = fn(list, func) {
+    l = []
+    for i = 0; i < len(list); ++i {
+        v = list[i]
+        if func(i, v) {
+            l = append(l, v)
+        }
+    }
+    l
+}
+
+Find = fn(list, func) {
+    for i = 0; i < len(list); ++i {
+        if func(i, list[i]) {
+            return list[i]
+        }
+    }
+    null
+}
+
+Index = fn(list, func) {
+    for i = 0; i < len(list); ++i {
+        if func(i, list[i]) {
+            return i
+        }
+    }
+    -1
+}
+
+ForEach = fn(list, func) {
+    for i = 0; i < len(list); ++i {
+        func(i, list[i])
+    }
+}
+
+Some = fn(list, func) {
+    for i = 0; i < len(list); ++i {
+        if func(i, list[i]) {
+            return true
+        }
+    }
+    false
+}
+
+Contains = fn(list, item) {
+	for i = 0; i < len(list); ++i {
+		if list[i] == item {
+			return true
+		}
+	}
+	return false
+}

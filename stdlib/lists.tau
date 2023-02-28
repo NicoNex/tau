@@ -1,6 +1,6 @@
 Reduce = fn(list, acc, func) {
     for i = 0; i < len(list); ++i {
-        acc = func(acc, list[i], i)
+        acc = func(i, list[i], acc)
     }
     acc
 }
@@ -30,7 +30,7 @@ Find = fn(list, func) {
             return list[i]
         }
     }
-    false
+    null
 }
 
 Index = fn(list, func) {
@@ -39,7 +39,7 @@ Index = fn(list, func) {
             return i
         }
     }
-    false
+    -1
 }
 
 ForEach = fn(list, func) {
@@ -55,4 +55,13 @@ Some = fn(list, func) {
         }
     }
     false
+}
+
+Contains = fn(list, item) {
+	for i = 0; i < len(list); ++i {
+		if list[i] == item {
+			return true
+		}
+	}
+	return false
 }

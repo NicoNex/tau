@@ -42,7 +42,7 @@ Index = fn(list, func) {
     false
 }
 
-Each = fn(list, func) {
+ForEach = fn(list, func) {
     for i = 0; i < len(list); ++i {
         func(i, list[i])
     }

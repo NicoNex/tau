@@ -1,4 +1,4 @@
-Reduce = fn(list, func, acc) {
+Reduce = fn(list, acc, func) {
     for i = 0; i < len(list); ++i {
         acc = func(acc, list[i], i)
     }
@@ -8,7 +8,7 @@ Reduce = fn(list, func, acc) {
 Map = fn(list, func) {
     l = []
     for i = 0; i < len(list); ++i {
-        l = append(l, func(list[i], i))
+        l = append(l, func(i, list[i]))
     }
     l
 }
@@ -17,7 +17,7 @@ Filter = fn(list, func) {
     l = []
     for i = 0; i < len(list); ++i {
         v = list[i]
-        if func(v, i) {
+        if func(i, v) {
             l = append(l, v)
         }
     }
@@ -26,7 +26,7 @@ Filter = fn(list, func) {
 
 Find = fn(list, func) {
     for i = 0; i < len(list); ++i {
-        if func(list[i], i) {
+        if func(i, list[i]) {
             return list[i]
         }
     }
@@ -35,7 +35,7 @@ Find = fn(list, func) {
 
 Index = fn(list, func) {
     for i = 0; i < len(list); ++i {
-        if func(list[i], i) {
+        if func(i, list[i]) {
             return i
         }
     }
@@ -44,13 +44,13 @@ Index = fn(list, func) {
 
 Each = fn(list, func) {
     for i = 0; i < len(list); ++i {
-        func(list[i], i)
+        func(i, list[i])
     }
 }
 
 Some = fn(list, func) {
     for i = 0; i < len(list); ++i {
-        if func(list[i], i) {
+        if func(i, list[i]) {
             return true
         }
     }

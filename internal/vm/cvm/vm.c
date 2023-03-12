@@ -40,7 +40,6 @@ static inline struct frame new_frame(struct object cl, uint32_t base_ptr) {
 
 struct state new_state() {
 	return (struct state) {
-		.st = NULL,
 		.consts = calloc(0, sizeof(struct object)),
 		.nconsts = 0,
 		.globals = {null_obj}
@@ -88,7 +87,7 @@ static struct bookmark *vm_get_bookmark(struct vm * restrict vm) {
 	return NULL;
 }
 
-static void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
+void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 	struct bookmark *b = vm_get_bookmark(vm);
 
 	if (b == NULL) {
@@ -870,6 +869,7 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_RETURN: {
 		vm_exec_return(vm);
 		frame = vm_current_frame(vm);
+		if (frame->ip == NULL) goto TARGET_HALT;
 		DISPATCH();
 	}
 

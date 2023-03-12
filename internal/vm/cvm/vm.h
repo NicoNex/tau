@@ -30,7 +30,6 @@ struct frame {
 };
 
 struct state {
-	struct symbol_table *st;
 	struct object *consts;
 	uint32_t nconsts;
 	struct object globals[GLOBAL_SIZE];
@@ -48,5 +47,6 @@ struct vm {
 struct state new_state();
 struct vm *new_vm(char *file, struct bytecode bytecode);
 int vm_run(struct vm * restrict vm);
+void vm_errorf(struct vm * restrict vm, const char *fmt, ...);
 struct object vm_last_popped_stack_elem(struct vm * restrict vm);
 void vm_dispose(struct vm *vm);

@@ -31,7 +31,7 @@ func NewFloat(f float64) CObj {
 }
 
 func NewInteger(i int64) CObj {
-	return CObj(C.new_integer_obj(C.long(i)))
+	return CObj(C.new_integer_obj(C.longlong(i)))
 }
 
 func NewString(s string) CObj {
@@ -47,11 +47,6 @@ func NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []t
 		cBookmarks(bmarks),
 		C.uint(len(bmarks)),
 	))
-}
-
-func ToC(o obj.Object) C.struct_object {
-	tmp, _ := o.(CObj)
-	return C.struct_object(tmp)
 }
 
 func cBookmarks(bmarks []tauerr.Bookmark) *C.struct_bookmark {

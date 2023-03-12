@@ -50,11 +50,13 @@ func cbytecode(bc *compiler.Bytecode) C.struct_bytecode {
 }
 
 func cObjs(objects []obj.Object) *C.struct_object {
-	var objs = make([]C.struct_object, len(objects))
+	var objs = make([]cobj.CObj, len(objects))
 
 	for i, o := range objects {
-		objs[i] = (C.struct_object)(cobj.ToC(o))
+		objs[i] = o.(cobj.CObj)
 	}
+
+	return (*C.struct_object)(unsafe.Pointer(&objs[0]))
 }
 
 func cBookmarks(bmarks []tauerr.Bookmark) *C.struct_bookmark {

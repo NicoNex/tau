@@ -130,6 +130,10 @@ struct object *unwrap(struct object *o) {
 	return o;
 }
 
+static inline void vm_exec_load_module(struct vm * restrict vm) {
+
+}
+
 static inline void vm_exec_dot(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);
 	struct object *left = unwrap(&vm_stack_pop(vm));

@@ -73,7 +73,7 @@ func (f Function) Compile(c *compiler.Compiler) (position int, err error) {
 		position = c.LoadSymbol(s)
 	}
 
-	fn := obj.NewFunctionCompiled(ins, nLocals, len(f.params), bookmarks)
+	fn := c.NewFunctionCompiled(ins, nLocals, len(f.params), bookmarks)
 	position = c.Emit(code.OpClosure, c.AddConstant(fn), len(freeSymbols))
 	c.Bookmark(f.pos)
 	return

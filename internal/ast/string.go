@@ -53,7 +53,7 @@ func (s String) Quoted() string {
 
 func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 	if len(s.substr) == 0 {
-		position = c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s)))
+		position = c.Emit(code.OpConstant, c.AddConstant(c.NewString(s.s)))
 		c.Bookmark(s.pos)
 		return
 	}
@@ -65,7 +65,7 @@ func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 		c.RemoveLast()
 	}
 
-	position = c.Emit(code.OpInterpolate, c.AddConstant(obj.NewString(s.s)), len(s.substr))
+	position = c.Emit(code.OpInterpolate, c.AddConstant(c.NewString(s.s)), len(s.substr))
 	c.Bookmark(s.pos)
 	return
 }

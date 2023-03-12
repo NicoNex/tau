@@ -7,6 +7,7 @@ import (
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/tauerr"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type Compilable interface {
@@ -32,6 +33,7 @@ type Compiler struct {
 	scopeIndex  int
 	fileName    string
 	fileContent string
+	useCObjects bool
 	*SymbolTable
 }
 
@@ -66,6 +68,10 @@ func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
 		scopes:      []CompilationScope{{}},
 		constants:   constants,
 	}
+}
+
+func (c *Compiler) SetUseCObjects(b bool) {
+	c.useCObjects = b
 }
 
 func (c *Compiler) AddConstant(o obj.Object) int {
@@ -269,4 +275,39 @@ func (c *Compiler) LoadSymbol(s Symbol) int {
 	default:
 		return 0
 	}
+}
+
+func (c Compiler) NullObj() obj.Object {
+	if c.useCObjects {
+		return cobj.NullObj
+	}
+	return obj.NullObj
+}
+
+func (c Compiler) NewFloat(f float64) obj.Object {
+	if c.useCObjects {
+		return cobj.NewFloat(f)
+	}
+	return obj.Float(f)
+}
+
+func (c Compiler) NewInteger(i int64) obj.Object {
+	if c.useCObjects {
+		return cobj.NewInteger(i)
+	}
+	return obj.Integer(i)
+}
+
+func (c Compiler) NewString(s string) obj.Object {
+	if c.useCObjects {
+		return cobj.NewString(s)
+	}
+	return obj.String(s)
+}
+
+func (c Compiler) NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []tauerr.Bookmark) obj.Object {
+	if c.useCObjects {
+		return cobj.NewFunctionCompiled(ins, nlocals, nparams, bmarks)
+	}
+	return obj.NewFunctionCompiled(ins, nlocals, nparams, bmarks)
 }

@@ -644,6 +644,8 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 		memcpy(tvm->stack, vm->stack, STACK_SIZE);
 		#pragma omp task
 		memcpy(tvm->state.globals, vm->state.globals, GLOBAL_SIZE);
+		#pragma omp task
+		memcpy(tvm->locals, vm->globals, GLOBAL_SIZE);
 		#pragma omp taskwait
 	}
 	vm_exec_call(tvm, num_args);

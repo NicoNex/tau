@@ -4,45 +4,47 @@ package cvm
 // #cgo LDFLAGS: -fopenmp
 // #include <stdlib.h>
 // #include "vm.h"
-// #include "decoder.h"
 // #include "obj.h"
 import "C"
 import (
+	"fmt"
+	"os"
+	"unicode"
+	"unicode/utf8"
 	"unsafe"
 
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/tauerr"
+	"github.com/NicoNex/tau/internal/vm"
 	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
-type CVM struct {
-	vm *C.struct_vm
-	bc *compiler.Bytecode
-}
+type CVM = *C.struct_vm
 
-var vm CVM
-
-// func New(file string, data []byte) CVM {
-// 	d := (*C.uchar)(unsafe.Pointer(&data[0]))
-// 	bcode := C.tau_decode(d, C.ulong(len(data)))
-// 	vm = CVM{vm: C.new_vm(C.CString(file), bcode)}
-// 	return vm
-// }
+var state vm.State
 
 func New(file string, bc *compiler.Bytecode) CVM {
-	vm = CVM{vm: C.new_vm(C.CString(file), cbytecode(bc))}
-	return vm
+	state = vm.State{
+		Symbols: compiler.NewSymbolTable(),
+		Consts:  bc.Constants,
+	}
+	for i, builtin := range obj.Builtins {
+		state.Symbols.DefineBuiltin(i, builtin.Name)
+	}
+	return C.new_vm(C.CString(file), cbytecode(bc))
 }
 
 func (cvm CVM) Run() {
-	C.vm_run(cvm.vm)
+	C.vm_run(cvm)
 }
 
 func cbytecode(bc *compiler.Bytecode) C.struct_bytecode {
 	return C.struct_bytecode{
 		insts:     (*C.uchar)(unsafe.Pointer(&bc.Instructions[0])),
 		len:       C.size_t(len(bc.Instructions)),
+		consts:    cObjs(bc.Constants),
 		nconsts:   C.size_t(len(bc.Constants)),
 		bookmarks: cBookmarks(bc.Bookmarks),
 		bklen:     C.size_t(len(bc.Bookmarks)),
@@ -75,32 +77,63 @@ func cBookmarks(bmarks []tauerr.Bookmark) *C.struct_bookmark {
 	return &ret[0]
 }
 
-// export parseAndCompile
-// func parseAndCompile(cpath *C.char) C.struct_bytecode {
-// 	path := C.GoString(cpath)
+func isExported(n string) bool {
+	r, _ := utf8.DecodeRuneInString(n)
+	return unicode.IsUpper(r)
+}
 
-// 	p, err := obj.ImportLookup(path)
-// 	if err != nil {
-// 		msg := fmt.Sprintf("import: %v", err)
-// 		C.vm_errorf(vm.vm, C.CString(msg))
-// 	}
+//export VMExecLoadModule
+func VMExecLoadModule(vm *C.struct_vm, cpath *C.char) {
+	path := C.GoString(cpath)
 
-// 	b, err := os.ReadFile(p)
-// 	if err != nil {
-// 		msg := fmt.Sprintf("import: %v", err)
-// 		C.vm_errorf(vm.vm, C.CString(msg))
-// 	}
+	p, err := obj.ImportLookup(path)
+	if err != nil {
+		msg := fmt.Sprintf("import: %v", err)
+		C.go_vm_errorf(vm, C.CString(msg))
+	}
 
-// 	tree, errs := parser.Parse(path, string(b))
-// 	if len(errs) > 0 {
-// 		m := fmt.Sprintf("import: multiple errors in module %s", path)
-// 		// msg := string(parserError(p, errs))
-// 		C.vm_errorf(vm.vm, C.CString(m))
-// 	}
+	b, err := os.ReadFile(p)
+	if err != nil {
+		msg := fmt.Sprintf("import: %v", err)
+		C.go_vm_errorf(vm, C.CString(msg))
+	}
 
-// 	c := compiler.New()
-// 	c.SetFileInfo(path, string(b))
-// 	if err := c.Compile(tree); err != nil {
-// 		C.vm_errorf(vm.vm, C.CString(err.Error()))
-// 	}
-// }
+	tree, errs := parser.Parse(path, string(b))
+	if len(errs) > 0 {
+		m := fmt.Sprintf("import: multiple errors in module %s", path)
+		// msg := string(parserError(p, errs))
+		C.go_vm_errorf(vm, C.CString(m))
+	}
+
+	c := compiler.NewWithState(state.Symbols, &state.Consts)
+	c.SetUseCObjects(true)
+	c.SetFileInfo(path, string(b))
+	if err := c.Compile(tree); err != nil {
+		C.go_vm_errorf(vm, C.CString(err.Error()))
+	}
+
+	bc := cbytecode(c.Bytecode())
+	vm.state.consts = bc.consts
+	tvm := C.new_vm_with_state(C.CString(path), bc, vm.state)
+	defer C.vm_dispose(tvm)
+	if i := C.vm_run(tvm); i != 0 {
+		C.go_vm_errorf(vm, C.CString("import error"))
+	}
+
+	mod := C.new_module()
+	for name, sym := range state.Symbols.Store {
+		if sym.Scope == compiler.GlobalScope && tvm.locals[sym.Index] == 1 {
+			o := vm.state.globals[sym.Index]
+			// TODO: convert objects.
+
+			if isExported(name) {
+				C.module_set_exp(mod, C.CString(name), o)
+			} else {
+				C.module_set_unexp(mod, C.CString(name), o)
+			}
+		}
+	}
+
+	vm.stack[vm.sp] = mod
+	vm.sp++
+}

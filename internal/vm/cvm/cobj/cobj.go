@@ -12,7 +12,7 @@ import (
 	"github.com/NicoNex/tau/internal/tauerr"
 )
 
-type CObj C.struct_object
+type CObj = C.struct_object
 
 func (c CObj) Type() obj.Type {
 	return obj.Type(c._type)
@@ -24,29 +24,29 @@ func (c CObj) String() string {
 	return C.GoString(cstr)
 }
 
-var NullObj = CObj(C.null_obj)
+var NullObj = C.null_obj
 
 func NewFloat(f float64) CObj {
-	return CObj(C.new_float_obj(C.double(f)))
+	return C.new_float_obj(C.double(f))
 }
 
 func NewInteger(i int64) CObj {
-	return CObj(C.new_integer_obj(C.longlong(i)))
+	return C.new_integer_obj(C.long(i))
 }
 
 func NewString(s string) CObj {
-	return CObj(C.new_string_obj(C.CString(s), C.size_t(len(s))))
+	return C.new_string_obj(C.CString(s), C.size_t(len(s)))
 }
 
 func NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []tauerr.Bookmark) CObj {
-	return CObj(C.new_function_obj(
+	return C.new_function_obj(
 		(*C.uchar)(unsafe.Pointer(&ins[0])),
 		C.size_t(len(ins)),
 		C.uint(nlocals),
 		C.uint(nparams),
 		cBookmarks(bmarks),
 		C.uint(len(bmarks)),
-	))
+	)
 }
 
 func cBookmarks(bmarks []tauerr.Bookmark) *C.struct_bookmark {

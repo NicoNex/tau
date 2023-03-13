@@ -42,11 +42,14 @@ struct vm {
 	uint32_t sp;
 	uint32_t frame_idx;
 	char *file;
+	uint32_t locals[GLOBAL_SIZE];
 };
 
 struct state new_state();
 struct vm *new_vm(char *file, struct bytecode bytecode);
+struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state);
 int vm_run(struct vm * restrict vm);
 void vm_errorf(struct vm * restrict vm, const char *fmt, ...);
+void go_vm_errorf(struct vm * restrict vm, const char *fmt);
 struct object vm_last_popped_stack_elem(struct vm * restrict vm);
 void vm_dispose(struct vm *vm);

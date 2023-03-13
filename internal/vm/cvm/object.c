@@ -1,9 +1,10 @@
 #include <stdint.h>
 #include <stdlib.h>
+#include <string.h>
 #include <stdio.h>
 #include "obj.h"
 
-static inline struct object _object_get(struct object_node *n, uint64_t key) {
+static inline struct object _object_get(struct object_node * restrict n, uint64_t key) {
 	if (n == NULL) {
 		return null_obj;
 	}
@@ -37,7 +38,7 @@ static inline void _object_set(struct object_node **n, uint64_t key, struct obje
 	}
 }
 
-static inline void _object_dispose(struct object_node *n) {
+static inline void _object_dispose(struct object_node * restrict n) {
 	if (n != NULL) {
 		if (n->l != NULL) _object_dispose(n->l);
 		if (n->r != NULL) _object_dispose(n->r);
@@ -75,4 +76,41 @@ struct object new_object() {
 		.dispose = dispose_object_obj,
 		.string = object_obj_str
 	};
+}
+
+static void dispose_object_module(struct object m) {
+	_object_dispose(m.data.module->exported);
+	_object_dispose(m.data.module->unexported);
+	free(m.data.module);
+}
+
+static char *module_str(struct object m) {
+	return strdup("<module>");
+}
+
+struct object new_module() {
+	return (struct object) {
+		.data.module = calloc(1, sizeof(struct module)),
+		.type = obj_module,
+		.dispose = dispose_object_module,
+		.string = module_str
+	};
+}
+
+struct object module_get_exp(struct object mod, char *name) {
+	return _object_get(mod.data.module->exported, fnv64a(name));
+}
+
+struct object module_get_unexp(struct object mod, char *name) {
+	return _object_get(mod.data.module->unexported, fnv64a(name));
+}
+
+struct object module_set_exp(struct object mod, char *name, struct object val) {
+	_object_set(&mod.data.module->exported, fnv64a(name), val);
+	return val;
+}
+
+struct object module_set_unexp(struct object mod, char *name, struct object val) {
+	_object_set(&mod.data.module->unexported, fnv64a(name), val);
+	return val;
 }

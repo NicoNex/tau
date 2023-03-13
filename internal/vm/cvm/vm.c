@@ -6,6 +6,7 @@
 #include "vm.h"
 #include "opcode.h"
 #include "obj.h"
+#include "_cgo_export.h"
 
 #define read_uint8(b) ((b)[0])
 #define read_uint16(b) (((b)[0] << 8) | (b)[1])
@@ -120,6 +121,10 @@ void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 	exit(1);
 }
 
+void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
+	vm_errorf(vm, fmt);
+}
+
 static inline __attribute__((always_inline))
 struct object *unwrap(struct object *o) {
 	if (o->type == obj_getsetter) {
@@ -131,7 +136,12 @@ struct object *unwrap(struct object *o) {
 }
 
 static inline void vm_exec_load_module(struct vm * restrict vm) {
+	struct object path = vm_stack_pop(vm);
+	if (path.type != obj_string) {
+		vm_errorf(vm, "import: expected string, got %s", otype_str(path.type));
+	}
 
+	VMExecLoadModule(vm, path.data.str->str);
 }
 
 static inline void vm_exec_dot(struct vm * restrict vm) {
@@ -921,6 +931,7 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_SET_GLOBAL: {
 		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
+		vm->locals[global_idx] = 1;
 		vm->state.globals[global_idx] = vm_stack_peek(vm);
 		DISPATCH();
 	}

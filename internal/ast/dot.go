@@ -67,7 +67,7 @@ func (d Dot) Compile(c *compiler.Compiler) (position int, err error) {
 	if _, ok := d.r.(Identifier); !ok {
 		return position, fmt.Errorf("expected identifier with dot operator, got %T", d.r)
 	}
-	position = c.Emit(code.OpConstant, c.AddConstant(obj.NewString(d.r.String())))
+	position = c.Emit(code.OpConstant, c.AddConstant(c.NewString(d.r.String())))
 	position = c.Emit(code.OpDot)
 	c.Bookmark(d.pos)
 	return

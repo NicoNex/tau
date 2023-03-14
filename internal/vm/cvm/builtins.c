@@ -7,7 +7,19 @@
 
 #include "obj.h"
 
-#define BUILTIN(name) static struct object name(struct object *args, size_t len)
+#define BUILTIN(name) static struct object name(struct object *_args, size_t len)
+
+#define UNWRAP_ARGS()                                    \
+	struct object args[len];                             \
+	for (uint32_t i = 0; i < len; i++) {                 \
+		if (_args[i].type == obj_getsetter) {            \
+			struct getsetter *gs = _args[i].data.gs;     \
+			args[i] = gs->get(gs);                       \
+			free(gs);                                    \
+			continue;                                    \
+		}                                                \
+		args[i] = _args[i];                              \
+	}
 
 static struct object errorf(char *fmt, ...) {
 	char *msg = malloc(sizeof(char) * 256);
@@ -25,6 +37,8 @@ BUILTIN(_len_b) {
 	if (len != 1) {
 		return errorf("len: wrong number of arguments, expected 1, got %lu", len);
 	}
+	UNWRAP_ARGS();
+
 	struct object arg = args[0];
 
 	switch (arg.type) {
@@ -41,6 +55,8 @@ BUILTIN(_len_b) {
 }
 
 BUILTIN(_println_b) {
+	UNWRAP_ARGS();
+
 	for (uint32_t i = 0; i < len; i++) {
 		char *s = object_str(args[i]);
 		fputs(s, stdout);
@@ -52,6 +68,8 @@ BUILTIN(_println_b) {
 }
 
 BUILTIN(_print_b) {
+	UNWRAP_ARGS();
+
 	for (uint32_t i = 0; i < len; i++) {
 		char *s = object_str(args[i]);
 		fputs(s, stdout);
@@ -69,12 +87,14 @@ BUILTIN(_string_b) {
 	if (len != 1) {
 		return errorf("string: wrong number of arguments, expected 1, got %lu", len);
 	}
+	UNWRAP_ARGS();
 
 	char *s = object_str(args[0]);
 	return new_string_obj(s, strlen(s));
 }
 
 BUILTIN(_error_b) {
+	UNWRAP_ARGS();
 	if (len != 1) {
 		return errorf("error: wrong number of arguments, expected 1, got %lu", len);
 	} else if (args[0].type != obj_string) {
@@ -87,6 +107,7 @@ BUILTIN(_type_b) {
 	if (len != 1) {
 		return errorf("type: wrong number of arguments, expected 1, got %lu", len);
 	}
+	UNWRAP_ARGS();
 
 	char *s = otype_str(args[0].type);
 	return new_string_obj(strdup(s), strlen(s));
@@ -96,6 +117,7 @@ BUILTIN(_int_b) {
 	if (len != 1) {
 		return errorf("int: wrong number of arguments, expected 1, got %lu", len);
 	}
+	UNWRAP_ARGS();
 
 	switch (args[0].type) {
 	case obj_integer:
@@ -124,6 +146,7 @@ BUILTIN(_float_b) {
 	if (len != 1) {
 		return errorf("int: wrong number of arguments, expected 1, got %lu", len);
 	}
+	UNWRAP_ARGS();
 
 	switch (args[0].type) {
 	case obj_integer:
@@ -149,6 +172,8 @@ BUILTIN(_float_b) {
 }
 
 BUILTIN(_exit_b) {
+	UNWRAP_ARGS();
+
 	switch (len) {
 	case 0:
 		exit(0);
@@ -192,6 +217,7 @@ BUILTIN(_failed_b) {
 	if (len != 1) {
 		return errorf("failed: wrong number of arguments, expected 1, got %lu", len);
 	}
+	UNWRAP_ARGS();
 
 	return parse_bool(args[0].type == obj_error);
 }

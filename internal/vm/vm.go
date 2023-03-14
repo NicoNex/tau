@@ -18,7 +18,7 @@ import (
 )
 
 type State struct {
-	Symbols *compiler.SymbolTable
+	NumDefs int
 	Consts  []obj.Object
 	Globals []obj.Object
 }
@@ -32,7 +32,6 @@ func NewState() *State {
 	return &State{
 		Consts:  []obj.Object{},
 		Globals: make([]obj.Object, GlobalSize),
-		Symbols: st,
 	}
 }
 

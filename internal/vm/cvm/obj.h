@@ -130,8 +130,8 @@ struct object new_error_obj(char *msg, size_t len);
 struct object new_string_obj(char *str, size_t len);
 struct object new_float_obj(double val);
 struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len));
-struct object new_list_obj(struct object *list, size_t len);
 struct object parse_bool(uint32_t b);
+struct object new_getsetter_obj(struct object l, struct object r, getfn get, setfn set);
 
 char *otype_str(enum obj_type t);
 char *object_str(struct object o);
@@ -139,27 +139,29 @@ void print_obj(struct object o);
 
 uint64_t fnv64a(char *s);
 
+struct object new_list_obj(struct object *list, size_t len);
+struct object list_getsetter_get(struct getsetter *gs);
+struct object list_getsetter_set(struct getsetter *gs, struct object val);
+
 struct object new_object();
 struct object object_get(struct object obj, char *name);
 struct object object_set(struct object obj, char *name, struct object val);
+struct object object_getsetter_get(struct getsetter *gs);
+struct object object_getsetter_set(struct getsetter *gs, struct object val);
 
 struct object new_map();
 struct map_pair map_get(struct object map, struct object k);
 struct map_pair map_set(struct object map, struct object k, struct object v);
+struct object map_getsetter_get(struct getsetter *gs);
+struct object map_getsetter_set(struct getsetter *gs, struct object val);
 
 struct object new_module();
 struct object module_get_exp(struct object mod, char *name);
 struct object module_get_unexp(struct object mod, char *name);
 struct object module_set_exp(struct object mod, char *name, struct object val);
 struct object module_set_unexp(struct object mod, char *name, struct object val);
-
-struct object new_getsetter_obj(struct object l, struct object r, getfn get, setfn set);
-struct object map_getsetter_get(struct getsetter *gs);
-struct object map_getsetter_set(struct getsetter *gs, struct object val);
-struct object list_getsetter_get(struct getsetter *gs);
-struct object list_getsetter_set(struct getsetter *gs, struct object val);
-struct object object_getsetter_get(struct getsetter *gs);
-struct object object_getsetter_set(struct getsetter *gs, struct object val);
+struct object module_getsetter_get(struct getsetter *gs);
+struct object module_getsetter_set(struct getsetter *gs, struct object val);
 
 extern struct object null_obj;
 extern struct object true_obj;

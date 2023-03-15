@@ -17,19 +17,15 @@ import (
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/tauerr"
-	"github.com/NicoNex/tau/internal/vm"
 	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type CVM = *C.struct_vm
 
-var state vm.State
+var consts []obj.Object
 
 func New(file string, bc *compiler.Bytecode) CVM {
-	state = vm.State{
-		NumDefs: bc.NumDefs,
-		Consts:  bc.Constants,
-	}
+	consts = bc.Constants
 	return C.new_vm(C.CString(file), cbytecode(bc))
 }
 
@@ -99,11 +95,10 @@ func VMExecLoadModule(vm *C.struct_vm, cpath *C.char) {
 	tree, errs := parser.Parse(path, string(b))
 	if len(errs) > 0 {
 		m := fmt.Sprintf("import: multiple errors in module %s", path)
-		// msg := string(parserError(p, errs))
 		C.go_vm_errorf(vm, C.CString(m))
 	}
 
-	c := compiler.NewImport(int(vm.state.ndefs), &state.Consts)
+	c := compiler.NewImport(int(vm.state.ndefs), &consts)
 	c.SetUseCObjects(true)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
@@ -124,7 +119,6 @@ func VMExecLoadModule(vm *C.struct_vm, cpath *C.char) {
 	for name, sym := range c.Store {
 		if sym.Scope == compiler.GlobalScope {
 			o := vm.state.globals[sym.Index]
-			fmt.Println("index", sym.Index)
 			// TODO: convert objects.
 
 			if isExported(name) {

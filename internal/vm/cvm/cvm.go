@@ -39,12 +39,12 @@ func (cvm CVM) Run() {
 func cbytecode(bc *compiler.Bytecode) C.struct_bytecode {
 	return C.struct_bytecode{
 		insts:     (*C.uchar)(unsafe.Pointer(&bc.Instructions[0])),
-		len:       C.size_t(len(bc.Instructions)),
+		len:       C.uint32_t(len(bc.Instructions)),
 		consts:    cObjs(bc.Constants),
-		nconsts:   C.size_t(len(bc.Constants)),
+		nconsts:   C.uint32_t(len(bc.Constants)),
 		bookmarks: cBookmarks(bc.Bookmarks),
-		bklen:     C.size_t(len(bc.Bookmarks)),
-		ndefs:     C.size_t(bc.NumDefs),
+		bklen:     C.uint32_t(len(bc.Bookmarks)),
+		ndefs:     C.uint32_t(bc.NumDefs),
 	}
 }
 

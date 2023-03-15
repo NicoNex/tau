@@ -16,11 +16,11 @@
 struct bytecode {
 	uint8_t *insts;
 	struct object *consts;
-	size_t len;
-	size_t nconsts;
-	size_t bklen;
+	uint32_t len;
+	uint32_t nconsts;
+	uint32_t bklen;
 	struct bookmark *bookmarks;
-	size_t ndefs;
+	uint32_t ndefs;
 };
 
 struct frame {

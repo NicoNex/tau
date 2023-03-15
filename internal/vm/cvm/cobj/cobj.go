@@ -26,12 +26,12 @@ func (c CObj) String() string {
 
 var NullObj = C.null_obj
 
-func NewFloat(f float64) CObj {
-	return C.new_float_obj(C.double(f))
+func NewInteger(i int64) CObj {
+	return C.new_integer_obj(C.int64_t(i))
 }
 
-func NewInteger(i int64) CObj {
-	return C.new_integer_obj(C.long(i))
+func NewFloat(f float64) CObj {
+	return C.new_float_obj(C.double(f))
 }
 
 func NewString(s string) CObj {

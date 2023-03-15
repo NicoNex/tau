@@ -41,6 +41,7 @@ type Bytecode struct {
 	Instructions code.Instructions
 	Constants    []obj.Object
 	Bookmarks    []tauerr.Bookmark
+	NumDefs      int
 }
 
 const (
@@ -65,6 +66,21 @@ func New() *Compiler {
 func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
 	return &Compiler{
 		SymbolTable: s,
+		scopes:      []CompilationScope{{}},
+		constants:   constants,
+	}
+}
+
+func NewImport(numDefs int, constants *[]obj.Object) *Compiler {
+	var st = NewSymbolTable()
+
+	st.NumDefs = numDefs
+	for i, b := range obj.Builtins {
+		st.DefineBuiltin(i, b.Name)
+	}
+
+	return &Compiler{
+		SymbolTable: st,
 		scopes:      []CompilationScope{{}},
 		constants:   constants,
 	}
@@ -247,6 +263,7 @@ func (c *Compiler) Bytecode() *Bytecode {
 		Instructions: c.scopes[c.scopeIndex].instructions,
 		Constants:    *c.constants,
 		Bookmarks:    c.scopes[c.scopeIndex].bookmarks,
+		NumDefs:      c.NumDefs,
 	}
 }
 

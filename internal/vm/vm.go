@@ -18,9 +18,10 @@ import (
 )
 
 type State struct {
-	NumDefs int
+	Symbols *compiler.SymbolTable
 	Consts  []obj.Object
 	Globals []obj.Object
+	NumDefs int
 }
 
 func NewState() *State {
@@ -32,6 +33,7 @@ func NewState() *State {
 	return &State{
 		Consts:  []obj.Object{},
 		Globals: make([]obj.Object, GlobalSize),
+		Symbols: st,
 	}
 }
 
@@ -113,6 +115,7 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 		State:      state,
 	}
 
+	vm.NumDefs = bytecode.NumDefs
 	vm.dir, vm.file = filepath.Split(file)
 	fn := &obj.CompiledFunction{
 		Instructions: bytecode.Instructions,
@@ -195,11 +198,12 @@ func (vm *VM) execLoadModule() error {
 		return parserError(p, errs)
 	}
 
-	c := compiler.NewWithState(vm.Symbols, &vm.Consts)
+	c := compiler.NewImport(vm.NumDefs, &vm.Consts)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
 		return err
 	}
+	vm.NumDefs = c.NumDefs
 
 	tvm := NewWithState(path, c.Bytecode(), vm.State)
 	if err := tvm.Run(); err != nil {
@@ -207,7 +211,7 @@ func (vm *VM) execLoadModule() error {
 	}
 
 	mod := obj.NewModule()
-	for name, symbol := range vm.Symbols.Store {
+	for name, symbol := range c.Store {
 		if symbol.Scope == compiler.GlobalScope && tvm.isLocal(symbol.Index) {
 			o := vm.Globals[symbol.Index]
 			if m, ok := o.(obj.Moduler); ok {

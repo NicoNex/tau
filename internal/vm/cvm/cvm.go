@@ -79,8 +79,8 @@ func isExported(n string) bool {
 	return unicode.IsUpper(r)
 }
 
-//export VMExecLoadModule
-func VMExecLoadModule(vm *C.struct_vm, cpath *C.char) {
+//export vm_exec_load_module
+func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	path := C.GoString(cpath)
 
 	p, err := obj.ImportLookup(path)

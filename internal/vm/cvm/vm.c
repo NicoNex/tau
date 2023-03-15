@@ -136,15 +136,6 @@ struct object *unwrap(struct object *o) {
 	return o;
 }
 
-static inline void vm_exec_load_module(struct vm * restrict vm) {
-	struct object path = vm_stack_pop(vm);
-	if (path.type != obj_string) {
-		vm_errorf(vm, "import: expected string, got %s", otype_str(path.type));
-	}
-
-	VMExecLoadModule(vm, path.data.str->str);
-}
-
 static inline void vm_exec_dot(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);
 	struct object *left = unwrap(&vm_stack_pop(vm));
@@ -966,7 +957,11 @@ int vm_run(struct vm * restrict vm) {
 	}
 
 	TARGET_LOAD_MODULE: {
-		vm_exec_load_module(vm);
+		struct object path = vm_stack_pop(vm);
+		if (path.type != obj_string) {
+			vm_errorf(vm, "import: expected string, got %s", otype_str(path.type));
+		}
+		vm_exec_load_module(vm, path.data.str->str);
 		DISPATCH();
 	}
 

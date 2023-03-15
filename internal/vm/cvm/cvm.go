@@ -114,6 +114,7 @@ func VMExecLoadModule(vm *C.struct_vm, cpath *C.char) {
 	if i := C.vm_run(tvm); i != 0 {
 		C.go_vm_errorf(vm, C.CString("import error"))
 	}
+	vm.state = tvm.state
 
 	mod := C.new_module()
 	for name, sym := range c.Store {

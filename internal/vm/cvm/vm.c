@@ -628,7 +628,6 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 	case obj_builtin:
 		return vm_call_builtin(vm, o->data.builtin, numargs);
 	default:
-		printf("type: %s\n", otype_str(o->type));
 		vm_errorf(vm, "calling non-function");
 	}
 }

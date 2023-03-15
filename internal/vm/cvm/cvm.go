@@ -22,7 +22,10 @@ import (
 
 type CVM = *C.struct_vm
 
-var consts []obj.Object
+var (
+	consts    []obj.Object
+	importTab = make(map[string]C.struct_object)
+)
 
 func New(file string, bc *compiler.Bytecode) CVM {
 	consts = bc.Constants
@@ -86,6 +89,12 @@ func VMExecLoadModule(vm *C.struct_vm, cpath *C.char) {
 		C.go_vm_errorf(vm, C.CString(msg))
 	}
 
+	if mod, ok := importTab[p]; ok {
+		vm.stack[vm.sp] = mod
+		vm.sp++
+		return
+	}
+
 	b, err := os.ReadFile(p)
 	if err != nil {
 		msg := fmt.Sprintf("import: %v", err)
@@ -130,6 +139,7 @@ func VMExecLoadModule(vm *C.struct_vm, cpath *C.char) {
 		}
 	}
 
+	importTab[p] = mod
 	vm.stack[vm.sp] = mod
 	vm.sp++
 }

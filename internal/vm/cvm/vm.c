@@ -51,6 +51,7 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 	struct vm *vm = calloc(1, sizeof(struct vm));
 	vm->file = file;
 	vm->state.consts = bc.consts;
+	vm->state.ndefs = bc.ndefs;
 
 	struct object fn = new_function_obj(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
 	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
@@ -148,11 +149,15 @@ static inline void vm_exec_dot(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);
 	struct object *left = unwrap(&vm_stack_pop(vm));
 
-	if (!ASSERT(left, obj_object) || !ASSERT(right, obj_string)) {
+	if (!ASSERT2(left, obj_object, obj_module) || !ASSERT(right, obj_string)) {
 		vm_errorf(vm, "%s object has no attribute %s", otype_str(left->type), object_str(*right));
 	}
 
-	vm_stack_push(vm, new_getsetter_obj(*left, *right, object_getsetter_get, object_getsetter_set));
+	if (ASSERT(left, obj_module)) {
+		vm_stack_push(vm, new_getsetter_obj(*left, *right, module_getsetter_get, module_getsetter_set));
+	} else {
+		vm_stack_push(vm, new_getsetter_obj(*left, *right, object_getsetter_get, object_getsetter_set));
+	}
 }
 
 static inline void vm_exec_define(struct vm * restrict vm) {
@@ -623,6 +628,7 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 	case obj_builtin:
 		return vm_call_builtin(vm, o->data.builtin, numargs);
 	default:
+		printf("type: %s\n", otype_str(o->type));
 		vm_errorf(vm, "calling non-function");
 	}
 }
@@ -644,8 +650,6 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 		memcpy(tvm->stack, vm->stack, STACK_SIZE);
 		#pragma omp task
 		memcpy(tvm->state.globals, vm->state.globals, GLOBAL_SIZE);
-		#pragma omp task
-		memcpy(tvm->locals, vm->globals, GLOBAL_SIZE);
 		#pragma omp taskwait
 	}
 	vm_exec_call(tvm, num_args);
@@ -933,7 +937,6 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_SET_GLOBAL: {
 		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
-		vm->locals[global_idx] = 1;
 		vm->state.globals[global_idx] = vm_stack_peek(vm);
 		DISPATCH();
 	}
@@ -964,7 +967,7 @@ int vm_run(struct vm * restrict vm) {
 	}
 
 	TARGET_LOAD_MODULE: {
-		UNHANDLED();
+		vm_exec_load_module(vm);
 		DISPATCH();
 	}
 

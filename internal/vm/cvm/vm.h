@@ -20,6 +20,7 @@ struct bytecode {
 	size_t nconsts;
 	size_t bklen;
 	struct bookmark *bookmarks;
+	size_t ndefs;
 };
 
 struct frame {
@@ -31,8 +32,9 @@ struct frame {
 
 struct state {
 	struct object *consts;
-	uint32_t nconsts;
 	struct object globals[GLOBAL_SIZE];
+	uint32_t nconsts;
+	uint32_t ndefs;
 };
 
 struct vm {
@@ -42,7 +44,6 @@ struct vm {
 	uint32_t sp;
 	uint32_t frame_idx;
 	char *file;
-	uint32_t locals[GLOBAL_SIZE];
 };
 
 struct state new_state();

@@ -43,7 +43,6 @@ type VM struct {
 	file       string
 	stack      []obj.Object
 	frames     []*Frame
-	localTable []bool
 	sp         int
 	frameIndex int
 }
@@ -92,7 +91,6 @@ func New(file string, bytecode *compiler.Bytecode) *VM {
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
-		localTable: make([]bool, GlobalSize),
 		State:      NewState(),
 	}
 
@@ -111,7 +109,6 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
-		localTable: make([]bool, GlobalSize),
 		State:      state,
 	}
 
@@ -123,10 +120,6 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 	}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
-}
-
-func (vm *VM) isLocal(i int) bool {
-	return vm.localTable[i]
 }
 
 func (vm *VM) currentFrame() *Frame {
@@ -212,7 +205,7 @@ func (vm *VM) execLoadModule() error {
 
 	mod := obj.NewModule()
 	for name, symbol := range c.Store {
-		if symbol.Scope == compiler.GlobalScope && tvm.isLocal(symbol.Index) {
+		if symbol.Scope == compiler.GlobalScope {
 			o := vm.Globals[symbol.Index]
 			if m, ok := o.(obj.Moduler); ok {
 				o = m.Module()
@@ -755,7 +748,6 @@ func (vm *VM) execConcurrentCall(numArgs int) error {
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
-		localTable: make([]bool, GlobalSize),
 		dir:        vm.dir,
 		file:       vm.file,
 		sp:         vm.sp,
@@ -768,7 +760,6 @@ func (vm *VM) execConcurrentCall(numArgs int) error {
 
 	wait(
 		func() { copy(tvm.stack, vm.stack) },
-		func() { copy(tvm.localTable, vm.localTable) },
 		func() { copy(tvm.Globals, vm.Globals) },
 	)
 
@@ -884,7 +875,6 @@ func (vm *VM) Run() (err error) {
 		case code.OpSetGlobal:
 			globalIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
-			vm.localTable[globalIndex] = true
 			vm.Globals[globalIndex] = vm.peek()
 
 		case code.OpGetGlobal:

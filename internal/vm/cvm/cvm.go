@@ -27,11 +27,8 @@ var state vm.State
 
 func New(file string, bc *compiler.Bytecode) CVM {
 	state = vm.State{
-		Symbols: compiler.NewSymbolTable(),
+		NumDefs: bc.NumDefs,
 		Consts:  bc.Constants,
-	}
-	for i, builtin := range obj.Builtins {
-		state.Symbols.DefineBuiltin(i, builtin.Name)
 	}
 	return C.new_vm(C.CString(file), cbytecode(bc))
 }
@@ -48,6 +45,7 @@ func cbytecode(bc *compiler.Bytecode) C.struct_bytecode {
 		nconsts:   C.size_t(len(bc.Constants)),
 		bookmarks: cBookmarks(bc.Bookmarks),
 		bklen:     C.size_t(len(bc.Bookmarks)),
+		ndefs:     C.size_t(bc.NumDefs),
 	}
 }
 
@@ -105,7 +103,7 @@ func VMExecLoadModule(vm *C.struct_vm, cpath *C.char) {
 		C.go_vm_errorf(vm, C.CString(m))
 	}
 
-	c := compiler.NewWithState(state.Symbols, &state.Consts)
+	c := compiler.NewImport(int(vm.state.ndefs), &state.Consts)
 	c.SetUseCObjects(true)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
@@ -114,6 +112,8 @@ func VMExecLoadModule(vm *C.struct_vm, cpath *C.char) {
 
 	bc := cbytecode(c.Bytecode())
 	vm.state.consts = bc.consts
+	vm.state.nconsts = bc.nconsts
+	vm.state.ndefs = bc.ndefs
 	tvm := C.new_vm_with_state(C.CString(path), bc, vm.state)
 	defer C.vm_dispose(tvm)
 	if i := C.vm_run(tvm); i != 0 {
@@ -121,9 +121,10 @@ func VMExecLoadModule(vm *C.struct_vm, cpath *C.char) {
 	}
 
 	mod := C.new_module()
-	for name, sym := range state.Symbols.Store {
-		if sym.Scope == compiler.GlobalScope && tvm.locals[sym.Index] == 1 {
+	for name, sym := range c.Store {
+		if sym.Scope == compiler.GlobalScope {
 			o := vm.state.globals[sym.Index]
+			fmt.Println("index", sym.Index)
 			// TODO: convert objects.
 
 			if isExported(name) {

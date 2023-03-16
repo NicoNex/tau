@@ -875,7 +875,7 @@ func (vm *VM) Run() (err error) {
 		case code.OpSetGlobal:
 			globalIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
-			vm.Globals[globalIndex] = vm.peek()
+			vm.Globals[globalIndex] = obj.Unwrap(vm.peek())
 
 		case code.OpGetGlobal:
 			globalIndex := code.ReadUint16(ins[ip+1:])
@@ -887,7 +887,7 @@ func (vm *VM) Run() (err error) {
 			vm.currentFrame().ip += 1
 
 			frame := vm.currentFrame()
-			vm.stack[frame.basePointer+int(localIndex)] = vm.peek()
+			vm.stack[frame.basePointer+int(localIndex)] = obj.Unwrap(vm.peek())
 
 		case code.OpGetLocal:
 			localIndex := code.ReadUint8(ins[ip+1:])

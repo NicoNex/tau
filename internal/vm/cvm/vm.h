@@ -3,12 +3,6 @@
 #include <stdint.h>
 #include "obj.h"
 
-#ifdef __GLIBC__
-#include <bits/stdint-uintn.h>
-#define uint32_t uint_fast32_t
-#endif
-
-
 #define STACK_SIZE 2048
 #define GLOBAL_SIZE 65536
 #define MAX_FRAMES 1024

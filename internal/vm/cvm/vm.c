@@ -136,6 +136,16 @@ struct object *unwrap(struct object *o) {
 	return o;
 }
 
+static inline __attribute__((always_inline))
+struct object unwraps(struct object o) {
+	if (o.type == obj_getsetter) {
+		struct getsetter *gs = o.data.gs;
+		o = gs->get(gs);
+		free(gs);
+	}
+	return o;
+}
+
 static inline void vm_exec_dot(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);
 	struct object *left = unwrap(&vm_stack_pop(vm));
@@ -927,7 +937,7 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_SET_GLOBAL: {
 		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
-		vm->state.globals[global_idx] = vm_stack_peek(vm);
+		vm->state.globals[global_idx] = unwraps(vm_stack_peek(vm));
 		DISPATCH();
 	}
 
@@ -939,7 +949,7 @@ int vm_run(struct vm * restrict vm) {
 
 	TARGET_SET_LOCAL: {
 		uint32_t local_idx = read_uint8(frame->ip++);
-		vm->stack[frame->base_ptr+local_idx] = vm_stack_peek(vm);
+		vm->stack[frame->base_ptr+local_idx] = unwraps(vm_stack_peek(vm));
 		DISPATCH();
 	}
 

@@ -165,7 +165,10 @@ func btoi(b []byte) int {
 func tauEncode(bcode *compiler.Bytecode) ([]byte, error) {
 	var buf = new(bytes.Buffer)
 
-	// Write the length of the instructions to the first 4 bytes of the buffer.
+	// Write the number of definitions to the first 4 bytes of the buffer.
+	buf.Write(itob(bcode.NumDefs))
+
+	// Write the length of the instructions to the following 4 bytes of the buffer.
 	buf.Write(itob(len(bcode.Instructions)))
 	buf.Write(bcode.Instructions)
 
@@ -189,21 +192,27 @@ func tauDecode(b []byte) (*compiler.Bytecode, error) {
 		bcode = new(compiler.Bytecode)
 	)
 
+	bcode.NumDefs = btoi(b)
+	pos += 4
+
 	// Read the first 4 bytes to determine the instructions length.
-	ilen := btoi(b)
-	bcode.Instructions = code.Instructions(b[4 : 4+ilen])
-	pos += 4 + ilen
+	ilen := btoi(b[pos:])
+	pos += 4
+	bcode.Instructions = code.Instructions(b[pos : pos+ilen])
+	pos += ilen
 
 	clen := btoi(b[pos:])
-	consts, clen, err := decodeObjects(b[pos+4:], clen)
+	pos += 4
+	consts, clen, err := decodeObjects(b[pos:], clen)
 	if err != nil {
 		return nil, err
 	}
 	bcode.Constants = consts
-	pos += 4 + clen
+	pos += clen
 
 	blen := btoi(b[pos:])
-	bmarks, _ := decodeBookmarks(b[pos+4:], blen)
+	pos += 4
+	bmarks, _ := decodeBookmarks(b[pos:], blen)
 	bcode.Bookmarks = bmarks
 	return bcode, nil
 }

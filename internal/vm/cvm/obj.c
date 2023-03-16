@@ -199,14 +199,6 @@ struct object object_getsetter_set(struct getsetter *gs, struct object val) {
 	return object_set(gs->l, gs->r.data.str->str, val);
 }
 
-struct object module_getsetter_get(struct getsetter *gs) {
-	return module_get_exp(gs->l, gs->r.data.str->str);
-}
-
-struct object module_getsetter_set(struct getsetter *gs, struct object val) {
-	return module_set_exp(gs->l, gs->r.data.str->str, val);
-}
-
 struct object map_getsetter_get(struct getsetter *gs) {
 	struct map_pair mp = map_get(gs->l, gs->r);
 	return mp.val;
@@ -342,8 +334,7 @@ char *otype_str(enum obj_type t) {
 		"object",
 		"pipe",
 		"bytes",
-		"getsetter",
-		"module"
+		"getsetter"
 	};
 
 	return strings[t];

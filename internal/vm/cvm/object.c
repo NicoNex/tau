@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <ctype.h>
 #include "obj.h"
 
 static inline struct object _object_get(struct object_node * restrict n, uint64_t key) {
@@ -18,9 +19,26 @@ static inline struct object _object_get(struct object_node * restrict n, uint64_
 	}
 }
 
-static inline void _object_set(struct object_node **n, uint64_t key, struct object val) {
+struct object object_to_module(struct object o);
+
+static void _object_to_module(struct object mod, struct object_node * restrict n) {
+	if (n != NULL) {
+		if (isupper(*n->name)) {
+			if (n->val.type == obj_object) {
+				object_set(mod, n->name, object_to_module(n->val));
+			} else {
+				object_set(mod, n->name, n->val);
+			}
+		}
+		_object_to_module(mod, n->l);
+		_object_to_module(mod, n->r);
+	}
+}
+
+static inline void _object_set(struct object_node **n, uint64_t key, char *name, struct object val) {
 	if (*n == NULL) {
 		*n = malloc(sizeof(struct object_node));
+		(*n)->name = strdup(name);
 		(*n)->key = key;
 		(*n)->val = val;
 		(*n)->l = NULL;
@@ -32,9 +50,9 @@ static inline void _object_set(struct object_node **n, uint64_t key, struct obje
 	if (key == cur) {
 		(*n)->val = val;
 	} else if (key < cur) {
-		_object_set(&(*n)->l, key, val);
+		_object_set(&(*n)->l, key, name, val);
 	} else {
-		_object_set(&(*n)->r, key, val);
+		_object_set(&(*n)->r, key, name, val);
 	}
 }
 
@@ -42,6 +60,7 @@ static inline void _object_dispose(struct object_node * restrict n) {
 	if (n != NULL) {
 		if (n->l != NULL) _object_dispose(n->l);
 		if (n->r != NULL) _object_dispose(n->r);
+		free(n->name);
 		free(n);
 	}
 }
@@ -51,7 +70,7 @@ struct object object_get(struct object obj, char *name) {
 }
 
 struct object object_set(struct object obj, char *name, struct object val) {
-	_object_set(obj.data.obj, fnv64a(name), val);
+	_object_set(obj.data.obj, fnv64a(name), name, val);
 	return val;
 }
 
@@ -78,39 +97,9 @@ struct object new_object() {
 	};
 }
 
-static void dispose_object_module(struct object m) {
-	_object_dispose(m.data.module->exported);
-	_object_dispose(m.data.module->unexported);
-	free(m.data.module);
-}
+struct object object_to_module(struct object o) {
+	struct object mod = new_object();
 
-static char *module_str(struct object m) {
-	return strdup("<module>");
-}
-
-struct object new_module() {
-	return (struct object) {
-		.data.module = calloc(1, sizeof(struct module)),
-		.type = obj_module,
-		.dispose = dispose_object_module,
-		.string = module_str
-	};
-}
-
-struct object module_get_exp(struct object mod, char *name) {
-	return _object_get(mod.data.module->exported, fnv64a(name));
-}
-
-struct object module_get_unexp(struct object mod, char *name) {
-	return _object_get(mod.data.module->unexported, fnv64a(name));
-}
-
-struct object module_set_exp(struct object mod, char *name, struct object val) {
-	_object_set(&mod.data.module->exported, fnv64a(name), val);
-	return val;
-}
-
-struct object module_set_unexp(struct object mod, char *name, struct object val) {
-	_object_set(&mod.data.module->unexported, fnv64a(name), val);
-	return val;
+	_object_to_module(mod, *o.data.obj);
+	return mod;
 }

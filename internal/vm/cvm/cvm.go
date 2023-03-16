@@ -125,16 +125,17 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	}
 	vm.state = tvm.state
 
-	mod := C.new_module()
+	mod := C.new_object()
 	for name, sym := range c.Store {
 		if sym.Scope == compiler.GlobalScope {
 			o := vm.state.globals[sym.Index]
-			// TODO: convert objects.
 
 			if isExported(name) {
-				C.module_set_exp(mod, C.CString(name), o)
-			} else {
-				C.module_set_unexp(mod, C.CString(name), o)
+				if o._type == C.obj_object {
+					C.object_set(mod, C.CString(name), C.object_to_module(o))
+				} else {
+					C.object_set(mod, C.CString(name), o)
+				}
 			}
 		}
 	}

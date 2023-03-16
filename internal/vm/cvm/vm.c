@@ -150,15 +150,10 @@ static inline void vm_exec_dot(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);
 	struct object *left = unwrap(&vm_stack_pop(vm));
 
-	if (!ASSERT2(left, obj_object, obj_module) || !ASSERT(right, obj_string)) {
+	if (!ASSERT(left, obj_object) || !ASSERT(right, obj_string)) {
 		vm_errorf(vm, "%s object has no attribute %s", otype_str(left->type), object_str(*right));
 	}
-
-	if (ASSERT(left, obj_module)) {
-		vm_stack_push(vm, new_getsetter_obj(*left, *right, module_getsetter_get, module_getsetter_set));
-	} else {
-		vm_stack_push(vm, new_getsetter_obj(*left, *right, object_getsetter_get, object_getsetter_set));
-	}
+	vm_stack_push(vm, new_getsetter_obj(*left, *right, object_getsetter_get, object_getsetter_set));
 }
 
 static inline void vm_exec_define(struct vm * restrict vm) {

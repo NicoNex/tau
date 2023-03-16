@@ -20,8 +20,7 @@ enum obj_type {
 	obj_object,
 	obj_pipe,
 	obj_bytes,
-	obj_getsetter,
-	obj_module
+	obj_getsetter
 };
 
 struct bookmark {
@@ -60,11 +59,6 @@ struct list {
 struct string {
 	char *str;
 	size_t len;
-};
-
-struct module {
-	struct object_node *exported;
-	struct object_node *unexported;
 };
 
 union data {
@@ -116,6 +110,7 @@ struct map_node {
 };
 
 struct object_node {
+	char *name;
 	uint64_t key;
 	struct object val;
 	struct object_node *l;
@@ -148,20 +143,13 @@ struct object object_get(struct object obj, char *name);
 struct object object_set(struct object obj, char *name, struct object val);
 struct object object_getsetter_get(struct getsetter *gs);
 struct object object_getsetter_set(struct getsetter *gs, struct object val);
+struct object object_to_module(struct object o);
 
 struct object new_map();
 struct map_pair map_get(struct object map, struct object k);
 struct map_pair map_set(struct object map, struct object k, struct object v);
 struct object map_getsetter_get(struct getsetter *gs);
 struct object map_getsetter_set(struct getsetter *gs, struct object val);
-
-struct object new_module();
-struct object module_get_exp(struct object mod, char *name);
-struct object module_get_unexp(struct object mod, char *name);
-struct object module_set_exp(struct object mod, char *name, struct object val);
-struct object module_set_unexp(struct object mod, char *name, struct object val);
-struct object module_getsetter_get(struct getsetter *gs);
-struct object module_getsetter_set(struct getsetter *gs, struct object val);
 
 extern struct object null_obj;
 extern struct object true_obj;

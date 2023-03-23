@@ -28,6 +28,7 @@ struct object new_closure_obj(struct function *fn, struct object *free, size_t n
 	return (struct object) {
 		.data.cl = cl,
 		.type = obj_closure,
+		.marked = MARKPTR(),
 		.dispose = dispose_closure_obj,
 		.string = closure_str
 	};
@@ -62,6 +63,7 @@ struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_params, 
 	return (struct object) {
 		.data.fn = fn,
 		.type = obj_function,
+		.marked = MARKPTR(),
 		.dispose = dispose_function_obj,
 		.string = function_str
 	};
@@ -76,6 +78,7 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 	return (struct object) {
 		.data.builtin = builtin,
 		.type = obj_builtin,
+		.marked = NULL,
 		.dispose = dummy_dispose,
 		.string = builtin_str
 	};
@@ -99,6 +102,7 @@ struct object new_error_obj(char *str, size_t len) {
 	return (struct object) {
 		.data.str = s,
 		.type = obj_error,
+		.marked = MARKPTR(),
 		.dispose = dispose_error_obj,
 		.string = error_str
 	};
@@ -116,6 +120,7 @@ struct object new_float_obj(double val) {
 	return (struct object) {
 		.data.f = val,
 		.type = obj_float,
+		.marked = NULL,
 		.dispose = dummy_dispose,
 		.string = float_str
 	};
@@ -138,6 +143,7 @@ struct object new_integer_obj(int64_t val) {
 	return (struct object) {
 		.data.i = val,
 		.type = obj_integer,
+		.marked = NULL,
 		.dispose = dummy_dispose,
 		.string = integer_str
 	};
@@ -161,6 +167,7 @@ struct object new_string_obj(char *str, size_t len) {
 	return (struct object) {
 		.data.str = s,
 		.type = obj_string,
+		.marked = MARKPTR(),
 		.dispose = dispose_string_obj,
 		.string = string_str
 	};
@@ -186,6 +193,7 @@ struct object new_getsetter_obj(struct object l, struct object r, getfn get, set
 	return (struct object) {
 		.data.gs = gs,
 		.type = obj_getsetter,
+		.marked = MARKPTR(),
 		.dispose = dispose_getsetter_obj,
 		.string = getsetter_str
 	};
@@ -272,6 +280,7 @@ struct object new_list_obj(struct object *list, size_t len) {
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
+		.marked = MARKPTR(),
 		.dispose = dispose_list_obj,
 		.string = list_str
 	};
@@ -300,6 +309,7 @@ static char *null_str(struct object o) {
 struct object true_obj = (struct object) {
 	.data.i = 1,
 	.type = obj_boolean,
+	.marked = NULL,
 	.dispose = dummy_dispose,
 	.string = boolean_str
 };
@@ -307,6 +317,7 @@ struct object true_obj = (struct object) {
 struct object false_obj = (struct object) {
 	.data.i = 0,
 	.type = obj_boolean,
+	.marked = NULL,
 	.dispose = dummy_dispose,
 	.string = boolean_str
 };
@@ -314,6 +325,7 @@ struct object false_obj = (struct object) {
 struct object null_obj = (struct object) {
 	.data.i = 0,
 	.type = obj_null,
+	.marked = NULL,
 	.dispose = dummy_dispose,
 	.string = null_str
 };

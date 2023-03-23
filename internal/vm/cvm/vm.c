@@ -52,6 +52,7 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 	vm->file = file;
 	vm->state.consts = bc.consts;
 	vm->state.ndefs = bc.ndefs;
+	vm->heap = (struct heap) {0};
 
 	struct object fn = new_function_obj(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
 	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);

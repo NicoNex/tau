@@ -3,9 +3,10 @@
 #include <stdint.h>
 #include "obj.h"
 
-#define STACK_SIZE 2048
+#define STACK_SIZE  2048
 #define GLOBAL_SIZE 65536
-#define MAX_FRAMES 1024
+#define MAX_FRAMES  1024
+#define HEAP_SIZE   1024
 
 struct bytecode {
 	uint8_t *insts;
@@ -31,10 +32,16 @@ struct state {
 	uint32_t ndefs;
 };
 
+struct heap {
+	uint32_t idx;
+	struct object objs[HEAP_SIZE];
+};
+
 struct vm {
+	struct state state;
+	struct heap heap;
 	struct object stack[STACK_SIZE];
 	struct frame frames[MAX_FRAMES];
-	struct state state;
 	uint32_t sp;
 	uint32_t frame_idx;
 	char *file;

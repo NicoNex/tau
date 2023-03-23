@@ -92,6 +92,7 @@ struct object new_object() {
 	return (struct object) {
 		.data.obj = calloc(1, sizeof(struct object_node *)),
 		.type = obj_object,
+		.marked = MARKPTR(),
 		.dispose = dispose_object_obj,
 		.string = object_obj_str
 	};

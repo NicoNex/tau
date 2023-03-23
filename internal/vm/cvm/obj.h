@@ -4,6 +4,7 @@
 #include <stddef.h>
 
 #define NUM_BUILTINS 26
+#define MARKPTR() calloc(1, sizeof(uint32_t))
 
 enum obj_type {
 	obj_null,
@@ -78,6 +79,7 @@ union data {
 struct object {
 	union data data;
 	enum obj_type type;
+	uint32_t *marked;
 	void (*dispose)(struct object o);
 	char *(*string)(struct object o);
 };

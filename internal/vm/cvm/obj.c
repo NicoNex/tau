@@ -7,6 +7,7 @@ static void dummy_dispose(struct object o) {}
 
 // ============================= CLOSURE OBJECT =============================
 static void dispose_closure_obj(struct object o) {
+	free(o.marked);
 	free(o.data.cl->fn->instructions);
 	free(o.data.cl->fn);
 	free(o.data.cl);
@@ -39,6 +40,7 @@ static void dispose_function_obj(struct object o) {
 	for (int i = 0; i < o.data.fn->bklen; i++) {
 		free(o.data.fn->bookmarks[i].line);
 	}
+	free(o.marked);
 	free(o.data.fn->bookmarks);
 	free(o.data.fn->instructions);
 	free(o.data.fn);
@@ -86,6 +88,7 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 
 // ============================= ERROR OBJECT =============================
 static void dispose_error_obj(struct object o) {
+	free(o.marked);
 	free(o.data.str->str);
 	free(o.data.str);
 }
@@ -151,6 +154,7 @@ struct object new_integer_obj(int64_t val) {
 
 // ============================= STRING OBJECT =============================
 static void dispose_string_obj(struct object o) {
+	free(o.marked);
 	free(o.data.str->str);
 	free(o.data.str);
 }
@@ -190,10 +194,12 @@ struct object new_getsetter_obj(struct object l, struct object r, getfn get, set
 	gs->get = get;
 	gs->set = set;
 
+	// We shouldn't need the marked field here since the getsetter is freed
+	// as soon as it's unwrapped soon after.
 	return (struct object) {
 		.data.gs = gs,
 		.type = obj_getsetter,
-		.marked = MARKPTR(),
+		.marked = NULL,
 		.dispose = dispose_getsetter_obj,
 		.string = getsetter_str
 	};
@@ -242,6 +248,7 @@ struct object list_getsetter_set(struct getsetter *gs, struct object val) {
 
 // ============================= LIST OBJECT =============================
 static void dispose_list_obj(struct object o) {
+	free(o.marked);
 	free(o.data.list->list);
 	free(o.data.list);
 }

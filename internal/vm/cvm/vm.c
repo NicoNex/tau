@@ -675,6 +675,68 @@ struct object vm_last_popped_stack_elem(struct vm * restrict vm) {
 	return vm->stack[vm->sp];
 }
 
+static void vm_mark_stack(struct vm * restrict vm) {
+	for (uint32_t i = 0; i < vm->sp; i++) {
+		if (vm->stack[i].type < obj_string) {
+			continue;
+		}
+		*vm->stack[i].marked = 1;
+	}
+}
+
+static void vm_mark_consts(struct vm * restrict vm) {
+	for (uint32_t i = 0; i < vm->state.nconsts; i++) {
+		if (vm->state.consts[i].type < obj_string) {
+			continue;
+		}
+		*vm->state.consts[i].marked = 1;
+	}
+}
+
+static void vm_mark_globals(struct vm * restrict vm) {
+	for (uint32_t i = 0; i < GLOBAL_SIZE; i++) {
+		if (vm->state.globals[i].type < obj_string) {
+			continue;
+		}
+		*vm->state.globals[i].marked = 1;
+	}
+}
+
+static inline void vm_gc(struct vm * restrict vm) {
+	if (vm->heap.size < (HEAP_SIZE / 100) * 90) {
+		return;
+	}
+
+	// Concurrently traverse the stack, constants and globals and mark all reachable objects.
+	#pragma omp parallel default(none) shared(vm)
+	#pragma omp single
+	{
+		#pragma omp task
+		vm_mark_stack(vm);
+
+		#pragma omp task
+		vm_mark_consts(vm);
+
+		#pragma omp task
+		vm_mark_globals(vm);
+
+		#pragma omp taskwait
+	}
+
+	// Traverse all heap objects and free the unmarked ones.
+	#pragma omp parallel for schedule(static)
+	for (uint32_t i = 0; i < vm->heap.size; i++) {
+		struct object o = vm->heap.values[i];
+
+		if (*o.marked) {
+			*o.marked = 0;
+			continue;
+		}
+		o.dispose(o);
+		// TODO: remove from heap (breaks concurrency).
+	}
+}
+
 /*
  * The following comment is taken from CPython's source:
  * https://github.com/python/cpython/blob/3.11/Python/ceval.c#L1243

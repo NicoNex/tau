@@ -33,8 +33,8 @@ struct state {
 };
 
 struct heap {
-	uint32_t idx;
-	struct object objs[HEAP_SIZE];
+	uint32_t size;
+	struct object values[HEAP_SIZE];
 };
 
 struct vm {

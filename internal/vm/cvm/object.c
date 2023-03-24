@@ -76,6 +76,7 @@ struct object object_set(struct object obj, char *name, struct object val) {
 
 static void dispose_object_obj(struct object obj) {
 	_object_dispose(*obj.data.obj);
+	free(obj.marked);
 	free(obj.data.obj);
 }
 

@@ -10,6 +10,7 @@ static void dispose_closure_obj(struct object o) {
 	free(o.marked);
 	free(o.data.cl->fn->instructions);
 	free(o.data.cl->fn);
+	free(o.data.cl->free);
 	free(o.data.cl);
 }
 

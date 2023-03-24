@@ -21,6 +21,8 @@
 #define vm_stack_pop_ignore(vm) vm->sp--
 #define vm_stack_peek(vm) (vm->stack[vm->sp-1])
 
+#define vm_heap_add(vm, o) vm->heap.values[vm->heap.size++] = o
+
 #define DISPATCH() goto *jump_table[*frame->ip++]
 #define UNHANDLED() printf("unhandled opcode %s\n", opcode_str(*(frame->ip-1))); return -1
 
@@ -29,6 +31,8 @@
 #define ASSERT4(obj, t1, t2, t3, t4) (ASSERT(obj, t1) || ASSERT(obj, t2) || ASSERT(obj, t3) || ASSERT(obj, t4))
 #define M_ASSERT(o1, o2, t) (ASSERT(o1, t) && ASSERT(o2, t))
 #define M_ASSERT2(o1, o2, t1, t2) (ASSERT2(o1, t1, t2) && ASSERT2(o2, t1, t2))
+
+static inline void gc(struct vm * restrict vm);
 
 static inline struct frame new_frame(struct object cl, uint32_t base_ptr) {
 	return (struct frame) {
@@ -184,6 +188,9 @@ static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, 
 	struct object cl = new_closure_obj(fn.data.fn, free, num_free);
 	vm->sp -= num_free;
 	vm_stack_push(vm, cl);
+	
+	vm_heap_add(vm, cl);
+	gc(vm);
 }
 
 static inline void vm_push_list(struct vm * restrict vm, uint32_t start, uint32_t end) {
@@ -194,7 +201,10 @@ static inline void vm_push_list(struct vm * restrict vm, uint32_t start, uint32_
 		list[i-start] = vm->stack[i];
 	}
 	vm->sp -= len;
-	vm_stack_push(vm, new_list_obj(list, len));
+	struct object lst = new_list_obj(list, len);
+	vm_stack_push(vm, lst);
+	vm_heap_add(vm, lst);
+	gc(vm);
 }
 
 static inline void vm_push_map(struct vm * restrict vm, uint32_t start, uint32_t end) {
@@ -219,6 +229,8 @@ static inline void vm_push_map(struct vm * restrict vm, uint32_t start, uint32_t
 
 	vm->sp -= end - start;
 	vm_stack_push(vm, map);
+	vm_heap_add(vm, map);
+	gc(vm);
 }
 
 static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_idx, uint32_t num_args) {
@@ -254,7 +266,10 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 		ret[retidx++] = *s;
 	}
 
-	vm_stack_push(vm, new_string_obj(ret, len));
+	struct object res = new_string_obj(ret, len);
+	vm_stack_push(vm, res);
+	vm_heap_add(vm, res);
+	gc(vm);
 }
 
 static inline double to_double(struct object * restrict o) {
@@ -304,7 +319,10 @@ static inline void vm_exec_add(struct vm * restrict vm) {
 		char *start = strcpy(str, left->data.str->str);
 		strcpy(start, right->data.str->str);
 		vm_stack_pop_ignore(vm);
-		vm_stack_push(vm, new_string_obj(str, slen));
+		struct object res = new_string_obj(str, slen);
+		vm_stack_push(vm, res);
+		vm_heap_add(vm, res);
+		gc(vm);
 	} else {
 		unsupported_operator_error(vm, "+", left, right);
 	}
@@ -614,6 +632,10 @@ static inline void vm_call_builtin(struct vm * restrict vm, builtin fn, size_t n
 
 	vm->sp -= numargs + 1;
 	vm_stack_push(vm, res);
+	if (res.type > obj_builtin) {
+		vm_heap_add(vm, res);
+		gc(vm);
+	}
 }
 
 static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
@@ -702,7 +724,7 @@ static void vm_mark_globals(struct vm * restrict vm) {
 	}
 }
 
-static inline void vm_gc(struct vm * restrict vm) {
+static inline void gc(struct vm * restrict vm) {
 	if (vm->heap.size < (HEAP_SIZE / 100) * 90) {
 		return;
 	}
@@ -734,6 +756,7 @@ static inline void vm_gc(struct vm * restrict vm) {
 
 		#pragma omp task shared(o)
 		o.dispose(o);
+		// Remove it from heap by swapping it with the last marked object.
 		vm->heap.values[i] = vm->heap.values[--vm->heap.size];
 	}
 }

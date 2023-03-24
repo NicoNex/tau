@@ -99,10 +99,6 @@ func ExecFileFastVM(f string) (err error) {
 		bytecode, err = tauDecode(readFile(f))
 	} else {
 		bytecode, err = compile(f, true)
-		// if bytecode, err = tauEncode(bc); err != nil {
-		// 	fmt.Println(err)
-		// 	return err
-		// }
 	}
 
 	if err != nil {

@@ -724,16 +724,17 @@ static inline void vm_gc(struct vm * restrict vm) {
 	}
 
 	// Traverse all heap objects and free the unmarked ones.
-	#pragma omp parallel for schedule(static)
-	for (uint32_t i = 0; i < vm->heap.size; i++) {
+	for (int32_t i = vm->heap.size - 1; i >= 0; i--) {
 		struct object o = vm->heap.values[i];
 
 		if (*o.marked) {
 			*o.marked = 0;
 			continue;
 		}
+
+		#pragma omp task shared(o)
 		o.dispose(o);
-		// TODO: remove from heap (breaks concurrency).
+		vm->heap.values[i] = vm->heap.values[--vm->heap.size];
 	}
 }
 

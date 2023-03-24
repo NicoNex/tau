@@ -725,9 +725,11 @@ static void vm_mark_globals(struct vm * restrict vm) {
 }
 
 static inline void gc(struct vm * restrict vm) {
-	if (vm->heap.size < (HEAP_SIZE / 100) * 90) {
-		return;
-	}
+	// if (vm->heap.size < (HEAP_SIZE / 100) * 90) {
+	// 	return;
+	// }
+
+	printf("gc heap size before: %d\n", vm->heap.size);
 
 	// Concurrently traverse the stack, constants and globals and mark all reachable objects.
 	#pragma omp parallel default(none) shared(vm)
@@ -759,6 +761,8 @@ static inline void gc(struct vm * restrict vm) {
 		// Remove it from heap by swapping it with the last marked object.
 		vm->heap.values[i] = vm->heap.values[--vm->heap.size];
 	}
+
+	printf("gc heap size after: %d\n", vm->heap.size);
 }
 
 /*

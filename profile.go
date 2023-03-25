@@ -3,12 +3,16 @@
 package main
 
 import (
+	"flag"
 	"os"
 	"runtime/pprof"
 
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
+	"github.com/NicoNex/tau/internal/vm/cvm"
+
+	_ "github.com/ianlancetaylor/cgosymbolizer"
 )
 
 const fib = `
@@ -19,7 +23,7 @@ fib = fn(n) {
 	fib(n-1) + fib(n-2)
 }
 
-fib(35)`
+println(fib(35))`
 
 func check(err error) {
 	if err != nil {
@@ -35,13 +39,17 @@ func code(path string) string {
 }
 
 func fileOrDefault() string {
-	if len(os.Args) > 1 {
-		return code(os.Args[1])
+	if flag.NArg() > 0 {
+		return code(flag.Arg(0))
 	}
 	return fib
 }
 
 func main() {
+	var useFast bool
+	flag.BoolVar(&useFast, "f", false, "Use fast VM.")
+	flag.Parse()
+
 	cpuf, err := os.Create("cpu.prof")
 	check(err)
 
@@ -51,11 +59,20 @@ func main() {
 	}
 
 	c := compiler.New()
+	if useFast {
+		c.SetUseCObjects(true)
+	}
+	c.SetFileInfo("<profiler>", fib)
 	check(c.Compile(tree))
 
 	check(pprof.StartCPUProfile(cpuf))
 	defer pprof.StopCPUProfile()
 
-	tvm := vm.New("<profiler>", c.Bytecode())
-	check(tvm.Run())
+	if useFast {
+		tvm := cvm.New("<profiler>", c.Bytecode())
+		tvm.Run()
+	} else {
+		tvm := vm.New("<profiler>", c.Bytecode())
+		check(tvm.Run())
+	}
 }

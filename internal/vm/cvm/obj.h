@@ -133,6 +133,7 @@ struct object new_getsetter_obj(struct object l, struct object r, getfn get, set
 char *otype_str(enum obj_type t);
 char *object_str(struct object o);
 void print_obj(struct object o);
+void mark_obj(struct object o);
 
 uint64_t fnv64a(char *s);
 
@@ -146,12 +147,14 @@ struct object object_set(struct object obj, char *name, struct object val);
 struct object object_getsetter_get(struct getsetter *gs);
 struct object object_getsetter_set(struct getsetter *gs, struct object val);
 struct object object_to_module(struct object o);
+void mark_object_obj(struct object o);
 
 struct object new_map();
 struct map_pair map_get(struct object map, struct object k);
 struct map_pair map_set(struct object map, struct object k, struct object v);
 struct object map_getsetter_get(struct getsetter *gs);
 struct object map_getsetter_set(struct getsetter *gs, struct object val);
+void mark_map_obj(struct object m);
 
 extern struct object null_obj;
 extern struct object true_obj;

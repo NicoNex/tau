@@ -702,7 +702,7 @@ static void vm_mark_stack(struct vm * restrict vm) {
 		if (vm->stack[i].type < obj_string) {
 			continue;
 		}
-		*vm->stack[i].marked = 1;
+		mark_obj(vm->stack[i]);
 	}
 }
 
@@ -711,7 +711,7 @@ static void vm_mark_consts(struct vm * restrict vm) {
 		if (vm->state.consts[i].type < obj_string) {
 			continue;
 		}
-		*vm->state.consts[i].marked = 1;
+		mark_obj(vm->state.consts[i]);
 	}
 }
 
@@ -720,7 +720,7 @@ static void vm_mark_globals(struct vm * restrict vm) {
 		if (vm->state.globals[i].type < obj_string) {
 			continue;
 		}
-		*vm->state.globals[i].marked = 1;
+		mark_obj(vm->state.globals[i]);
 	}
 }
 

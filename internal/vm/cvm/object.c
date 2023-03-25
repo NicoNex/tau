@@ -19,6 +19,14 @@ static inline struct object _object_get(struct object_node * restrict n, uint64_
 	}
 }
 
+static void mark_object_children(struct object_node * restrict n) {
+	if (n != NULL) {
+		mark_obj(n->val);
+		mark_object_children(n->l);
+		mark_object_children(n->r);
+	}
+}
+
 struct object object_to_module(struct object o);
 
 static void _object_to_module(struct object mod, struct object_node * restrict n) {
@@ -104,4 +112,9 @@ struct object object_to_module(struct object o) {
 
 	_object_to_module(mod, *o.data.obj);
 	return mod;
+}
+
+void mark_object_obj(struct object o) {
+	*o.marked = 1;
+	mark_object_children(*o.data.obj);
 }

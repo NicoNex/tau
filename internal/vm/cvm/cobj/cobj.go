@@ -42,8 +42,8 @@ func NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []t
 	return C.new_function_obj(
 		(*C.uchar)(unsafe.Pointer(&ins[0])),
 		C.size_t(len(ins)),
-		C.uint(nlocals),
 		C.uint(nparams),
+		C.uint(nlocals),
 		cBookmarks(bmarks),
 		C.uint(len(bmarks)),
 	)

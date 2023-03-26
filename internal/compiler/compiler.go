@@ -91,6 +91,10 @@ func (c *Compiler) SetUseCObjects(b bool) {
 }
 
 func (c *Compiler) AddConstant(o obj.Object) int {
+	if c.useCObjects {
+		o = toc(o)
+	}
+
 	*c.constants = append(*c.constants, o)
 	return len(*c.constants) - 1
 }
@@ -327,4 +331,23 @@ func (c Compiler) NewFunctionCompiled(ins code.Instructions, nlocals, nparams in
 		return cobj.NewFunctionCompiled(ins, nlocals, nparams, bmarks)
 	}
 	return obj.NewFunctionCompiled(ins, nlocals, nparams, bmarks)
+}
+
+func toc(o obj.Object) obj.Object {
+	switch o := o.(type) {
+	case cobj.CObj:
+		return o
+	case obj.Integer:
+		return cobj.NewInteger(int64(o))
+	case obj.Float:
+		return cobj.NewFloat(float64(o))
+	case *obj.Boolean:
+		return cobj.ParseBool(bool(*o))
+	case obj.String:
+		return cobj.NewString(string(o))
+	case *obj.Null:
+		return cobj.NullObj
+	default:
+		panic(fmt.Errorf("toc: unhandled type %T", o))
+	}
 }

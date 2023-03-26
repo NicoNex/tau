@@ -24,7 +24,18 @@ func (c CObj) String() string {
 	return C.GoString(cstr)
 }
 
-var NullObj = C.null_obj
+var (
+	NullObj  = C.null_obj
+	TrueObj  = C.true_obj
+	FalseObj = C.false_obj
+)
+
+func ParseBool(b bool) CObj {
+	if b {
+		return TrueObj
+	}
+	return FalseObj
+}
 
 func NewInteger(i int64) CObj {
 	return C.new_integer_obj(C.int64_t(i))

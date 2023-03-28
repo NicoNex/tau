@@ -64,7 +64,7 @@ static char *function_str(struct object o) {
 	return str;
 }
 
-struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_params, uint32_t num_locals, struct bookmark *bmarks, uint32_t bklen) {
+struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t bklen) {
 	struct function *fn = malloc(sizeof(struct function));
 	fn->instructions = insts;
 	fn->len = len;
@@ -297,22 +297,12 @@ struct object new_list_obj(struct object *list, size_t len) {
 
 // ============================= STATIC OBJECTS =============================
 static char *boolean_str(struct object o) {
-	char *str = calloc(6, sizeof(char));
-	strcpy(str, o.data.i == 1 ? "true" : "false");
-
-	return str;
+	return o.data.i ? strdup("true") : strdup("false");
 }
 
 inline __attribute__((always_inline))
 struct object parse_bool(uint32_t b) {
 	return b ? true_obj : false_obj;
-}
-
-static char *null_str(struct object o) {
-	char *str = calloc(5, sizeof(char));
-	strcpy(str, "null");
-
-	return str;
 }
 
 struct object true_obj = (struct object) {
@@ -358,7 +348,7 @@ char *otype_str(enum obj_type t) {
 char *object_str(struct object o) {
 	switch (o.type) {
 	case obj_null:
-		return null_str(o);
+		return strdup("null");
 	case obj_boolean:
 		return boolean_str(o);
 	case obj_integer:
@@ -381,6 +371,10 @@ char *object_str(struct object o) {
 		return closure_str(o);
 	case obj_object:
 		return object_obj_str(o);
+	case obj_pipe:
+		return strdup("<unimplemented pipe>");
+	case obj_bytes:
+		return strdup("<unimplemented bytes>");
 	case obj_getsetter:
 		return getsetter_str(o);
 	default:

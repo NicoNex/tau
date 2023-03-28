@@ -48,7 +48,7 @@ static char *function_str(struct object o) {
 	return str;
 }
 
-struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_params, uint32_t num_locals, struct bookmark *bmarks, uint32_t bklen) {
+struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t bklen) {
 	struct function *fn = malloc(sizeof(struct function));
 	fn->instructions = insts;
 	fn->len = len;
@@ -313,10 +313,8 @@ char *object_str(struct object o) {
 	case obj_boolean:
 		return boolean_str(o);
 	case obj_integer:
-		puts("obj_integer");
 		return integer_str(o);
 	case obj_float:
-		puts("obj_float");
 		return float_str(o);
 	case obj_builtin:
 		return builtin_str(o);

@@ -80,8 +80,6 @@ struct object {
 	union data data;
 	enum obj_type type;
 	uint32_t *marked;
-	void (*dispose)(struct object o);
-	char *(*string)(struct object o);
 };
 
 struct getsetter {
@@ -134,6 +132,7 @@ char *otype_str(enum obj_type t);
 char *object_str(struct object o);
 void print_obj(struct object o);
 void mark_obj(struct object o);
+void free_obj(struct object o);
 
 uint64_t fnv64a(char *s);
 
@@ -148,6 +147,8 @@ struct object object_getsetter_get(struct getsetter *gs);
 struct object object_getsetter_set(struct getsetter *gs, struct object val);
 struct object object_to_module(struct object o);
 void mark_object_obj(struct object o);
+char *object_obj_str(struct object obj);
+void dispose_object_obj(struct object obj);
 
 struct object new_map();
 struct map_pair map_get(struct object map, struct object k);
@@ -155,6 +156,8 @@ struct map_pair map_set(struct object map, struct object k, struct object v);
 struct object map_getsetter_get(struct getsetter *gs);
 struct object map_getsetter_set(struct getsetter *gs, struct object val);
 void mark_map_obj(struct object m);
+char *map_str(struct object map);
+void dispose_map_obj(struct object map);
 
 extern struct object null_obj;
 extern struct object true_obj;

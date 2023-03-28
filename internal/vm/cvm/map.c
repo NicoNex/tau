@@ -115,13 +115,13 @@ struct map_pair map_set(struct object map, struct object k, struct object v) {
 	return p;
 }
 
-static void dispose_map_obj(struct object map) {
+void dispose_map_obj(struct object map) {
 	_map_dispose(map.data.map->root);
 	free(map.data.map);
 }
 
 // TODO: actually return map content as string.
-static char *map_str(struct object map) {
+char *map_str(struct object map) {
 	char *str = malloc(sizeof(char) * 64);
 	str[63] = '\0';
 	sprintf(str, "map[%p]", map.data.map->root);
@@ -133,8 +133,6 @@ struct object new_map() {
 	return (struct object) {
 		.data.map = calloc(1, sizeof(struct map_node)),
 		.type = obj_map,
-		.dispose = dispose_map_obj,
-		.string = map_str
 	};
 }
 

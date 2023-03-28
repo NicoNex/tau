@@ -82,14 +82,14 @@ struct object object_set(struct object obj, char *name, struct object val) {
 	return val;
 }
 
-static void dispose_object_obj(struct object obj) {
+void dispose_object_obj(struct object obj) {
 	_object_dispose(*obj.data.obj);
 	free(obj.marked);
 	free(obj.data.obj);
 }
 
 // TODO: actually return object content as string.
-static char *object_obj_str(struct object obj) {
+char *object_obj_str(struct object obj) {
 	char *str = malloc(sizeof(char) * 64);
 	str[63] = '\0';
 	sprintf(str, "object[%p]", *obj.data.obj);
@@ -102,8 +102,6 @@ struct object new_object() {
 		.data.obj = calloc(1, sizeof(struct object_node *)),
 		.type = obj_object,
 		.marked = MARKPTR(),
-		.dispose = dispose_object_obj,
-		.string = object_obj_str
 	};
 }
 

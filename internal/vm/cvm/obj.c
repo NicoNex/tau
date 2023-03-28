@@ -3,7 +3,7 @@
 #include <string.h>
 #include "obj.h"
 
-static void dummy_dispose(struct object o) {}
+// static void dummy_dispose(struct object o) {}
 
 // ============================= CLOSURE OBJECT =============================
 static void dispose_function_data(struct function *fn);
@@ -39,8 +39,6 @@ struct object new_closure_obj(struct function *fn, struct object *free, size_t n
 		.data.cl = cl,
 		.type = obj_closure,
 		.marked = MARKPTR(),
-		.dispose = dispose_closure_obj,
-		.string = closure_str
 	};
 }
 
@@ -79,8 +77,6 @@ struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_params, 
 		.data.fn = fn,
 		.type = obj_function,
 		.marked = MARKPTR(),
-		.dispose = dispose_function_obj,
-		.string = function_str
 	};
 }
 
@@ -94,8 +90,6 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 		.data.builtin = builtin,
 		.type = obj_builtin,
 		.marked = NULL,
-		.dispose = dummy_dispose,
-		.string = builtin_str
 	};
 }
 
@@ -119,8 +113,6 @@ struct object new_error_obj(char *str, size_t len) {
 		.data.str = s,
 		.type = obj_error,
 		.marked = MARKPTR(),
-		.dispose = dispose_error_obj,
-		.string = error_str
 	};
 }
 
@@ -137,8 +129,6 @@ struct object new_float_obj(double val) {
 		.data.f = val,
 		.type = obj_float,
 		.marked = NULL,
-		.dispose = dummy_dispose,
-		.string = float_str
 	};
 }
 
@@ -160,8 +150,6 @@ struct object new_integer_obj(int64_t val) {
 		.data.i = val,
 		.type = obj_integer,
 		.marked = NULL,
-		.dispose = dummy_dispose,
-		.string = integer_str
 	};
 }
 
@@ -185,8 +173,6 @@ struct object new_string_obj(char *str, size_t len) {
 		.data.str = s,
 		.type = obj_string,
 		.marked = MARKPTR(),
-		.dispose = dispose_string_obj,
-		.string = string_str
 	};
 }
 
@@ -213,8 +199,6 @@ struct object new_getsetter_obj(struct object l, struct object r, getfn get, set
 		.data.gs = gs,
 		.type = obj_getsetter,
 		.marked = NULL,
-		.dispose = dispose_getsetter_obj,
-		.string = getsetter_str
 	};
 }
 
@@ -308,8 +292,6 @@ struct object new_list_obj(struct object *list, size_t len) {
 		.data.list = l,
 		.type = obj_list,
 		.marked = MARKPTR(),
-		.dispose = dispose_list_obj,
-		.string = list_str
 	};
 }
 
@@ -337,24 +319,18 @@ struct object true_obj = (struct object) {
 	.data.i = 1,
 	.type = obj_boolean,
 	.marked = NULL,
-	.dispose = dummy_dispose,
-	.string = boolean_str
 };
 
 struct object false_obj = (struct object) {
 	.data.i = 0,
 	.type = obj_boolean,
 	.marked = NULL,
-	.dispose = dummy_dispose,
-	.string = boolean_str
 };
 
 struct object null_obj = (struct object) {
 	.data.i = 0,
 	.type = obj_null,
 	.marked = NULL,
-	.dispose = dummy_dispose,
-	.string = null_str
 };
 
 char *otype_str(enum obj_type t) {
@@ -380,11 +356,40 @@ char *otype_str(enum obj_type t) {
 }
 
 char *object_str(struct object o) {
-	return o.string(o);
+	switch (o.type) {
+	case obj_null:
+		return null_str(o);
+	case obj_boolean:
+		return boolean_str(o);
+	case obj_integer:
+		return integer_str(o);
+	case obj_float:
+		return float_str(o);
+	case obj_builtin:
+		return builtin_str(o);
+	case obj_string:
+		return string_str(o);
+	case obj_error:
+		return error_str(o);
+	case obj_list:
+		return list_str(o);
+	case obj_map:
+		return map_str(o);
+	case obj_function:
+		return function_str(o);
+	case obj_closure:
+		return closure_str(o);
+	case obj_object:
+		return object_obj_str(o);
+	case obj_getsetter:
+		return getsetter_str(o);
+	default:
+		return strdup("<unimplemented>");
+	}
 }
 
 void print_obj(struct object o) {
-	char *str = o.string(o);
+	char *str = object_str(o);
 	puts(str);
 	free(str);
 }
@@ -408,5 +413,42 @@ inline void mark_obj(struct object o) {
 			*o.marked = 1;
 			break;
 		}
+	}
+}
+
+void free_obj(struct object o) {
+	switch (o.type) {
+	case obj_string:
+		dispose_string_obj(o);
+		return;
+	case obj_error:
+		dispose_error_obj(o);
+		return;
+	case obj_list:
+		dispose_list_obj(o);
+		return;
+	case obj_map:
+		dispose_map_obj(o);
+		return;
+	case obj_function:
+		dispose_function_obj(o);
+		return;
+	case obj_closure:
+		dispose_closure_obj(o);
+		return;
+	case obj_object:
+		dispose_object_obj(o);
+		return;
+	case obj_pipe:
+		puts("no free function for pipe");
+		return;
+	case obj_bytes:
+		puts("no free function for bytes");
+		return;
+	case obj_getsetter:
+		dispose_getsetter_obj(o);
+		return;
+	default:
+		return;
 	}
 }

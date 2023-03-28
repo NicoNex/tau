@@ -78,8 +78,6 @@ union data {
 struct object {
 	union data data;
 	enum obj_type type;
-	void (*dispose)(struct object o);
-	char *(*string)(struct object o);
 };
 
 struct getsetter {
@@ -144,12 +142,16 @@ struct object object_set(struct object obj, char *name, struct object val);
 struct object object_getsetter_get(struct getsetter *gs);
 struct object object_getsetter_set(struct getsetter *gs, struct object val);
 struct object object_to_module(struct object o);
+char *object_obj_str(struct object obj);
+void dispose_object_obj(struct object obj);
 
 struct object new_map();
 struct map_pair map_get(struct object map, struct object k);
 struct map_pair map_set(struct object map, struct object k, struct object v);
 struct object map_getsetter_get(struct getsetter *gs);
 struct object map_getsetter_set(struct getsetter *gs, struct object val);
+char *map_str(struct object map);
+void dispose_map_obj(struct object map);
 
 extern struct object null_obj;
 extern struct object true_obj;

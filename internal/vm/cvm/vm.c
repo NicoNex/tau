@@ -318,7 +318,7 @@ static inline void vm_exec_sub(struct vm * restrict vm) {
 	} else if (M_ASSERT2(left, right, obj_integer, obj_float)) {
 		double l = to_double(left);
 		double r = to_double(right);
-		left->data.f = l + r;
+		left->data.f = l - r;
 		left->type = obj_float;
 	} else {
 		unsupported_operator_error(vm, "-", left, right);

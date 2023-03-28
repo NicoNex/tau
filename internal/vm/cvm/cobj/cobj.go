@@ -19,7 +19,7 @@ func (c CObj) Type() obj.Type {
 }
 
 func (c CObj) String() string {
-	cstr := C.object_str(C.struct_object(c))
+	cstr := C.object_str(c)
 	defer C.free(unsafe.Pointer(cstr))
 	return C.GoString(cstr)
 }

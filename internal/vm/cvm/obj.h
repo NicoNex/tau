@@ -54,6 +54,7 @@ struct map {
 struct list {
 	struct object *list;
 	size_t len;
+	size_t cap;
 };
 
 struct string {

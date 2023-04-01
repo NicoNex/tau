@@ -252,6 +252,7 @@ struct object new_list_obj(struct object *list, size_t len) {
 	struct list *l = malloc(sizeof(struct list));
 	l->list = list;
 	l->len = len;
+	l->cap = len;
 
 	return (struct object) {
 		.data.list = l,

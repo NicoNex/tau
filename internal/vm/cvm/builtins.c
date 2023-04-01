@@ -206,6 +206,31 @@ BUILTIN(_exit_b) {
 	}
 }
 
+BUILTIN(_append_b) {
+	if (len < 2) {
+		return errorf("append: wrong number of arguments, expected at least 2");
+	}
+	UNWRAP_ARGS();
+
+	if (args[0].type != obj_list) {
+		return errorf("append: first argument must be a list");
+	}
+
+	struct list *l = args[0].data.list;
+	if (l->cap == 0) {
+		l->list = realloc(l->list, ++l->cap * sizeof(struct object));
+	}
+	for (uint32_t i = 1; i < len; i++) {
+		if (l->len == l->cap) {
+			l->cap *= 2;
+			l->list = realloc(l->list, l->cap * sizeof(struct object));
+		}
+		l->list[l->len++] = args[i];
+	}
+
+	return args[0];
+}
+
 BUILTIN(_new_b) {
 	if (len != 0) {
 		return errorf("new: wrong number of arguments, expected 0, got %lu", len);
@@ -233,7 +258,7 @@ const builtin builtins[NUM_BUILTINS] = {
 	_int_b,
 	_float_b,
 	_exit_b,
-	NULL, // append
+	_append_b,
 	NULL, // push
 	NULL, // range
 	_new_b,

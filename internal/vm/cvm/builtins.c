@@ -247,6 +247,57 @@ BUILTIN(_failed_b) {
 	return parse_bool(args[0].type == obj_error);
 }
 
+BUILTIN(_hex_b) {
+	if (len != 1) {
+		return errorf("hex: wrong number of arguments, expected 1, got %lu", len);
+	}
+	UNWRAP_ARGS();
+
+	if (args[0].type != obj_integer) {
+		return errorf("hex: first argument must be int, got %s instead", otype_str(args[0].type));
+	}
+
+	char *s = calloc(30, sizeof(char));
+	sprintf(s, "0x%lx", args[0].data.i);
+	return new_string_obj(s, strlen(s));
+}
+
+BUILTIN(_oct_b) {
+	if (len != 1) {
+		return errorf("oct: wrong number of arguments, expected 1, got %lu", len);
+	}
+	UNWRAP_ARGS();
+
+	if (args[0].type != obj_integer) {
+		return errorf("oct: first argument must be int, got %s instead", otype_str(args[0].type));
+	}
+
+	char *s = calloc(30, sizeof(char));
+	sprintf(s, "0o%lo", args[0].data.i);
+	return new_string_obj(s, strlen(s));
+}
+
+BUILTIN(_bin_b) {
+	if (len != 1) {
+		return errorf("bin: wrong number of arguments, expected 1, got %lu", len);
+	}
+	UNWRAP_ARGS();
+
+	if (args[0].type != obj_integer) {
+		return errorf("bin: first argument must be int, got %s instead", otype_str(args[0].type));
+	}
+
+	char *s = calloc(67, sizeof(char));
+	s[0] = '0';
+	s[1] = 'b';
+	int idx = 2;
+
+	for (int64_t n = args[0].data.i; n; n >>= 1) {
+		s[idx++] = n & 1 ? '1' : '0';
+	}
+	return new_string_obj(s, strlen(s));
+}
+
 const builtin builtins[NUM_BUILTINS] = {
 	_len_b,
 	_println_b,
@@ -268,9 +319,9 @@ const builtin builtins[NUM_BUILTINS] = {
 	NULL, // send
 	NULL, // recv
 	NULL, // close
-	NULL, // hex
-	NULL, // oct
-	NULL, // bin
+	_hex_b,
+	_oct_b,
+	_bin_b,
 	NULL, // slice
 	NULL, // open
 	NULL // bytes

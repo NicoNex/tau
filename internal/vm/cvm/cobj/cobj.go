@@ -25,9 +25,12 @@ func (c CObj) String() string {
 }
 
 var (
-	NullObj  = C.null_obj
-	TrueObj  = C.true_obj
-	FalseObj = C.false_obj
+	//extern null_obj
+	NullObj CObj
+	//extern true_obj
+	TrueObj CObj
+	//extern false_obj
+	FalseObj CObj
 )
 
 func ParseBool(b bool) CObj {

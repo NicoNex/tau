@@ -49,6 +49,10 @@ func cbytecode(bc *compiler.Bytecode) C.struct_bytecode {
 }
 
 func cObjs(objects []obj.Object) *C.struct_object {
+	if len(objects) == 0 {
+		return nil
+	}
+
 	var objs = make([]cobj.CObj, len(objects))
 
 	for i, o := range objects {
@@ -59,6 +63,10 @@ func cObjs(objects []obj.Object) *C.struct_object {
 }
 
 func cBookmarks(bmarks []tauerr.Bookmark) *C.struct_bookmark {
+	if len(bmarks) == 0 {
+		return nil
+	}
+
 	var ret = make([]C.struct_bookmark, len(bmarks))
 
 	for i, b := range bmarks {

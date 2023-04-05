@@ -6,9 +6,12 @@
 // static void dummy_dispose(struct object o) {}
 
 // ============================= CLOSURE OBJECT =============================
+static void dispose_function_data(struct function *fn);
+
 static void dispose_closure_obj(struct object o) {
-	free(o.data.cl->fn->instructions);
-	free(o.data.cl->fn);
+	dispose_function_data(o.data.cl->fn);
+	free(o.marked);
+	free(o.data.cl->free);
 	free(o.data.cl);
 }
 
@@ -17,6 +20,13 @@ static char *closure_str(struct object o) {
 	sprintf(str, "closure[%p]", o.data.cl->fn);
 
 	return str;
+}
+
+void mark_closure_obj(struct object c) {
+	*c.marked = 1;
+	for (uint32_t i = 0; i < c.data.cl->num_free; i++) {
+		mark_obj(c.data.cl->free[i]);
+	}
 }
 
 struct object new_closure_obj(struct function *fn, struct object *free, size_t num_free) {
@@ -28,17 +38,23 @@ struct object new_closure_obj(struct function *fn, struct object *free, size_t n
 	return (struct object) {
 		.data.cl = cl,
 		.type = obj_closure,
+		.marked = MARKPTR(),
 	};
 }
 
 // ============================= FUNCTION OBJECT =============================
-static void dispose_function_obj(struct object o) {
-	for (int i = 0; i < o.data.fn->bklen; i++) {
-		free(o.data.fn->bookmarks[i].line);
+static void dispose_function_data(struct function *fn) {
+	for (int i = 0; i < fn->bklen; i++) {
+		free(fn->bookmarks[i].line);
 	}
-	free(o.data.fn->bookmarks);
-	free(o.data.fn->instructions);
-	free(o.data.fn);
+	free(fn->bookmarks);
+	free(fn->instructions);
+	free(fn);
+}
+
+static void dispose_function_obj(struct object o) {
+	dispose_function_data(o.data.fn);
+	free(o.marked);
 }
 
 static char *function_str(struct object o) {
@@ -60,6 +76,7 @@ struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, 
 	return (struct object) {
 		.data.fn = fn,
 		.type = obj_function,
+		.marked = MARKPTR(),
 	};
 }
 
@@ -72,11 +89,13 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 	return (struct object) {
 		.data.builtin = builtin,
 		.type = obj_builtin,
+		.marked = NULL,
 	};
 }
 
 // ============================= ERROR OBJECT =============================
 static void dispose_error_obj(struct object o) {
+	free(o.marked);
 	free(o.data.str->str);
 	free(o.data.str);
 }
@@ -93,6 +112,7 @@ struct object new_error_obj(char *str, size_t len) {
 	return (struct object) {
 		.data.str = s,
 		.type = obj_error,
+		.marked = MARKPTR(),
 	};
 }
 
@@ -108,6 +128,7 @@ struct object new_float_obj(double val) {
 	return (struct object) {
 		.data.f = val,
 		.type = obj_float,
+		.marked = NULL,
 	};
 }
 
@@ -128,11 +149,13 @@ struct object new_integer_obj(int64_t val) {
 	return (struct object) {
 		.data.i = val,
 		.type = obj_integer,
+		.marked = NULL,
 	};
 }
 
 // ============================= STRING OBJECT =============================
 static void dispose_string_obj(struct object o) {
+	free(o.marked);
 	free(o.data.str->str);
 	free(o.data.str);
 }
@@ -149,6 +172,7 @@ struct object new_string_obj(char *str, size_t len) {
 	return (struct object) {
 		.data.str = s,
 		.type = obj_string,
+		.marked = MARKPTR(),
 	};
 }
 
@@ -169,9 +193,12 @@ struct object new_getsetter_obj(struct object l, struct object r, getfn get, set
 	gs->get = get;
 	gs->set = set;
 
+	// We shouldn't need the marked field here since the getsetter is freed
+	// as soon as it's unwrapped soon after.
 	return (struct object) {
 		.data.gs = gs,
 		.type = obj_getsetter,
+		.marked = NULL,
 	};
 }
 
@@ -218,6 +245,7 @@ struct object list_getsetter_set(struct getsetter *gs, struct object val) {
 
 // ============================= LIST OBJECT =============================
 static void dispose_list_obj(struct object o) {
+	free(o.marked);
 	free(o.data.list->list);
 	free(o.data.list);
 }
@@ -248,6 +276,13 @@ static char *list_str(struct object o) {
 	return str;
 }
 
+void mark_list_obj(struct object l) {
+	*l.marked = 1;
+	for (uint32_t i = 0; i < l.data.list->len; i++) {
+		mark_obj(l.data.list->list[i]);
+	}
+}
+
 struct object new_list_obj(struct object *list, size_t len) {
 	struct list *l = malloc(sizeof(struct list));
 	l->list = list;
@@ -257,6 +292,7 @@ struct object new_list_obj(struct object *list, size_t len) {
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
+		.marked = MARKPTR(),
 	};
 }
 
@@ -273,16 +309,19 @@ struct object parse_bool(uint32_t b) {
 struct object true_obj = (struct object) {
 	.data.i = 1,
 	.type = obj_boolean,
+	.marked = NULL,
 };
 
 struct object false_obj = (struct object) {
 	.data.i = 0,
 	.type = obj_boolean,
+	.marked = NULL,
 };
 
 struct object null_obj = (struct object) {
 	.data.i = 0,
 	.type = obj_null,
+	.marked = NULL,
 };
 
 char *otype_str(enum obj_type t) {
@@ -348,6 +387,28 @@ void print_obj(struct object o) {
 	char *str = object_str(o);
 	puts(str);
 	free(str);
+}
+
+inline void mark_obj(struct object o) {
+	if (o.type > obj_builtin) {
+		switch (o.type) {
+		case obj_object:
+			mark_object_obj(o);
+			break;
+		case obj_list:
+			mark_list_obj(o);
+			break;
+		case obj_closure:
+			mark_closure_obj(o);
+			break;
+		case obj_map:
+			mark_map_obj(o);
+			break;
+		default:
+			*o.marked = 1;
+			break;
+		}
+	}
 }
 
 void free_obj(struct object o) {

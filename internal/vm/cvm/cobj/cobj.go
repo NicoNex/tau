@@ -64,6 +64,10 @@ func NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []t
 }
 
 func cBookmarks(bmarks []tauerr.Bookmark) *C.struct_bookmark {
+	if len(bmarks) == 0 {
+		return nil
+	}
+
 	var ret = make([]C.struct_bookmark, len(bmarks))
 
 	for i, b := range bmarks {

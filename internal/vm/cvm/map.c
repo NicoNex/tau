@@ -46,7 +46,7 @@ struct key_hash hash(struct object o) {
 	}
 }
 
-static inline struct map_pair _map_get(struct map_node *n, struct key_hash k) {
+static inline struct map_pair _map_get(struct map_node * restrict n, struct key_hash k) {
 	if (n == NULL) {
 		return (struct map_pair) {
 			.key = null_obj,
@@ -61,6 +61,15 @@ static inline struct map_pair _map_get(struct map_node *n, struct key_hash k) {
 		return _map_get(n->l, k);
 	} else {
 		return _map_get(n->r, k);
+	}
+}
+
+static void mark_map_children(struct map_node * restrict n) {
+	if (n != NULL) {
+		mark_obj(n->val.key);
+		mark_obj(n->val.val);
+		mark_map_children(n->l);
+		mark_map_children(n->r);
 	}
 }
 
@@ -125,4 +134,9 @@ struct object new_map() {
 		.data.map = calloc(1, sizeof(struct map_node)),
 		.type = obj_map,
 	};
+}
+
+void mark_map_obj(struct object m) {
+	*m.marked = 1;
+	mark_map_children(m.data.map->root);
 }

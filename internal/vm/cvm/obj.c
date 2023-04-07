@@ -155,24 +155,40 @@ struct object new_integer_obj(int64_t val) {
 
 // ============================= STRING OBJECT =============================
 static void dispose_string_obj(struct object o) {
-	free(o.marked);
-	free(o.data.str->str);
+	if (!o.data.str->is_slice) {
+		free(o.marked);
+		free(o.data.str->str);
+	}
 	free(o.data.str);
 }
 
 static char *string_str(struct object o) {
-	return strdup(o.data.str->str);
+	return strndup(o.data.str->str, o.data.str->len);
 }
 
 struct object new_string_obj(char *str, size_t len) {
 	struct string *s = malloc(sizeof(struct string));
 	s->str = str;
 	s->len = len;
+	s->is_slice = 0;
 
 	return (struct object) {
 		.data.str = s,
 		.type = obj_string,
 		.marked = MARKPTR(),
+	};
+}
+
+struct object new_string_slice(char *str, size_t len, uint32_t *marked) {
+	struct string *s = malloc(sizeof(struct string));
+	s->str = str;
+	s->len = len;
+	s->is_slice = 1;
+
+	return (struct object) {
+		.data.str = s,
+		.type = obj_string,
+		.marked = marked,
 	};
 }
 
@@ -245,8 +261,10 @@ struct object list_getsetter_set(struct getsetter *gs, struct object val) {
 
 // ============================= LIST OBJECT =============================
 static void dispose_list_obj(struct object o) {
-	free(o.marked);
-	free(o.data.list->list);
+	if (!o.data.list->is_slice) {
+		free(o.marked);
+		free(o.data.list->list);
+	}
 	free(o.data.list);
 }
 
@@ -288,11 +306,26 @@ struct object new_list_obj(struct object *list, size_t len) {
 	l->list = list;
 	l->len = len;
 	l->cap = len;
+	l->is_slice = 0;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
 		.marked = MARKPTR(),
+	};
+}
+
+struct object new_list_slice(struct object *list, size_t len, uint32_t *marked) {
+	struct list *l = malloc(sizeof(struct list));
+	l->list = list;
+	l->len = len;
+	l->cap = len;
+	l->is_slice = 1;
+
+	return (struct object) {
+		.data.list = l,
+		.type = obj_list,
+		.marked = marked,
 	};
 }
 

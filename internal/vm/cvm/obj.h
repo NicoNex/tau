@@ -56,11 +56,13 @@ struct list {
 	struct object *list;
 	size_t len;
 	size_t cap;
+	uint32_t is_slice;
 };
 
 struct string {
 	char *str;
 	size_t len;
+	uint32_t is_slice;
 };
 
 union data {
@@ -123,7 +125,6 @@ struct object new_closure_obj(struct function *fn, struct object *free, size_t n
 struct object new_boolean_obj(uint32_t b);
 struct object new_integer_obj(int64_t val);
 struct object new_error_obj(char *msg, size_t len);
-struct object new_string_obj(char *str, size_t len);
 struct object new_float_obj(double val);
 struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len));
 struct object parse_bool(uint32_t b);
@@ -137,9 +138,13 @@ void free_obj(struct object o);
 
 uint64_t fnv64a(char *s);
 
+struct object new_string_obj(char *str, size_t len);
+struct object new_string_slice(char *str, size_t len, uint32_t *marked);
+
 struct object new_list_obj(struct object *list, size_t len);
 struct object list_getsetter_get(struct getsetter *gs);
 struct object list_getsetter_set(struct getsetter *gs, struct object val);
+struct object new_list_slice(struct object *list, size_t len, uint32_t *marked);
 
 struct object new_object();
 struct object object_get(struct object obj, char *name);

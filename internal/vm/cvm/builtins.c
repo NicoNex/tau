@@ -298,6 +298,48 @@ BUILTIN(_bin_b) {
 	return new_string_obj(s, strlen(s));
 }
 
+BUILTIN(_slice_b) {
+	if (len != 3) {
+		return errorf("slice: wrong number of arguments, expected 3, got %lu", len);
+	}
+	UNWRAP_ARGS();
+
+	if (args[1].type != obj_integer) {
+		return errorf("slice: second argument must be an int, got %s instead", otype_str(args[1].type));
+	} else if (args[2].type != obj_integer) {
+		return errorf("slice: third argument must be an int, got %s instead", otype_str(args[2].type));
+	}
+
+	int64_t start = args[1].data.i;
+	int64_t end = args[2].data.i;
+	if (start < 0 || end < 0) {
+		return errorf("slice: invalid argument: index arguments must not be negative");
+	} else if (end < start) {
+		return errorf("slice: invalid slice indices: %ld < %ld", end, start);
+	}
+
+	switch (args[0].type) {
+	case obj_list:
+		if (end > args[0].data.list->len) {
+			return errorf("slice: list bounds out of range %d with capacity %lu", end, args[0].data.list->len);
+		} else if (start == end) {
+			return new_list_obj(NULL, 0);
+		}
+		return new_list_slice(&args[0].data.list->list[start], end-start, args[0].marked);
+
+	case obj_string:
+		if (end > args[0].data.str->len) {
+			return errorf("slice: string bounds out of range %d with capacity %lu", end, args[0].data.list->len);
+		} else if (start == end) {
+			return new_string_obj(strdup(""), 0);
+		}
+		return new_string_slice(&args[0].data.str->str[start], end-start, args[0].marked);
+	// case obj_bytes:
+	default:
+		return errorf("slice: first argument must be a list or string, got %s instead", otype_str(args[0].type));
+	}
+}
+
 const builtin builtins[NUM_BUILTINS] = {
 	_len_b,
 	_println_b,
@@ -322,7 +364,7 @@ const builtin builtins[NUM_BUILTINS] = {
 	_hex_b,
 	_oct_b,
 	_bin_b,
-	NULL, // slice
+	_slice_b,
 	NULL, // open
 	NULL // bytes
 };

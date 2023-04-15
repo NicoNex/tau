@@ -56,13 +56,13 @@ struct list {
 	struct object *list;
 	size_t len;
 	size_t cap;
-	uint32_t is_slice;
+	uint32_t *m_parent;
 };
 
 struct string {
 	char *str;
 	size_t len;
-	uint32_t is_slice;
+	uint32_t *m_parent;
 };
 
 union data {
@@ -139,12 +139,12 @@ void free_obj(struct object o);
 uint64_t fnv64a(char *s);
 
 struct object new_string_obj(char *str, size_t len);
-struct object new_string_slice(char *str, size_t len, uint32_t *marked);
+struct object new_string_slice(char *str, size_t len, uint32_t *m_parent);
 
 struct object new_list_obj(struct object *list, size_t len);
 struct object list_getsetter_get(struct getsetter *gs);
 struct object list_getsetter_set(struct getsetter *gs, struct object val);
-struct object new_list_slice(struct object *list, size_t len, uint32_t *marked);
+struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent);
 
 struct object new_object();
 struct object object_get(struct object obj, char *name);

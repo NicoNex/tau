@@ -155,7 +155,8 @@ struct object new_integer_obj(int64_t val) {
 
 // ============================= STRING OBJECT =============================
 static void dispose_string_obj(struct object o) {
-	if (!o.data.str->is_slice) {
+	// Free everything if it's not a slice (marked parent bit is set to NULL).
+	if (o.data.str->m_parent == NULL) {
 		free(o.marked);
 		free(o.data.str->str);
 	}
@@ -170,7 +171,7 @@ struct object new_string_obj(char *str, size_t len) {
 	struct string *s = malloc(sizeof(struct string));
 	s->str = str;
 	s->len = len;
-	s->is_slice = 0;
+	s->m_parent = NULL;
 
 	return (struct object) {
 		.data.str = s,
@@ -179,16 +180,23 @@ struct object new_string_obj(char *str, size_t len) {
 	};
 }
 
-struct object new_string_slice(char *str, size_t len, uint32_t *marked) {
+static void mark_string_obj(struct object s) {
+	*s.marked = 1;
+	if (s.data.str->m_parent != NULL) {
+		*s.data.str->m_parent = 1;
+	}
+}
+
+struct object new_string_slice(char *str, size_t len, uint32_t *m_parent) {
 	struct string *s = malloc(sizeof(struct string));
 	s->str = str;
 	s->len = len;
-	s->is_slice = 1;
+	s->m_parent = m_parent;
 
 	return (struct object) {
 		.data.str = s,
 		.type = obj_string,
-		.marked = marked,
+		.marked = MARKPTR(),
 	};
 }
 
@@ -261,7 +269,8 @@ struct object list_getsetter_set(struct getsetter *gs, struct object val) {
 
 // ============================= LIST OBJECT =============================
 static void dispose_list_obj(struct object o) {
-	if (!o.data.list->is_slice) {
+	// Free everything if it's not a slice (marked parent bit is set to NULL).
+	if (o.data.list->m_parent == NULL) {
 		free(o.marked);
 		free(o.data.list->list);
 	}
@@ -296,6 +305,9 @@ static char *list_str(struct object o) {
 
 void mark_list_obj(struct object l) {
 	*l.marked = 1;
+	if (l.data.list->m_parent != NULL) {
+		*l.data.list->m_parent = 1;
+	}
 	for (uint32_t i = 0; i < l.data.list->len; i++) {
 		mark_obj(l.data.list->list[i]);
 	}
@@ -306,7 +318,7 @@ struct object new_list_obj(struct object *list, size_t len) {
 	l->list = list;
 	l->len = len;
 	l->cap = len;
-	l->is_slice = 0;
+	l->m_parent = NULL;
 
 	return (struct object) {
 		.data.list = l,
@@ -315,17 +327,17 @@ struct object new_list_obj(struct object *list, size_t len) {
 	};
 }
 
-struct object new_list_slice(struct object *list, size_t len, uint32_t *marked) {
+struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent) {
 	struct list *l = malloc(sizeof(struct list));
 	l->list = list;
 	l->len = len;
 	l->cap = len;
-	l->is_slice = 1;
+	l->m_parent = m_parent;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = marked,
+		.marked = MARKPTR(),
 	};
 }
 
@@ -436,6 +448,9 @@ inline void mark_obj(struct object o) {
 			break;
 		case obj_map:
 			mark_map_obj(o);
+			break;
+		case obj_string:
+			mark_string_obj(o);
 			break;
 		default:
 			*o.marked = 1;

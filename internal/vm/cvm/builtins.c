@@ -319,21 +319,29 @@ BUILTIN(_slice_b) {
 	}
 
 	switch (args[0].type) {
-	case obj_list:
+	case obj_list: {
 		if (end > args[0].data.list->len) {
 			return errorf("slice: list bounds out of range %d with capacity %lu", end, args[0].data.list->len);
 		} else if (start == end) {
 			return new_list_obj(NULL, 0);
 		}
-		return new_list_slice(&args[0].data.list->list[start], end-start, args[0].marked);
+		// If the parent is a slice, propagate its marked parent flag for the gc,
+		// otherwise use the default marked flag.
+		uint32_t *m_parent = args[0].data.list->m_parent != NULL ? args[0].data.list->m_parent : args[0].marked;
+		return new_list_slice(&args[0].data.list->list[start], end-start, m_parent);
+	}
 
-	case obj_string:
+	case obj_string: {
 		if (end > args[0].data.str->len) {
 			return errorf("slice: string bounds out of range %d with capacity %lu", end, args[0].data.list->len);
 		} else if (start == end) {
 			return new_string_obj(strdup(""), 0);
 		}
-		return new_string_slice(&args[0].data.str->str[start], end-start, args[0].marked);
+		// If the parent is a slice, propagate its marked parent flag for the gc,
+		// otherwise use the default marked flag.
+		uint32_t *m_parent = args[0].data.str->m_parent != NULL ? args[0].data.str->m_parent : args[0].marked;
+		return new_string_slice(&args[0].data.str->str[start], end-start, m_parent);
+	}
 	// case obj_bytes:
 	default:
 		return errorf("slice: first argument must be a list or string, got %s instead", otype_str(args[0].type));

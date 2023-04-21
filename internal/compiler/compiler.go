@@ -1,14 +1,20 @@
 package compiler
 
+// #include "bytecode.h"
+import "C"
+
 import (
 	"errors"
 	"fmt"
+	"unsafe"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/tauerr"
 	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
+
+type Bytecode = C.struct_bytecode
 
 type Compilable interface {
 	Compile(c *Compiler) (int, error)
@@ -28,20 +34,13 @@ type CompilationScope struct {
 }
 
 type Compiler struct {
-	constants   *[]obj.Object
+	constants   *[]cobj.Object
 	scopes      []CompilationScope
 	scopeIndex  int
 	fileName    string
 	fileContent string
 	useCObjects bool
 	*SymbolTable
-}
-
-type Bytecode struct {
-	Instructions code.Instructions
-	Constants    []obj.Object
-	Bookmarks    []tauerr.Bookmark
-	NumDefs      int
 }
 
 const (
@@ -59,11 +58,11 @@ func New() *Compiler {
 	return &Compiler{
 		SymbolTable: st,
 		scopes:      []CompilationScope{{}},
-		constants:   &[]obj.Object{},
+		constants:   &[]cobj.Object{},
 	}
 }
 
-func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
+func NewWithState(s *SymbolTable, constants *[]cobj.Object) *Compiler {
 	return &Compiler{
 		SymbolTable: s,
 		scopes:      []CompilationScope{{}},
@@ -71,7 +70,7 @@ func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
 	}
 }
 
-func NewImport(numDefs int, constants *[]obj.Object) *Compiler {
+func NewImport(numDefs int, constants *[]cobj.Object) *Compiler {
 	var st = NewSymbolTable()
 
 	st.NumDefs = numDefs
@@ -90,11 +89,7 @@ func (c *Compiler) SetUseCObjects(b bool) {
 	c.useCObjects = b
 }
 
-func (c *Compiler) AddConstant(o obj.Object) int {
-	if c.useCObjects {
-		o = toc(o)
-	}
-
+func (c *Compiler) AddConstant(o cobj.Object) int {
 	*c.constants = append(*c.constants, o)
 	return len(*c.constants) - 1
 }
@@ -262,18 +257,16 @@ func (c *Compiler) Compile(node Compilable) error {
 	return err
 }
 
-func (c *Compiler) Bytecode() *Bytecode {
-	return &Bytecode{
-		Instructions: c.scopes[c.scopeIndex].instructions,
-		Constants:    *c.constants,
-		Bookmarks:    c.scopes[c.scopeIndex].bookmarks,
-		NumDefs:      c.NumDefs,
+func (c *Compiler) Bytecode() Bytecode {
+	return Bytecode{
+		insts:     (*C.uchar)(unsafe.Pointer(&c.scopes[c.scopeIndex].instructions[0])),
+		len:       C.uint32_t(len(c.scopes[c.scopeIndex].instructions)),
+		consts:    (*C.struct_object)(unsafe.Pointer(&(*c.constants)[0])),
+		nconsts:   C.uint32_t(len(*c.constants)),
+		bookmarks: c.scopes[c.scopeIndex].bookmarks,
+		bklen:     C.uint32_t(len(c.scopes[c.scopeIndex].bookmarks)),
+		ndefs:     C.uint32_t(c.NumDefs),
 	}
-}
-
-func (c *Compiler) SetBytecode(b *Bytecode) {
-	c.scopes[c.scopeIndex].instructions = b.Instructions
-	*c.constants = b.Constants
 }
 
 func (c *Compiler) SetFileInfo(name, content string) {
@@ -295,59 +288,5 @@ func (c *Compiler) LoadSymbol(s Symbol) int {
 		return c.Emit(code.OpCurrentClosure)
 	default:
 		return 0
-	}
-}
-
-func (c Compiler) NullObj() obj.Object {
-	if c.useCObjects {
-		return cobj.NullObj
-	}
-	return obj.NullObj
-}
-
-func (c Compiler) NewFloat(f float64) obj.Object {
-	if c.useCObjects {
-		return cobj.NewFloat(f)
-	}
-	return obj.Float(f)
-}
-
-func (c Compiler) NewInteger(i int64) obj.Object {
-	if c.useCObjects {
-		return cobj.NewInteger(i)
-	}
-	return obj.Integer(i)
-}
-
-func (c Compiler) NewString(s string) obj.Object {
-	if c.useCObjects {
-		return cobj.NewString(s)
-	}
-	return obj.String(s)
-}
-
-func (c Compiler) NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []tauerr.Bookmark) obj.Object {
-	if c.useCObjects {
-		return cobj.NewFunctionCompiled(ins, nlocals, nparams, bmarks)
-	}
-	return obj.NewFunctionCompiled(ins, nlocals, nparams, bmarks)
-}
-
-func toc(o obj.Object) obj.Object {
-	switch o := o.(type) {
-	case cobj.Object:
-		return o
-	case obj.Integer:
-		return cobj.NewInteger(int64(o))
-	case obj.Float:
-		return cobj.NewFloat(float64(o))
-	case *obj.Boolean:
-		return cobj.ParseBool(bool(*o))
-	case obj.String:
-		return cobj.NewString(string(o))
-	case *obj.Null:
-		return cobj.NullObj
-	default:
-		panic(fmt.Errorf("toc: unhandled type %T", o))
 	}
 }

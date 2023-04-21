@@ -20,20 +20,39 @@ import (
 	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
-type CVM = *C.struct_vm
+type (
+	CVM   = *C.struct_vm
+	State = C.struct_state
+)
 
 var (
-	consts    []obj.Object
+	Consts    = []obj.Object{}
 	importTab = make(map[string]C.struct_object)
 )
 
+func NewState() State {
+	return C.new_state()
+}
+
 func New(file string, bc *compiler.Bytecode) CVM {
-	consts = bc.Constants
+	Consts = bc.Constants
 	return C.new_vm(C.CString(file), cbytecode(bc))
+}
+
+func NewWithState(file string, bc *compiler.Bytecode, state State) CVM {
+	return C.new_vm_with_state(C.CString(file), cbytecode(bc), state)
 }
 
 func (cvm CVM) Run() {
 	C.vm_run(cvm)
+}
+
+func (cvm CVM) State() State {
+	return cvm.state
+}
+
+func (cvm CVM) Free() {
+	C.vm_dispose(cvm)
 }
 
 func cbytecode(bc *compiler.Bytecode) C.struct_bytecode {
@@ -53,10 +72,10 @@ func cObjs(objects []obj.Object) *C.struct_object {
 		return nil
 	}
 
-	var objs = make([]cobj.CObj, len(objects))
+	var objs = make([]cobj.Object, len(objects))
 
 	for i, o := range objects {
-		objs[i] = o.(cobj.CObj)
+		objs[i] = o.(cobj.Object)
 	}
 
 	return (*C.struct_object)(unsafe.Pointer(&objs[0]))
@@ -115,7 +134,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 		C.go_vm_errorf(vm, C.CString(m))
 	}
 
-	c := compiler.NewImport(int(vm.state.ndefs), &consts)
+	c := compiler.NewImport(int(vm.state.ndefs), &Consts)
 	c.SetUseCObjects(true)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {

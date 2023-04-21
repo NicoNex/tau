@@ -335,7 +335,7 @@ func (c Compiler) NewFunctionCompiled(ins code.Instructions, nlocals, nparams in
 
 func toc(o obj.Object) obj.Object {
 	switch o := o.(type) {
-	case cobj.CObj:
+	case cobj.Object:
 		return o
 	case obj.Integer:
 		return cobj.NewInteger(int64(o))

@@ -12,13 +12,13 @@ import (
 	"github.com/NicoNex/tau/internal/tauerr"
 )
 
-type CObj = C.struct_object
+type Object = C.struct_object
 
-func (c CObj) Type() obj.Type {
+func (c Object) Type() obj.Type {
 	return obj.Type(c._type)
 }
 
-func (c CObj) String() string {
+func (c Object) String() string {
 	cstr := C.object_str(c)
 	defer C.free(unsafe.Pointer(cstr))
 	return C.GoString(cstr)
@@ -26,33 +26,33 @@ func (c CObj) String() string {
 
 var (
 	//extern null_obj
-	NullObj CObj
+	NullObj Object
 	//extern true_obj
-	TrueObj CObj
+	TrueObj Object
 	//extern false_obj
-	FalseObj CObj
+	FalseObj Object
 )
 
-func ParseBool(b bool) CObj {
+func ParseBool(b bool) Object {
 	if b {
 		return TrueObj
 	}
 	return FalseObj
 }
 
-func NewInteger(i int64) CObj {
+func NewInteger(i int64) Object {
 	return C.new_integer_obj(C.int64_t(i))
 }
 
-func NewFloat(f float64) CObj {
+func NewFloat(f float64) Object {
 	return C.new_float_obj(C.double(f))
 }
 
-func NewString(s string) CObj {
+func NewString(s string) Object {
 	return C.new_string_obj(C.CString(s), C.size_t(len(s)))
 }
 
-func NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []tauerr.Bookmark) CObj {
+func NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []tauerr.Bookmark) Object {
 	return C.new_function_obj(
 		(*C.uchar)(unsafe.Pointer(&ins[0])),
 		C.size_t(len(ins)),

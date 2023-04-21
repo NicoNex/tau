@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type Times struct {
@@ -22,36 +22,30 @@ func NewTimes(l, r Node, pos int) Node {
 	}
 }
 
-func (t Times) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(t.l.Eval(env))
-		right = obj.Unwrap(t.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
-	}
-	if takesPrecedence(right) {
-		return right
+func (t Times) Eval() (cobj.Object, error) {
+	left, err := t.l.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
 
-	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '*' for type %v", left.Type())
-	}
-	if !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '*' for type %v", right.Type())
+	right, err := t.r.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
 
-	if obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType) {
-		l := left.(obj.Integer)
-		r := right.(obj.Integer)
-		return obj.Integer(l * r)
+	if !cobj.AssertTypes(left, cobj.IntType, cobj.FloatType) {
+		return cobj.NullObj, fmt.Errorf("unsupported operator '*' for type %v", left.Type())
+	}
+	if !cobj.AssertTypes(right, cobj.IntType, cobj.FloatType) {
+		return cobj.NullObj, fmt.Errorf("unsupported operator '*' for type %v", right.Type())
 	}
 
-	left, right = obj.ToFloat(left, right)
-	l := left.(obj.Float)
-	r := right.(obj.Float)
-	return obj.Float(l * r)
+	if cobj.AssertTypes(left, cobj.IntType) && cobj.AssertTypes(right, cobj.IntType) {
+		return cobj.NewInteger(left.Int() * right.Int()), nil
+	}
+
+	l, r := cobj.ToFloat(left, right)
+	return cobj.NewFloat(l * r), nil
 }
 
 func (t Times) String() string {
@@ -60,13 +54,13 @@ func (t Times) String() string {
 
 func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
 	if t.IsConstExpression() {
-		o := t.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(t.pos, string(e))
+		o, err := t.Eval()
+		if err != nil {
+			return 0, c.NewError(t.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(t.pos)
-		return
+		return position, err
 	}
 
 	if position, err = t.l.Compile(c); err != nil {

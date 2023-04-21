@@ -1,11 +1,12 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type IfExpr struct {
@@ -24,26 +25,8 @@ func NewIfExpr(cond, body, alt Node, pos int) Node {
 	}
 }
 
-func (i IfExpr) Eval(env *obj.Env) obj.Object {
-	var cond = obj.Unwrap(i.cond.Eval(env))
-
-	if takesPrecedence(cond) {
-		return cond
-	}
-
-	switch c := cond.(type) {
-	case *obj.Boolean:
-		if c.Val() {
-			return obj.Unwrap(i.body.Eval(env))
-		}
-		return i.alternative(env)
-
-	case *obj.Null:
-		return i.alternative(env)
-
-	default:
-		return obj.Unwrap(i.body.Eval(env))
-	}
+func (i IfExpr) Eval() (cobj.Object, error) {
+	return cobj.NullObj, errors.New("ast.IfExpr: not a constant expression")
 }
 
 func (i IfExpr) String() string {
@@ -51,13 +34,6 @@ func (i IfExpr) String() string {
 		return fmt.Sprintf("if %v { %v } else { %v }", i.cond, i.body, i.altern)
 	}
 	return fmt.Sprintf("if %v { %v }", i.cond, i.body)
-}
-
-func (i IfExpr) alternative(env *obj.Env) obj.Object {
-	if i.altern != nil {
-		return obj.Unwrap(i.altern.Eval(env))
-	}
-	return obj.NullObj
 }
 
 func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {

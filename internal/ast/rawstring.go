@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type RawString string
@@ -14,8 +14,8 @@ func NewRawString(s string) Node {
 	return RawString(s)
 }
 
-func (r RawString) Eval(env *obj.Env) obj.Object {
-	return obj.String(string(r))
+func (r RawString) Eval() (cobj.Object, error) {
+	return cobj.NewString(string(r)), nil
 }
 
 func (r RawString) String() string {
@@ -32,7 +32,7 @@ func (r RawString) Quoted() string {
 }
 
 func (r RawString) Compile(c *compiler.Compiler) (position int, err error) {
-	return c.Emit(code.OpConstant, c.AddConstant(c.NewString(string(r)))), nil
+	return c.Emit(code.OpConstant, c.AddConstant(cobj.NewString(string(r)))), nil
 }
 
 func (r RawString) IsConstExpression() bool {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type Mod struct {
@@ -22,33 +22,28 @@ func NewMod(l, r Node, pos int) Node {
 	}
 }
 
-func (m Mod) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(m.l.Eval(env))
-		right = obj.Unwrap(m.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
-	}
-	if takesPrecedence(right) {
-		return right
+func (m Mod) Eval() (cobj.Object, error) {
+	left, err := m.l.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
 
-	if !obj.AssertTypes(left, obj.IntType) {
-		return obj.NewError("unsupported operator '%%' for type %v", left.Type())
-	}
-	if !obj.AssertTypes(right, obj.IntType) {
-		return obj.NewError("unsupported operator '%%' for type %v", right.Type())
+	right, err := m.r.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
 
-	l := left.(obj.Integer)
-	r := right.(obj.Integer)
-
-	if r == 0 {
-		return obj.NewError("can't divide by 0")
+	if !cobj.AssertTypes(left, cobj.IntType) {
+		return cobj.NullObj, fmt.Errorf("unsupported operator '%%' for type %v", left.Type())
 	}
-	return obj.Integer(l % r)
+	if !cobj.AssertTypes(right, cobj.IntType) {
+		return cobj.NullObj, fmt.Errorf("unsupported operator '%%' for type %v", right.Type())
+	}
+	if right.Int() == 0 {
+		return cobj.NullObj, fmt.Errorf("can't divide by 0")
+	}
+
+	return cobj.NewInteger(left.Int() % right.Int()), nil
 }
 
 func (m Mod) String() string {
@@ -57,13 +52,13 @@ func (m Mod) String() string {
 
 func (m Mod) Compile(c *compiler.Compiler) (position int, err error) {
 	if m.IsConstExpression() {
-		o := m.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(m.pos, string(e))
+		o, err := m.Eval()
+		if err != nil {
+			return 0, c.NewError(m.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(m.pos)
-		return
+		return position, err
 	}
 
 	if position, err = m.l.Compile(c); err != nil {

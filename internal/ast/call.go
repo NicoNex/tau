@@ -1,12 +1,14 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type Call struct {
@@ -23,47 +25,8 @@ func NewCall(fn Node, args []Node, pos int) Node {
 	}
 }
 
-func (c Call) Eval(env *obj.Env) obj.Object {
-	var fnObj = obj.Unwrap(c.Fn.Eval(env))
-
-	if takesPrecedence(fnObj) {
-		return fnObj
-	}
-
-	switch fn := fnObj.(type) {
-	case *obj.Function:
-		var args []obj.Object
-
-		if len(c.Args) != len(fn.Params) {
-			return obj.NewError(
-				"wrong number of arguments: expected %d, got %d",
-				len(fn.Params),
-				len(c.Args),
-			)
-		}
-
-		for _, a := range c.Args {
-			o := obj.Unwrap(a.Eval(env))
-			if takesPrecedence(o) {
-				return o
-			}
-			args = append(args, o)
-		}
-
-		extEnv := extendEnv(fn, args)
-		return unwrapReturn(fn.Body.Eval(extEnv))
-
-	case obj.Builtin:
-		var args []obj.Object
-
-		for _, a := range c.Args {
-			args = append(args, obj.Unwrap(a.Eval(env)))
-		}
-		return fn(args...)
-
-	default:
-		return obj.NewError("%q object is not callable", fnObj.Type())
-	}
+func (c Call) Eval() (cobj.Object, error) {
+	return cobj.NullObj, errors.New("ast.Call: not a constant expression")
 }
 
 func (c Call) String() string {

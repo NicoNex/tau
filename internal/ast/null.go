@@ -3,7 +3,7 @@ package ast
 import (
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type Null struct{}
@@ -12,8 +12,8 @@ func NewNull() Null {
 	return Null{}
 }
 
-func (n Null) Eval(_ *obj.Env) obj.Object {
-	return obj.NullObj
+func (n Null) Eval() (cobj.Object, error) {
+	return cobj.NullObj, nil
 }
 
 func (n Null) String() string {
@@ -21,7 +21,7 @@ func (n Null) String() string {
 }
 
 func (n Null) Compile(c *compiler.Compiler) (position int, err error) {
-	return c.Emit(code.OpConstant, c.AddConstant(c.NullObj())), nil
+	return c.Emit(code.OpConstant, c.AddConstant(cobj.NullObj)), nil
 }
 
 func (n Null) IsConstExpression() bool {

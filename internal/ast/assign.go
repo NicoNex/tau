@@ -1,11 +1,12 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type Assign struct {
@@ -22,25 +23,8 @@ func NewAssign(l, r Node, pos int) Node {
 	}
 }
 
-func (a Assign) Eval(env *obj.Env) obj.Object {
-	if left, ok := a.l.(Identifier); ok {
-		right := obj.Unwrap(a.r.Eval(env))
-		if takesPrecedenceNoError(right) {
-			return right
-		}
-		return env.Set(left.String(), right)
-	}
-
-	left := a.l.Eval(env)
-	if s, ok := left.(obj.Setter); ok {
-		right := obj.Unwrap(a.r.Eval(env))
-		if takesPrecedence(right) {
-			return right
-		}
-		return s.Set(right)
-	}
-
-	return obj.NewError("cannot assign to literal")
+func (a Assign) Eval() (cobj.Object, error) {
+	return cobj.NullObj, errors.New("ast.Assign: not a constant expression")
 }
 
 func (a Assign) String() string {

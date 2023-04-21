@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type And struct {
@@ -22,20 +22,18 @@ func NewAnd(l, r Node, pos int) Node {
 	}
 }
 
-func (a And) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(a.l.Eval(env))
-		right = obj.Unwrap(a.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
-	}
-	if takesPrecedence(right) {
-		return right
+func (a And) Eval() (cobj.Object, error) {
+	left, err := a.l.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
 
-	return obj.ParseBool(obj.IsTruthy(left) && obj.IsTruthy(right))
+	right, err := a.r.Eval()
+	if err != nil {
+		return cobj.NullObj, err
+	}
+
+	return cobj.ParseBool(cobj.IsTruthy(left) && cobj.IsTruthy(right)), nil
 }
 
 func (a And) String() string {
@@ -44,13 +42,13 @@ func (a And) String() string {
 
 func (a And) Compile(c *compiler.Compiler) (position int, err error) {
 	if a.IsConstExpression() {
-		o := a.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(a.pos, string(e))
+		o, err := a.Eval()
+		if err != nil {
+			return 0, c.NewError(a.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(a.pos)
-		return
+		return position, err
 	}
 
 	if position, err = a.l.Compile(c); err != nil {

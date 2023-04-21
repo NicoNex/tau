@@ -3,7 +3,7 @@ package ast
 import (
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type Boolean bool
@@ -12,8 +12,8 @@ func NewBoolean(b bool) Node {
 	return Boolean(b)
 }
 
-func (b Boolean) Eval(env *obj.Env) obj.Object {
-	return obj.ParseBool(bool(b))
+func (b Boolean) Eval() (cobj.Object, error) {
+	return cobj.ParseBool(bool(b)), nil
 }
 
 func (b Boolean) String() string {

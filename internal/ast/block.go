@@ -1,11 +1,12 @@
 package ast
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type Block []Node
@@ -14,16 +15,8 @@ func NewBlock() Block {
 	return Block([]Node{})
 }
 
-func (b Block) Eval(env *obj.Env) obj.Object {
-	var res obj.Object
-
-	for _, n := range b {
-		res = obj.Unwrap(n.Eval(env))
-		if res != nil && takesPrecedence(res) {
-			return res
-		}
-	}
-	return res
+func (b Block) Eval() (cobj.Object, error) {
+	return cobj.NullObj, errors.New("ast.Block: not a constant expression")
 }
 
 func (b Block) String() string {

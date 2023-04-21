@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type BitwiseAnd struct {
@@ -22,29 +22,24 @@ func NewBitwiseAnd(l, r Node, pos int) Node {
 	}
 }
 
-func (b BitwiseAnd) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(b.l.Eval(env))
-		right = obj.Unwrap(b.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
-	}
-	if takesPrecedence(right) {
-		return right
+func (b BitwiseAnd) Eval() (cobj.Object, error) {
+	left, err := b.l.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
 
-	if !obj.AssertTypes(left, obj.IntType) {
-		return obj.NewError("unsupported operator '&' for type %v", left.Type())
-	}
-	if !obj.AssertTypes(right, obj.IntType) {
-		return obj.NewError("unsupported operator '&' for type %v", right.Type())
+	right, err := b.r.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
 
-	l := left.(obj.Integer)
-	r := right.(obj.Integer)
-	return obj.Integer(l & r)
+	if !cobj.AssertTypes(left, cobj.IntType) {
+		return cobj.NullObj, fmt.Errorf("unsupported operator '&' for type %v", left.Type())
+	}
+	if !cobj.AssertTypes(right, cobj.IntType) {
+		return cobj.NullObj, fmt.Errorf("unsupported operator '&' for type %v", right.Type())
+	}
+	return cobj.NewInteger(left.Int() & right.Int()), nil
 }
 
 func (b BitwiseAnd) String() string {
@@ -53,13 +48,13 @@ func (b BitwiseAnd) String() string {
 
 func (b BitwiseAnd) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		o := b.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(b.pos, string(e))
+		o, err := b.Eval()
+		if err != nil {
+			return 0, c.NewError(b.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(b.pos)
-		return
+		return position, err
 	}
 
 	if position, err = b.l.Compile(c); err != nil {

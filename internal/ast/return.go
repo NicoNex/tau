@@ -1,11 +1,12 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type Return struct {
@@ -20,8 +21,8 @@ func NewReturn(n Node, pos int) Node {
 	}
 }
 
-func (r Return) Eval(env *obj.Env) obj.Object {
-	return obj.NewReturn(obj.Unwrap(r.v.Eval(env)))
+func (r Return) Eval() (cobj.Object, error) {
+	return cobj.NullObj, errors.New("ast.Return: not a constant expression")
 }
 
 func (r Return) String() string {

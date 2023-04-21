@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type NotEquals struct {
@@ -22,48 +22,39 @@ func NewNotEquals(l, r Node, pos int) Node {
 	}
 }
 
-func (n NotEquals) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(n.l.Eval(env))
-		right = obj.Unwrap(n.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
-	}
-	if takesPrecedence(right) {
-		return right
+func (n NotEquals) Eval() (cobj.Object, error) {
+	left, err := n.l.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
 
-	if !obj.AssertTypes(left, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
-		return obj.NewError("unsupported operator '!=' for type %v", left.Type())
+	right, err := n.r.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
-	if !obj.AssertTypes(right, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
-		return obj.NewError("unsupported operator '!=' for type %v", right.Type())
+
+	if !cobj.AssertTypes(left, cobj.IntType, cobj.FloatType, cobj.StringType, cobj.BoolType, cobj.NullType) {
+		return cobj.NullObj, fmt.Errorf("unsupported operator '!=' for type %v", left.Type())
+	}
+	if !cobj.AssertTypes(right, cobj.IntType, cobj.FloatType, cobj.StringType, cobj.BoolType, cobj.NullType) {
+		return cobj.NullObj, fmt.Errorf("unsupported operator '!=' for type %v", right.Type())
 	}
 
 	switch {
-	case obj.AssertTypes(right, obj.BoolType, obj.NullType) || obj.AssertTypes(right, obj.BoolType, obj.NullType):
-		return obj.ParseBool(left != right)
+	case cobj.AssertTypes(right, cobj.BoolType, cobj.NullType) || cobj.AssertTypes(right, cobj.BoolType, cobj.NullType):
+		return cobj.ParseBool(left.Int() != right.Int()), nil
 
-	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String)
-		r := right.(obj.String)
-		return obj.ParseBool(l != r)
+	case cobj.AssertTypes(left, cobj.StringType) && cobj.AssertTypes(right, cobj.StringType):
+		return cobj.ParseBool(left.String() != right.String()), nil
 
-	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
-		l := left.(obj.Integer)
-		r := right.(obj.Integer)
-		return obj.ParseBool(l != r)
+	case cobj.AssertTypes(left, cobj.IntType) && cobj.AssertTypes(right, cobj.IntType):
+		return cobj.ParseBool(left.Int() != right.Int()), nil
 
-	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
-		left, right = obj.ToFloat(left, right)
-		l := left.(obj.Float)
-		r := right.(obj.Float)
-		return obj.ParseBool(l != r)
-
+	case cobj.AssertTypes(left, cobj.FloatType, cobj.IntType) && cobj.AssertTypes(right, cobj.FloatType, cobj.IntType):
+		l, r := cobj.ToFloat(left, right)
+		return cobj.ParseBool(l != r), nil
 	default:
-		return obj.True
+		return cobj.TrueObj, nil
 	}
 }
 
@@ -73,13 +64,13 @@ func (n NotEquals) String() string {
 
 func (n NotEquals) Compile(c *compiler.Compiler) (position int, err error) {
 	if n.IsConstExpression() {
-		o := n.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(n.pos, string(e))
+		o, err := n.Eval()
+		if err != nil {
+			return 0, c.NewError(n.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(n.pos)
-		return
+		return position, err
 	}
 
 	if position, err = n.l.Compile(c); err != nil {

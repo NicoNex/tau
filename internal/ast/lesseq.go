@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type LessEq struct {
@@ -22,38 +22,30 @@ func NewLessEq(l, r Node, pos int) Node {
 	}
 }
 
-func (l LessEq) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(l.l.Eval(env))
-		right = obj.Unwrap(l.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func (l LessEq) Eval() (cobj.Object, error) {
+	left, err := l.l.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
-	if takesPrecedence(right) {
-		return right
+
+	right, err := l.r.Eval()
+	if err != nil {
+		return cobj.NullObj, err
 	}
 
 	switch {
-	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
-		l := left.(obj.Integer)
-		r := right.(obj.Integer)
-		return obj.ParseBool(l <= r)
+	case cobj.AssertTypes(left, cobj.IntType) && cobj.AssertTypes(right, cobj.IntType):
+		return cobj.ParseBool(left.Int() <= right.Int()), nil
 
-	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
-		left, right = obj.ToFloat(left, right)
-		l := left.(obj.Float)
-		r := right.(obj.Float)
-		return obj.ParseBool(l <= r)
+	case cobj.AssertTypes(left, cobj.IntType, cobj.FloatType) && cobj.AssertTypes(right, cobj.IntType, cobj.FloatType):
+		l, r := cobj.ToFloat(left, right)
+		return cobj.ParseBool(l <= r), nil
 
-	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String)
-		r := right.(obj.String)
-		return obj.ParseBool(l <= r)
+	case cobj.AssertTypes(left, cobj.StringType) && cobj.AssertTypes(right, cobj.StringType):
+		return cobj.ParseBool(left.String() <= right.String()), nil
 
 	default:
-		return obj.NewError("unsupported operator '<=' for types %v and %v", left.Type(), right.Type())
+		return cobj.NullObj, fmt.Errorf("unsupported operator '<=' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -63,13 +55,13 @@ func (l LessEq) String() string {
 
 func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if l.IsConstExpression() {
-		o := l.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(l.pos, string(e))
+		o, err := l.Eval()
+		if err != nil {
+			return 0, c.NewError(l.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(l.pos)
-		return
+		return position, err
 	}
 
 	if position, err = l.r.Compile(c); err != nil {

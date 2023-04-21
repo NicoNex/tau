@@ -1,11 +1,12 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type For struct {
@@ -26,29 +27,8 @@ func NewFor(cond, body, before, after Node, pos int) Node {
 	}
 }
 
-func (f For) Eval(env *obj.Env) obj.Object {
-	if f.before != nil {
-		obj.Unwrap(f.before.Eval(env))
-	}
-
-loop:
-	for obj.IsTruthy(obj.Unwrap(f.cond.Eval(env))) {
-		switch o := obj.Unwrap(f.body.Eval(env)); {
-		case o == nil:
-			break
-
-		case isError(o) || isReturn(o):
-			return o
-
-		case isBreak(o):
-			break loop
-		}
-
-		if f.after != nil {
-			obj.Unwrap(f.after.Eval(env))
-		}
-	}
-	return obj.NullObj
+func (f For) Eval() (cobj.Object, error) {
+	return cobj.NullObj, errors.New("ast.For: not a constant expression")
 }
 
 func (f For) String() string {

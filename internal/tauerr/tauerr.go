@@ -10,7 +10,7 @@ func New(file, input string, pos int, s string, a ...any) error {
 		file = "<stdin>"
 	}
 
-	line, lineno, rel := line(input, pos)
+	line, lineno, rel := line(input, uint(pos))
 	return fmt.Errorf(
 		"error in file %s at line %d:\n    %s\n    %s\n%s",
 		file,
@@ -29,21 +29,21 @@ func NewFromBookmark(file string, b Bookmark, s string, a ...any) error {
 	return fmt.Errorf(
 		"error in file %s at line %d:\n    %s\n    %s\n%s",
 		file,
-		b.LineNo,
-		b.Line,
-		arrow(b.Pos),
+		b.lineno,
+		b.line,
+		arrow(uint(b.pos)),
 		fmt.Sprintf(s, a...),
 	)
 }
 
-func line(input string, pos int) (line string, lineno, relative int) {
-	s, e := start(input, pos), end(input, pos)
+func line(input string, pos uint) (line string, lineno, relative uint) {
+	s, e := start(input, pos), end(input, int(pos))
 	l := input[s:e]
 	line = strings.TrimLeft(l, " \t")
-	return line, lineNo(input, pos), len(line) - (e - pos)
+	return line, lineNo(input, pos), uint(len(line)) - (e - pos)
 }
 
-func start(s string, pos int) int {
+func start(s string, pos uint) uint {
 	for i := pos - 1; i >= 0; i-- {
 		if s[i] == '\n' {
 			return i + 1
@@ -52,16 +52,16 @@ func start(s string, pos int) int {
 	return 0
 }
 
-func end(s string, pos int) int {
+func end(s string, pos int) uint {
 	for i := pos; i < len(s); i++ {
 		if s[i] == '\n' {
-			return i
+			return uint(i)
 		}
 	}
-	return len(s)
+	return uint(len(s))
 }
 
-func lineNo(s string, pos int) int {
+func lineNo(s string, pos uint) uint {
 	var cnt = 1
 
 	for _, b := range s[:pos] {
@@ -70,14 +70,14 @@ func lineNo(s string, pos int) int {
 		}
 	}
 
-	return cnt
+	return uint(cnt)
 }
 
-func arrow(pos int) string {
+func arrow(pos uint) string {
 	var s = make([]byte, pos+1)
 
 	for i := range s {
-		if i == pos {
+		if uint(i) == pos {
 			s[i] = '^'
 		} else {
 			s[i] = ' '

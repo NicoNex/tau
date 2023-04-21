@@ -1,19 +1,17 @@
 package tauerr
 
-type Bookmark struct {
-	Offset int
-	LineNo int
-	Pos    int
-	Line   string
-}
+// #include "bookmark.h"
+import "C"
 
-func NewBookmark(fileCnt string, filePos, offset int) Bookmark {
+type Bookmark = C.struct_bookmark
+
+func NewBookmark(fileCnt string, filePos, offset uint) Bookmark {
 	line, lineNo, relative := line(fileCnt, filePos)
 
 	return Bookmark{
-		Offset: offset,
-		Line:   line,
-		LineNo: lineNo,
-		Pos:    relative,
+		offset: C.uint32_t(offset),
+		line:   C.CString(line),
+		lineno: C.uint32_t(lineNo),
+		pos:    C.uint32_t(relative),
 	}
 }

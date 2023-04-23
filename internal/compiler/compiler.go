@@ -42,6 +42,7 @@ type Compiler struct {
 }
 
 const (
+	GenericPlaceholder  = 9999
 	ContinuePlaceholder = 9998
 	BreakPlaceholder    = 9997
 )

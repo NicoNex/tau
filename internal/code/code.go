@@ -18,7 +18,10 @@ type Definition struct {
 
 //go:generate stringer -type=Opcode
 const (
-	OpConstant Opcode = iota
+	OpHalt Opcode = iota
+	OpPop
+
+	OpConstant
 	OpTrue
 	OpFalse
 	OpNull
@@ -69,12 +72,12 @@ const (
 	OpGetFree
 	OpLoadModule
 	OpInterpolate
-
-	OpPop
-	OpHalt
 )
 
 var definitions = map[Opcode]*Definition{
+	OpHalt: {"OpHalt", []int{}},
+	OpPop:  {"OpPop", []int{}},
+
 	OpConstant:       {"OpConstant", []int{2}},
 	OpTrue:           {"OpTrue", []int{}},
 	OpFalse:          {"OpFalse", []int{}},
@@ -126,9 +129,6 @@ var definitions = map[Opcode]*Definition{
 	OpGetFree:     {"OpGetFree", []int{1}},
 	OpLoadModule:  {"OpLoadModule", []int{}},
 	OpInterpolate: {"OpInterpolate", []int{2, 2}},
-
-	OpPop:  {"OpPop", []int{}},
-	OpHalt: {"OpHalt", []int{}},
 }
 
 func (ins Instructions) String() string {

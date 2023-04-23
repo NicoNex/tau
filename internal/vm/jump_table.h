@@ -1,6 +1,9 @@
 #pragma once
 
 static const void *jump_table[] = {
+	&&TARGET_HALT,
+	&&TARGET_POP,
+
 	&&TARGET_CONST,
 	&&TARGET_TRUE,
 	&&TARGET_FALSE,
@@ -52,7 +55,4 @@ static const void *jump_table[] = {
 	&&TARGET_GET_FREE,
 	&&TARGET_LOAD_MODULE,
 	&&TARGET_INTERPOLATE,
-
-	&&TARGET_POP,
-	&&TARGET_HALT
 };

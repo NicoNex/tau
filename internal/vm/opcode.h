@@ -1,6 +1,9 @@
 #pragma once
 
 enum opcode {
+	op_halt,
+	op_pop,
+
 	op_constant,
 	op_true,
 	op_false,
@@ -51,14 +54,14 @@ enum opcode {
 	op_get_builtin,
 	op_get_free,
 	op_load_module,
-	op_interpolate,
-
-	op_pop,
-	op_halt
+	op_interpolate
 };
 
 char *opcode_str(enum opcode op) {
 	static char *strings[] = {
+		"op_halt",
+		"op_pop",
+
 		"op_constant",
 		"op_true",
 		"op_false",
@@ -110,9 +113,6 @@ char *opcode_str(enum opcode op) {
 		"op_get_free",
 		"op_load_module",
 		"op_interpolate",
-
-		"op_pop",
-		"op_halt"
 	};
 
 	return strings[op];

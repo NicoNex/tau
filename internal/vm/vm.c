@@ -806,6 +806,11 @@ int vm_run(struct vm * restrict vm) {
 	register struct frame *frame = vm_current_frame(vm);
 	DISPATCH();
 
+	TARGET_POP: {
+		vm_stack_pop_ignore(vm);
+		DISPATCH();
+	}
+
 	TARGET_CONST: {
 		uint16_t idx = read_uint16(frame->ip);
 		frame->ip += 2;
@@ -1062,11 +1067,6 @@ int vm_run(struct vm * restrict vm) {
 		uint32_t num_args = read_uint16(frame->ip+2);
 		frame->ip += 4;
 		vm_push_interpolated(vm, str_idx, num_args);
-		DISPATCH();
-	}
-
-	TARGET_POP: {
-		vm_stack_pop_ignore(vm);
 		DISPATCH();
 	}
 

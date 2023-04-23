@@ -91,7 +91,6 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	}
 
 	c := compiler.NewImport(int(vm.state.ndefs), &Consts)
-	c.SetUseCObjects(true)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
 		C.go_vm_errorf(vm, C.CString(err.Error()))

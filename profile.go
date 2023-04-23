@@ -45,10 +45,6 @@ func fileOrDefault() string {
 }
 
 func main() {
-	var useFast bool
-	flag.BoolVar(&useFast, "f", false, "Use fast VM.")
-	flag.Parse()
-
 	cpuf, err := os.Create("cpu.prof")
 	check(err)
 
@@ -58,20 +54,11 @@ func main() {
 	}
 
 	c := compiler.New()
-	if useFast {
-		c.SetUseCObjects(true)
-	}
 	c.SetFileInfo("<profiler>", fib)
 	check(c.Compile(tree))
 
 	check(pprof.StartCPUProfile(cpuf))
 	defer pprof.StopCPUProfile()
-
-	if useFast {
-		tvm := vm.New("<profiler>", c.Bytecode())
-		tvm.Run()
-	} else {
-		tvm := vm.New("<profiler>", c.Bytecode())
-		check(tvm.Run())
-	}
+	tvm := vm.New("<profiler>", c.Bytecode())
+	tvm.Run()
 }

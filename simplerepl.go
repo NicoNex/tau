@@ -47,7 +47,6 @@ func SimpleVmREPL() {
 		}
 
 		c := compiler.NewWithState(symbols, &vm.Consts)
-		c.SetUseCObjects(true)
 		c.SetFileInfo("<stdin>", input)
 		if err := c.Compile(res); err != nil {
 			fmt.Println(err)

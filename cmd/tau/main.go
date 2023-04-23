@@ -10,12 +10,10 @@ import (
 func main() {
 	var (
 		compile bool
-		useFast bool
 		version bool
 		simple  bool
 	)
 
-	flag.BoolVar(&useFast, "f", false, "Use the fast implementation Tau VM (alpha).")
 	flag.BoolVar(&compile, "c", false, "Compile a tau file into a '.tauc' bytecode file.")
 	flag.BoolVar(&simple, "s", false, "Use simple REPL instead of opening a terminal.")
 	flag.BoolVar(&version, "v", false, "Print Tau version information.")
@@ -29,11 +27,7 @@ func main() {
 		tau.PrintVersionInfo(os.Stdout)
 
 	case flag.NArg() > 0:
-		if useFast {
-			tau.ExecFileFastVM(flag.Arg(0))
-		} /*else {
-			tau.ExecFileVM(flag.Arg(0))
-		}*/
+		tau.ExecFileVM(flag.Arg(0))
 
 	default:
 		tau.SimpleVmREPL()

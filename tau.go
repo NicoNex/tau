@@ -44,7 +44,7 @@ func precompiledBytecode(path string) (compiler.Bytecode, error) {
 	return tauDecode(b), nil
 }
 
-func compile(path string, useCObjects bool) (bc compiler.Bytecode, err error) {
+func compile(path string) (bc compiler.Bytecode, err error) {
 	input := string(readFile(path))
 	res, errs := parser.Parse(path, input)
 	if len(errs) > 0 {
@@ -58,7 +58,6 @@ func compile(path string, useCObjects bool) (bc compiler.Bytecode, err error) {
 	}
 
 	c := compiler.New()
-	c.SetUseCObjects(useCObjects)
 	c.SetFileInfo(path, input)
 	if err = c.Compile(res); err != nil {
 		return
@@ -67,36 +66,13 @@ func compile(path string, useCObjects bool) (bc compiler.Bytecode, err error) {
 	return c.Bytecode(), nil
 }
 
-// func ExecFileVM(f string) (err error) {
-// 	var bytecode *compiler.Bytecode
-
-// 	if filepath.Ext(f) == ".tauc" {
-// 		bytecode, err = precompiledBytecode(f)
-// 	} else {
-// 		bytecode, err = compile(f, false)
-// 	}
-
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return
-// 	}
-
-// 	tvm := vm.New(f, bytecode)
-// 	if err = tvm.Run(); err != nil {
-// 		fmt.Println(err)
-// 		return
-// 	}
-
-// 	return
-// }
-
-func ExecFileFastVM(f string) (err error) {
+func ExecFileVM(f string) (err error) {
 	var bytecode compiler.Bytecode
 
 	if filepath.Ext(f) == ".tauc" {
 		bytecode = tauDecode(readFile(f))
 	} else {
-		bytecode, err = compile(f, true)
+		bytecode, err = compile(f)
 	}
 
 	if err != nil {

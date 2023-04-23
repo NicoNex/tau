@@ -38,7 +38,6 @@ type Compiler struct {
 	scopeIndex  int
 	fileName    string
 	fileContent string
-	useCObjects bool
 	*SymbolTable
 }
 
@@ -82,10 +81,6 @@ func NewImport(numDefs int, constants *[]obj.Object) *Compiler {
 		scopes:      []CompilationScope{{}},
 		constants:   constants,
 	}
-}
-
-func (c *Compiler) SetUseCObjects(b bool) {
-	c.useCObjects = b
 }
 
 func (c *Compiler) AddConstant(o obj.Object) int {

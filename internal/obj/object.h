@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include "../tauerr/bookmark.h"
 
 #define NUM_BUILTINS 26
 #define MARKPTR() calloc(1, sizeof(uint32_t))
@@ -22,14 +23,6 @@ enum obj_type {
 	obj_pipe,
 	obj_bytes,
 	obj_getsetter
-};
-
-struct bookmark {
-	uint32_t offset;
-	uint32_t lineno;
-	uint32_t pos;
-	size_t len;
-	char *line;
 };
 
 struct function {
@@ -120,32 +113,56 @@ struct object_node {
 	struct object_node *r;
 };
 
-struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t num_bookmarks);
-struct object new_closure_obj(struct function *fn, struct object *free, size_t num_free);
+// Static objects.
+extern struct object null_obj;
+extern struct object true_obj;
+extern struct object false_obj;
+
+// Boolean object.
 struct object new_boolean_obj(uint32_t b);
-struct object new_integer_obj(int64_t val);
-struct object new_error_obj(char *msg, size_t len);
-struct object new_float_obj(double val);
-struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len));
 struct object parse_bool(uint32_t b);
-struct object new_getsetter_obj(struct object l, struct object r, getfn get, setfn set);
+char *boolean_str(struct object o);
 
-char *otype_str(enum obj_type t);
-char *object_str(struct object o);
-void print_obj(struct object o);
-void mark_obj(struct object o);
-void free_obj(struct object o);
+// Integer object.
+struct object new_integer_obj(int64_t val);
+char *integer_str(struct object o);
 
-uint64_t fnv64a(char *s);
+// Float object.
+struct object new_float_obj(double val);
+char *float_str(struct object o);
 
+// String object.
 struct object new_string_obj(char *str, size_t len);
 struct object new_string_slice(char *str, size_t len, uint32_t *m_parent);
+char *string_str(struct object o);
+void mark_string_obj(struct object s);
+void dispose_string_obj(struct object o);
 
+// Error object.
+struct object new_error_obj(char *msg, size_t len);
+char *error_str(struct object o);
+void dispose_error_obj(struct object o);
+
+// List object.
 struct object new_list_obj(struct object *list, size_t len);
 struct object list_getsetter_get(struct getsetter *gs);
 struct object list_getsetter_set(struct getsetter *gs, struct object val);
 struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent);
+char *list_str(struct object o);
+void mark_list_obj(struct object l);
+void dispose_list_obj(struct object o);
 
+// Map object.
+struct object new_map();
+struct map_pair map_get(struct object map, struct object k);
+struct map_pair map_set(struct object map, struct object k, struct object v);
+struct object map_getsetter_get(struct getsetter *gs);
+struct object map_getsetter_set(struct getsetter *gs, struct object val);
+void mark_map_obj(struct object m);
+char *map_str(struct object map);
+void dispose_map_obj(struct object map);
+
+// Object object.
 struct object new_object();
 struct object object_get(struct object obj, char *name);
 struct object object_set(struct object obj, char *name, struct object val);
@@ -156,18 +173,32 @@ void mark_object_obj(struct object o);
 char *object_obj_str(struct object obj);
 void dispose_object_obj(struct object obj);
 
-struct object new_map();
-struct map_pair map_get(struct object map, struct object k);
-struct map_pair map_set(struct object map, struct object k, struct object v);
-struct object map_getsetter_get(struct getsetter *gs);
-struct object map_getsetter_set(struct getsetter *gs, struct object val);
-void mark_map_obj(struct object m);
-char *map_str(struct object map);
-void dispose_map_obj(struct object map);
+// Function object.
+struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t num_bookmarks);
+char *function_str(struct object o);
+void dispose_function_obj(struct object o);
+void dispose_function_data(struct function *fn);
 
-extern struct object null_obj;
-extern struct object true_obj;
-extern struct object false_obj;
+// Closure object.
+struct object new_closure_obj(struct function *fn, struct object *free, size_t num_free);
+char *closure_str(struct object o);
+void dispose_closure_obj(struct object o);
+void mark_closure_obj(struct object c);
 
+// Builtin object.
 typedef struct object (*builtin)(struct object *args, size_t len);
 extern const builtin builtins[NUM_BUILTINS];
+struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len));
+
+// Getsetter object.
+struct object new_getsetter_obj(struct object l, struct object r, getfn get, setfn set);
+char *getsetter_str(struct object o);
+void dispose_getsetter_obj(struct object o);
+
+// Util functions.
+char *otype_str(enum obj_type t);
+char *object_str(struct object o);
+void print_obj(struct object o);
+void mark_obj(struct object o);
+void free_obj(struct object o);
+uint64_t fnv64a(char *s);

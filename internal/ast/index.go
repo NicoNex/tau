@@ -6,7 +6,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Index struct {
@@ -22,8 +22,8 @@ func NewIndex(l, i Node, pos int) Node {
 	}
 }
 
-func (i Index) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.Index: not a constant expression")
+func (i Index) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Index: not a constant expression")
 }
 
 func (i Index) String() string {

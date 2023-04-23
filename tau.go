@@ -11,10 +11,8 @@ import (
 
 	"github.com/NicoNex/tau/internal/ast"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
-	"github.com/NicoNex/tau/internal/vm/cvm"
 )
 
 const TauVersion = "v1.5.0"
@@ -37,16 +35,16 @@ func writeFile(fname string, cont []byte) {
 	}
 }
 
-func precompiledBytecode(path string) (*compiler.Bytecode, error) {
+func precompiledBytecode(path string) (compiler.Bytecode, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		fmt.Println(err)
-		return nil, fmt.Errorf("error opening file %q: %w", path, err)
+		return compiler.Bytecode{}, fmt.Errorf("error opening file %q: %w", path, err)
 	}
-	return tauDecode(b)
+	return tauDecode(b), nil
 }
 
-func compile(path string, useCObjects bool) (bc *compiler.Bytecode, err error) {
+func compile(path string, useCObjects bool) (bc compiler.Bytecode, err error) {
 	input := string(readFile(path))
 	res, errs := parser.Parse(path, input)
 	if len(errs) > 0 {
@@ -56,7 +54,7 @@ func compile(path string, useCObjects bool) (bc *compiler.Bytecode, err error) {
 			buf.WriteString(e.Error())
 			buf.WriteByte('\n')
 		}
-		return nil, errors.New(buf.String())
+		return compiler.Bytecode{}, errors.New(buf.String())
 	}
 
 	c := compiler.New()
@@ -69,34 +67,34 @@ func compile(path string, useCObjects bool) (bc *compiler.Bytecode, err error) {
 	return c.Bytecode(), nil
 }
 
-func ExecFileVM(f string) (err error) {
-	var bytecode *compiler.Bytecode
+// func ExecFileVM(f string) (err error) {
+// 	var bytecode *compiler.Bytecode
 
-	if filepath.Ext(f) == ".tauc" {
-		bytecode, err = precompiledBytecode(f)
-	} else {
-		bytecode, err = compile(f, false)
-	}
+// 	if filepath.Ext(f) == ".tauc" {
+// 		bytecode, err = precompiledBytecode(f)
+// 	} else {
+// 		bytecode, err = compile(f, false)
+// 	}
 
-	if err != nil {
-		fmt.Println(err)
-		return
-	}
+// 	if err != nil {
+// 		fmt.Println(err)
+// 		return
+// 	}
 
-	tvm := vm.New(f, bytecode)
-	if err = tvm.Run(); err != nil {
-		fmt.Println(err)
-		return
-	}
+// 	tvm := vm.New(f, bytecode)
+// 	if err = tvm.Run(); err != nil {
+// 		fmt.Println(err)
+// 		return
+// 	}
 
-	return
-}
+// 	return
+// }
 
 func ExecFileFastVM(f string) (err error) {
-	var bytecode *compiler.Bytecode
+	var bytecode compiler.Bytecode
 
 	if filepath.Ext(f) == ".tauc" {
-		bytecode, err = tauDecode(readFile(f))
+		bytecode = tauDecode(readFile(f))
 	} else {
 		bytecode, err = compile(f, true)
 	}
@@ -106,25 +104,8 @@ func ExecFileFastVM(f string) (err error) {
 		return
 	}
 
-	tvm := cvm.New(f, bytecode)
+	tvm := vm.New(f, bytecode)
 	tvm.Run()
-	return nil
-}
-
-func ExecFileEval(f string) error {
-	var env = obj.NewEnv(f)
-
-	b := readFile(f)
-	res, errs := parser.Parse(f, string(b))
-	if len(errs) != 0 {
-		for _, e := range errs {
-			fmt.Println(e)
-		}
-		return ErrParseError
-	}
-
-	res.Eval(env)
-
 	return nil
 }
 
@@ -146,15 +127,8 @@ func CompileFiles(files []string) error {
 			fmt.Println(err)
 			continue
 		}
-
-		cnt, err := tauEncode(c.Bytecode())
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-
 		ext := filepath.Ext(f)
-		writeFile(f[:len(f)-len(ext)]+".tauc", cnt)
+		writeFile(f[:len(f)-len(ext)]+".tauc", tauEncode(c.Bytecode()))
 	}
 
 	return nil

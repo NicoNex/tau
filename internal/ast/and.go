@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type And struct {
@@ -22,18 +22,18 @@ func NewAnd(l, r Node, pos int) Node {
 	}
 }
 
-func (a And) Eval() (cobj.Object, error) {
+func (a And) Eval() (obj.Object, error) {
 	left, err := a.l.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	right, err := a.r.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
-	return cobj.ParseBool(cobj.IsTruthy(left) && cobj.IsTruthy(right)), nil
+	return obj.ParseBool(obj.IsTruthy(left) && obj.IsTruthy(right)), nil
 }
 
 func (a And) String() string {

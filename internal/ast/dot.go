@@ -6,7 +6,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Dot struct {
@@ -23,8 +23,8 @@ func NewDot(l, r Node, pos int) Node {
 	}
 }
 
-func (d Dot) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.Dot: not a constant expression")
+func (d Dot) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Dot: not a constant expression")
 }
 
 func (d Dot) String() string {
@@ -38,7 +38,7 @@ func (d Dot) Compile(c *compiler.Compiler) (position int, err error) {
 	if _, ok := d.r.(Identifier); !ok {
 		return position, fmt.Errorf("expected identifier with dot operator, got %T", d.r)
 	}
-	position = c.Emit(code.OpConstant, c.AddConstant(cobj.NewString(d.r.String())))
+	position = c.Emit(code.OpConstant, c.AddConstant(obj.NewString(d.r.String())))
 	position = c.Emit(code.OpDot)
 	c.Bookmark(d.pos)
 	return

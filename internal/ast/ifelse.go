@@ -6,7 +6,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type IfExpr struct {
@@ -25,8 +25,8 @@ func NewIfExpr(cond, body, alt Node, pos int) Node {
 	}
 }
 
-func (i IfExpr) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.IfExpr: not a constant expression")
+func (i IfExpr) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.IfExpr: not a constant expression")
 }
 
 func (i IfExpr) String() string {

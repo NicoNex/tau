@@ -6,7 +6,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Assign struct {
@@ -23,8 +23,8 @@ func NewAssign(l, r Node, pos int) Node {
 	}
 }
 
-func (a Assign) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.Assign: not a constant expression")
+func (a Assign) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Assign: not a constant expression")
 }
 
 func (a Assign) String() string {

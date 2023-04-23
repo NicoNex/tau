@@ -2,18 +2,18 @@ package ast
 
 import (
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type parseFn func(string, string) (Node, []error)
 
 type Node interface {
-	Eval() (cobj.Object, error)
+	Eval() (obj.Object, error)
 	String() string
 	compiler.Compilable
 }
 
-// Checks whether o is of type cobj.ErrorType.
-func isError(o cobj.Object) bool {
-	return o.Type() == cobj.ErrorType
+// Checks whether o is of type obj.ErrorType.
+func isError(o obj.Object) bool {
+	return o.Type() == obj.ErrorType
 }

@@ -2,7 +2,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include "obj.h"
+#include "object.h"
 
 // Taken from: https://github.com/haipome/fnv/blob/master/fnv.c#L368
 inline uint64_t fnv64a(char *s) {
@@ -139,4 +139,14 @@ struct object new_map() {
 void mark_map_obj(struct object m) {
 	*m.marked = 1;
 	mark_map_children(m.data.map->root);
+}
+
+struct object map_getsetter_get(struct getsetter *gs) {
+	struct map_pair mp = map_get(gs->l, gs->r);
+	return mp.val;
+}
+
+struct object map_getsetter_set(struct getsetter *gs, struct object val) {
+	struct map_pair mp = map_set(gs->l, gs->r, val);
+	return mp.val;
 }

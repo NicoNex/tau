@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type BitwiseNot struct {
@@ -20,17 +20,17 @@ func NewBitwiseNot(n Node, pos int) Node {
 	}
 }
 
-func (b BitwiseNot) Eval() (cobj.Object, error) {
+func (b BitwiseNot) Eval() (obj.Object, error) {
 	value, err := b.n.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
-	if !cobj.AssertTypes(value, cobj.IntType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '~' for type %v", value.Type())
+	if !obj.AssertTypes(value, obj.IntType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '~' for type %v", value.Type())
 	}
 
-	return cobj.NewInteger(^value.Int()), nil
+	return obj.NewInteger(^value.Int()), nil
 }
 
 func (b BitwiseNot) String() string {

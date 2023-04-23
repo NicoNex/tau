@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Or struct {
@@ -22,18 +22,18 @@ func NewOr(l, r Node, pos int) Node {
 	}
 }
 
-func (o Or) Eval() (cobj.Object, error) {
+func (o Or) Eval() (obj.Object, error) {
 	left, err := o.l.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	right, err := o.r.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
-	return cobj.ParseBool(cobj.IsTruthy(left) || cobj.IsTruthy(right)), nil
+	return obj.ParseBool(obj.IsTruthy(left) || obj.IsTruthy(right)), nil
 }
 
 func (o Or) String() string {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Continue struct{}
@@ -14,8 +14,8 @@ func NewContinue() Continue {
 	return Continue{}
 }
 
-func (c Continue) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.ConcurrentCall: not a constant expression")
+func (c Continue) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.ConcurrentCall: not a constant expression")
 }
 
 func (c Continue) String() string {

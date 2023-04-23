@@ -31,14 +31,17 @@ func main() {
 	case flag.NArg() > 0:
 		if useFast {
 			tau.ExecFileFastVM(flag.Arg(0))
-		} else {
+		} /*else {
 			tau.ExecFileVM(flag.Arg(0))
-		}
-
-	case simple:
-		tau.SimpleVmREPL()
+		}*/
 
 	default:
-		tau.VmREPL()
+		tau.SimpleVmREPL()
+
+		// case simple:
+		// 	tau.SimpleVmREPL()
+
+		// default:
+		// 	tau.VmREPL()
 	}
 }

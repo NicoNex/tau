@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Float float64
@@ -14,8 +14,8 @@ func NewFloat(f float64) Node {
 	return Float(f)
 }
 
-func (f Float) Eval() (cobj.Object, error) {
-	return cobj.NewFloat(float64(f)), nil
+func (f Float) Eval() (obj.Object, error) {
+	return obj.NewFloat(float64(f)), nil
 }
 
 func (f Float) String() string {
@@ -23,7 +23,7 @@ func (f Float) String() string {
 }
 
 func (f Float) Compile(c *compiler.Compiler) (position int, err error) {
-	return c.Emit(code.OpConstant, c.AddConstant(cobj.NewFloat(float64(f)))), nil
+	return c.Emit(code.OpConstant, c.AddConstant(obj.NewFloat(float64(f)))), nil
 }
 
 func (f Float) IsConstExpression() bool {

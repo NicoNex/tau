@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Plus struct {
@@ -22,37 +22,37 @@ func NewPlus(l, r Node, pos int) Node {
 	}
 }
 
-func (p Plus) Eval() (cobj.Object, error) {
+func (p Plus) Eval() (obj.Object, error) {
 	left, err := p.l.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	right, err := p.r.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
-	if !cobj.AssertTypes(left, cobj.IntType, cobj.FloatType, cobj.StringType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '+' for type %v", left.Type())
+	if !obj.AssertTypes(left, obj.IntType, obj.FloatType, obj.StringType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '+' for type %v", left.Type())
 	}
-	if !cobj.AssertTypes(right, cobj.IntType, cobj.FloatType, cobj.StringType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '+' for type %v", right.Type())
+	if !obj.AssertTypes(right, obj.IntType, obj.FloatType, obj.StringType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '+' for type %v", right.Type())
 	}
 
 	switch {
-	case cobj.AssertTypes(left, cobj.StringType) && cobj.AssertTypes(right, cobj.StringType):
-		return cobj.NewString(left.String() + right.String()), nil
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
+		return obj.NewString(left.String() + right.String()), nil
 
-	case cobj.AssertTypes(left, cobj.IntType) && cobj.AssertTypes(right, cobj.IntType):
-		return cobj.NewInteger(left.Int() + right.Int()), nil
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
+		return obj.NewInteger(left.Int() + right.Int()), nil
 
-	case cobj.AssertTypes(left, cobj.FloatType, cobj.IntType) && cobj.AssertTypes(right, cobj.FloatType, cobj.IntType):
-		l, r := cobj.ToFloat(left, right)
-		return cobj.NewFloat(l + r), nil
+	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
+		l, r := obj.ToFloat(left, right)
+		return obj.NewFloat(l + r), nil
 
 	default:
-		return cobj.NullObj, fmt.Errorf(
+		return obj.NullObj, fmt.Errorf(
 			"invalid operation %v + %v (wrong types %v and %v)",
 			left, right, left.Type(), right.Type(),
 		)

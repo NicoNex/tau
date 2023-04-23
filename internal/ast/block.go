@@ -6,7 +6,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Block []Node
@@ -15,8 +15,8 @@ func NewBlock() Block {
 	return Block([]Node{})
 }
 
-func (b Block) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.Block: not a constant expression")
+func (b Block) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Block: not a constant expression")
 }
 
 func (b Block) String() string {

@@ -6,7 +6,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type For struct {
@@ -27,8 +27,8 @@ func NewFor(cond, body, before, after Node, pos int) Node {
 	}
 }
 
-func (f For) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.For: not a constant expression")
+func (f For) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.For: not a constant expression")
 }
 
 func (f For) String() string {

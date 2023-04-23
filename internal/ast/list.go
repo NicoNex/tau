@@ -7,7 +7,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type List []Node
@@ -22,8 +22,8 @@ func NewList(elements ...Node) Node {
 }
 
 // TODO: optimise this for the case where all the list elements are constant expressions.
-func (l List) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.Index: not a constant expression")
+func (l List) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Index: not a constant expression")
 }
 
 func (l List) String() string {

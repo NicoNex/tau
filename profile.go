@@ -10,7 +10,6 @@ import (
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
-	"github.com/NicoNex/tau/internal/vm/cvm"
 
 	_ "github.com/ianlancetaylor/cgosymbolizer"
 )
@@ -69,7 +68,7 @@ func main() {
 	defer pprof.StopCPUProfile()
 
 	if useFast {
-		tvm := cvm.New("<profiler>", c.Bytecode())
+		tvm := vm.New("<profiler>", c.Bytecode())
 		tvm.Run()
 	} else {
 		tvm := vm.New("<profiler>", c.Bytecode())

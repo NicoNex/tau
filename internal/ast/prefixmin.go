@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type PrefixMinus struct {
@@ -20,19 +20,19 @@ func NewPrefixMinus(n Node, pos int) Node {
 	}
 }
 
-func (p PrefixMinus) Eval() (cobj.Object, error) {
+func (p PrefixMinus) Eval() (obj.Object, error) {
 	right, err := p.n.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	switch right.Type() {
-	case cobj.IntType:
-		return cobj.NewInteger(-right.Int()), nil
-	case cobj.FloatType:
-		return cobj.NewFloat(-right.Float()), nil
+	case obj.IntType:
+		return obj.NewInteger(-right.Int()), nil
+	case obj.FloatType:
+		return obj.NewFloat(-right.Float()), nil
 	default:
-		return cobj.NullObj, fmt.Errorf("unsupported prefix operator '-' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported prefix operator '-' for type %v", right.Type())
 	}
 }
 

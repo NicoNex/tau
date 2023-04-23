@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Mod struct {
@@ -22,28 +22,28 @@ func NewMod(l, r Node, pos int) Node {
 	}
 }
 
-func (m Mod) Eval() (cobj.Object, error) {
+func (m Mod) Eval() (obj.Object, error) {
 	left, err := m.l.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	right, err := m.r.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
-	if !cobj.AssertTypes(left, cobj.IntType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '%%' for type %v", left.Type())
+	if !obj.AssertTypes(left, obj.IntType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '%%' for type %v", left.Type())
 	}
-	if !cobj.AssertTypes(right, cobj.IntType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '%%' for type %v", right.Type())
+	if !obj.AssertTypes(right, obj.IntType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '%%' for type %v", right.Type())
 	}
 	if right.Int() == 0 {
-		return cobj.NullObj, fmt.Errorf("can't divide by 0")
+		return obj.NullObj, fmt.Errorf("can't divide by 0")
 	}
 
-	return cobj.NewInteger(left.Int() % right.Int()), nil
+	return obj.NewInteger(left.Int() % right.Int()), nil
 }
 
 func (m Mod) String() string {

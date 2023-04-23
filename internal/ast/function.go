@@ -7,7 +7,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Function struct {
@@ -25,8 +25,8 @@ func NewFunction(params []Identifier, body Node, pos int) Node {
 	}
 }
 
-func (f Function) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.For: not a constant expression")
+func (f Function) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.For: not a constant expression")
 }
 
 func (f Function) String() string {
@@ -68,7 +68,7 @@ func (f Function) Compile(c *compiler.Compiler) (position int, err error) {
 		position = c.LoadSymbol(s)
 	}
 
-	fn := cobj.NewFunctionCompiled(ins, nLocals, len(f.params), bookmarks)
+	fn := obj.NewFunctionCompiled(ins, nLocals, len(f.params), bookmarks)
 	position = c.Emit(code.OpClosure, c.AddConstant(fn), len(freeSymbols))
 	c.Bookmark(f.pos)
 	return

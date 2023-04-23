@@ -10,7 +10,6 @@ import (
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
 )
 
 type String struct {
@@ -31,8 +30,8 @@ func NewString(file, s string, parse parseFn, pos int) (Node, error) {
 	return String{s: str, parse: parse, substr: nodes, pos: pos}, err
 }
 
-func (s String) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.String: not a constant expression")
+func (s String) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.String: not a constant expression")
 }
 
 func (s String) String() string {
@@ -45,7 +44,7 @@ func (s String) Quoted() string {
 
 func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 	if len(s.substr) == 0 {
-		position = c.Emit(code.OpConstant, c.AddConstant(cobj.NewString(s.s)))
+		position = c.Emit(code.OpConstant, c.AddConstant(obj.NewString(s.s)))
 		c.Bookmark(s.pos)
 		return
 	}
@@ -57,7 +56,7 @@ func (s String) Compile(c *compiler.Compiler) (position int, err error) {
 		c.RemoveLast()
 	}
 
-	position = c.Emit(code.OpInterpolate, c.AddConstant(cobj.NewString(s.s)), len(s.substr))
+	position = c.Emit(code.OpInterpolate, c.AddConstant(obj.NewString(s.s)), len(s.substr))
 	c.Bookmark(s.pos)
 	return
 }
@@ -121,14 +120,6 @@ func escapeRune(r rune) (rune, error) {
 	default:
 		return r, fmt.Errorf(`unknown escape "\%c"`, r)
 	}
-}
-
-func toAnySlice(args []obj.Object) []any {
-	var ret = make([]any, len(args))
-	for i, a := range args {
-		ret[i] = a
-	}
-	return ret
 }
 
 const eof = -1

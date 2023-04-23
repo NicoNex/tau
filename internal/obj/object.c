@@ -3,7 +3,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <ctype.h>
-#include "obj.h"
+#include "object.h"
 
 static inline struct object _object_get(struct object_node * restrict n, uint64_t key) {
 	if (n == NULL) {
@@ -115,4 +115,12 @@ struct object object_to_module(struct object o) {
 void mark_object_obj(struct object o) {
 	*o.marked = 1;
 	mark_object_children(*o.data.obj);
+}
+
+struct object object_getsetter_get(struct getsetter *gs) {
+	return object_get(gs->l, gs->r.data.str->str);
+}
+
+struct object object_getsetter_set(struct getsetter *gs, struct object val) {
+	return object_set(gs->l, gs->r.data.str->str, val);
 }

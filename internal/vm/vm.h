@@ -1,22 +1,13 @@
 #pragma once
 
 #include <stdint.h>
-#include "obj.h"
+#include "../obj/object.h"
+#include "../compiler/bytecode.h"
 
 #define STACK_SIZE  2048
 #define GLOBAL_SIZE 65536
 #define MAX_FRAMES  1024
 #define HEAP_SIZE   1024
-
-struct bytecode {
-	uint8_t *insts;
-	struct object *consts;
-	uint32_t len;
-	uint32_t nconsts;
-	uint32_t bklen;
-	struct bookmark *bookmarks;
-	uint32_t ndefs;
-};
 
 struct frame {
 	struct object cl;

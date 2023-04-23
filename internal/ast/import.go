@@ -6,7 +6,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Import struct {
@@ -23,8 +23,8 @@ func NewImport(name Node, parse parseFn, pos int) Node {
 	}
 }
 
-func (i Import) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.Import: not a constant expression")
+func (i Import) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Import: not a constant expression")
 }
 
 func (i Import) Compile(c *compiler.Compiler) (position int, err error) {

@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Bang struct {
@@ -20,19 +20,19 @@ func NewBang(n Node, pos int) Node {
 	}
 }
 
-func (b Bang) Eval() (cobj.Object, error) {
+func (b Bang) Eval() (obj.Object, error) {
 	value, err := b.n.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	switch value.Type() {
-	case cobj.BoolType:
-		return cobj.ParseBool(!cobj.IsTruthy(value)), nil
-	case cobj.NullType:
-		return cobj.TrueObj, nil
+	case obj.BoolType:
+		return obj.ParseBool(!obj.IsTruthy(value)), nil
+	case obj.NullType:
+		return obj.TrueObj, nil
 	default:
-		return cobj.FalseObj, nil
+		return obj.FalseObj, nil
 	}
 }
 

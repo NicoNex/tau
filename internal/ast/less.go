@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Less struct {
@@ -22,30 +22,30 @@ func NewLess(l, r Node, pos int) Node {
 	}
 }
 
-func (l Less) Eval() (cobj.Object, error) {
+func (l Less) Eval() (obj.Object, error) {
 	left, err := l.l.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	right, err := l.r.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	switch {
-	case cobj.AssertTypes(left, cobj.IntType) && cobj.AssertTypes(right, cobj.IntType):
-		return cobj.ParseBool(left.Int() < right.Int()), nil
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
+		return obj.ParseBool(left.Int() < right.Int()), nil
 
-	case cobj.AssertTypes(left, cobj.IntType, cobj.FloatType) && cobj.AssertTypes(right, cobj.IntType, cobj.FloatType):
-		l, r := cobj.ToFloat(left, right)
-		return cobj.ParseBool(l < r), nil
+	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
+		l, r := obj.ToFloat(left, right)
+		return obj.ParseBool(l < r), nil
 
-	case cobj.AssertTypes(left, cobj.StringType) && cobj.AssertTypes(right, cobj.StringType):
-		return cobj.ParseBool(left.String() < right.String()), nil
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
+		return obj.ParseBool(left.String() < right.String()), nil
 
 	default:
-		return cobj.NullObj, fmt.Errorf("unsupported operator '<' for types %v and %v", left.Type(), right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '<' for types %v and %v", left.Type(), right.Type())
 	}
 }
 

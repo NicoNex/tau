@@ -5,7 +5,6 @@
 
 #include "vm.h"
 #include "opcode.h"
-#include "obj.h"
 #include "_cgo_export.h"
 
 #define read_uint8(b) ((b)[0])
@@ -800,6 +799,7 @@ static inline void gc(struct vm * restrict vm) {
  * -fno-crossjumping).
  */
 
+// TODO: maybe return a char *.
 int vm_run(struct vm * restrict vm) {
 #include "jump_table.h"
 

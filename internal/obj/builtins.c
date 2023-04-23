@@ -4,8 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-
-#include "obj.h"
+#include "object.h"
 
 #define BUILTIN(name) static struct object name(struct object *_args, size_t len)
 
@@ -20,6 +19,14 @@
 		}                                                \
 		args[i] = _args[i];                              \
 	}
+
+struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len)) {
+	return (struct object) {
+		.data.builtin = builtin,
+		.type = obj_builtin,
+		.marked = NULL,
+	};
+}
 
 static struct object errorf(char *fmt, ...) {
 	char *msg = malloc(sizeof(char) * 256);

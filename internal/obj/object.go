@@ -1,92 +1,210 @@
 package obj
 
+// #include <stdlib.h>
+// #include <stdint.h>
+// #include "object.h"
+//
+// static inline uint32_t is_truthy(struct object o) {
+// 	switch (o.type) {
+// 	case obj_boolean:
+// 		return o.data.i == 1;
+// 	case obj_integer:
+// 		return o.data.i != 0;
+// 	case obj_float:
+// 		return o.data.f != 0;
+// 	case obj_null:
+// 		return 0;
+// 	default:
+// 		return 1;
+// 	}
+// }
+//
+// static inline uint32_t is_error(struct object o) {
+// 	return o.type == obj_error;
+// }
+//
+// static inline char *error_msg(struct object err) {
+// 	return err.data.str->str;
+// }
+//
+// static inline int64_t int_val(struct object i) {
+// 	return i.data.i;
+// }
+//
+// static inline double float_val(struct object f) {
+// 	return f.data.f;
+// }
+//
+// static inline struct function *function_val(struct object fn) {
+// 	return fn.data.fn;
+// }
+import "C"
+
 import (
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
+	"unsafe"
+
+	"github.com/NicoNex/tau/internal/code"
+	"github.com/NicoNex/tau/internal/tauerr"
 )
 
-type Object interface {
-	Type() Type
-	String() string
-}
-
-type Getter interface {
-	Object() Object
-}
-
-type Setter interface {
-	Set(Object) Object
-}
-
-type GetSetter interface {
-	Object
-	Getter
-	Setter
-}
-
-type MapGetSetter interface {
-	Get(string) (Object, bool)
-	Set(string, Object) Object
-}
-
-type KeyHash struct {
-	Type  Type
-	Value uint64
-}
-
-type Hashable interface {
-	KeyHash() KeyHash
-}
-
-type setter interface {
-	Set(string, Object) Object
-}
+type (
+	Object           = C.struct_object
+	Type             = C.enum_obj_type
+	CompiledFunction = C.struct_function
+)
 
 //go:generate stringer -linecomment -type=Type
-type Type int
-
 const (
-	NullType     Type = iota // null
-	BoolType                 // bool
-	IntType                  // int
-	FloatType                // float
-	BuiltinType              // builtin
-	StringType               // string
-	ErrorType                // error
-	ListType                 // list
-	MapType                  // map
-	FunctionType             // function
-	ClosureType              // closure
-	ObjectType               // object
-	PipeType                 // pipe
-	BytesType                // bytes
-	ReturnType               // return
-	ContinueType             // continue
-	BreakType                // break
+	NullType      Type = C.obj_null      // null
+	BoolType           = C.obj_boolean   // bool
+	IntType            = C.obj_integer   // int
+	FloatType          = C.obj_float     // float
+	BuiltinType        = C.obj_builtin   // builtin
+	StringType         = C.obj_string    // string
+	ErrorType          = C.obj_error     // error
+	ListType           = C.obj_list      // list
+	MapType            = C.obj_map       // map
+	FunctionType       = C.obj_function  // function
+	ClosureType        = C.obj_closure   // closure
+	ObjectType         = C.obj_object    // object
+	PipeType           = C.obj_pipe      // pipe
+	BytesType          = C.obj_bytes     // bytes
+	GetsetterType      = C.obj_getsetter // getsetter
 )
 
 var (
-	NullObj     = NewNull()
-	True        = NewBoolean(true)
-	False       = NewBoolean(false)
-	ContinueObj = NewContinue()
-	BreakObj    = NewBreak()
+	Stdout io.Writer = os.Stdout
+	Stdin  io.Reader = os.Stdin
+
+	Builtins = [...]string{
+		0:  "len",
+		1:  "println",
+		2:  "print",
+		3:  "input",
+		4:  "string",
+		5:  "error",
+		6:  "type",
+		7:  "int",
+		8:  "float",
+		9:  "exit",
+		10: "append",
+		11: "push",
+		12: "range",
+		13: "new",
+		14: "failed",
+		15: "plugin",
+		16: "pipe",
+		17: "send",
+		18: "recv",
+		19: "close",
+		20: "hex",
+		21: "oct",
+		22: "bin",
+		23: "slice",
+		24: "open",
+		25: "bytes",
+	}
+
+	//extern null_obj
+	NullObj Object
+	//extern true_obj
+	TrueObj Object
+	//extern false_obj
+	FalseObj Object
+
+	ErrNoFileProvided = errors.New("no file provided")
 )
+
+func (o Object) Type() Type {
+	return o._type
+}
+
+func (o Object) String() string {
+	cstr := C.object_str(o)
+	defer C.free(unsafe.Pointer(cstr))
+	return C.GoString(cstr)
+}
+
+func (o Object) Int() int64 {
+	return int64(C.int_val(o))
+}
+
+func (o Object) Float() float64 {
+	return float64(C.float_val(o))
+}
+
+func (o Object) CompiledFunction() *CompiledFunction {
+	return C.function_val(o)
+}
+
+func (cf CompiledFunction) Instructions() []byte {
+	return C.GoBytes(unsafe.Pointer(cf.instructions), C.int(cf.len))
+}
+
+func (cf CompiledFunction) Len() int {
+	return int(cf.len)
+}
+
+func (cf CompiledFunction) NumLocals() int {
+	return int(cf.num_locals)
+}
+
+func (cf CompiledFunction) NumParams() int {
+	return int(cf.num_params)
+}
+
+func (cf CompiledFunction) BKLen() int {
+	return int(cf.bklen)
+}
 
 func ParseBool(b bool) Object {
 	if b {
-		return True
+		return TrueObj
 	}
-	return False
+	return FalseObj
 }
 
-func Unwrap(o Object) Object {
-	if g, ok := o.(Getter); ok {
-		return g.Object()
+func IsTruthy(o Object) bool {
+	return C.is_truthy(o) == 1
+}
+
+func IsError(o Object) bool {
+	return C.is_error(o) == 1
+}
+
+func GoError(o Object) error {
+	if IsError(o) {
+		return errors.New(C.GoString(C.error_msg(o)))
 	}
-	return o
+	return nil
+}
+
+func NewInteger(i int64) Object {
+	return C.new_integer_obj(C.int64_t(i))
+}
+
+func NewFloat(f float64) Object {
+	return C.new_float_obj(C.double(f))
+}
+
+func NewString(s string) Object {
+	return C.new_string_obj(C.CString(s), C.size_t(len(s)))
+}
+
+func NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []tauerr.Bookmark) Object {
+	return C.new_function_obj(
+		(*C.uchar)(unsafe.Pointer(&ins[0])),
+		C.size_t(len(ins)),
+		C.uint(nlocals),
+		C.uint(nparams),
+		(*C.struct_bookmark)(unsafe.Pointer(&bmarks[0])),
+		C.uint(len(bmarks)),
+	)
 }
 
 func AssertTypes(o Object, types ...Type) bool {
@@ -98,39 +216,25 @@ func AssertTypes(o Object, types ...Type) bool {
 	return false
 }
 
-func IsPrimitive(o Object) bool {
-	return AssertTypes(o, BoolType, ErrorType, FloatType, IntType, StringType)
+func ToFloat(l, r Object) (left, right float64) {
+	left, right = l.Float(), r.Float()
+
+	if l.Type() == IntType {
+		left = float64(l.Int())
+	}
+	if r.Type() == IntType {
+		right = float64(r.Int())
+	}
+	return
 }
 
-func ToFloat(l, r Object) (Object, Object) {
-	if i, ok := l.(Integer); ok {
-		l = Float(i)
-	}
-	if i, ok := r.(Integer); ok {
-		r = Float(i)
-	}
-	return l, r
+func Println(a ...any) {
+	fmt.Fprintln(Stdout, a...)
 }
 
-func IsTruthy(o Object) bool {
-	switch val := o.(type) {
-	case *Boolean:
-		return o == True
-	case Integer:
-		return val != 0
-	case Float:
-		return val != 0
-	case *Null:
-		return false
-	default:
-		return true
-	}
+func Printf(s string, a ...any) {
+	fmt.Fprintf(Stdout, s, a...)
 }
-
-var (
-	ErrFileNotFound   = errors.New("file not found")
-	ErrNoFileProvided = errors.New("no file provided")
-)
 
 func ImportLookup(taupath string) (string, error) {
 	dir, file := filepath.Split(taupath)

@@ -8,7 +8,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Map struct {
@@ -23,8 +23,8 @@ func NewMap(pos int, pairs ...[2]Node) Node {
 	}
 }
 
-func (m Map) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.Index: not a constant expression")
+func (m Map) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Index: not a constant expression")
 }
 
 func (m Map) String() string {

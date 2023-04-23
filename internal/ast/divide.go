@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Divide struct {
@@ -22,27 +22,27 @@ func NewDivide(l, r Node, pos int) Node {
 	}
 }
 
-func (d Divide) Eval() (cobj.Object, error) {
+func (d Divide) Eval() (obj.Object, error) {
 
 	left, err := d.l.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	right, err := d.r.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
-	if !cobj.AssertTypes(left, cobj.IntType, cobj.FloatType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '/' for type %v", left.Type())
+	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '/' for type %v", left.Type())
 	}
-	if !cobj.AssertTypes(right, cobj.IntType, cobj.FloatType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '/' for type %v", right.Type())
+	if !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '/' for type %v", right.Type())
 	}
 
-	l, r := cobj.ToFloat(left, right)
-	return cobj.NewFloat(l / r), nil
+	l, r := obj.ToFloat(left, right)
+	return obj.NewFloat(l / r), nil
 }
 
 func (d Divide) String() string {

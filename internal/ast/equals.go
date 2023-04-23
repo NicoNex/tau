@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type Equals struct {
@@ -22,40 +22,40 @@ func NewEquals(l, r Node, pos int) Node {
 	}
 }
 
-func (e Equals) Eval() (cobj.Object, error) {
+func (e Equals) Eval() (obj.Object, error) {
 	left, err := e.l.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	right, err := e.r.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
-	if !cobj.AssertTypes(left, cobj.IntType, cobj.FloatType, cobj.StringType, cobj.BoolType, cobj.NullType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '==' for type %v", left.Type())
+	if !obj.AssertTypes(left, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '==' for type %v", left.Type())
 	}
-	if !cobj.AssertTypes(right, cobj.IntType, cobj.FloatType, cobj.StringType, cobj.BoolType, cobj.NullType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '==' for type %v", right.Type())
+	if !obj.AssertTypes(right, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '==' for type %v", right.Type())
 	}
 
 	switch {
-	case cobj.AssertTypes(left, cobj.BoolType, cobj.NullType) || cobj.AssertTypes(right, cobj.BoolType, cobj.NullType):
-		return cobj.ParseBool(left.Int() == right.Int()), nil
+	case obj.AssertTypes(left, obj.BoolType, obj.NullType) || obj.AssertTypes(right, obj.BoolType, obj.NullType):
+		return obj.ParseBool(left.Int() == right.Int()), nil
 
-	case cobj.AssertTypes(left, cobj.StringType) && cobj.AssertTypes(right, cobj.StringType):
-		return cobj.ParseBool(left.String() == right.String()), nil
+	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
+		return obj.ParseBool(left.String() == right.String()), nil
 
-	case cobj.AssertTypes(left, cobj.IntType) && cobj.AssertTypes(right, cobj.IntType):
-		return cobj.ParseBool(left.Int() == right.Int()), nil
+	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
+		return obj.ParseBool(left.Int() == right.Int()), nil
 
-	case cobj.AssertTypes(left, cobj.FloatType, cobj.IntType) && cobj.AssertTypes(right, cobj.FloatType, cobj.IntType):
-		l, r := cobj.ToFloat(left, right)
-		return cobj.ParseBool(l == r), nil
+	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
+		l, r := obj.ToFloat(left, right)
+		return obj.ParseBool(l == r), nil
 
 	default:
-		return cobj.FalseObj, nil
+		return obj.FalseObj, nil
 	}
 }
 

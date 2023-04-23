@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type ModAssign struct {
@@ -22,8 +22,8 @@ func NewModAssign(l, r Node, pos int) Node {
 	}
 }
 
-func (m ModAssign) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.ModAssign: not a constant expression")
+func (m ModAssign) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.ModAssign: not a constant expression")
 }
 
 func (m ModAssign) String() string {

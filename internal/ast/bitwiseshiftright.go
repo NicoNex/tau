@@ -5,7 +5,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type BitwiseRightShift struct {
@@ -22,24 +22,24 @@ func NewBitwiseRightShift(l, r Node, pos int) Node {
 	}
 }
 
-func (b BitwiseRightShift) Eval() (cobj.Object, error) {
+func (b BitwiseRightShift) Eval() (obj.Object, error) {
 	left, err := b.l.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
 	right, err := b.r.Eval()
 	if err != nil {
-		return cobj.NullObj, err
+		return obj.NullObj, err
 	}
 
-	if !cobj.AssertTypes(left, cobj.IntType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '>>' for type %v", left.Type())
+	if !obj.AssertTypes(left, obj.IntType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '>>' for type %v", left.Type())
 	}
-	if !cobj.AssertTypes(right, cobj.IntType) {
-		return cobj.NullObj, fmt.Errorf("unsupported operator '>>' for type %v", right.Type())
+	if !obj.AssertTypes(right, obj.IntType) {
+		return obj.NullObj, fmt.Errorf("unsupported operator '>>' for type %v", right.Type())
 	}
-	return cobj.NewInteger(left.Int() >> right.Int()), nil
+	return obj.NewInteger(left.Int() >> right.Int()), nil
 }
 
 func (b BitwiseRightShift) String() string {

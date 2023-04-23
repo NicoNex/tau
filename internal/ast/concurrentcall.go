@@ -7,7 +7,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type ConcurrentCall struct {
@@ -19,8 +19,8 @@ func NewConcurrentCall(fn Node, args []Node) Node {
 	return ConcurrentCall{fn, args}
 }
 
-func (c ConcurrentCall) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.ConcurrentCall: not a constant expression")
+func (c ConcurrentCall) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.ConcurrentCall: not a constant expression")
 }
 
 func (c ConcurrentCall) String() string {

@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/vm/cvm/cobj"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 type BitwiseShiftRightAssign struct {
@@ -22,8 +22,8 @@ func NewBitwiseShiftRightAssign(l, r Node, pos int) Node {
 	}
 }
 
-func (b BitwiseShiftRightAssign) Eval() (cobj.Object, error) {
-	return cobj.NullObj, errors.New("ast.BitwiseShiftRightAssign: not a constant expression")
+func (b BitwiseShiftRightAssign) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.BitwiseShiftRightAssign: not a constant expression")
 }
 
 func (b BitwiseShiftRightAssign) String() string {

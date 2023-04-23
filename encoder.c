@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include "encoder.h"
 #include "internal/compiler/bytecode.h"
-#include "internal/vm/cvm/obj.h"
+#include "internal/obj/object.h"
 #include "internal/tauerr/bookmark.h"
 
 static inline void write_byte(struct buffer *buf, uint8_t b) {

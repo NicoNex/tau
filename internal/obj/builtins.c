@@ -265,7 +265,11 @@ BUILTIN(_hex_b) {
 	}
 
 	char *s = calloc(30, sizeof(char));
+#ifdef __unix__
 	sprintf(s, "0x%lx", args[0].data.i);
+#else
+	sprintf(s, "0x%llx", args[0].data.i);
+#endif
 	return new_string_obj(s, strlen(s));
 }
 
@@ -280,7 +284,11 @@ BUILTIN(_oct_b) {
 	}
 
 	char *s = calloc(30, sizeof(char));
+#ifdef __unix__
 	sprintf(s, "0o%lo", args[0].data.i);
+#else
+	sprintf(s, "0o%llo", args[0].data.i);
+#endif
 	return new_string_obj(s, strlen(s));
 }
 

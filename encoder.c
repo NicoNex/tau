@@ -1,11 +1,21 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <string.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include "encoder.h"
 #include "internal/compiler/bytecode.h"
 #include "internal/obj/object.h"
 #include "internal/tauerr/bookmark.h"
+
+__attribute__((noreturn))
+static inline void fatalf(char * restrict fmt, ...) {
+	va_list args;
+	va_start(args, fmt);
+	vprintf(fmt, args);
+	va_end(args);
+	exit(1);
+}
 
 static inline void write_byte(struct buffer *buf, uint8_t b) {
 	if (buf->cap == 0) {
@@ -47,8 +57,7 @@ static inline int write_uint64(struct buffer *buf, uint64_t n) {
 	return write_uint32(buf, n >> 32) + write_uint32(buf, n);
 }
 
-static void encode_bookmarks(struct buffer *buf, struct bookmark *bookmarks, size_t len) {
-	write_uint32(buf, len);
+static inline void encode_bookmarks(struct buffer *buf, struct bookmark *bookmarks, size_t len) {
 	for (int i = 0; i < len; i++) {
 		struct bookmark b = bookmarks[i];
 
@@ -60,7 +69,7 @@ static void encode_bookmarks(struct buffer *buf, struct bookmark *bookmarks, siz
 	}
 }
 
-static void encode_objects(struct buffer *buf, struct object *objs, size_t len) {
+static inline void encode_objects(struct buffer *buf, struct object *objs, size_t len) {
 	for (int i = 0; i < len; i++) {
 		struct object o = objs[i];
 
@@ -85,16 +94,16 @@ static void encode_objects(struct buffer *buf, struct object *objs, size_t len) 
 			write_uint32(buf, fn->num_locals);
 			write_uint32(buf, fn->len);
 			write_bytes(buf, fn->instructions, fn->len);
+			write_uint32(buf, fn->bklen);
 			encode_bookmarks(buf, fn->bookmarks, fn->bklen);
 			break;
 		default:
-			printf("encoder: unsupported encoding for type %s\n", otype_str(o.type));
-			exit(1);
+			fatalf("encoder: unsupported encoding for type %s\n", otype_str(o.type));
 		}
 	}
 }
 
-struct buffer tau_encode(struct bytecode bc) {
+inline struct buffer tau_encode(struct bytecode bc) {
 	struct buffer buf = (struct buffer) {0};
 
 	write_uint32(&buf, bc.ndefs);
@@ -102,11 +111,12 @@ struct buffer tau_encode(struct bytecode bc) {
 	write_bytes(&buf, bc.insts, bc.len);
 	write_uint32(&buf, bc.nconsts);
 	encode_objects(&buf, bc.consts, bc.nconsts);
+	write_uint32(&buf, bc.bklen);
 	encode_bookmarks(&buf, bc.bookmarks, bc.bklen);
 	return buf;
 }
 
-void free_buffer(struct buffer buf) {
+inline void free_buffer(struct buffer buf) {
 	free(buf.buf);
 }
 
@@ -116,23 +126,22 @@ struct reader {
 	uint32_t pos;
 };
 
-inline uint8_t read_byte(struct reader *r) {
+static inline uint8_t read_byte(struct reader *r) {
 	if (++r->pos == r->len) {
-		puts("decoder: buffer overflow");
-		exit(1);
+		fatalf("decoder: buffer overflow\n");
 	}
 	return r->buf[r->pos];
 }
 
-inline uint32_t read_uint32(struct reader *r) {
+static inline uint32_t read_uint32(struct reader *r) {
 	return (read_byte(r) << 24) | (read_byte(r) << 16) | (read_byte(r) << 8) | read_byte(r);
 }
 
-inline uint64_t read_uint64(struct reader *r) {
+static inline uint64_t read_uint64(struct reader *r) {
 	return (((uint64_t) read_uint32(r)) << 32) | read_uint32(r);
 }
 
-inline uint8_t *read_bytes(struct reader *r, size_t len) {
+static inline uint8_t *read_bytes(struct reader *r, size_t len) {
 	uint8_t *b = malloc(sizeof(uint8_t) * len);
 
 	for (int i = 0; i < len; i++) {
@@ -141,7 +150,7 @@ inline uint8_t *read_bytes(struct reader *r, size_t len) {
 	return b;
 }
 
-inline char *read_string(struct reader *r, size_t len) {
+static inline char *read_string(struct reader *r, size_t len) {
 	char *str = malloc(sizeof(char) * (len + 1));
 	str[len] = '\0';
 
@@ -151,7 +160,7 @@ inline char *read_string(struct reader *r, size_t len) {
 	return str;
 }
 
-struct bookmark *decode_bookmarks(struct reader *r, size_t len) {
+static inline struct bookmark *decode_bookmarks(struct reader *r, size_t len) {
 	struct bookmark *bms = malloc(sizeof(struct bookmark) * len);
 
 	for (int i = 0; i < len; i++) {
@@ -164,7 +173,7 @@ struct bookmark *decode_bookmarks(struct reader *r, size_t len) {
 	return bms;
 }
 
-struct object *decode_objects(struct reader *r, size_t len) {
+static inline struct object *decode_objects(struct reader *r, size_t len) {
 	struct object *objs = malloc(sizeof(struct object) * len);
 
 	for (int i = 0; i < len; i++) {
@@ -199,16 +208,17 @@ struct object *decode_objects(struct reader *r, size_t len) {
 			break;
 		}
 		default:
-			printf("decoder: unsupported decoding for type %s\n", otype_str(type));
+			fatalf("decoder: unsupported decoding for type %s\n", otype_str(type));
 		}
 	}
 }
 
-struct bytecode tau_decode(uint8_t *bytes, size_t len) {
+inline struct bytecode tau_decode(uint8_t *bytes, size_t len) {
 	if (len == 0) {
-		return (struct bytecode) {0};
+		fatalf("decoder: empty bytecode");
 	}
 
+	printf("%lu\n", len);
 	struct bytecode bc = (struct bytecode) {0};
 	struct reader r = (struct reader) {
 		.buf = bytes,

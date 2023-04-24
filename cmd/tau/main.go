@@ -22,20 +22,13 @@ func main() {
 	switch {
 	case compile:
 		tau.CompileFiles(flag.Args())
-
 	case version:
 		tau.PrintVersionInfo(os.Stdout)
-
 	case flag.NArg() > 0:
 		tau.ExecFileVM(flag.Arg(0))
-
-	default:
+	case simple:
 		tau.SimpleVmREPL()
-
-		// case simple:
-		// 	tau.SimpleVmREPL()
-
-		// default:
-		// 	tau.VmREPL()
+	default:
+		tau.VmREPL()
 	}
 }

@@ -6,59 +6,63 @@ import (
 	"os"
 	"strings"
 
+	"github.com/NicoNex/tau/internal/compiler"
+	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/parser"
+	"github.com/NicoNex/tau/internal/vm"
 	"golang.org/x/term"
 )
 
-// func VmREPL() error {
-// 	var state = vm.NewState()
+// TODO: somehow redirect stdout to the terminal.
+func VmREPL() error {
+	var (
+		state   = vm.NewState()
+		symbols = loadBuiltins(compiler.NewSymbolTable())
+	)
 
-// 	initState, err := term.MakeRaw(0)
-// 	if err != nil {
-// 		fmt.Println(err)
-// 		return fmt.Errorf("error opening terminal: %w", err)
-// 	}
-// 	defer term.Restore(0, initState)
+	initState, err := term.MakeRaw(0)
+	if err != nil {
+		fmt.Println(err)
+		return fmt.Errorf("error opening terminal: %w", err)
+	}
+	defer term.Restore(0, initState)
 
-// 	t := term.NewTerminal(os.Stdin, ">>> ")
-// 	t.AutoCompleteCallback = autoComplete
-// 	obj.Stdout = t
+	t := term.NewTerminal(os.Stdin, ">>> ")
+	t.AutoCompleteCallback = autoComplete
+	obj.Stdout = t
 
-// 	PrintVersionInfo(t)
-// 	for {
-// 		input, err := t.ReadLine()
-// 		check(t, initState, err)
+	PrintVersionInfo(t)
+	for {
+		input, err := t.ReadLine()
+		check(t, initState, err)
 
-// 		input = strings.TrimRight(input, " ")
-// 		if len(input) > 0 && input[len(input)-1] == '{' {
-// 			input, err = acceptUntil(t, input, "\n\n")
-// 			check(t, initState, err)
-// 		}
+		input = strings.TrimRight(input, " ")
+		if len(input) > 0 && input[len(input)-1] == '{' {
+			input, err = acceptUntil(t, input, "\n\n")
+			check(t, initState, err)
+		}
 
-// 		res, errs := parser.Parse("<stdin>", input)
-// 		if len(errs) != 0 {
-// 			for _, e := range errs {
-// 				fmt.Fprintln(t, e)
-// 			}
-// 			continue
-// 		}
+		res, errs := parser.Parse("<stdin>", input)
+		if len(errs) != 0 {
+			for _, e := range errs {
+				fmt.Fprintln(t, e)
+			}
+			continue
+		}
 
-// 		c := compiler.NewWithState(state.Symbols, &state.Consts)
-// 		if err := c.Compile(res); err != nil {
-// 			fmt.Fprintln(t, err)
-// 			continue
-// 		}
+		c := compiler.NewWithState(symbols, &vm.Consts)
+		c.SetFileInfo("<stdin>", input)
+		if err := c.Compile(res); err != nil {
+			fmt.Fprintln(t, err)
+			continue
+		}
 
-// 		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)
-// 		if err := tvm.Run(); err != nil {
-// 			fmt.Fprintf(t, "runtime error: %v\n", err)
-// 			continue
-// 		}
-
-// 		if val := tvm.LastPoppedStackElem(); val != nil && obj.IsPrimitive(val) {
-// 			fmt.Fprintln(t, val)
-// 		}
-// 	}
-// }
+		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)
+		tvm.Run()
+		state = tvm.State()
+		tvm.Free()
+	}
+}
 
 func autoComplete(line string, pos int, key rune) (newLine string, newPos int, ok bool) {
 	if key == '\t' {

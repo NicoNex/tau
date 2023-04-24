@@ -52,66 +52,13 @@ func SimpleVmREPL() {
 			fmt.Println(err)
 			continue
 		}
+
 		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)
 		tvm.Run()
 		state = tvm.State()
-
-		// if err := tvm.Run(); err != nil {
-		// 	fmt.Printf("runtime error: %v\n", err)
-		// 	continue
-		// }
-
-		// if val := tvm.LastPoppedStackElem(); val != nil && obj.IsPrimitive(val) {
-		// 	fmt.Println(val)
-		// }
 		tvm.Free()
 	}
 }
-
-// func SimpleVmREPL() {
-// 	var (
-// 		state  = vm.NewState()
-// 		reader = bufio.NewReader(os.Stdin)
-// 	)
-
-// 	PrintVersionInfo(os.Stdout)
-// 	for {
-// 		fmt.Print(">>> ")
-// 		input, err := reader.ReadString('\n')
-// 		simpleCheck(err)
-
-// 		input = strings.TrimRight(input, " \n")
-// 		if len(input) > 0 && input[len(input)-1] == '{' {
-// 			input, err = simpleAcceptUntil(reader, input, "\n\n")
-// 			simpleCheck(err)
-// 		}
-
-// 		res, errs := parser.Parse("<stdin>", input)
-// 		if len(errs) != 0 {
-// 			for _, e := range errs {
-// 				fmt.Println(e)
-// 			}
-// 			continue
-// 		}
-
-// 		c := compiler.NewWithState(state.Symbols, &state.Consts)
-// 		c.SetFileInfo("<stdin>", input)
-// 		if err := c.Compile(res); err != nil {
-// 			fmt.Println(err)
-// 			continue
-// 		}
-// 		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)
-
-// 		if err := tvm.Run(); err != nil {
-// 			fmt.Printf("runtime error: %v\n", err)
-// 			continue
-// 		}
-
-// 		if val := tvm.LastPoppedStackElem(); val != nil && obj.IsPrimitive(val) {
-// 			fmt.Println(val)
-// 		}
-// 	}
-// }
 
 func simpleCheck(err error) {
 	if err != nil {

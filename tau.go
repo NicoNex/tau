@@ -72,12 +72,10 @@ func ExecFileVM(f string) (err error) {
 	if filepath.Ext(f) == ".tauc" {
 		bytecode = tauDecode(readFile(f))
 	} else {
-		bytecode, err = compile(f)
-	}
-
-	if err != nil {
-		fmt.Println(err)
-		return
+		if bytecode, err = compile(f); err != nil {
+			fmt.Println(err)
+			return
+		}
 	}
 
 	tvm := vm.New(f, bytecode)

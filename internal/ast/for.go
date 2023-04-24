@@ -47,7 +47,7 @@ func (f For) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 
-	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, GenericPlaceholder)
+	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, compiler.GenericPlaceholder)
 
 	startBody := c.Pos()
 	if position, err = f.body.Compile(c); err != nil {

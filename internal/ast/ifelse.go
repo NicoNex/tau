@@ -40,7 +40,7 @@ func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = i.cond.Compile(c); err != nil {
 		return
 	}
-	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, GenericPlaceholder)
+	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, compiler.GenericPlaceholder)
 	if position, err = i.body.Compile(c); err != nil {
 		return
 	}
@@ -49,7 +49,7 @@ func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {
 		c.RemoveLast()
 	}
 
-	jumpPos := c.Emit(code.OpJump, GenericPlaceholder)
+	jumpPos := c.Emit(code.OpJump, compiler.GenericPlaceholder)
 	c.ReplaceOperand(jumpNotTruthyPos, c.Pos())
 
 	if i.altern == nil {

@@ -3,10 +3,9 @@
 #include <string.h>
 #include <stdarg.h>
 #include <stdio.h>
-#include "encoder.h"
-#include "internal/compiler/bytecode.h"
-#include "internal/obj/object.h"
-#include "internal/tauerr/bookmark.h"
+#include "bytecode.h"
+#include "../obj/object.h"
+#include "../tauerr/bookmark.h"
 
 __attribute__((noreturn))
 static inline void fatalf(char * restrict fmt, ...) {
@@ -27,34 +26,28 @@ static inline void write_byte(struct buffer *buf, uint8_t b) {
 	buf->buf[buf->len++] = b;
 }
 
-static inline int write_bytes(struct buffer *buf, uint8_t *bytes, size_t len) {
-	int i = 0;
-
-	for (; i < len; i++) {
+static inline void write_bytes(struct buffer *buf, uint8_t *bytes, size_t len) {
+	for (int i = 0; i < len; i++) {
 		write_byte(buf, bytes[i]);
 	}
-	return i;
 }
 
-static inline int write_string(struct buffer *buf, const char *str) {
-	int i = 0;
-
-	for (; str[i] != '\0'; i++) {
+static inline void write_string(struct buffer *buf, const char *str) {
+	for (int i = 0; str[i] != '\0'; i++) {
 		write_byte(buf, str[i]);
 	}
-	return i;
 }
 
-static inline int write_uint32(struct buffer *buf, uint32_t n) {
+static inline void write_uint32(struct buffer *buf, uint32_t n) {
 	write_byte(buf, n >> 24);
 	write_byte(buf, n >> 16);
 	write_byte(buf, n >> 8);
 	write_byte(buf, n);
-	return 4;
 }
 
-static inline int write_uint64(struct buffer *buf, uint64_t n) {
-	return write_uint32(buf, n >> 32) + write_uint32(buf, n);
+static inline void write_uint64(struct buffer *buf, uint64_t n) {
+	write_uint32(buf, n >> 32);
+	write_uint32(buf, n);
 }
 
 static inline void encode_bookmarks(struct buffer *buf, struct bookmark *bookmarks, size_t len) {
@@ -82,7 +75,7 @@ static inline void encode_objects(struct buffer *buf, struct object *objs, size_
 			break;
 		case obj_float:
 		case obj_integer:
-			write_uint32(buf, o.data.i);
+			write_uint64(buf, o.data.i);
 			break;
 		case obj_string:
 			write_uint32(buf, o.data.str->len);
@@ -127,10 +120,10 @@ struct reader {
 };
 
 static inline uint8_t read_byte(struct reader *r) {
-	if (++r->pos == r->len) {
+	if (r->pos == r->len) {
 		fatalf("decoder: buffer overflow\n");
 	}
-	return r->buf[r->pos];
+	return r->buf[r->pos++];
 }
 
 static inline uint32_t read_uint32(struct reader *r) {
@@ -168,6 +161,7 @@ static inline struct bookmark *decode_bookmarks(struct reader *r, size_t len) {
 		bms[i].lineno = read_uint32(r);
 		bms[i].pos = read_uint32(r);
 		bms[i].len = read_uint32(r);
+		printf("line len %u\n", bms[i].len);
 		bms[i].line = read_string(r, bms[i].len);
 	}
 	return bms;
@@ -203,6 +197,7 @@ static inline struct object *decode_objects(struct reader *r, size_t len) {
 			uint32_t len = read_uint32(r);
 			uint8_t *insts = read_bytes(r, len);
 			uint32_t bklen = read_uint32(r);
+			printf("bklen %u\n", bklen);
 			struct bookmark *bmarks = decode_bookmarks(r, bklen);
 			objs[i] = new_function_obj(insts, len, nlocals, nparams, bmarks, bklen);
 			break;
@@ -218,7 +213,6 @@ inline struct bytecode tau_decode(uint8_t *bytes, size_t len) {
 		fatalf("decoder: empty bytecode");
 	}
 
-	printf("%lu\n", len);
 	struct bytecode bc = (struct bytecode) {0};
 	struct reader r = (struct reader) {
 		.buf = bytes,
@@ -227,11 +221,23 @@ inline struct bytecode tau_decode(uint8_t *bytes, size_t len) {
 	};
 
 	bc.ndefs = read_uint32(&r);
+	printf("bc.ndefs %u\n", bc.ndefs);
+
 	bc.len = read_uint32(&r);
+	printf("bc.len %u\n", bc.len);
+
 	bc.insts = read_bytes(&r, bc.len);
+	puts("bytes read");
+
 	bc.nconsts = read_uint32(&r);
+	printf("bc.nconsts %u\n", bc.nconsts);
+
 	bc.consts = decode_objects(&r, bc.nconsts);
+
 	bc.bklen = read_uint32(&r);
+	printf("bc.bklen %u\n", bc.bklen);
+
 	bc.bookmarks = decode_bookmarks(&r, bc.bklen);
+
 	return bc;
 }

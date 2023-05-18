@@ -41,7 +41,7 @@ func precompiledBytecode(path string) (compiler.Bytecode, error) {
 		fmt.Println(err)
 		return compiler.Bytecode{}, fmt.Errorf("error opening file %q: %w", path, err)
 	}
-	return tauDecode(b), nil
+	return compiler.DecodeBytecode(b), nil
 }
 
 func compile(path string) (bc compiler.Bytecode, err error) {
@@ -70,7 +70,7 @@ func ExecFileVM(f string) (err error) {
 	var bytecode compiler.Bytecode
 
 	if filepath.Ext(f) == ".tauc" {
-		bytecode = tauDecode(readFile(f))
+		bytecode = compiler.DecodeBytecode(readFile(f))
 	} else {
 		if bytecode, err = compile(f); err != nil {
 			fmt.Println(err)
@@ -102,7 +102,7 @@ func CompileFiles(files []string) error {
 			continue
 		}
 		ext := filepath.Ext(f)
-		writeFile(f[:len(f)-len(ext)]+".tauc", tauEncode(c.Bytecode()))
+		writeFile(f[:len(f)-len(ext)]+".tauc", c.Bytecode().Encode())
 	}
 
 	return nil

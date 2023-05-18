@@ -5,9 +5,9 @@ import (
 	"io"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
 	"golang.org/x/term"
@@ -29,7 +29,17 @@ func VmREPL() error {
 
 	t := term.NewTerminal(os.Stdin, ">>> ")
 	t.AutoCompleteCallback = autoComplete
-	obj.Stdout = t
+	// obj.Stdout = t
+
+	r, w, err := os.Pipe()
+	if err != nil {
+		return fmt.Errorf("error opening pipe: %w", err)
+	}
+	defer r.Close()
+	defer w.Close()
+	syscall.Dup2(int(w.Fd()), syscall.Stdout)
+
+	tr := io.TeeReader(r, os.Stdout)
 
 	PrintVersionInfo(t)
 	for {
@@ -37,7 +47,9 @@ func VmREPL() error {
 		check(t, initState, err)
 
 		input = strings.TrimRight(input, " ")
-		if len(input) > 0 && input[len(input)-1] == '{' {
+		if input == "" {
+			continue
+		} else if len(input) > 0 && input[len(input)-1] == '{' {
 			input, err = acceptUntil(t, input, "\n\n")
 			check(t, initState, err)
 		}
@@ -61,6 +73,7 @@ func VmREPL() error {
 		tvm.Run()
 		state = tvm.State()
 		tvm.Free()
+		io.Copy(t, tr)
 	}
 }
 

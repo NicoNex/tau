@@ -1,5 +1,6 @@
 package obj
 
+// #include <stdio.h>
 // #include <stdlib.h>
 // #include <stdint.h>
 // #include "object.h"
@@ -37,6 +38,10 @@ package obj
 //
 // static inline struct function *function_val(struct object fn) {
 // 	return fn.data.fn;
+// }
+//
+// static void set_stdout(int fd, const char *name) {
+//	stdout = fdopen(fd, name);
 // }
 import "C"
 
@@ -82,32 +87,30 @@ var (
 	Stdin  io.Reader = os.Stdin
 
 	Builtins = [...]string{
-		0:  "len",
-		1:  "println",
-		2:  "print",
-		3:  "input",
-		4:  "string",
-		5:  "error",
-		6:  "type",
-		7:  "int",
-		8:  "float",
-		9:  "exit",
-		10: "append",
-		11: "push",
-		12: "range",
-		13: "new",
-		14: "failed",
-		15: "plugin",
-		16: "pipe",
-		17: "send",
-		18: "recv",
-		19: "close",
-		20: "hex",
-		21: "oct",
-		22: "bin",
-		23: "slice",
-		24: "open",
-		25: "bytes",
+		"len",
+		"println",
+		"print",
+		"input",
+		"string",
+		"error",
+		"type",
+		"int",
+		"float",
+		"exit",
+		"append",
+		"new",
+		"failed",
+		"plugin",
+		"pipe",
+		"send",
+		"recv",
+		"close",
+		"hex",
+		"oct",
+		"bin",
+		"slice",
+		"open",
+		"bytes",
 	}
 
 	//extern null_obj
@@ -256,4 +259,8 @@ func ImportLookup(taupath string) (string, error) {
 	}
 
 	return path, nil
+}
+
+func SetStdout(fd int, name string) {
+	C.set_stdout(C.int(fd), C.CString(name))
 }

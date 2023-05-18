@@ -375,8 +375,6 @@ const builtin builtins[NUM_BUILTINS] = {
 	_float_b,
 	_exit_b,
 	_append_b,
-	NULL, // push
-	NULL, // range
 	_new_b,
 	_failed_b,
 	NULL, // plugin

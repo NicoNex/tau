@@ -3,6 +3,7 @@ package vm
 // #cgo CFLAGS: -Werror -Wall -g -Ofast -mtune=native -fopenmp
 // #cgo LDFLAGS: -fopenmp
 // #include <stdlib.h>
+// #include <stdio.h>
 // #include "vm.h"
 // #include "../obj/object.h"
 import "C"
@@ -44,6 +45,7 @@ func NewWithState(file string, bc compiler.Bytecode, state State) VM {
 
 func (vm VM) Run() {
 	C.vm_run(vm)
+	C.fflush(C.stdout)
 }
 
 func (vm VM) State() State {

@@ -275,15 +275,22 @@ func (c *Compiler) LoadSymbol(s Symbol) int {
 }
 
 func (c *Compiler) Bytecode() Bytecode {
-	return Bytecode{
-		insts:     (*C.uchar)(unsafe.Pointer(&c.scopes[c.scopeIndex].instructions[0])),
-		len:       C.uint32_t(len(c.scopes[c.scopeIndex].instructions)),
-		consts:    (*C.struct_object)(unsafe.Pointer(&(*c.constants)[0])),
-		nconsts:   C.uint32_t(len(*c.constants)),
-		bookmarks: (*C.struct_bookmark)(unsafe.Pointer(&c.scopes[c.scopeIndex].bookmarks[0])),
-		bklen:     C.uint32_t(len(c.scopes[c.scopeIndex].bookmarks)),
-		ndefs:     C.uint32_t(c.NumDefs),
+	b := Bytecode{
+		len:     C.uint32_t(len(c.scopes[c.scopeIndex].instructions)),
+		nconsts: C.uint32_t(len(*c.constants)),
+		bklen:   C.uint32_t(len(c.scopes[c.scopeIndex].bookmarks)),
+		ndefs:   C.uint32_t(c.NumDefs),
 	}
+	if len(c.scopes[c.scopeIndex].instructions) > 0 {
+		b.insts = (*C.uchar)(unsafe.Pointer(&c.scopes[c.scopeIndex].instructions[0]))
+	}
+	if len(*c.constants) > 0 {
+		b.consts = (*C.struct_object)(unsafe.Pointer(&(*c.constants)[0]))
+	}
+	if len(c.scopes[c.scopeIndex].bookmarks) > 0 {
+		b.bookmarks = (*C.struct_bookmark)(unsafe.Pointer(&c.scopes[c.scopeIndex].bookmarks[0]))
+	}
+	return b
 }
 
 func NewBytecode(insts []byte, consts []obj.Object, bookmarks []tauerr.Bookmark, ndefs int) Bytecode {

@@ -161,7 +161,6 @@ static inline struct bookmark *decode_bookmarks(struct reader *r, size_t len) {
 		bms[i].lineno = read_uint32(r);
 		bms[i].pos = read_uint32(r);
 		bms[i].len = read_uint32(r);
-		printf("line len %u\n", bms[i].len);
 		bms[i].line = read_string(r, bms[i].len);
 	}
 	return bms;
@@ -197,7 +196,6 @@ static inline struct object *decode_objects(struct reader *r, size_t len) {
 			uint32_t len = read_uint32(r);
 			uint8_t *insts = read_bytes(r, len);
 			uint32_t bklen = read_uint32(r);
-			printf("bklen %u\n", bklen);
 			struct bookmark *bmarks = decode_bookmarks(r, bklen);
 			objs[i] = new_function_obj(insts, len, nlocals, nparams, bmarks, bklen);
 			break;
@@ -206,6 +204,7 @@ static inline struct object *decode_objects(struct reader *r, size_t len) {
 			fatalf("decoder: unsupported decoding for type %s\n", otype_str(type));
 		}
 	}
+	return objs;
 }
 
 inline struct bytecode tau_decode(uint8_t *bytes, size_t len) {
@@ -221,22 +220,11 @@ inline struct bytecode tau_decode(uint8_t *bytes, size_t len) {
 	};
 
 	bc.ndefs = read_uint32(&r);
-	printf("bc.ndefs %u\n", bc.ndefs);
-
 	bc.len = read_uint32(&r);
-	printf("bc.len %u\n", bc.len);
-
 	bc.insts = read_bytes(&r, bc.len);
-	puts("bytes read");
-
 	bc.nconsts = read_uint32(&r);
-	printf("bc.nconsts %u\n", bc.nconsts);
-
 	bc.consts = decode_objects(&r, bc.nconsts);
-
 	bc.bklen = read_uint32(&r);
-	printf("bc.bklen %u\n", bc.bklen);
-
 	bc.bookmarks = decode_bookmarks(&r, bc.bklen);
 
 	return bc;

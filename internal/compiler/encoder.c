@@ -226,6 +226,5 @@ inline struct bytecode tau_decode(uint8_t *bytes, size_t len) {
 	bc.consts = decode_objects(&r, bc.nconsts);
 	bc.bklen = read_uint32(&r);
 	bc.bookmarks = decode_bookmarks(&r, bc.bklen);
-
 	return bc;
 }

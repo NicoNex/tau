@@ -10,9 +10,10 @@ func NewBookmark(fileCnt string, filePos, offset int) Bookmark {
 
 	return Bookmark{
 		offset: C.int32_t(offset),
-		line:   C.CString(line),
 		lineno: C.int32_t(lineNo),
 		pos:    C.int32_t(relative),
+		len:    C.size_t(len(line)),
+		line:   C.CString(line),
 	}
 }
 
@@ -21,6 +22,7 @@ func NewRawBookmark(line string, offset, lineNo, pos int) Bookmark {
 		offset: C.int32_t(offset),
 		lineno: C.int32_t(lineNo),
 		pos:    C.int32_t(pos),
+		len:    C.size_t(len(line)),
 		line:   C.CString(line),
 	}
 }

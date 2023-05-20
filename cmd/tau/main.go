@@ -27,8 +27,8 @@ func main() {
 	case flag.NArg() > 0:
 		tau.ExecFileVM(flag.Arg(0))
 	case simple:
-		tau.SimpleVmREPL()
+		tau.SimpleREPL()
 	default:
-		tau.VmREPL()
+		tau.REPL()
 	}
 }

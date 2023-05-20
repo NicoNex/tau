@@ -16,7 +16,7 @@ import (
 )
 
 // TODO: somehow redirect stdout to the terminal.
-func VmREPL() error {
+func REPL() error {
 	var (
 		state   = vm.NewState()
 		symbols = loadBuiltins(compiler.NewSymbolTable())
@@ -145,7 +145,7 @@ func acceptUntil(t *term.Terminal, start, end string) (string, error) {
 	return buf.String(), nil
 }
 
-func SimpleVmREPL() {
+func SimpleREPL() {
 	var (
 		state   = vm.NewState()
 		symbols = loadBuiltins(compiler.NewSymbolTable())

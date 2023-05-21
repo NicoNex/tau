@@ -1,6 +1,6 @@
-github.com/ianlancetaylor/cgosymbolizer v0.0.0-20221217025313-27d3c9f66b6a h1:2pDHS5ciC7EKulVtDBD2J+9X9Eypl1K60q4EJyHvvxY=
-github.com/ianlancetaylor/cgosymbolizer v0.0.0-20221217025313-27d3c9f66b6a/go.mod h1:DvXTE/K/RtHehxU8/GtDs4vFtfw64jJ3PaCnFri8CRg=
-golang.org/x/sys v0.5.0 h1:MUK/U/4lj1t1oPg0HfuXDN/Z1wv31ZJ/YcPiGccS4DU=
-golang.org/x/sys v0.5.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
-golang.org/x/term v0.5.0 h1:n2a8QNdAb0sZNpU9R1ALUXBbY+w51fCQDN+7EdxNBsY=
-golang.org/x/term v0.5.0/go.mod h1:jMB1sMXY+tzblOD4FWmEbocvup2/aLOaQEp7JmGp78k=
+github.com/ianlancetaylor/cgosymbolizer v0.0.0-20230328201059-365e72989107 h1:vtb3u/oSPSI/zjdDGpeAKFDASS5ry10XpchYFIFClmM=
+github.com/ianlancetaylor/cgosymbolizer v0.0.0-20230328201059-365e72989107/go.mod h1:DvXTE/K/RtHehxU8/GtDs4vFtfw64jJ3PaCnFri8CRg=
+golang.org/x/sys v0.8.0 h1:EBmGv8NaZBZTWvrbjNoL6HVt+IVy3QDQpJs7VRIw3tU=
+golang.org/x/sys v0.8.0/go.mod h1:oPkhp1MJrh7nUepCBck5+mAzfO9JrbApNNgaTdGDITg=
+golang.org/x/term v0.8.0 h1:n5xxQn2i3PC0yLAbjTpNT85q/Kgzcr2gIoX9OrJUols=
+golang.org/x/term v0.8.0/go.mod h1:xPskH00ivmX89bAKVGSKKtLOWNx2+17Eiy94tnKShWo=

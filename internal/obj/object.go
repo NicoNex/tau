@@ -63,7 +63,6 @@ type (
 	CompiledFunction = C.struct_function
 )
 
-//go:generate stringer -linecomment -type=Type
 const (
 	NullType      Type = C.obj_null      // null
 	BoolType           = C.obj_boolean   // bool
@@ -113,12 +112,9 @@ var (
 		"bytes",
 	}
 
-	//extern null_obj
-	NullObj Object
-	//extern true_obj
-	TrueObj Object
-	//extern false_obj
-	FalseObj Object
+	NullObj  = C.null_obj
+	TrueObj  = C.true_obj
+	FalseObj = C.false_obj
 
 	ErrNoFileProvided = errors.New("no file provided")
 )

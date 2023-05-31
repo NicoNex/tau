@@ -23,7 +23,11 @@
 
 #define vm_heap_add(vm, o) vm->heap.values[vm->heap.size++] = o
 
-#define DISPATCH() goto *jump_table[*frame->ip++]
+#ifndef DEBUG
+	#define DISPATCH() goto *jump_table[*frame->ip++]
+#else
+	#define DISPATCH() puts(opcode_str(*frame->ip)); goto *jump_table[*frame->ip++]
+#endif
 
 #define ASSERT(obj, t) (obj->type == t)
 #define ASSERT2(obj, t1, t2) (ASSERT(obj, t1) || ASSERT(obj, t2))

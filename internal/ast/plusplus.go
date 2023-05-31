@@ -1,40 +1,5 @@
 package ast
 
-import (
-	"errors"
-	"fmt"
-
-	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
-)
-
-type PlusPlus struct {
-	r   Node
-	pos int
-}
-
 func NewPlusPlus(r Node, pos int) Node {
-	return PlusPlus{
-		r:   r,
-		pos: pos,
-	}
-}
-
-func (p PlusPlus) Eval() (obj.Object, error) {
-	return obj.NullObj, errors.New("ast.PlusPlus: not a constant expression")
-}
-
-func (p PlusPlus) String() string {
-	return fmt.Sprintf("++%v", p.r)
-}
-
-func (p PlusPlus) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{l: p.r, r: Plus{l: p.r, r: Integer(1), pos: p.pos}, pos: p.pos}
-	position, err = n.Compile(c)
-	c.Bookmark(n.pos)
-	return
-}
-
-func (p PlusPlus) IsConstExpression() bool {
-	return false
+	return Assign{l: r, r: Plus{l: r, r: Integer(1), pos: pos}, pos: pos}
 }

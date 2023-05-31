@@ -27,6 +27,10 @@ func NewString(file, s string, parse parseFn, pos int) (Node, error) {
 
 	i := newInterpolator(file, str, parse)
 	nodes, str, err := i.nodes()
+
+	if len(nodes) == 0 {
+		return NewRawString(str), nil
+	}
 	return String{s: str, parse: parse, substr: nodes, pos: pos}, err
 }
 

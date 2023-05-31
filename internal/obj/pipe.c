@@ -1,15 +1,22 @@
 #include <stdlib.h>
 #include <threads.h>
+#include <stdio.h>
 #include "object.h"
 
 int pipe_close(struct object pipe) {
 	struct pipe *p = pipe.data.pipe;
-	if (p->buf == NULL) {
+	if (p->is_closed) {
 		return 0;
 	}
 
+	mtx_lock(&p->mu);
+	// Set the flag to indicate that the pipe is closed.
+	p->is_closed = 1;
+	// Unblock all threads waiting on not_empty.
+	cnd_broadcast(&p->not_empty);
+	mtx_unlock(&p->mu);
+
 	free(p->buf);
-	p->buf = NULL;
 	mtx_destroy(&pipe.data.pipe->mu);
 	cnd_destroy(&pipe.data.pipe->not_empty);
 	cnd_destroy(&pipe.data.pipe->not_full);
@@ -32,7 +39,7 @@ void mark_pipe_obj(struct object pipe) {
 
 int pipe_send(struct object pipe, struct object o) {
 	struct pipe *p = pipe.data.pipe;
-	if (p->buf == NULL) {
+	if (p->is_closed) {
 		return 0;
 	}
 
@@ -57,14 +64,17 @@ int pipe_send(struct object pipe, struct object o) {
 
 struct object pipe_recv(struct object pipe) {
 	struct pipe *p = pipe.data.pipe;
-	if (p->buf == NULL) {
+
+	mtx_lock(&p->mu);
+	while (p->len == 0 && !p->is_closed) {
+		cnd_wait(&p->not_empty, &p->mu);
+	}
+
+	if (p->is_closed) {
+		mtx_unlock(&p->mu);
 		return null_obj;
 	}
 
-	mtx_lock(&p->mu);
-	while (p->len == 0) {
-		cnd_wait(&p->not_empty, &p->mu);
-	}
 	struct object val = p->buf[p->head];
 	p->head = (p->head + 1) % p->cap;
 	p->len--;

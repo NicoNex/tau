@@ -66,6 +66,7 @@ struct pipe {
 	uint32_t head;
 	uint32_t tail;
 	uint32_t is_buffered;
+	uint32_t is_closed;
 	mtx_t mu;
 	cnd_t not_empty;
 	cnd_t not_full;

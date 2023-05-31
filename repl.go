@@ -22,18 +22,18 @@ func REPL() error {
 		symbols = loadBuiltins(compiler.NewSymbolTable())
 	)
 
-	initState, err := term.MakeRaw(0)
+	initState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("error opening terminal: %w", err)
 	}
-	defer term.Restore(0, initState)
+	defer term.Restore(int(os.Stdin.Fd()), initState)
 
 	t := term.NewTerminal(os.Stdin, ">>> ")
 	t.AutoCompleteCallback = autoComplete
 	redirectStdout(t)
-
 	PrintVersionInfo(t)
+
 	for {
 		input, err := t.ReadLine()
 		check(t, initState, err)

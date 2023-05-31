@@ -199,13 +199,20 @@ func NewString(s string) Object {
 	return C.new_string_obj(C.CString(s), C.size_t(len(s)))
 }
 
+func CArray[CT, GoT any](s []GoT) *CT {
+	if len(s) > 0 {
+		return (*CT)(unsafe.Pointer(&s[0]))
+	}
+	return nil
+}
+
 func NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []tauerr.Bookmark) Object {
 	return C.new_function_obj(
 		(*C.uchar)(unsafe.Pointer(&ins[0])),
 		C.size_t(len(ins)),
 		C.uint(nlocals),
 		C.uint(nparams),
-		(*C.struct_bookmark)(unsafe.Pointer(&bmarks[0])),
+		CArray[C.struct_bookmark, tauerr.Bookmark](bmarks),
 		C.uint(len(bmarks)),
 	)
 }

@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
+#include <threads.h>
 
 #include "vm.h"
 #include "opcode.h"
@@ -23,7 +24,6 @@
 #define vm_heap_add(vm, o) vm->heap.values[vm->heap.size++] = o
 
 #define DISPATCH() goto *jump_table[*frame->ip++]
-#define UNHANDLED() printf("unhandled opcode %s\n", opcode_str(*(frame->ip-1))); return -1
 
 #define ASSERT(obj, t) (obj->type == t)
 #define ASSERT2(obj, t1, t2) (ASSERT(obj, t1) || ASSERT(obj, t2))
@@ -652,31 +652,72 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 
 int vm_run(struct vm * restrict vm);
 
+int run_and_cleanup(void *vm) {
+	int ret = vm_run(vm);
+	free(vm);
+	return ret;
+}
+
+struct builtin_call_data {
+	builtin fn;
+	struct object *args;
+	size_t numargs;
+};
+
+int call_builtin_and_cleanup(void *data) {
+	struct builtin_call_data *d = data;
+	d->fn(d->args, d->numargs);
+	free(d->args);
+	free(d);
+	return 0;
+}
+
 static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num_args) {
-	struct vm *tvm = calloc(1, sizeof(struct vm));
-	tvm->file = vm->file;
-	tvm->state.consts = vm->state.consts;
-	tvm->state.nconsts = vm->state.nconsts;
-	tvm->sp = vm->sp;
-	tvm->frame_idx = 1;
+	thrd_t thread;
+	struct object *o = unwrap(&vm->stack[vm->sp-1-num_args]);
 
-	#pragma omp parallel default(none) shared(vm, tvm)
-	#pragma omp single
-	{
-		#pragma omp task
-		memcpy(tvm->stack, vm->stack, STACK_SIZE);
-		#pragma omp task
-		memcpy(tvm->state.globals, vm->state.globals, GLOBAL_SIZE);
+	switch (o->type) {
+	case obj_closure: {
+		struct vm *tvm = calloc(1, sizeof(struct vm));
+		tvm->file = vm->file;
+		tvm->state.consts = vm->state.consts;
+		tvm->state.nconsts = vm->state.nconsts;
+		tvm->sp = vm->sp;
+
+		#pragma omp parallel default(none) shared(vm, tvm)
+		#pragma omp single
+		{
+			#pragma omp task
+			memcpy(tvm->stack, vm->stack, STACK_SIZE * sizeof(struct object));
+
+			#pragma omp task
+			memcpy(tvm->state.globals, vm->state.globals, GLOBAL_SIZE * sizeof(struct object));
+		}
 		#pragma omp taskwait
-	}
-	vm_exec_call(tvm, num_args);
 
-	#pragma omp single
-	{
-		vm_run(tvm);
-		free(tvm);
+		vm_call_closure(tvm, o, num_args);
+		if (thrd_create(&thread, run_and_cleanup, tvm) != thrd_success) {
+			vm_errorf(vm, "failed to create thread");
+		}
+		break;
 	}
-	vm_stack_push(vm, null_obj);
+
+	case obj_builtin: {
+		struct builtin_call_data *d = malloc(sizeof(struct builtin_call_data));
+		d->fn = o->data.builtin;
+		d->args = malloc(sizeof(struct object) * num_args);
+		d->numargs = num_args;
+		memcpy(d->args, &vm->stack[vm->sp-num_args], num_args * sizeof(struct object));
+
+		if (thrd_create(&thread, call_builtin_and_cleanup, d) != thrd_success) {
+			vm_errorf(vm, "failed to create thread");
+		}
+		break;
+	}
+
+	default:
+		vm_errorf(vm, "calling non-function");
+	}
 }
 
 static inline void vm_exec_return(struct vm * restrict vm) {

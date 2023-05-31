@@ -39,7 +39,9 @@ func New(file string, bc compiler.Bytecode) VM {
 }
 
 func NewWithState(file string, bc compiler.Bytecode, state State) VM {
-	state.consts = (*C.struct_object)(unsafe.Pointer(&Consts[0]))
+	if len(Consts) > 0 {
+		state.consts = (*C.struct_object)(unsafe.Pointer(&Consts[0]))
+	}
 	return C.new_vm_with_state(C.CString(file), cbytecode(bc), state)
 }
 

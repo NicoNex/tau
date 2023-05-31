@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
+#include <threads.h>
 #include "../tauerr/bookmark.h"
 
 #define NUM_BUILTINS 26
@@ -58,6 +59,18 @@ struct string {
 	uint32_t *m_parent;
 };
 
+struct pipe {
+	struct object *buf;
+	size_t cap;
+	size_t len;
+	uint32_t head;
+	uint32_t tail;
+	uint32_t is_buffered;
+	mtx_t mu;
+	cnd_t not_empty;
+	cnd_t not_full;
+};
+
 union data {
 	int64_t i;
 	double f;
@@ -67,7 +80,7 @@ union data {
 	struct list *list;
 	struct map *map;
 	struct object_node **obj;
-	struct module *module;
+	struct pipe *pipe;
 	struct getsetter *gs;
 	struct object (*builtin)(struct object *args, size_t len);
 };
@@ -151,6 +164,15 @@ struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent
 char *list_str(struct object o);
 void mark_list_obj(struct object l);
 void dispose_list_obj(struct object o);
+
+// Pipe object.
+struct object new_pipe();
+struct object new_buffered_pipe(size_t size);
+int pipe_send(struct object pipe, struct object o);
+struct object pipe_recv(struct object pipe);
+int pipe_close(struct object pipe);
+void mark_pipe_obj(struct object pipe);
+void dispose_pipe_obj(struct object pipe);
 
 // Map object.
 struct object new_map();

@@ -254,6 +254,69 @@ BUILTIN(_failed_b) {
 	return parse_bool(args[0].type == obj_error);
 }
 
+BUILTIN(_pipe_b) {
+	UNWRAP_ARGS();
+	switch (len) {
+	case 0:
+		return new_pipe();
+	case 1:
+		if (args[0].type != obj_integer) {
+			return errorf("pipe: first argument must be int, got %s instead", otype_str(args[0].type));
+		}
+		if (args[0].data.i < 0) {
+			return errorf("pipe: invalid argument: size %ld, must not be negative", args[0].data.i);
+		}
+		return new_buffered_pipe(args[0].data.i);
+	default:
+		return errorf("pipe: wrong number of arguments, expected 0 or 1, got %lu", len);
+	}
+}
+
+BUILTIN(_send_b) {
+	if (len != 2) {
+		return errorf("send: wrong number of arguments, expected 2, got %lu", len);
+	}
+	UNWRAP_ARGS();
+
+	struct object pipe = args[0];
+	struct object o = args[1];
+
+	if (pipe.type != obj_pipe) {
+		return errorf("send: first argument must be a pipe, got %s instead", otype_str(args[0].type));
+	}
+	if (!pipe_send(pipe, o)) {
+		return errorf("send: closed pipe");
+	}
+	return o;
+}
+
+BUILTIN(_recv_b) {
+	if (len != 1) {
+		return errorf("recv: wrong number of arguments, expected 1, got %lu", len);
+	}
+	UNWRAP_ARGS();
+
+	if (args[0].type != obj_pipe) {
+		return errorf("recv: first argument must be a pipe, got %s instead", otype_str(args[0].type));
+	}
+	return pipe_recv(args[0]);
+}
+
+BUILTIN(_close_b) {
+	if (len != 1) {
+		return errorf("close: wrong number of arguments, expected 1, got %lu", len);
+	}
+	UNWRAP_ARGS();
+
+	if (args[0].type != obj_pipe) {
+		return errorf("close: first argument must be a pipe, got %s instead", otype_str(args[0].type));
+	}
+	if (!pipe_close(args[0])) {
+		return errorf("close: pipe already closed");
+	}
+	return null_obj;
+}
+
 BUILTIN(_hex_b) {
 	if (len != 1) {
 		return errorf("hex: wrong number of arguments, expected 1, got %lu", len);
@@ -378,10 +441,10 @@ const builtin builtins[NUM_BUILTINS] = {
 	_new_b,
 	_failed_b,
 	NULL, // plugin
-	NULL, // pipe
-	NULL, // send
-	NULL, // recv
-	NULL, // close
+	_pipe_b,
+	_send_b,
+	_recv_b,
+	_close_b,
 	_hex_b,
 	_oct_b,
 	_bin_b,

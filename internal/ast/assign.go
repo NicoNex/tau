@@ -40,7 +40,11 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 			return
 		}
 
-		symbol := c.Define(left.String())
+		symbol, ok := c.Resolve(left.String())
+		if !ok {
+			symbol = c.Define(left.String())
+		}
+
 		if symbol.Scope == compiler.GlobalScope {
 			position = c.Emit(code.OpSetGlobal, symbol.Index)
 			c.Bookmark(a.pos)

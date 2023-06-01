@@ -36,11 +36,11 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 
 	switch left := a.l.(type) {
 	case Identifier:
-		symbol := c.Define(left.String())
 		if position, err = a.r.Compile(c); err != nil {
 			return
 		}
 
+		symbol := c.Define(left.String())
 		if symbol.Scope == compiler.GlobalScope {
 			position = c.Emit(code.OpSetGlobal, symbol.Index)
 			c.Bookmark(a.pos)

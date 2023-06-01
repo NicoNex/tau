@@ -658,6 +658,7 @@ int vm_run(struct vm * restrict vm);
 
 int run_and_cleanup(void *vm) {
 	int ret = vm_run(vm);
+	fflush(stdout);
 	free(vm);
 	return ret;
 }
@@ -671,6 +672,7 @@ struct builtin_call_data {
 int call_builtin_and_cleanup(void *data) {
 	struct builtin_call_data *d = data;
 	d->fn(d->args, d->numargs);
+	fflush(stdout);
 	free(d->args);
 	free(d);
 	return 0;

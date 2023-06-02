@@ -1,0 +1,18 @@
+Questo è il file .../info/dir, che contiene il
+nodo più in alto della gerarchia di Info, chiamata (dir)Top.
+La prima volta che invochi il programma Info si inizia cercando questo nodo.
+
+File: dir,	Node: Top	Questo è il nodo più alto dell'albero INFO
+
+  Questo (il nodo principale) fornisce un menù che contiene le voci principali.
+  Digitando "q" esce, digitando "H" si produce un elenco di tutti i comandi Info,
+  "d" ritorna alla presente schermata, "h" fornisce informazioni ai nuovi utenti,
+  "mEmacs<Return>" visualizza il manuale di Emacs, ecc.
+
+  All'interno di Emacs, puoi cliccare con il pulsante destro del mouse su una voce di menù
+  o su un riferimento incrociato per selezionarlo.
+
+* Menu:
+
+Development
+* libffi: (libffi).             Portable foreign function interface library.

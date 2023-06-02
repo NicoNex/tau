@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <threads.h>
+#include <setjmp.h>
 
 #include "vm.h"
 #include "opcode.h"
@@ -34,6 +35,8 @@
 #define ASSERT4(obj, t1, t2, t3, t4) (ASSERT(obj, t1) || ASSERT(obj, t2) || ASSERT(obj, t3) || ASSERT(obj, t4))
 #define M_ASSERT(o1, o2, t) (ASSERT(o1, t) && ASSERT(o2, t))
 #define M_ASSERT2(o1, o2, t1, t2) (ASSERT2(o1, t1, t2) && ASSERT2(o2, t1, t2))
+
+jmp_buf env;
 
 static inline void gc(struct vm * restrict vm);
 
@@ -97,7 +100,8 @@ static struct bookmark *vm_get_bookmark(struct vm * restrict vm) {
 	return NULL;
 }
 
-void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
+__attribute__((noreturn))
+inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 	struct bookmark *b = vm_get_bookmark(vm);
 
 	if (b == NULL) {
@@ -127,7 +131,7 @@ void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 		arrow,
 		msg
 	);
-	exit(1);
+	longjmp(env, 1);
 }
 
 void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
@@ -850,6 +854,10 @@ static inline void gc(struct vm * restrict vm) {
 int vm_run(struct vm * restrict vm) {
 #include "jump_table.h"
 
+	// Used by vm_errorf to stop the execution of the VM without exiting.
+	if (setjmp(env) == 1) {
+		return 1;
+	}
 	register struct frame *frame = vm_current_frame(vm);
 	DISPATCH();
 

@@ -22,7 +22,7 @@ fib = fn(n) {
 	fib(n-1) + fib(n-2)
 }
 
-println(fib(35))`
+println(fib(40))`
 
 func check(err error) {
 	if err != nil {

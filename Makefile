@@ -6,5 +6,10 @@ all:
 install: all
 	mv tau /usr/bin
 
+profile:
+	@go build profile.go
+	@./profile
+	@rm profile
+
 run: all
 	./tau

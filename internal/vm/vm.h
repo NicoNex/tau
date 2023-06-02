@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <setjmp.h>
 #include "../obj/object.h"
 #include "../compiler/bytecode.h"
 
@@ -36,6 +37,7 @@ struct vm {
 	uint32_t sp;
 	uint32_t frame_idx;
 	char *file;
+	jmp_buf env;
 };
 
 struct state new_state();

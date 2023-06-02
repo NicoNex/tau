@@ -36,8 +36,6 @@
 #define M_ASSERT(o1, o2, t) (ASSERT(o1, t) && ASSERT(o2, t))
 #define M_ASSERT2(o1, o2, t1, t2) (ASSERT2(o1, t1, t2) && ASSERT2(o2, t1, t2))
 
-jmp_buf env;
-
 static inline void gc(struct vm * restrict vm);
 
 static inline struct frame new_frame(struct object cl, uint32_t base_ptr) {
@@ -131,7 +129,7 @@ inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 		arrow,
 		msg
 	);
-	longjmp(env, 1);
+	longjmp(vm->env, 1);
 }
 
 void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
@@ -660,10 +658,10 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 
 int vm_run(struct vm * restrict vm);
 
-int run_and_cleanup(void *vm) {
+static int run_and_cleanup(void *vm) {
 	int ret = vm_run(vm);
 	fflush(stdout);
-	free(vm);
+	vm_dispose(vm);
 	return ret;
 }
 
@@ -673,7 +671,7 @@ struct builtin_call_data {
 	size_t numargs;
 };
 
-int call_builtin_and_cleanup(void *data) {
+static int call_builtin_and_cleanup(void *data) {
 	struct builtin_call_data *d = data;
 	d->fn(d->args, d->numargs);
 	fflush(stdout);
@@ -689,7 +687,7 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 	switch (o->type) {
 	case obj_closure: {
 		struct vm *tvm = calloc(1, sizeof(struct vm));
-		tvm->file = vm->file;
+		tvm->file = strdup(vm->file);
 		tvm->state.consts = vm->state.consts;
 		tvm->state.nconsts = vm->state.nconsts;
 		tvm->sp = vm->sp;
@@ -855,7 +853,7 @@ int vm_run(struct vm * restrict vm) {
 #include "jump_table.h"
 
 	// Used by vm_errorf to stop the execution of the VM without exiting.
-	if (setjmp(env) == 1) {
+	if (setjmp(vm->env) == 1) {
 		return 1;
 	}
 	register struct frame *frame = vm_current_frame(vm);

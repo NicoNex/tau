@@ -5,9 +5,13 @@
 *.tauc
 *.py
 *.so
+*.prof
+
 
 **/.DS_store
 
 /tau
 /cmd/tau/tau
 !/examples/*.tau
+internal/obj/libffi
+profile

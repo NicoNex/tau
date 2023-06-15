@@ -23,7 +23,8 @@ enum obj_type {
 	obj_object,
 	obj_pipe,
 	obj_bytes,
-	obj_getsetter
+	obj_getsetter,
+	obj_native
 };
 
 struct function {
@@ -75,6 +76,7 @@ struct pipe {
 union data {
 	int64_t i;
 	double f;
+	void *handle;
 	struct function *fn;
 	struct closure *cl;
 	struct string *str;
@@ -224,4 +226,5 @@ char *object_str(struct object o);
 void print_obj(struct object o);
 void mark_obj(struct object o);
 void free_obj(struct object o);
+struct object errorf(char *fmt, ...);
 uint64_t fnv64a(char *s);

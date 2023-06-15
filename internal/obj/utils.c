@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
+#include <stdarg.h>
 #include "object.h"
 
 char *otype_str(enum obj_type t) {
@@ -19,7 +20,8 @@ char *otype_str(enum obj_type t) {
 		"object",
 		"pipe",
 		"bytes",
-		"getsetter"
+		"getsetter",
+		"native"
 	};
 
 	return strings[t];
@@ -57,6 +59,8 @@ char *object_str(struct object o) {
 		return strdup("<unimplemented bytes>");
 	case obj_getsetter:
 		return getsetter_str(o);
+	case obj_native:
+		return strdup("<native>");
 	default:
 		return strdup("<unimplemented>");
 	}
@@ -131,4 +135,16 @@ void free_obj(struct object o) {
 	default:
 		return;
 	}
+}
+
+inline struct object errorf(char *fmt, ...) {
+	char *msg = malloc(sizeof(char) * 256);
+	msg[255] = '\n';
+
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(msg, 256, fmt, ap);
+	va_end(ap);
+
+	return new_error_obj(msg, strlen(msg));
 }

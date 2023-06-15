@@ -1,9 +1,9 @@
 #include <stdio.h>
 #include <stdint.h>
-#include <stdarg.h>
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
+#include <dlfcn.h>
 #include "object.h"
 
 #define BUILTIN(name) static struct object name(struct object *_args, size_t len)
@@ -26,18 +26,6 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 		.type = obj_builtin,
 		.marked = NULL,
 	};
-}
-
-static struct object errorf(char *fmt, ...) {
-	char *msg = malloc(sizeof(char) * 256);
-	msg[255] = '\n';
-
-	va_list ap;
-	va_start(ap, fmt);
-	vsnprintf(msg, 256, fmt, ap);
-	va_end(ap);
-
-	return new_error_obj(msg, strlen(msg));
 }
 
 BUILTIN(_len_b) {
@@ -252,6 +240,28 @@ BUILTIN(_failed_b) {
 	UNWRAP_ARGS();
 
 	return parse_bool(args[0].type == obj_error);
+}
+
+BUILTIN(_plugin_b) {
+	if (len != 1) {
+		return errorf("plugin: wrong number of arguments, expected 1, got %lu", len);
+	}
+	UNWRAP_ARGS();
+
+	if (args[0].type != obj_string) {
+		return errorf("plugin: first argument must be string, got %s instead", otype_str(args[0].type));
+	}
+	char *path = args[0].data.str->str;
+	void *handle = dlopen(path, RTLD_LAZY);
+	if (!handle) {
+		return errorf("plugin: %s", dlerror());
+	}
+
+	return (struct object) {
+		.data.handle = handle,
+		.type = obj_native,
+		.marked = MARKPTR()
+	};
 }
 
 BUILTIN(_pipe_b) {

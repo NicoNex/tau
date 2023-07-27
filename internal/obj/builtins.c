@@ -84,8 +84,16 @@ BUILTIN(_string_b) {
 	}
 	UNWRAP_ARGS();
 
-	char *s = object_str(args[0]);
-	return new_string_obj(s, strlen(s));
+	switch (args[0].type) {
+	case obj_native:
+		char *s = (char *) args[0].data.handle;
+		return new_string_obj(s, strlen(s));
+
+	default: {
+		char *s = object_str(args[0]);
+		return new_string_obj(s, strlen(s));
+	}
+	}
 }
 
 BUILTIN(_error_b) {
@@ -117,10 +125,12 @@ BUILTIN(_int_b) {
 	switch (args[0].type) {
 	case obj_integer:
 		return args[0];
+
 	case obj_float:
 		args[0].data.i = (int64_t) args[0].data.f;
 		args[0].type = obj_integer;
 		return args[0];
+
 	case obj_string: {
 		errno = 0;
 		int64_t i = strtol(args[0].data.str->str, NULL, 10);
@@ -128,6 +138,10 @@ BUILTIN(_int_b) {
 			return new_integer_obj(i);
 		}
 	}
+
+	case obj_native:
+		return new_integer_obj(*(int64_t*)args[0].data.handle);
+
 	default: {
 		char *s = object_str(args[0]);
 		struct object err = errorf("int: %s is not a number", s);
@@ -148,8 +162,10 @@ BUILTIN(_float_b) {
 		args[0].data.f = (double) args[0].data.i;
 		args[0].type = obj_float;
 		return args[0];
+
 	case obj_float:
 		return args[0];
+
 	case obj_string: {
 		errno = 0;
 		double f = strtod(args[0].data.str->str, NULL);
@@ -157,6 +173,10 @@ BUILTIN(_float_b) {
 			return new_float_obj(f);
 		}
 	}
+
+	case obj_native:
+		return new_float_obj(*(double*)args[0].data.handle);
+
 	default: {
 		char *s = object_str(args[0]);
 		struct object err = errorf("float: %s is not a number", s);
@@ -450,7 +470,7 @@ const builtin builtins[NUM_BUILTINS] = {
 	_append_b,
 	_new_b,
 	_failed_b,
-	NULL, // plugin
+	_plugin_b,
 	_pipe_b,
 	_send_b,
 	_recv_b,

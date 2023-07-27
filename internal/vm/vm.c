@@ -8,6 +8,7 @@
 #include "vm.h"
 #include "opcode.h"
 #include "_cgo_export.h"
+#include "../obj/libffi/include/ffi.h"
 
 #define read_uint8(b) ((b)[0])
 #define read_uint16(b) (((b)[0] << 8) | (b)[1])
@@ -160,10 +161,22 @@ static inline void vm_exec_dot(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);
 	struct object *left = unwrap(&vm_stack_pop(vm));
 
-	if (!ASSERT(left, obj_object) || !ASSERT(right, obj_string)) {
+	if (!ASSERT(right, obj_string)) {
 		vm_errorf(vm, "%s object has no attribute %s", otype_str(left->type), object_str(*right));
 	}
-	vm_stack_push(vm, new_getsetter_obj(*left, *right, object_getsetter_get, object_getsetter_set));
+
+	switch (left->type) {
+	case obj_object:
+		vm_stack_push(vm, new_getsetter_obj(*left, *right, object_getsetter_get, object_getsetter_set));
+		return;
+
+	case obj_native:
+		vm_stack_push(vm, new_getsetter_obj(*left, *right, native_getsetter_get, native_getsetter_set));
+		return;
+
+	default:
+		vm_errorf(vm, "%s object has no attribute %s", otype_str(left->type), object_str(*right));
+	}
 }
 
 static inline void vm_exec_define(struct vm * restrict vm) {
@@ -643,6 +656,58 @@ static inline void vm_call_builtin(struct vm * restrict vm, builtin fn, size_t n
 	}
 }
 
+static inline void vm_call_native(struct vm * restrict vm, struct object *n, size_t numargs) {
+	ffi_cif cif;
+	ffi_type *arg_types[numargs];
+	void *arg_values[numargs];
+
+	// Convert Tau types to C types.
+	for (size_t i = 0; i < numargs; i++) {
+		struct object *o = unwrap(&vm_stack_pop(vm));
+
+		switch (o->type) {
+		case obj_boolean:
+		case obj_integer:
+			arg_types[i] = &ffi_type_sint64;
+			arg_values[i] = &o->data.i;
+			break;
+
+		case obj_float:
+			arg_types[i] = &ffi_type_double;
+			arg_values[i] = &o->data.f;
+			break;
+
+		case obj_string:
+			arg_types[i] = &ffi_type_pointer;
+			arg_values[i] = o->data.str->str;
+			break;
+
+		case obj_null:
+			arg_types[i] = &ffi_type_pointer;
+			arg_values[i] = &o->data.i;
+			break;
+
+		default:
+			vm_errorf(vm, "unsupported argument type %s for native objects", otype_str(o->type));
+		}
+	}
+
+	if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, numargs, &ffi_type_pointer, arg_types) != FFI_OK) {
+		vm_stack_push(vm, errorf("failed to prepare the native function"));
+		return;
+	}
+
+	void *return_value = malloc(sizeof(&ffi_type_pointer));
+	ffi_call(&cif, n->data.handle, return_value, arg_values);
+
+	struct object ret = (struct object) {
+		.data.handle = return_value,
+		.type = obj_native,
+		.marked = MARKPTR()
+	};
+	vm_stack_push(vm, ret);
+}
+
 static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 	struct object *o = unwrap(&vm->stack[vm->sp-1-numargs]);
 
@@ -651,6 +716,8 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 		return vm_call_closure(vm, o, numargs);
 	case obj_builtin:
 		return vm_call_builtin(vm, o->data.builtin, numargs);
+	case obj_native:
+		return vm_call_native(vm, o, numargs);
 	default:
 		vm_errorf(vm, "calling non-function");
 	}

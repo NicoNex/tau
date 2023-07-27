@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <threads.h>
@@ -219,6 +220,10 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 struct object new_getsetter_obj(struct object l, struct object r, getfn get, setfn set);
 char *getsetter_str(struct object o);
 void dispose_getsetter_obj(struct object o);
+
+// Native object.
+struct object native_getsetter_get(struct getsetter *gs);
+struct object native_getsetter_set(struct getsetter *gs, struct object val);
 
 // Util functions.
 char *otype_str(enum obj_type t);

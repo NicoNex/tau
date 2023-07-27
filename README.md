@@ -414,40 +414,44 @@ println(it.Snuffles.ID())
 ```
 
 ##### Plugin
-Tau plugin system makes it possible to import and use Go plugins in Tau seamlessly.
-To run your Go code in Tau just compile it with:
+Tau plugin system makes it possible to import and use C shared libraries in Tau seamlessly.
+To run your C code in Tau just compile it with:
 ```bash
-go build -buildmode=plugin -o myplugin.so
+gcc -shared -o mylib.so -fPIC mylib.c
 ```
 then you can import it in Tau with the `plugin` builtin function.
 ```python
 myplugin = plugin("path/to/myplugin.so")
 ```
 ###### Example
-Go code:
-```golang
-package main
+C code:
+```c
+#include <stdio.h>
 
-import "fmt"
-
-func Hello() {
-	fmt.Println("Hello World")
+void hello() {
+	puts("Hello World!");
 }
 
-func Sum(a, b int) int {
-	return a + b
+int add(int a, int b) {
+	return a + b;
+}
+
+int sub(int a, int b) {
+	return a - b;
 }
 ```
 
 Tau code:
 ```python
-myplugin = plugin("myplugin.so")
+myplugin = plugin("mylib.so")
 
-myplugin.Hello()
-println("The sum is", myplugin.Sum(3, 2))
+myplugin.hello()
+println("The sum is", int(myplugin.add(3, 2)))
+println("The difference is", int(myplugin.sub(3, 2)))
 ```
 Output:
 ```
->>> Hello World
+>>> Hello World!
 >>> The sum is 5
+>>> The difference is 1
 ```

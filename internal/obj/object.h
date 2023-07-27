@@ -224,6 +224,7 @@ void dispose_getsetter_obj(struct object o);
 // Native object.
 struct object native_getsetter_get(struct getsetter *gs);
 struct object native_getsetter_set(struct getsetter *gs, struct object val);
+void dispose_native_obj(struct object o);
 
 // Util functions.
 char *otype_str(enum obj_type t);

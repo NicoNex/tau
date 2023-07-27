@@ -662,7 +662,7 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 	void *arg_values[numargs];
 
 	// Convert Tau types to C types.
-	for (size_t i = 0; i < numargs; i++) {
+	for (int64_t i = numargs - 1; i >= 0; i--) {
 		struct object *o = unwrap(&vm_stack_pop(vm));
 
 		switch (o->type) {
@@ -691,6 +691,7 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 			vm_errorf(vm, "unsupported argument type %s for native objects", otype_str(o->type));
 		}
 	}
+	vm->sp--;
 
 	if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, numargs, &ffi_type_pointer, arg_types) != FFI_OK) {
 		vm_stack_push(vm, errorf("failed to prepare the native function"));
@@ -700,12 +701,14 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 	void *return_value = malloc(sizeof(&ffi_type_pointer));
 	ffi_call(&cif, n->data.handle, return_value, arg_values);
 
-	struct object ret = (struct object) {
+	struct object res = (struct object) {
 		.data.handle = return_value,
 		.type = obj_native,
 		.marked = MARKPTR()
 	};
-	vm_stack_push(vm, ret);
+	vm_stack_push(vm, res);
+	vm_heap_add(vm, res);
+	gc(vm);
 }
 
 static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {

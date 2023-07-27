@@ -25,3 +25,8 @@ struct object native_getsetter_get(struct getsetter *gs) {
 struct object native_getsetter_set(struct getsetter *gs, struct object val) {
 	return errorf("cannot assign values to type %s", otype_str(gs->l.type));
 }
+
+void dispose_native_obj(struct object o) {
+	free(o.marked);
+	free(o.data.handle);
+}

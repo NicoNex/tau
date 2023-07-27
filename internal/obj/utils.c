@@ -132,6 +132,9 @@ void free_obj(struct object o) {
 	case obj_getsetter:
 		dispose_getsetter_obj(o);
 		return;
+	case obj_native:
+		dispose_native_obj(o);
+		return;
 	default:
 		return;
 	}

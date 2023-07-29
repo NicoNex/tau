@@ -2,3 +2,6 @@
 	path = libffi
 	url = https://github.com/libffi/libffi
 	tag = v3.4.4
+[submodule "bdwgc"]
+	path = bdwgc
+	url = https://github.com/ivmai/bdwgc

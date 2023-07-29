@@ -1,10 +1,11 @@
 #include <stdio.h>
-#include <stdint.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <string.h>
 #include <errno.h>
 #include <dlfcn.h>
 #include "object.h"
+#include "../vm/gc.h"
 
 #define BUILTIN(name) static struct object name(struct object *_args, size_t len)
 
@@ -14,7 +15,6 @@
 		if (_args[i].type == obj_getsetter) {            \
 			struct getsetter *gs = _args[i].data.gs;     \
 			args[i] = gs->get(gs);                       \
-			free(gs);                                    \
 			continue;                                    \
 		}                                                \
 		args[i] = _args[i];                              \
@@ -24,7 +24,6 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 	return (struct object) {
 		.data.builtin = builtin,
 		.type = obj_builtin,
-		.marked = NULL,
 	};
 }
 
@@ -55,7 +54,6 @@ BUILTIN(_println_b) {
 	for (uint32_t i = 0; i < len; i++) {
 		char *s = object_str(args[i]);
 		fputs(s, stdout);
-		free(s);
 		if (i < len-1) putc(' ', stdout);
 	}
 	putc('\n', stdout);
@@ -68,7 +66,6 @@ BUILTIN(_print_b) {
 	for (uint32_t i = 0; i < len; i++) {
 		char *s = object_str(args[i]);
 		fputs(s, stdout);
-		free(s);
 		if (i < len-1) putc(' ', stdout);
 	}
 	return null_obj;
@@ -145,7 +142,6 @@ BUILTIN(_int_b) {
 	default: {
 		char *s = object_str(args[0]);
 		struct object err = errorf("int: %s is not a number", s);
-		free(s);
 		return err;
 	}
 	}
@@ -177,12 +173,8 @@ BUILTIN(_float_b) {
 	case obj_native:
 		return new_float_obj(*(double*)args[0].data.handle);
 
-	default: {
-		char *s = object_str(args[0]);
-		struct object err = errorf("float: %s is not a number", s);
-		free(s);
-		return err;
-	}
+	default:
+		return errorf("float: %s is not a number", object_str(args[0]));
 	}
 }
 
@@ -280,7 +272,6 @@ BUILTIN(_plugin_b) {
 	return (struct object) {
 		.data.handle = handle,
 		.type = obj_native,
-		.marked = MARKPTR()
 	};
 }
 
@@ -435,8 +426,7 @@ BUILTIN(_slice_b) {
 		}
 		// If the parent is a slice, propagate its marked parent flag for the gc,
 		// otherwise use the default marked flag.
-		uint32_t *m_parent = args[0].data.list->m_parent != NULL ? args[0].data.list->m_parent : args[0].marked;
-		return new_list_slice(&args[0].data.list->list[start], end-start, m_parent);
+		return new_list_obj(&args[0].data.list->list[start], end-start);
 	}
 
 	case obj_string: {
@@ -447,8 +437,7 @@ BUILTIN(_slice_b) {
 		}
 		// If the parent is a slice, propagate its marked parent flag for the gc,
 		// otherwise use the default marked flag.
-		uint32_t *m_parent = args[0].data.str->m_parent != NULL ? args[0].data.str->m_parent : args[0].marked;
-		return new_string_slice(&args[0].data.str->str[start], end-start, m_parent);
+		return new_string_obj(&args[0].data.str->str[start], end-start);
 	}
 	// case obj_bytes:
 	default:

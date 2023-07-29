@@ -1,13 +1,11 @@
 #pragma once
 
-#include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
 #include <threads.h>
 #include "../tauerr/bookmark.h"
 
 #define NUM_BUILTINS 26
-#define MARKPTR() calloc(1, sizeof(uint32_t))
 
 enum obj_type {
 	obj_null,
@@ -52,13 +50,11 @@ struct list {
 	struct object *list;
 	size_t len;
 	size_t cap;
-	uint32_t *m_parent;
 };
 
 struct string {
 	char *str;
 	size_t len;
-	uint32_t *m_parent;
 };
 
 struct pipe {
@@ -92,7 +88,6 @@ union data {
 struct object {
 	union data data;
 	enum obj_type type;
-	uint32_t *marked;
 };
 
 struct getsetter {
@@ -150,24 +145,19 @@ char *float_str(struct object o);
 
 // String object.
 struct object new_string_obj(char *str, size_t len);
-struct object new_string_slice(char *str, size_t len, uint32_t *m_parent);
 char *string_str(struct object o);
 void mark_string_obj(struct object s);
-void dispose_string_obj(struct object o);
 
 // Error object.
 struct object new_error_obj(char *msg, size_t len);
 char *error_str(struct object o);
-void dispose_error_obj(struct object o);
 
 // List object.
 struct object new_list_obj(struct object *list, size_t len);
 struct object list_getsetter_get(struct getsetter *gs);
 struct object list_getsetter_set(struct getsetter *gs, struct object val);
-struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent);
 char *list_str(struct object o);
 void mark_list_obj(struct object l);
-void dispose_list_obj(struct object o);
 
 // Pipe object.
 struct object new_pipe();
@@ -176,7 +166,6 @@ int pipe_send(struct object pipe, struct object o);
 struct object pipe_recv(struct object pipe);
 int pipe_close(struct object pipe);
 void mark_pipe_obj(struct object pipe);
-void dispose_pipe_obj(struct object pipe);
 
 // Map object.
 struct object new_map();
@@ -186,7 +175,6 @@ struct object map_getsetter_get(struct getsetter *gs);
 struct object map_getsetter_set(struct getsetter *gs, struct object val);
 void mark_map_obj(struct object m);
 char *map_str(struct object map);
-void dispose_map_obj(struct object map);
 
 // Object object.
 struct object new_object();
@@ -197,18 +185,14 @@ struct object object_getsetter_set(struct getsetter *gs, struct object val);
 struct object object_to_module(struct object o);
 void mark_object_obj(struct object o);
 char *object_obj_str(struct object obj);
-void dispose_object_obj(struct object obj);
 
 // Function object.
 struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t num_bookmarks);
 char *function_str(struct object o);
-void dispose_function_obj(struct object o);
-void dispose_function_data(struct function *fn);
 
 // Closure object.
 struct object new_closure_obj(struct function *fn, struct object *free, size_t num_free);
 char *closure_str(struct object o);
-void dispose_closure_obj(struct object o);
 void mark_closure_obj(struct object c);
 
 // Builtin object.
@@ -219,18 +203,14 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 // Getsetter object.
 struct object new_getsetter_obj(struct object l, struct object r, getfn get, setfn set);
 char *getsetter_str(struct object o);
-void dispose_getsetter_obj(struct object o);
 
 // Native object.
 struct object native_getsetter_get(struct getsetter *gs);
 struct object native_getsetter_set(struct getsetter *gs, struct object val);
-void dispose_native_obj(struct object o);
 
 // Util functions.
 char *otype_str(enum obj_type t);
 char *object_str(struct object o);
 void print_obj(struct object o);
-void mark_obj(struct object o);
-void free_obj(struct object o);
 struct object errorf(char *fmt, ...);
 uint64_t fnv64a(char *s);

@@ -24,14 +24,8 @@ struct state {
 	uint32_t ndefs;
 };
 
-struct heap {
-	uint32_t size;
-	struct object values[HEAP_SIZE];
-};
-
 struct vm {
 	struct state state;
-	struct heap heap;
 	struct object stack[STACK_SIZE];
 	struct frame frames[MAX_FRAMES];
 	uint32_t sp;
@@ -47,4 +41,4 @@ int vm_run(struct vm * restrict vm);
 void vm_errorf(struct vm * restrict vm, const char *fmt, ...);
 void go_vm_errorf(struct vm * restrict vm, const char *fmt);
 struct object vm_last_popped_stack_elem(struct vm * restrict vm);
-void vm_dispose(struct vm *vm);
+void gc_init(void);

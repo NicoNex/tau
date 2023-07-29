@@ -1,16 +1,15 @@
 #include <string.h>
 #include "object.h"
+#include "../vm/gc.h"
 
 struct object true_obj = (struct object) {
 	.data.i = 1,
 	.type = obj_boolean,
-	.marked = NULL,
 };
 
 struct object false_obj = (struct object) {
 	.data.i = 0,
 	.type = obj_boolean,
-	.marked = NULL,
 };
 
 inline __attribute__((always_inline))

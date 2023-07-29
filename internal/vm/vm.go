@@ -1,7 +1,7 @@
 package vm
 
-// #cgo CFLAGS: -Werror -Wall -g -Ofast -mtune=native -fopenmp
-// #cgo LDFLAGS: -fopenmp
+// #cgo CFLAGS: -Werror -g -Ofast -mtune=native -fopenmp
+// #cgo LDFLAGS: -fopenmp -lgc
 // #include <stdlib.h>
 // #include <stdio.h>
 // #include "vm.h"
@@ -54,10 +54,6 @@ func (vm VM) State() State {
 	return vm.state
 }
 
-func (vm VM) Free() {
-	C.vm_dispose(vm)
-}
-
 func cbytecode(bc compiler.Bytecode) C.struct_bytecode {
 	return *(*C.struct_bytecode)(unsafe.Pointer(&bc))
 }
@@ -106,7 +102,6 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	vm.state.nconsts = C.uint32_t(bc.NConsts())
 	vm.state.ndefs = C.uint32_t(bc.NDefs())
 	tvm := C.new_vm_with_state(C.CString(path), cbytecode(bc), vm.state)
-	defer C.vm_dispose(tvm)
 	if i := C.vm_run(tvm); i != 0 {
 		C.go_vm_errorf(vm, C.CString("import error"))
 	}
@@ -130,4 +125,8 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	importTab[p] = mod
 	vm.stack[vm.sp] = mod
 	vm.sp++
+}
+
+func init() {
+	C.gc_init()
 }

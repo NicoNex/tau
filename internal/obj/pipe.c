@@ -1,7 +1,7 @@
-#include <stdlib.h>
 #include <threads.h>
 #include <stdio.h>
 #include "object.h"
+#include "../vm/gc.h"
 
 int pipe_close(struct object pipe) {
 	struct pipe *p = pipe.data.pipe;
@@ -16,25 +16,10 @@ int pipe_close(struct object pipe) {
 	cnd_broadcast(&p->not_empty);
 	mtx_unlock(&p->mu);
 
-	free(p->buf);
 	mtx_destroy(&pipe.data.pipe->mu);
 	cnd_destroy(&pipe.data.pipe->not_empty);
 	cnd_destroy(&pipe.data.pipe->not_full);
 	return 1;
-}
-
-void dispose_pipe_obj(struct object pipe) {
-	pipe_close(pipe);
-	free(pipe.data.pipe);
-}
-
-void mark_pipe_obj(struct object pipe) {
-	struct pipe *p = pipe.data.pipe;
-
-	for (uint32_t i = 0; i < p->len; i++) {
-		mark_obj(p->buf[i]);
-	}
-	*pipe.marked = 1;
 }
 
 int pipe_send(struct object pipe, struct object o) {
@@ -99,7 +84,6 @@ struct object new_pipe() {
 	return (struct object) {
 		.data.pipe = pipe,
 		.type = obj_pipe,
-		.marked = MARKPTR()
 	};
 }
 
@@ -118,6 +102,5 @@ struct object new_buffered_pipe(size_t size) {
 	return (struct object) {
 		.data.pipe = pipe,
 		.type = obj_pipe,
-		.marked = MARKPTR()
 	};
 }

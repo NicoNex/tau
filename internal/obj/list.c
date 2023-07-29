@@ -1,15 +1,6 @@
-#include <stdlib.h>
 #include <string.h>
 #include "object.h"
-
-void dispose_list_obj(struct object o) {
-	// Free everything if it's not a slice (marked parent bit is set to NULL).
-	if (o.data.list->m_parent == NULL) {
-		free(o.marked);
-		free(o.data.list->list);
-	}
-	free(o.data.list);
-}
+#include "../vm/gc.h"
 
 // TODO: optimise this.
 char *list_str(struct object o) {
@@ -30,21 +21,9 @@ char *list_str(struct object o) {
 	for (int i = 0; i < len; i++) {
 		strcat(str, strings[i]);
 		if (i < len-1) strcat(str, ", ");
-		free(strings[i]);
 	}
 	strcat(str, "]");
-
 	return str;
-}
-
-void mark_list_obj(struct object l) {
-	*l.marked = 1;
-	if (l.data.list->m_parent != NULL) {
-		*l.data.list->m_parent = 1;
-	}
-	for (uint32_t i = 0; i < l.data.list->len; i++) {
-		mark_obj(l.data.list->list[i]);
-	}
 }
 
 struct object new_list_obj(struct object *list, size_t len) {
@@ -52,26 +31,10 @@ struct object new_list_obj(struct object *list, size_t len) {
 	l->list = list;
 	l->len = len;
 	l->cap = len;
-	l->m_parent = NULL;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = MARKPTR(),
-	};
-}
-
-struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent) {
-	struct list *l = malloc(sizeof(struct list));
-	l->list = list;
-	l->len = len;
-	l->cap = len;
-	l->m_parent = m_parent;
-
-	return (struct object) {
-		.data.list = l,
-		.type = obj_list,
-		.marked = MARKPTR(),
 	};
 }
 

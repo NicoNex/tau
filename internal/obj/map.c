@@ -1,8 +1,8 @@
 #include <string.h>
 #include <stdint.h>
-#include <stdlib.h>
 #include <stdio.h>
 #include "object.h"
+#include "../vm/gc.h"
 
 // Taken from: https://github.com/haipome/fnv/blob/master/fnv.c#L368
 inline uint64_t fnv64a(char *s) {
@@ -64,15 +64,6 @@ static inline struct map_pair _map_get(struct map_node * restrict n, struct key_
 	}
 }
 
-static void mark_map_children(struct map_node * restrict n) {
-	if (n != NULL) {
-		mark_obj(n->val.key);
-		mark_obj(n->val.val);
-		mark_map_children(n->l);
-		mark_map_children(n->r);
-	}
-}
-
 static inline void _map_set(struct map_node **n, struct key_hash k, struct map_pair v) {
 	if (*n == NULL) {
 		struct map_node *tmp = malloc(sizeof(struct map_node));
@@ -95,14 +86,6 @@ static inline void _map_set(struct map_node **n, struct key_hash k, struct map_p
 	}
 }
 
-static inline void _map_dispose(struct map_node *n) {
-	if (n != NULL) {
-		if (n->l != NULL) _map_dispose(n->l);
-		if (n->r != NULL) _map_dispose(n->r);
-		free(n);
-	}
-}
-
 struct map_pair map_get(struct object map, struct object o) {
 	return _map_get(map.data.map->root, hash(o));
 }
@@ -113,11 +96,6 @@ struct map_pair map_set(struct object map, struct object k, struct object v) {
 	_map_set(&map.data.map->root, hash(k), p);
 	map.data.map->len++;
 	return p;
-}
-
-void dispose_map_obj(struct object map) {
-	_map_dispose(map.data.map->root);
-	free(map.data.map);
 }
 
 // TODO: actually return map content as string.
@@ -134,11 +112,6 @@ struct object new_map() {
 		.data.map = calloc(1, sizeof(struct map_node)),
 		.type = obj_map,
 	};
-}
-
-void mark_map_obj(struct object m) {
-	*m.marked = 1;
-	mark_map_children(m.data.map->root);
 }
 
 struct object map_getsetter_get(struct getsetter *gs) {

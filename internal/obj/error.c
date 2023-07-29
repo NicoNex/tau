@@ -1,12 +1,5 @@
-#include <stdlib.h>
-#include <string.h>
 #include "object.h"
-
-void dispose_error_obj(struct object o) {
-	free(o.marked);
-	free(o.data.str->str);
-	free(o.data.str);
-}
+#include "../vm/gc.h"
 
 char *error_str(struct object o) {
 	return strdup(o.data.str->str);
@@ -20,6 +13,5 @@ struct object new_error_obj(char *str, size_t len) {
 	return (struct object) {
 		.data.str = s,
 		.type = obj_error,
-		.marked = MARKPTR(),
 	};
 }

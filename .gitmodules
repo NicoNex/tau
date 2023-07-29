@@ -5,3 +5,4 @@
 [submodule "bdwgc"]
 	path = bdwgc
 	url = https://github.com/ivmai/bdwgc
+	tag = v8.2.4

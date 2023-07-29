@@ -1,11 +1,3 @@
-/*
-Facciamo si che plugin() restituisca un oggetto di tipo obj_handle,
-la chiamata a funzione avviene tramite il `getsetter`, perchè conosce la stringa
-(il nome della funzione C) e può avere delle funzioni custom
-
-L'oggetto restituito (di tipo obj_native) può essere passato alle builtin `int`, `float`, `string` eccetera...
-*/
-
 #include <dlfcn.h>
 #include "object.h"
 

@@ -1,8 +1,9 @@
 DIR := $(shell pwd)
 
-.PHONY: all libffi profile
+.PHONY: all libffi bdwgc debug install profile run
 
-all: libffi
+all: libffi bdwgc
+	cd cmd/tau && go build -o $(DIR)/tau
 
 libffi:
 	cd libffi && \
@@ -10,8 +11,11 @@ libffi:
 	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static && \
 	make install
 
-all:
-	cd cmd/tau && go build -o $(DIR)/tau
+bdwgc:
+	cd bdwgc && \
+	./autogen.sh && \
+	./configure --prefix=$(DIR)/internal/vm/bdwgc --disable-shared --enable-static && \
+	make install
 
 debug: CGO_CFLAGS='-DDEBUG' all
 

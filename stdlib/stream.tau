@@ -1,0 +1,50 @@
+stop = error("stop exec")
+
+NewStream = fn() {
+	stream = new()
+	stream.calls = []
+
+	apply = fn(func) {
+		stream.calls = append(stream.calls, func)
+		stream
+	}
+
+	stream.Map = fn(mapFn) {
+		apply(mapFn)
+	}
+	stream.Filter = fn(filterFn) {
+		apply(fn(item) {
+			if !filterFn(item) {
+				return stop
+			}
+			return item
+		})
+	}
+	stream.ForEach = fn(eachFn) {
+		apply(fn(item) {
+			eachFn(item)
+			return item
+		})
+	}
+
+	stream.Start = fn(items) {
+		list = []
+
+		for i = 0; i < len(items); ++i {
+			item = items[i]
+
+			for j = 0; j < len(stream.calls); ++j {
+				item = stream.calls[j](item)
+				if failed(item) {
+					break
+				}
+			}
+			if !failed(item) {
+				list = append(list, item)
+			}
+		}
+		return list
+	}
+
+	return stream
+}

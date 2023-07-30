@@ -64,7 +64,6 @@ func REPL() error {
 		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)
 		tvm.Run()
 		state = tvm.State()
-		tvm.Free()
 	}
 }
 
@@ -182,7 +181,6 @@ func SimpleREPL() {
 		tvm := vm.NewWithState("<stdin>", c.Bytecode(), state)
 		tvm.Run()
 		state = tvm.State()
-		tvm.Free()
 	}
 }
 

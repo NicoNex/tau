@@ -1,5 +1,15 @@
 DIR := $(shell pwd)
 
+UNAME_S := $(shell uname -s)
+ifeq ($(UNAME_S),Linux)
+    ACLOCAL_PATH := /usr/share/aclocal
+    INSTALL_PATH := /usr/bin
+endif
+ifeq ($(UNAME_S),Darwin)
+    ACLOCAL_PATH := /usr/local/share/aclocal
+    INSTALL_PATH := /usr/local/bin
+endif
+
 .PHONY: all libffi bdwgc debug install profile run
 
 all: libffi bdwgc
@@ -7,7 +17,7 @@ all: libffi bdwgc
 
 libffi:
 	cd libffi && \
-	ACLOCAL_PATH=/usr/share/aclocal autoreconf -i && \
+	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
 	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static && \
 	make install
 
@@ -20,7 +30,7 @@ bdwgc:
 debug: CGO_CFLAGS='-DDEBUG' all
 
 install: all
-	mv tau /usr/bin
+	mv tau $(INSTALL_PATH)
 
 profile:
 	@go build profile.go

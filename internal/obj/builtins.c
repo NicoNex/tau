@@ -424,8 +424,6 @@ BUILTIN(_slice_b) {
 		} else if (start == end) {
 			return new_list_obj(NULL, 0);
 		}
-		// If the parent is a slice, propagate its marked parent flag for the gc,
-		// otherwise use the default marked flag.
 		return new_list_obj(&args[0].data.list->list[start], end-start);
 	}
 
@@ -435,8 +433,6 @@ BUILTIN(_slice_b) {
 		} else if (start == end) {
 			return new_string_obj(strdup(""), 0);
 		}
-		// If the parent is a slice, propagate its marked parent flag for the gc,
-		// otherwise use the default marked flag.
 		return new_string_obj(&args[0].data.str->str[start], end-start);
 	}
 	// case obj_bytes:

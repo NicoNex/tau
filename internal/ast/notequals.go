@@ -42,7 +42,7 @@ func (n NotEquals) Eval() (obj.Object, error) {
 
 	switch {
 	case obj.AssertTypes(right, obj.BoolType, obj.NullType) || obj.AssertTypes(right, obj.BoolType, obj.NullType):
-		return obj.ParseBool(left.Int() != right.Int()), nil
+		return obj.ParseBool(left.Type() != right.Type() || left.Int() != right.Int()), nil
 
 	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
 		return obj.ParseBool(left.String() != right.String()), nil

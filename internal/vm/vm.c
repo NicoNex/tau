@@ -457,27 +457,22 @@ static inline void vm_exec_eq(struct vm * restrict vm) {
 	struct object *right = unwrap(&vm_stack_pop(vm));
 	struct object *left = unwrap(&vm_stack_peek(vm));
 
-	if (M_ASSERT2(left, right, obj_boolean, obj_null)) {
-		left->data.i = left->type == right->type && left->data.i == right->data.i;
-		left->type = obj_boolean;
-	} else if (M_ASSERT(left, right, obj_integer)) {
-		left->data.i = left->data.i == right->data.i;
-		left->type = obj_boolean;
-	} else if (M_ASSERT2(left, right, obj_integer, obj_float)) {
-		double l = to_double(left);
-		double r = to_double(right);
-		left->data.i = l == r;
-		left->type = obj_boolean;
-	} else if (M_ASSERT(left, right, obj_string)) {
+	if (M_ASSERT(left, right, obj_string)) {
 		char *l = left->data.str->str;
 		char *r = right->data.str->str;
+		if (l == r) {
+			*left = true_obj;
+			return;
+		}
 		size_t lenl = left->data.str->len;
 		size_t lenr = right->data.str->len;
-		struct object res = (lenl == lenr) ? parse_bool(strcmp(l, r) == 0) : false_obj;
-		vm_stack_pop_ignore(vm);
-		vm_stack_push(vm, res);
+		*left = (lenl == lenr) ? parse_bool(strcmp(l, r) == 0) : false_obj;
+	} else if (M_ASSERT2(left, right, obj_integer, obj_float)) {
+		*left = parse_bool(to_double(left) == to_double(right));
+	} else if (left->type == right->type) {
+		*left = parse_bool(memcmp(&left->data, &right->data, sizeof(union data)) == 0);
 	} else {
-		vm_stack_push(vm, false_obj);
+		*left = false_obj;
 	}
 }
 
@@ -485,27 +480,22 @@ static inline void vm_exec_not_eq(struct vm * restrict vm) {
 	struct object *right = unwrap(&vm_stack_pop(vm));
 	struct object *left = unwrap(&vm_stack_peek(vm));
 
-	if (M_ASSERT2(left, right, obj_boolean, obj_null)) {
-		left->data.i = left->type != right->type && left->data.i != right->data.i;
-		left->type = obj_boolean;
-	} else if (M_ASSERT(left, right, obj_integer)) {
-		left->data.i = left->data.i != right->data.i;
-		left->type = obj_boolean;
-	} else if (M_ASSERT2(left, right, obj_integer, obj_float)) {
-		double l = to_double(left);
-		double r = to_double(right);
-		left->data.i = l != r;
-		left->type = obj_boolean;
-	} else if (M_ASSERT(left, right, obj_string)) {
+	if (M_ASSERT(left, right, obj_string)) {
 		char *l = left->data.str->str;
 		char *r = right->data.str->str;
+		if (l == r) {
+			*left = false_obj;
+			return;
+		}
 		size_t lenl = left->data.str->len;
 		size_t lenr = right->data.str->len;
-		struct object res = (lenl == lenr) ? parse_bool(strcmp(l, r) != 0) : false_obj;
-		vm_stack_pop_ignore(vm);
-		vm_stack_push(vm, res);
+		*left = (lenl == lenr) ? parse_bool(strcmp(l, r) != 0) : true_obj;
+	} else if (M_ASSERT2(left, right, obj_integer, obj_float)) {
+		*left = parse_bool(to_double(left) != to_double(right));
+	} else if (left->type == right->type) {
+		*left = parse_bool(memcmp(&left->data, &right->data, sizeof(union data)) != 0);
 	} else {
-		vm_stack_push(vm, false_obj);
+		*left = true_obj;
 	}
 }
 

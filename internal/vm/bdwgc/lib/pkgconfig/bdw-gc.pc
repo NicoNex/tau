@@ -1,0 +1,10 @@
+prefix=/home/speedking/Documenti/tau/internal/vm/bdwgc
+exec_prefix=${prefix}
+libdir=${exec_prefix}/lib
+includedir=${prefix}/include
+
+Name: Boehm-Demers-Weiser Conservative Garbage Collector
+Description: A garbage collector for C and C++
+Version: 8.3.0
+Libs: -L${libdir}  -lgc -lpthread -ldl
+Cflags: -I${includedir}

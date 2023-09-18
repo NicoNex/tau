@@ -3,13 +3,8 @@
 #include "object.h"
 
 char *integer_str(struct object o) {
-	char *str = calloc(30, sizeof(char));
-
-#ifdef __unix__
-	sprintf(str, "%ld", o.data.i);
-#else
+	char *str = calloc(64, sizeof(char));
 	sprintf(str, "%lld", o.data.i);
-#endif
 
 	return str;
 }

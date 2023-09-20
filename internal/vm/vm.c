@@ -1,8 +1,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
-#include <threads.h>
 #include <setjmp.h>
+#include <threads.h>
 
 #include "vm.h"
 #include "opcode.h"

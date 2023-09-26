@@ -30,7 +30,7 @@ char *otype_str(enum obj_type t) {
 char *object_str(struct object o) {
 	switch (o.type) {
 	case obj_null:
-		return "null";
+		return strdup("null");
 	case obj_boolean:
 		return boolean_str(o);
 	case obj_integer:
@@ -38,7 +38,7 @@ char *object_str(struct object o) {
 	case obj_float:
 		return float_str(o);
 	case obj_builtin:
-		return "<builtin function>";
+		return strdup("<builtin function>");
 	case obj_string:
 		return string_str(o);
 	case obj_error:
@@ -54,15 +54,15 @@ char *object_str(struct object o) {
 	case obj_object:
 		return object_obj_str(o);
 	case obj_pipe:
-		return "<pipe>";
+		return strdup("<pipe>");
 	case obj_bytes:
-		return "<unimplemented bytes>";
+		return strdup("<unimplemented bytes>");
 	case obj_getsetter:
 		return getsetter_str(o);
 	case obj_native:
-		return "<native>";
+		return strdup("<native>");
 	default:
-		return "<unimplemented>";
+		return strdup("<unimplemented>");
 	}
 }
 

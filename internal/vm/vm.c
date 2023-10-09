@@ -62,12 +62,27 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
 	vm->frames[0] = new_frame(cl, 0);
 
+	GC_add_roots(&(vm->stack), &(vm->stack) + STACK_SIZE);
+	GC_add_roots(&(vm->state.consts), &(vm->state.consts) + vm->state.nconsts);
+	GC_add_roots(&(vm->state.globals), &(vm->state.globals) + GLOBAL_SIZE);
+	GC_add_roots(&(vm->frames), &(vm->frames) + MAX_FRAMES);
+
 	return vm;
 }
 
 struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state) {
-	struct vm *vm = new_vm(file, bc);
+	struct vm *vm = calloc(1, sizeof(struct vm));
+	vm->file = strdup(file);
 	vm->state = state;
+
+	struct object fn = new_function_obj(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
+	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
+	vm->frames[0] = new_frame(cl, 0);
+
+	GC_add_roots(&(vm->stack), &(vm->stack) + STACK_SIZE);
+	GC_add_roots(&(vm->state.consts), &(vm->state.consts) + vm->state.nconsts);
+	GC_add_roots(&(vm->state.globals), &(vm->state.globals) + GLOBAL_SIZE);
+	GC_add_roots(&(vm->frames), &(vm->frames) + MAX_FRAMES);
 
 	return vm;
 }

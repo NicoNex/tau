@@ -60,3 +60,32 @@ struct object list_getsetter_set(struct getsetter *gs, struct object val) {
 	list[idx] = val;
 	return val;
 }
+
+inline struct list new_list(size_t cap) {
+	return (struct list) {
+		.list = malloc(sizeof(struct object) * cap),
+		.cap = cap,
+		.len = 0
+	};
+}
+
+inline void list_insert(struct list *l, struct object o, size_t idx) {
+	if (idx >= l->cap) {
+		if (l->cap == 0) l->cap = 1;
+		while (l->cap <= idx) l->cap *= 2;
+		l->list = realloc(l->list, sizeof(struct object) * l->cap);
+	}
+	l->list[idx] = o;
+	l->len++;
+}
+
+inline struct list list_copy(struct list l) {
+	struct list ret = {
+		.list = malloc(sizeof(struct object) * l.cap),
+		.cap = l.cap,
+		.len = l.len
+	};
+	memcpy(ret.list, l.list, l.cap);
+
+	return ret;
+}

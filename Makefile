@@ -10,9 +10,13 @@ ifeq ($(UNAME_S),Darwin)
     INSTALL_PATH := /usr/local/bin
 endif
 
-.PHONY: all libffi bdwgc debug install profile run
+.PHONY: all libffi bdwgc debug install profile run deps tau
 
-all: libffi bdwgc
+deps: libffi bdwgc
+
+all: deps tau
+
+tau:
 	cd cmd/tau && go build -o $(DIR)/tau
 
 libffi:

@@ -48,7 +48,7 @@ struct state new_state() {
 	return (struct state) {
 		.consts = calloc(0, sizeof(struct object)),
 		.nconsts = 0,
-		.globals = {null_obj}
+		.globals = new_list(1024)
 	};
 }
 
@@ -56,7 +56,9 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 	struct vm *vm = calloc(1, sizeof(struct vm));
 	vm->file = strdup(file);
 	vm->state.consts = bc.consts;
+	vm->state.nconsts = bc.nconsts;
 	vm->state.ndefs = bc.ndefs;
+	vm->state.globals = new_list(1024);
 
 	struct object fn = new_function_obj(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
 	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
@@ -64,7 +66,6 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 
 	GC_add_roots(&(vm->stack), &(vm->stack) + STACK_SIZE);
 	GC_add_roots(&(vm->state.consts), &(vm->state.consts) + vm->state.nconsts);
-	GC_add_roots(&(vm->state.globals), &(vm->state.globals) + GLOBAL_SIZE);
 	GC_add_roots(&(vm->frames), &(vm->frames) + MAX_FRAMES);
 
 	return vm;
@@ -81,7 +82,6 @@ struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state)
 
 	GC_add_roots(&(vm->stack), &(vm->stack) + STACK_SIZE);
 	GC_add_roots(&(vm->state.consts), &(vm->state.consts) + vm->state.nconsts);
-	GC_add_roots(&(vm->state.globals), &(vm->state.globals) + GLOBAL_SIZE);
 	GC_add_roots(&(vm->frames), &(vm->frames) + MAX_FRAMES);
 
 	return vm;
@@ -720,8 +720,6 @@ static int call_builtin_and_cleanup(void *data) {
 	struct builtin_call_data *d = data;
 	d->fn(d->args, d->numargs);
 	fflush(stdout);
-	// free(d->args);
-	// free(d);
 	return 0;
 }
 
@@ -735,18 +733,9 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 		tvm->file = strdup(vm->file);
 		tvm->state.consts = vm->state.consts;
 		tvm->state.nconsts = vm->state.nconsts;
+		tvm->state.globals = list_copy(vm->state.globals);
 		tvm->sp = vm->sp;
-
-		#pragma omp parallel default(none) shared(vm, tvm)
-		#pragma omp single
-		{
-			#pragma omp task
-			memcpy(tvm->stack, vm->stack, STACK_SIZE * sizeof(struct object));
-
-			#pragma omp task
-			memcpy(tvm->state.globals, vm->state.globals, GLOBAL_SIZE * sizeof(struct object));
-		}
-		#pragma omp taskwait
+		memcpy(tvm->stack, vm->stack, STACK_SIZE * sizeof(struct object));
 
 		vm_call_closure(tvm, o, num_args);
 		if (thrd_create(&thread, run_and_cleanup, tvm) != thrd_success) {
@@ -1051,14 +1040,14 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_GET_GLOBAL: {
 		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
-		vm_stack_push(vm, vm->state.globals[global_idx]);
+		vm_stack_push(vm, vm->state.globals.list[global_idx]);
 		DISPATCH();
 	}
 
 	TARGET_SET_GLOBAL: {
 		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
-		vm->state.globals[global_idx] = unwraps(vm_stack_peek(vm));
+		list_insert(&vm->state.globals, unwraps(vm_stack_peek(vm)), global_idx);
 		DISPATCH();
 	}
 

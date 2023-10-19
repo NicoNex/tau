@@ -6,7 +6,6 @@
 #include "../compiler/bytecode.h"
 
 #define STACK_SIZE  2048
-#define GLOBAL_SIZE 65536
 #define MAX_FRAMES  1024
 #define HEAP_SIZE   1024
 
@@ -18,8 +17,8 @@ struct frame {
 };
 
 struct state {
+	struct list globals;
 	struct object *consts;
-	struct object globals[GLOBAL_SIZE];
 	uint32_t nconsts;
 	uint32_t ndefs;
 };

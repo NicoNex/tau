@@ -6,6 +6,10 @@ package vm
 // #include <stdio.h>
 // #include "vm.h"
 // #include "../obj/object.h"
+//
+// static inline struct object list_get(struct list l, size_t idx) {
+// 	return l.list[idx];
+// }
 import "C"
 import (
 	"fmt"
@@ -110,7 +114,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	mod := C.new_object()
 	for name, sym := range c.Store {
 		if sym.Scope == compiler.GlobalScope {
-			o := vm.state.globals[sym.Index]
+			o := C.list_get(vm.state.globals, C.size_t(sym.Index))
 
 			if isExported(name) {
 				if o._type == C.obj_object {

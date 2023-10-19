@@ -161,6 +161,9 @@ char *error_str(struct object o);
 void dispose_error_obj(struct object o);
 
 // List object.
+struct list new_list(size_t cap);
+void list_insert(struct list *l, struct object o, size_t idx);
+struct list list_copy(struct list l);
 struct object new_list_obj(struct object *list, size_t len);
 struct object list_getsetter_get(struct getsetter *gs);
 struct object list_getsetter_set(struct getsetter *gs, struct object val);

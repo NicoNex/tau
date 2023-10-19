@@ -3,7 +3,6 @@
 package main
 
 import (
-	"flag"
 	"os"
 	"runtime/pprof"
 
@@ -33,13 +32,12 @@ func check(err error) {
 func code(path string) string {
 	b, err := os.ReadFile(path)
 	check(err)
-
 	return string(b)
 }
 
 func fileOrDefault() string {
-	if flag.NArg() > 0 {
-		return code(flag.Arg(0))
+	if len(os.Args) > 1 {
+		return code(os.Args[1])
 	}
 	return fib
 }
@@ -47,18 +45,26 @@ func fileOrDefault() string {
 func main() {
 	cpuf, err := os.Create("cpu.prof")
 	check(err)
+	defer cpuf.Close()
 
-	tree, errs := parser.Parse("<profiler>", fileOrDefault())
+	memf, err := os.Create("mem.prof")
+	check(err)
+	defer memf.Close()
+
+	code := fileOrDefault()
+	tree, errs := parser.Parse("<profiler>", code)
 	if len(errs) > 0 {
 		panic("parser errors")
 	}
 
 	c := compiler.New()
-	c.SetFileInfo("<profiler>", fib)
+	c.SetFileInfo("<profiler>", code)
 	check(c.Compile(tree))
 
 	check(pprof.StartCPUProfile(cpuf))
 	defer pprof.StopCPUProfile()
-	tvm := vm.New("<profiler>", c.Bytecode())
-	tvm.Run()
+
+	vm.New("<profiler>", c.Bytecode()).Run()
+
+	pprof.WriteHeapProfile(memf)
 }

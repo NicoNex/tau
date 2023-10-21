@@ -6,6 +6,14 @@ package vm
 // #include <stdio.h>
 // #include "vm.h"
 // #include "../obj/object.h"
+//
+// static inline struct object get_global(struct pool *globals, size_t idx) {
+// 	return globals->list[idx];
+// }
+//
+// static inline void set_const(struct object *list, size_t idx, struct object o) {
+// 	list[idx] = o;
+// }
 import "C"
 import (
 	"fmt"
@@ -34,13 +42,33 @@ func NewState() State {
 	return C.new_state()
 }
 
+func (s State) Free() {
+	C.state_dispose(s)
+}
+
+func (s *State) SetConsts(consts []obj.Object) {
+	s.consts.list = (*C.struct_object)(C.malloc(C.size_t(unsafe.Sizeof(consts[0])) * C.size_t(len(consts))))
+	s.consts.len = C.size_t(len(consts))
+	s.consts.cap = C.size_t(len(consts))
+
+	for i, c := range consts {
+		C.set_const(
+			s.consts.list,
+			C.size_t(i),
+			*(*C.struct_object)(unsafe.Pointer(&c)),
+		)
+	}
+}
+
 func New(file string, bc compiler.Bytecode) VM {
 	return C.new_vm(C.CString(file), cbytecode(bc))
 }
 
+func setConsts(state State)
+
 func NewWithState(file string, bc compiler.Bytecode, state State) VM {
 	if len(Consts) > 0 {
-		state.consts = (*C.struct_object)(unsafe.Pointer(&Consts[0]))
+		state.SetConsts(Consts)
 	}
 	return C.new_vm_with_state(C.CString(file), cbytecode(bc), state)
 }
@@ -102,8 +130,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	}
 
 	bc := c.Bytecode()
-	vm.state.consts = (*C.struct_object)(unsafe.Pointer(bc.Consts()))
-	vm.state.nconsts = C.uint32_t(bc.NConsts())
+	(&vm.state).SetConsts(Consts)
 	vm.state.ndefs = C.uint32_t(bc.NDefs())
 	tvm := C.new_vm_with_state(C.CString(path), cbytecode(bc), vm.state)
 	defer C.vm_dispose(tvm)
@@ -115,7 +142,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	mod := C.new_object()
 	for name, sym := range c.Store {
 		if sym.Scope == compiler.GlobalScope {
-			o := vm.state.globals[sym.Index]
+			o := C.get_global(vm.state.globals, C.size_t(sym.Index))
 
 			if isExported(name) {
 				if o._type == C.obj_object {

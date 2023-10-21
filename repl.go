@@ -22,6 +22,7 @@ func REPL() error {
 		symbols = loadBuiltins(compiler.NewSymbolTable())
 	)
 
+	defer state.Free()
 	initState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		fmt.Println(err)
@@ -152,6 +153,7 @@ func SimpleREPL() {
 		reader  = bufio.NewReader(os.Stdin)
 	)
 
+	defer state.Free()
 	PrintVersionInfo(os.Stdout)
 	for {
 		fmt.Print(">>> ")

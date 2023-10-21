@@ -23,7 +23,7 @@
 #define vm_stack_pop_ignore(vm) vm->sp--
 #define vm_stack_peek(vm) (vm->stack[vm->sp-1])
 
-#define vm_heap_add(vm, o) vm->heap.values[vm->heap.size++] = o
+#define vm_heap_add(vm, o) pool_append(vm->state.heap, o)
 
 #ifndef DEBUG
 	#define DISPATCH() goto *jump_table[*frame->ip++]
@@ -48,20 +48,29 @@ static inline struct frame new_frame(struct object cl, uint32_t base_ptr) {
 	};
 }
 
-struct state new_state() {
+inline struct state new_state() {
 	return (struct state) {
-		.consts = calloc(0, sizeof(struct object)),
-		.nconsts = 0,
-		.globals = {null_obj}
+		.heap = new_pool(1000),
+		.globals = new_pool(1000),
+		.consts.list = NULL,
+		.ndefs = 0
 	};
+}
+
+inline void state_dispose(struct state s) {
+	pool_dispose(s.heap);
+	pool_dispose(s.globals);
 }
 
 struct vm *new_vm(char *file, struct bytecode bc) {
 	struct vm *vm = calloc(1, sizeof(struct vm));
 	vm->file = file;
-	vm->state.consts = bc.consts;
-	vm->state.ndefs = bc.ndefs;
-	vm->heap = (struct heap) {0};
+	vm->state = new_state();
+	vm->state.consts = (struct pool) {
+		.list = bc.consts,
+		.len = bc.nconsts,
+		.cap = bc.nconsts
+	};
 
 	struct object fn = new_function_obj(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
 	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
@@ -71,8 +80,19 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 }
 
 struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state) {
-	struct vm *vm = new_vm(file, bc);
+	struct vm *vm = calloc(1, sizeof(struct vm));
+	vm->file = file;
 	vm->state = state;
+	vm->state.ndefs = bc.ndefs;
+	vm->state.consts = (struct pool) {
+		.list = bc.consts,
+		.len = bc.nconsts,
+		.cap = bc.nconsts
+	};
+
+	struct object fn = new_function_obj(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
+	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
+	vm->frames[0] = new_frame(cl, 0);
 
 	return vm;
 }
@@ -192,7 +212,7 @@ static inline void vm_exec_define(struct vm * restrict vm) {
 }
 
 static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, uint32_t num_free) {
-	struct object fn = vm->state.consts[const_idx];
+	struct object fn = vm->state.consts.list[const_idx];
 
 	if (fn.type != obj_function) {
 		vm_errorf(vm, "not a function %s", object_str(fn));
@@ -252,7 +272,7 @@ static inline void vm_push_map(struct vm * restrict vm, uint32_t start, uint32_t
 }
 
 static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_idx, uint32_t num_args) {
-	struct object o = vm->state.consts[str_idx];
+	struct object o = vm->state.consts.list[str_idx];
 	char *str = o.data.str->str;
 	size_t fmt_len = o.data.str->len;
 	char *subs[num_args];
@@ -749,19 +769,10 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 		struct vm *tvm = calloc(1, sizeof(struct vm));
 		tvm->file = strdup(vm->file);
 		tvm->state.consts = vm->state.consts;
-		tvm->state.nconsts = vm->state.nconsts;
+		tvm->state.globals = vm->state.globals;
+		tvm->state.heap = new_pool(1000);
 		tvm->sp = vm->sp;
-
-		#pragma omp parallel default(none) shared(vm, tvm)
-		#pragma omp single
-		{
-			#pragma omp task
-			memcpy(tvm->stack, vm->stack, STACK_SIZE * sizeof(struct object));
-
-			#pragma omp task
-			memcpy(tvm->state.globals, vm->state.globals, GLOBAL_SIZE * sizeof(struct object));
-		}
-		#pragma omp taskwait
+		memcpy(tvm->stack, vm->stack, STACK_SIZE * sizeof(struct object));
 
 		vm_call_closure(tvm, o, num_args);
 		if (thrd_create(&thread, run_and_cleanup, tvm) != thrd_success) {
@@ -815,27 +826,39 @@ static void vm_mark_stack(struct vm * restrict vm) {
 }
 
 static void vm_mark_consts(struct vm * restrict vm) {
-	for (uint32_t i = 0; i < vm->state.nconsts; i++) {
-		if (vm->state.consts[i].type < obj_string) {
+	struct object *consts = vm->state.consts.list;
+	size_t len = vm->state.consts.len;
+
+	for (size_t i = 0; i < len; i++) {
+		if (consts[i].type < obj_string) {
 			continue;
 		}
-		mark_obj(vm->state.consts[i]);
+		mark_obj(consts[i]);
 	}
 }
 
 static void vm_mark_globals(struct vm * restrict vm) {
-	for (uint32_t i = 0; i < GLOBAL_SIZE; i++) {
-		if (vm->state.globals[i].type < obj_string) {
+	struct object *globals = vm->state.globals->list;
+	size_t len = vm->state.globals->len;
+
+	for (uint32_t i = 0; i < len; i++) {
+		if (globals[i].type < obj_string) {
 			continue;
 		}
-		mark_obj(vm->state.globals[i]);
+		mark_obj(globals[i]);
 	}
 }
 
 static inline void gc(struct vm * restrict vm) {
-	if (vm->heap.size < (HEAP_SIZE / 100) * 90) {
+	struct pool *heap = vm->state.heap;
+
+#ifndef GC_DEBUG
+	if (heap->len < (heap->cap / 100) * 90) {
 		return;
 	}
+#else
+	printf("heap size before: %lu\n", heap->len);
+#endif
 
 	// Concurrently traverse the stack, constants and globals and mark all reachable objects.
 	#pragma omp parallel default(none) shared(vm)
@@ -854,8 +877,8 @@ static inline void gc(struct vm * restrict vm) {
 	}
 
 	// Traverse all heap objects and free the unmarked ones.
-	for (int32_t i = vm->heap.size - 1; i >= 0; i--) {
-		struct object o = vm->heap.values[i];
+	for (int32_t i = heap->len - 1; i >= 0; i--) {
+		struct object o = heap->list[i];
 
 		if (*o.marked) {
 			*o.marked = 0;
@@ -865,8 +888,12 @@ static inline void gc(struct vm * restrict vm) {
 		#pragma omp task shared(o)
 		free_obj(o);
 		// Remove it from heap by swapping it with the last marked object.
-		vm->heap.values[i] = vm->heap.values[--vm->heap.size];
+		heap->list[i] = heap->list[--heap->len];
 	}
+
+#ifdef GC_DEBUG
+	printf("heap size after: %lu\n", heap->len);
+#endif
 }
 
 /*
@@ -927,7 +954,7 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_CONST: {
 		uint16_t idx = read_uint16(frame->ip);
 		frame->ip += 2;
-		vm_stack_push(vm, vm->state.consts[idx]);
+		vm_stack_push(vm, vm->state.consts.list[idx]);
 		DISPATCH();
 	}
 
@@ -1130,14 +1157,15 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_GET_GLOBAL: {
 		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
-		vm_stack_push(vm, vm->state.globals[global_idx]);
+		vm_stack_push(vm, vm->state.globals->list[global_idx]);
 		DISPATCH();
 	}
 
 	TARGET_SET_GLOBAL: {
 		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
-		vm->state.globals[global_idx] = unwraps(vm_stack_peek(vm));
+		pool_insert(vm->state.globals, global_idx, unwraps(vm_stack_peek(vm)));
+		// vm->state.globals->list[global_idx] = unwraps(vm_stack_peek(vm));
 		DISPATCH();
 	}
 

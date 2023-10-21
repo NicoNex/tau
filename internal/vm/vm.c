@@ -817,10 +817,11 @@ struct object vm_last_popped_stack_elem(struct vm * restrict vm) {
 }
 
 static void vm_mark_stack(struct vm * restrict vm) {
-	for (uint32_t i = 0; i < vm->sp; i++) {
+	for (size_t i = vm->sp - 1; i >= 0; i--) {
 		if (vm->stack[i].type < obj_string) {
 			continue;
 		}
+		puts(otype_str(vm->stack[i].type));
 		mark_obj(vm->stack[i]);
 	}
 }

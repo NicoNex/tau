@@ -17,13 +17,6 @@ struct frame {
 	uint32_t base_ptr;
 };
 
-// struct state {
-// 	struct object *consts;
-// 	struct object globals[GLOBAL_SIZE];
-// 	uint32_t nconsts;
-// 	uint32_t ndefs;
-// };
-
 struct pool {
 	struct object *list;
 	size_t cap;

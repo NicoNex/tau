@@ -47,16 +47,15 @@ func (s State) Free() {
 }
 
 func (s *State) SetConsts(consts []obj.Object) {
-	s.consts.list = (*C.struct_object)(C.malloc(C.size_t(unsafe.Sizeof(consts[0])) * C.size_t(len(consts))))
+	s.consts.list = (*C.struct_object)(C.realloc(
+		unsafe.Pointer(s.consts.list),
+		C.size_t(unsafe.Sizeof(consts[0])) * C.size_t(len(consts)),
+	))
 	s.consts.len = C.size_t(len(consts))
 	s.consts.cap = C.size_t(len(consts))
 
 	for i, c := range consts {
-		C.set_const(
-			s.consts.list,
-			C.size_t(i),
-			*(*C.struct_object)(unsafe.Pointer(&c)),
-		)
+		C.set_const(s.consts.list, C.size_t(i), cobj(c))
 	}
 }
 
@@ -84,6 +83,10 @@ func (vm VM) State() State {
 
 func (vm VM) Free() {
 	C.vm_dispose(vm)
+}
+
+func cobj(o obj.Object) C.struct_object {
+	return *(*C.struct_object)(unsafe.Pointer(&o))
 }
 
 func cbytecode(bc compiler.Bytecode) C.struct_bytecode {

@@ -58,6 +58,7 @@ inline struct state new_state() {
 }
 
 inline void state_dispose(struct state s) {
+	free(s.consts.list);
 	pool_dispose(s.heap);
 	pool_dispose(s.globals);
 }
@@ -84,11 +85,6 @@ struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state)
 	vm->file = file;
 	vm->state = state;
 	vm->state.ndefs = bc.ndefs;
-	vm->state.consts = (struct pool) {
-		.list = bc.consts,
-		.len = bc.nconsts,
-		.cap = bc.nconsts
-	};
 
 	struct object fn = new_function_obj(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
 	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
@@ -817,11 +813,10 @@ struct object vm_last_popped_stack_elem(struct vm * restrict vm) {
 }
 
 static void vm_mark_stack(struct vm * restrict vm) {
-	for (size_t i = vm->sp - 1; i >= 0; i--) {
+	for (int32_t i = vm->sp - 1; i >= 0; i--) {
 		if (vm->stack[i].type < obj_string) {
 			continue;
 		}
-		puts(otype_str(vm->stack[i].type));
 		mark_obj(vm->stack[i]);
 	}
 }

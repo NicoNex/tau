@@ -350,8 +350,8 @@ static inline void vm_exec_add(struct vm * restrict vm) {
 	} else if (M_ASSERT(left, right, obj_string)) {
 		size_t slen = left->data.str->len + right->data.str->len;
 		char *str = malloc(sizeof(char) * (slen + 1));
-		char *start = strcpy(str, left->data.str->str);
-		strcpy(start, right->data.str->str);
+		char *p = stpcpy(stpcpy(str, left->data.str->str), right->data.str->str);
+		*p = '\0';
 		vm_stack_pop_ignore(vm);
 		struct object res = new_string_obj(str, slen);
 		vm_stack_push(vm, res);

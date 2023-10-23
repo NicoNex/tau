@@ -4,6 +4,7 @@
 #include <string.h>
 #include <errno.h>
 #include <dlfcn.h>
+#include <math.h>
 #include "object.h"
 
 #define BUILTIN(name) static struct object name(struct object *_args, size_t len)
@@ -231,19 +232,37 @@ BUILTIN(_append_b) {
 		return errorf("append: first argument must be a list");
 	}
 
-	struct list *l = args[0].data.list;
-	if (l->cap == 0) {
-		l->list = realloc(l->list, ++l->cap * sizeof(struct object));
-	}
-	for (uint32_t i = 1; i < len; i++) {
-		if (l->len == l->cap) {
-			l->cap *= 2;
-			l->list = realloc(l->list, l->cap * sizeof(struct object));
+	struct list *old = args[0].data.list;
+
+	// If there's enough space in the old list set it as slice and return a new
+	// list poiting to the old one.
+	if ((old->cap - old->len) > (len - 1)) {
+		struct object ret = new_list_obj_data(old->list, old->len + (len-1), old->cap);
+		struct list *new = ret.data.list;
+		old->m_parent = ret.marked;
+
+		for (size_t i = 1; i < len; i++) {
+			new->list[new->len++] = args[i];
 		}
-		l->list[l->len++] = args[i];
+		return ret;
 	}
 
-	return args[0];
+	// If there's not enough space in the old list we create a new bigger list
+	// and we copy all the old objects to the new list.
+	size_t llen = 0;
+	size_t cap = pow(2, ceil(log2(old->cap + (len - 1))));
+	struct object *l = malloc(sizeof(struct object) * cap);
+
+	// Copy the objects in the old list to the new one.
+	for (size_t i = 0; i < old->len; i++) {
+		l[llen++] = old->list[i];
+	}
+	// Append the new objects to the new list.
+	for (size_t i = 1; i < len; i++) {
+		l[llen++] = args[i];
+	}
+
+	return new_list_obj_data(l, llen, cap);
 }
 
 BUILTIN(_new_b) {

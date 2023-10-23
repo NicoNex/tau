@@ -61,6 +61,20 @@ struct object new_list_obj(struct object *list, size_t len) {
 	};
 }
 
+struct object new_list_obj_data(struct object *list, size_t len, size_t cap) {
+	struct list *l = malloc(sizeof(struct list));
+	l->list = list;
+	l->len = len;
+	l->cap = cap;
+	l->m_parent = NULL;
+
+	return (struct object) {
+		.data.list = l,
+		.type = obj_list,
+		.marked = MARKPTR()
+	};
+}
+
 struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent) {
 	struct list *l = malloc(sizeof(struct list));
 	l->list = list;

@@ -164,7 +164,9 @@ void dispose_error_obj(struct object o);
 struct list new_list(size_t cap);
 void list_insert(struct list *l, struct object o, size_t idx);
 struct list list_copy(struct list l);
+
 struct object new_list_obj(struct object *list, size_t len);
+struct object new_list_obj_data(struct object *list, size_t len, size_t cap);
 struct object list_getsetter_get(struct getsetter *gs);
 struct object list_getsetter_set(struct getsetter *gs, struct object val);
 struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent);

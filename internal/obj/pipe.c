@@ -1,6 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "../vm/threads.h"
+#include "../vm/thrd.h"
 #include "object.h"
 
 int pipe_close(struct object pipe) {

@@ -86,9 +86,10 @@ BUILTIN(_string_b) {
 	UNWRAP_ARGS();
 
 	switch (args[0].type) {
-	case obj_native:
+	case obj_native: {
 		char *s = (char *) args[0].data.handle;
 		return new_string_obj(s, strlen(s));
+	}
 
 	default: {
 		char *s = object_str(args[0]);

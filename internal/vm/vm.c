@@ -2,11 +2,11 @@
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <threads.h>
 #include <setjmp.h>
 
 #include "vm.h"
 #include "opcode.h"
+#include "threads.h"
 #include "_cgo_export.h"
 #include "../obj/libffi/include/ffi.h"
 

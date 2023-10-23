@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <stddef.h>
-#include <threads.h>
+#include "../vm/threads.h"
 #include "../tauerr/bookmark.h"
 
 #define NUM_BUILTINS 26

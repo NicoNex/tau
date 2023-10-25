@@ -235,10 +235,10 @@ BUILTIN(_append_b) {
 
 	struct list *old = args[0].data.list;
 
-	// If there's enough space in the old list set it as slice and return a new
-	// list poiting to the old one.
-	if ((old->cap - old->len) > (len - 1)) {
-		struct object ret = new_list_obj_data(old->list, old->len + (len-1), old->cap);
+	// If there's enough space in the old list set the old one as slice and
+	// return a new list poiting to the old one.
+	if (old->cap - old->len >= len - 1) {
+		struct object ret = new_list_obj_data(old->list, old->len, old->cap);
 		struct list *new = ret.data.list;
 		old->m_parent = ret.marked;
 

@@ -133,6 +133,7 @@ struct object new_map() {
 	return (struct object) {
 		.data.map = calloc(1, sizeof(struct map_node)),
 		.type = obj_map,
+		.marked = MARKPTR()
 	};
 }
 

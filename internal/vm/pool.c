@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
+#include <math.h>
 #include "vm.h"
 
 inline struct pool *new_pool(size_t cap) {
@@ -31,7 +32,7 @@ inline void pool_append(struct pool *p, struct object o) {
 
 inline void pool_insert(struct pool *p, size_t idx, struct object o) {
 	if (idx >= p->cap) {
-		p->cap = idx * 2;
+		p->cap = p->cap > 0 ? pow(2, ceil(log2(idx + 1))) : 1;
 		p->list = realloc(p->list, p->cap * sizeof(struct object));
 	}
 	p->list[idx] = o;

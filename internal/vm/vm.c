@@ -23,7 +23,11 @@
 #define vm_stack_pop_ignore(vm) vm->sp--
 #define vm_stack_peek(vm) (vm->stack[vm->sp-1])
 
-#define vm_heap_add(vm, o) pool_append(vm->state.heap, o)
+#ifndef GC_DEBUG
+	#define vm_heap_add(vm, o) pool_append(vm->state.heap, o)
+#else
+	#define vm_heap_add(vm, o) printf("adding type %s to heap\n", otype_str(o.type)); pool_append(vm->state.heap, o)
+#endif
 
 #ifndef DEBUG
 	#define DISPATCH() goto *jump_table[*frame->ip++]
@@ -73,8 +77,8 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 		.cap = bc.nconsts
 	};
 
-	struct object fn = new_function_obj(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
-	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
+	struct function *fn = new_function(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
+	struct object cl = new_closure_obj(fn, NULL, 0);
 	vm->frames[0] = new_frame(cl, 0);
 
 	return vm;
@@ -86,8 +90,8 @@ struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state)
 	vm->state = state;
 	vm->state.ndefs = bc.ndefs;
 
-	struct object fn = new_function_obj(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
-	struct object cl = new_closure_obj(fn.data.fn, NULL, 0);
+	struct function *fn = new_function(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
+	struct object cl = new_closure_obj(fn, NULL, 0);
 	vm->frames[0] = new_frame(cl, 0);
 
 	return vm;
@@ -1161,7 +1165,6 @@ int vm_run(struct vm * restrict vm) {
 		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
 		pool_insert(vm->state.globals, global_idx, unwraps(vm_stack_peek(vm)));
-		// vm->state.globals->list[global_idx] = unwraps(vm_stack_peek(vm));
 		DISPATCH();
 	}
 

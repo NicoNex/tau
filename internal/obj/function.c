@@ -2,7 +2,7 @@
 #include <stdio.h>
 #include "object.h"
 
-void dispose_function_data(struct function *fn) {
+inline void dispose_function_data(struct function *fn) {
 	for (int i = 0; i < fn->bklen; i++) {
 		free(fn->bookmarks[i].line);
 	}
@@ -23,7 +23,7 @@ char *function_str(struct object o) {
 	return str;
 }
 
-struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t bklen) {
+inline struct function *new_function(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t bklen) {
 	struct function *fn = malloc(sizeof(struct function));
 	fn->instructions = insts;
 	fn->len = len;
@@ -32,8 +32,12 @@ struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, 
 	fn->bookmarks = bmarks;
 	fn->bklen = bklen;
 
+	return fn;
+}
+
+inline struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t bklen) {
 	return (struct object) {
-		.data.fn = fn,
+		.data.fn = new_function(insts, len, num_locals, num_params, bmarks, bklen),
 		.type = obj_function,
 		.marked = MARKPTR(),
 	};

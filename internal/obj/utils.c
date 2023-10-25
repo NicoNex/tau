@@ -23,8 +23,7 @@ char *otype_str(enum obj_type t) {
 		"getsetter",
 		"native"
 	};
-
-	return strings[t];
+	return t <= obj_native ? strings[t] : "corrupted";
 }
 
 char *object_str(struct object o) {

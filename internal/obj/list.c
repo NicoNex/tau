@@ -5,10 +5,10 @@
 void dispose_list_obj(struct object o) {
 	// Free everything if it's not a slice (marked parent bit is set to NULL).
 	if (o.data.list->m_parent == NULL) {
-		free(o.marked);
 		free(o.data.list->list);
 	}
 	free(o.data.list);
+	free(o.marked);
 }
 
 // TODO: optimise this.

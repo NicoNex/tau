@@ -62,3 +62,4 @@ void go_vm_errorf(struct vm * restrict vm, const char *fmt);
 struct object vm_last_popped_stack_elem(struct vm * restrict vm);
 void vm_dispose(struct vm *vm);
 void state_dispose(struct state s);
+void set_exit();

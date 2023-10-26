@@ -1,6 +1,6 @@
 package vm
 
-// #cgo CFLAGS: -Werror -Wall -g -Ofast -mtune=native -fopenmp
+// #cgo CFLAGS: -Wall -g -Ofast -mtune=native -fopenmp
 // #cgo LDFLAGS: -fopenmp
 // #include <stdlib.h>
 // #include <stdio.h>
@@ -25,6 +25,7 @@ import (
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
+	"golang.org/x/term"
 )
 
 type (
@@ -36,6 +37,7 @@ type (
 var (
 	Consts    []obj.Object
 	importTab = make(map[string]C.struct_object)
+	TermState *term.State
 )
 
 func NewState() State {
@@ -160,4 +162,15 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	importTab[p] = mod
 	vm.stack[vm.sp] = mod
 	vm.sp++
+}
+
+//export restore_term
+func restore_term() {
+	if TermState != nil {
+		term.Restore(int(os.Stdin.Fd()), TermState)
+	}
+}
+
+func init() {
+	C.set_exit()
 }

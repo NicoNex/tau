@@ -1210,3 +1210,7 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_HALT:
 		return 0;
 }
+
+void set_exit() {
+	atexit(restore_term);
+}

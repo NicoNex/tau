@@ -54,7 +54,7 @@ static inline struct frame new_frame(struct object cl, uint32_t base_ptr) {
 
 inline struct state new_state() {
 	return (struct state) {
-		.heap = new_pool(1000),
+		.heap = new_pool(65536),
 		.globals = new_pool(1000),
 		.consts.list = NULL,
 		.ndefs = 0

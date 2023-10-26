@@ -42,6 +42,7 @@ void mark_list_obj(struct object l) {
 	if (l.data.list->m_parent != NULL) {
 		*l.data.list->m_parent = 1;
 	}
+	#pragma omp parallel for
 	for (uint32_t i = 0; i < l.data.list->len; i++) {
 		mark_obj(l.data.list->list[i]);
 	}

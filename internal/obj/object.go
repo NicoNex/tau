@@ -1,7 +1,5 @@
 package obj
 
-// #cgo CFLAGS: -Ofast -mtune=native -Ilibffi/include
-// #cgo LDFLAGS: -Llibffi/lib -lffi -lm
 // #include <stdio.h>
 // #include <stdlib.h>
 // #include <stdint.h>

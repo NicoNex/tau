@@ -28,13 +28,33 @@
 #else
 	#include <pthread.h>
 
+	#ifdef __clang__
+		struct warg {
+			int (*fn)(void *);
+			void *arg;
+		};
+
+		static void *wrapper(void *arg) {
+			struct warg *a = arg;
+			a->fn(a->arg);
+			return NULL;
+		}
+	#endif
+
 	// Thread
 	#define thrd_t pthread_t
 	#define thrd_success 0
-	#define thrd_create(thrd, fn, arg) ({ \
-		void *wrapper(void *a) { return (void *)(intptr_t)fn(a); } \
-		pthread_create((thrd), NULL, wrapper, (arg)); \
-	})
+	#ifdef __clang__
+		#define thrd_create(thrd, _fn, _arg) ({ \
+			struct warg a = (struct warg) {.fn = (_fn), .arg = (_arg)}; \
+			pthread_create((thrd), NULL, wrapper, &a); \
+		})
+	#else
+		#define thrd_create(thrd, fn, arg) ({ \
+			void *wrapper(void *a) { return (void *)(intptr_t)fn(a); } \
+			pthread_create((thrd), NULL, wrapper, (arg)); \
+		})
+	#endif
 
 	// Mutex
 	#define mtx_t pthread_mutex_t

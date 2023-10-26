@@ -15,7 +15,6 @@ import (
 	"golang.org/x/term"
 )
 
-// TODO: somehow redirect stdout to the terminal.
 func REPL() error {
 	var (
 		state   = vm.NewState()

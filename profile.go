@@ -3,7 +3,6 @@
 package main
 
 import (
-	"flag"
 	"os"
 	"runtime/pprof"
 
@@ -38,8 +37,8 @@ func code(path string) string {
 }
 
 func fileOrDefault() string {
-	if flag.NArg() > 0 {
-		return code(flag.Arg(0))
+	if len(os.Args) > 1 {
+		return code(os.Args[1])
 	}
 	return fib
 }
@@ -48,13 +47,14 @@ func main() {
 	cpuf, err := os.Create("cpu.prof")
 	check(err)
 
-	tree, errs := parser.Parse("<profiler>", fileOrDefault())
+	tauCode := fileOrDefault()
+	tree, errs := parser.Parse("<profiler>", tauCode)
 	if len(errs) > 0 {
 		panic("parser errors")
 	}
 
 	c := compiler.New()
-	c.SetFileInfo("<profiler>", fib)
+	c.SetFileInfo("<profiler>", tauCode)
 	check(c.Compile(tree))
 
 	check(pprof.StartCPUProfile(cpuf))

@@ -49,7 +49,7 @@ func (s State) Free() {
 func (s *State) SetConsts(consts []obj.Object) {
 	s.consts.list = (*C.struct_object)(C.realloc(
 		unsafe.Pointer(s.consts.list),
-		C.size_t(unsafe.Sizeof(consts[0])) * C.size_t(len(consts)),
+		C.size_t(unsafe.Sizeof(consts[0]))*C.size_t(len(consts)),
 	))
 	s.consts.len = C.size_t(len(consts))
 	s.consts.cap = C.size_t(len(consts))

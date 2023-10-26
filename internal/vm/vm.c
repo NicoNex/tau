@@ -818,10 +818,9 @@ struct object vm_last_popped_stack_elem(struct vm * restrict vm) {
 
 static void vm_mark_stack(struct vm * restrict vm) {
 	for (int32_t i = vm->sp - 1; i >= 0; i--) {
-		if (vm->stack[i].type < obj_string) {
-			continue;
+		if (vm->stack[i].type > obj_getsetter) {
+			mark_obj(vm->stack[i]);
 		}
-		mark_obj(vm->stack[i]);
 	}
 }
 
@@ -830,10 +829,9 @@ static void vm_mark_consts(struct vm * restrict vm) {
 	size_t len = vm->state.consts.len;
 
 	for (size_t i = 0; i < len; i++) {
-		if (consts[i].type < obj_string) {
-			continue;
+		if (consts[i].type > obj_getsetter) {
+			mark_obj(consts[i]);
 		}
-		mark_obj(consts[i]);
 	}
 }
 
@@ -842,10 +840,9 @@ static void vm_mark_globals(struct vm * restrict vm) {
 	size_t len = vm->state.globals->len;
 
 	for (uint32_t i = 0; i < len; i++) {
-		if (globals[i].type < obj_string) {
-			continue;
+		if (globals[i].type > obj_getsetter) {
+			mark_obj(globals[i]);
 		}
-		mark_obj(globals[i]);
 	}
 }
 

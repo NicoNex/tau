@@ -36,7 +36,7 @@ inline void pool_insert(struct pool *p, size_t idx, struct object o) {
 		p->list = realloc(p->list, p->cap * sizeof(struct object));
 	}
 	p->list[idx] = o;
-	p->len++;
+	if (idx >= p->len) p->len = idx + 1;
 }
 
 inline void pool_dispose(struct pool *p) {

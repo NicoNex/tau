@@ -109,7 +109,7 @@ static struct bookmark *vm_get_bookmark(struct vm * restrict vm) {
 	struct bookmark *bookmarks = frame->cl.data.cl->fn->bookmarks;
 
 	if (blen > 0) {
-		for (int i = 0; i < blen; i++) {
+		for (size_t i = 0; i < blen; i++) {
 			struct bookmark b = bookmarks[i];
 			if (offset <= b.offset) {
 				return &bookmarks[i];
@@ -219,7 +219,7 @@ static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, 
 	}
 	
 	struct object *free = malloc(sizeof(struct object) * num_free);
-	for (int i = 0; i < num_free; i++) {
+	for (uint32_t i = 0; i < num_free; i++) {
 		free[i] = vm->stack[vm->sp-num_free+i];
 	}
 
@@ -644,7 +644,7 @@ static inline void vm_exec_index(struct vm * restrict vm) {
 }
 
 static inline void vm_call_closure(struct vm * restrict vm, struct object *cl, size_t numargs) {
-	int num_params = cl->data.cl->fn->num_params;
+	size_t num_params = cl->data.cl->fn->num_params;
 
 	if (num_params != numargs) {
 		vm_errorf(vm, "wrong number of arguments: expected %d, got %lu", num_params, numargs);

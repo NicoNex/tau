@@ -27,6 +27,7 @@ func REPL() error {
 		fmt.Println(err)
 		return fmt.Errorf("error opening terminal: %w", err)
 	}
+	vm.TermState = initState
 	defer term.Restore(int(os.Stdin.Fd()), initState)
 
 	t := term.NewTerminal(os.Stdin, ">>> ")

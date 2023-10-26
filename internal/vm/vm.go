@@ -1,6 +1,6 @@
 package vm
 
-// #cgo CFLAGS: -Wall -g -Ofast -mtune=native -fopenmp
+// #cgo CFLAGS: -g -Ofast -mtune=native -fopenmp
 // #cgo LDFLAGS: -fopenmp
 // #include <stdlib.h>
 // #include <stdio.h>

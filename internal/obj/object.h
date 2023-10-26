@@ -15,6 +15,7 @@ enum obj_type {
 	obj_integer,
 	obj_float,
 	obj_builtin,
+	obj_getsetter,
 	obj_string,
 	obj_error,
 	obj_list,
@@ -24,7 +25,6 @@ enum obj_type {
 	obj_object,
 	obj_pipe,
 	obj_bytes,
-	obj_getsetter,
 	obj_native
 };
 

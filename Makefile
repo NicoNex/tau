@@ -46,9 +46,7 @@ install: all
 	mv tau /usr/bin
 
 profile:
-	@go build profile.go
-	@./profile
-	@rm profile
+	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go build profile.go
 
 run: all
 	./tau

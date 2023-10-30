@@ -119,7 +119,6 @@ static struct bookmark *vm_get_bookmark(struct vm * restrict vm) {
 	return NULL;
 }
 
-__attribute__((noreturn))
 inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 	struct bookmark *b = vm_get_bookmark(vm);
 
@@ -128,7 +127,7 @@ inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 		va_start(args, fmt);
 		vprintf(fmt, args);
 		va_end(args);
-		exit(1);
+		longjmp(vm->env, 1);
 	}
 
 	char msg[512];
@@ -150,11 +149,41 @@ inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 		arrow,
 		msg
 	);
+
 	longjmp(vm->env, 1);
 }
 
 void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
-	vm_errorf(vm, fmt);
+	static uint8_t halt_code[1] = {op_halt};
+	struct frame halt_frame = (struct frame) {
+		.cl = {0},
+		.ip = &halt_code[0],
+		.start = &halt_code[0],
+		.base_ptr = 0
+	};
+
+	struct bookmark *b = vm_get_bookmark(vm);
+	if (b == NULL) {
+		puts(fmt);
+		vm_push_frame(vm, halt_frame);
+		return;
+	}
+
+	char arrow[b->pos+2];
+	memset(arrow, ' ', b->pos+2);
+	arrow[b->pos] = '^';
+	arrow[b->pos+1] = '\0';
+
+	printf(
+		"error in file %s at line %d:\n    %s\n    %s\n%s\n",
+		vm->file,
+		b->lineno,
+		b->line,
+		arrow,
+		fmt
+	);
+
+	vm_push_frame(vm, halt_frame);
 }
 
 static inline __attribute__((always_inline))

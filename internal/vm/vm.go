@@ -16,8 +16,10 @@ package vm
 // }
 import "C"
 import (
+	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"unicode"
 	"unicode/utf8"
 	"unsafe"
@@ -38,6 +40,8 @@ var (
 	Consts    []obj.Object
 	importTab = make(map[string]C.struct_object)
 	TermState *term.State
+
+	ErrNoFileProvided = errors.New("no file provided")
 )
 
 func NewState() State {
@@ -100,14 +104,43 @@ func isExported(n string) bool {
 	return unicode.IsUpper(r)
 }
 
+func lookup(taupath string) (string, error) {
+	var paths []string
+	taupath = filepath.Clean(taupath)
+
+	if ext := filepath.Ext(taupath); ext != "" {
+		paths = []string{taupath, filepath.Join("/", "lib", "tau", taupath)}
+	} else {
+		paths = []string{
+			taupath + ".tau",
+			taupath + ".tauc",
+			filepath.Join("/", "lib", "tau", taupath+".tau"),
+			filepath.Join("/", "lib", "tau", taupath+".tauc"),
+		}
+	}
+
+	for _, p := range paths {
+		if _, err := os.Stat(p); os.IsExist(err) {
+			return p, nil
+		}
+	}
+	return "", fmt.Errorf("no module named %q", taupath)
+}
+
 //export vm_exec_load_module
 func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	path := C.GoString(cpath)
 
-	p, err := obj.ImportLookup(path)
+	if path == "" {
+		C.go_vm_errorf(vm, C.CString("import: no file provided"))
+		return
+	}
+
+	p, err := lookup(path)
 	if err != nil {
 		msg := fmt.Sprintf("import: %v", err)
 		C.go_vm_errorf(vm, C.CString(msg))
+		return
 	}
 
 	if mod, ok := importTab[p]; ok {
@@ -120,18 +153,21 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	if err != nil {
 		msg := fmt.Sprintf("import: %v", err)
 		C.go_vm_errorf(vm, C.CString(msg))
+		return
 	}
 
 	tree, errs := parser.Parse(path, string(b))
 	if len(errs) > 0 {
 		m := fmt.Sprintf("import: multiple errors in module %s", path)
 		C.go_vm_errorf(vm, C.CString(m))
+		return
 	}
 
 	c := compiler.NewImport(int(vm.state.ndefs), &Consts)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
 		C.go_vm_errorf(vm, C.CString(err.Error()))
+		return
 	}
 
 	bc := c.Bytecode()
@@ -141,6 +177,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	defer C.vm_dispose(tvm)
 	if i := C.vm_run(tvm); i != 0 {
 		C.go_vm_errorf(vm, C.CString("import error"))
+		return
 	}
 	vm.state = tvm.state
 

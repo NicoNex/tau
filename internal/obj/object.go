@@ -52,7 +52,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"unsafe"
 
 	"github.com/NicoNex/tau/internal/code"
@@ -117,8 +116,6 @@ var (
 	NullObj  = C.null_obj
 	TrueObj  = C.true_obj
 	FalseObj = C.false_obj
-
-	ErrNoFileProvided = errors.New("no file provided")
 )
 
 func (o Object) Type() Type {
@@ -242,28 +239,6 @@ func Println(a ...any) {
 
 func Printf(s string, a ...any) {
 	fmt.Fprintf(Stdout, s, a...)
-}
-
-func ImportLookup(taupath string) (string, error) {
-	dir, file := filepath.Split(taupath)
-
-	if file == "" {
-		return "", ErrNoFileProvided
-	}
-
-	if filepath.Ext(file) == "" {
-		file += ".tau"
-	}
-
-	path := filepath.Join(dir, file)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		path = filepath.Join("/lib", "tau", dir, file)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			return "", fmt.Errorf("%s: %w", path, err)
-		}
-	}
-
-	return path, nil
 }
 
 func SetStdout(fd int, name string) {

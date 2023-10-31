@@ -156,9 +156,9 @@ inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
 	static uint8_t halt_code[1] = {op_halt};
 	struct frame halt_frame = (struct frame) {
-		.cl = {0},
-		.ip = &halt_code[0],
-		.start = &halt_code[0],
+		.cl = null_obj,
+		.ip = halt_code,
+		.start = halt_code,
 		.base_ptr = 0
 	};
 

@@ -16,7 +16,6 @@ package vm
 // }
 import "C"
 import (
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -40,8 +39,6 @@ var (
 	Consts    []obj.Object
 	importTab = make(map[string]C.struct_object)
 	TermState *term.State
-
-	ErrNoFileProvided = errors.New("no file provided")
 )
 
 func NewState() State {
@@ -120,7 +117,7 @@ func lookup(taupath string) (string, error) {
 	}
 
 	for _, p := range paths {
-		if _, err := os.Stat(p); os.IsExist(err) {
+		if _, err := os.Stat(p); err == nil {
 			return p, nil
 		}
 	}

@@ -9,53 +9,50 @@ import (
 )
 
 type Plus struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewPlus(l, r Node) Node {
-	return Plus{l, r}
-}
-
-func (p Plus) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(p.l.Eval(env))
-		right = obj.Unwrap(p.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func NewPlus(l, r Node, pos int) Node {
+	return Plus{
+		l:   l,
+		r:   r,
+		pos: pos,
 	}
-	if takesPrecedence(right) {
-		return right
+}
+
+func (p Plus) Eval() (obj.Object, error) {
+	left, err := p.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
+	}
+
+	right, err := p.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType, obj.FloatType, obj.StringType) {
-		return obj.NewError("unsupported operator '+' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '+' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType, obj.FloatType, obj.StringType) {
-		return obj.NewError("unsupported operator '+' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '+' for type %v", right.Type())
 	}
 
 	switch {
 	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String)
-		r := right.(obj.String)
-		return obj.String(l + r)
+		return obj.NewString(left.String() + right.String()), nil
 
 	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
-		l := left.(obj.Integer)
-		r := right.(obj.Integer)
-		return obj.Integer(l + r)
+		return obj.NewInteger(left.Int() + right.Int()), nil
 
 	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
-		left, right = obj.ToFloat(left, right)
-		l := left.(obj.Float)
-		r := right.(obj.Float)
-		return obj.Float(l + r)
+		l, r := obj.ToFloat(left, right)
+		return obj.NewFloat(l + r), nil
 
 	default:
-		return obj.NewError(
+		return obj.NullObj, fmt.Errorf(
 			"invalid operation %v + %v (wrong types %v and %v)",
 			left, right, left.Type(), right.Type(),
 		)
@@ -68,7 +65,13 @@ func (p Plus) String() string {
 
 func (p Plus) Compile(c *compiler.Compiler) (position int, err error) {
 	if p.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(p.Eval(nil))), nil
+		o, err := p.Eval()
+		if err != nil {
+			return 0, c.NewError(p.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(p.pos)
+		return position, err
 	}
 
 	if position, err = p.l.Compile(c); err != nil {
@@ -77,7 +80,9 @@ func (p Plus) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = p.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpAdd), nil
+	position = c.Emit(code.OpAdd)
+	c.Bookmark(p.pos)
+	return
 }
 
 func (p Plus) IsConstExpression() bool {

@@ -9,30 +9,30 @@ import (
 )
 
 type PrefixMinus struct {
-	n Node
+	n   Node
+	pos int
 }
 
-func NewPrefixMinus(n Node) Node {
-	return PrefixMinus{n}
+func NewPrefixMinus(n Node, pos int) Node {
+	return PrefixMinus{
+		n:   n,
+		pos: pos,
+	}
 }
 
-func (p PrefixMinus) Eval(env *obj.Env) obj.Object {
-	var value = obj.Unwrap(p.n.Eval(env))
-
-	if takesPrecedence(value) {
-		return value
+func (p PrefixMinus) Eval() (obj.Object, error) {
+	right, err := p.n.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
-	switch v := value.(type) {
-	case obj.Integer:
-		return obj.Integer(-v.Val())
-
-	case obj.Float:
-		return obj.Float(-v.Val())
-
+	switch right.Type() {
+	case obj.IntType:
+		return obj.NewInteger(-right.Int()), nil
+	case obj.FloatType:
+		return obj.NewFloat(-right.Float()), nil
 	default:
-		return obj.NewError("unsupported prefix operator '-' for type %v", value.Type())
-
+		return obj.NullObj, fmt.Errorf("unsupported prefix operator '-' for type %v", right.Type())
 	}
 }
 
@@ -42,13 +42,21 @@ func (p PrefixMinus) String() string {
 
 func (p PrefixMinus) Compile(c *compiler.Compiler) (position int, err error) {
 	if p.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(p.Eval(nil))), nil
+		o, err := p.Eval()
+		if err != nil {
+			return 0, c.NewError(p.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(p.pos)
+		return position, err
 	}
 
 	if position, err = p.n.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpMinus), nil
+	position = c.Emit(code.OpMinus)
+	c.Bookmark(p.pos)
+	return
 }
 
 func (p PrefixMinus) IsConstExpression() bool {

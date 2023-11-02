@@ -9,37 +9,37 @@ import (
 )
 
 type BitwiseAnd struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewBitwiseAnd(l, r Node) Node {
-	return BitwiseAnd{l, r}
-}
-
-func (b BitwiseAnd) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(b.l.Eval(env))
-		right = obj.Unwrap(b.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func NewBitwiseAnd(l, r Node, pos int) Node {
+	return BitwiseAnd{
+		l:   l,
+		r:   r,
+		pos: pos,
 	}
-	if takesPrecedence(right) {
-		return right
+}
+
+func (b BitwiseAnd) Eval() (obj.Object, error) {
+	left, err := b.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
+	}
+
+	right, err := b.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType) {
-		return obj.NewError("unsupported operator '&' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '&' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType) {
-		return obj.NewError("unsupported operator '&' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '&' for type %v", right.Type())
 	}
-
-	l := left.(obj.Integer)
-	r := right.(obj.Integer)
-	return obj.Integer(l & r)
+	return obj.NewInteger(left.Int() & right.Int()), nil
 }
 
 func (b BitwiseAnd) String() string {
@@ -48,7 +48,13 @@ func (b BitwiseAnd) String() string {
 
 func (b BitwiseAnd) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+		o, err := b.Eval()
+		if err != nil {
+			return 0, c.NewError(b.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(b.pos)
+		return position, err
 	}
 
 	if position, err = b.l.Compile(c); err != nil {
@@ -57,7 +63,9 @@ func (b BitwiseAnd) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = b.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpBwAnd), nil
+	position = c.Emit(code.OpBwAnd)
+	c.Bookmark(b.pos)
+	return
 }
 
 func (b BitwiseAnd) IsConstExpression() bool {

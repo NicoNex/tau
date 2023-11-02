@@ -9,46 +9,43 @@ import (
 )
 
 type LessEq struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewLessEq(l, r Node) Node {
-	return LessEq{l, r}
-}
-
-func (l LessEq) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(l.l.Eval(env))
-		right = obj.Unwrap(l.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func NewLessEq(l, r Node, pos int) Node {
+	return LessEq{
+		l:   l,
+		r:   r,
+		pos: pos,
 	}
-	if takesPrecedence(right) {
-		return right
+}
+
+func (l LessEq) Eval() (obj.Object, error) {
+	left, err := l.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
+	}
+
+	right, err := l.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	switch {
 	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
-		l := left.(obj.Integer)
-		r := right.(obj.Integer)
-		return obj.ParseBool(l <= r)
+		return obj.ParseBool(left.Int() <= right.Int()), nil
 
 	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
-		left, right = obj.ToFloat(left, right)
-		l := left.(obj.Float)
-		r := right.(obj.Float)
-		return obj.ParseBool(l <= r)
+		l, r := obj.ToFloat(left, right)
+		return obj.ParseBool(l <= r), nil
 
 	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String)
-		r := right.(obj.String)
-		return obj.ParseBool(l <= r)
+		return obj.ParseBool(left.String() <= right.String()), nil
 
 	default:
-		return obj.NewError("unsupported operator '<=' for types %v and %v", left.Type(), right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '<=' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -58,7 +55,13 @@ func (l LessEq) String() string {
 
 func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if l.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(l.Eval(nil))), nil
+		o, err := l.Eval()
+		if err != nil {
+			return 0, c.NewError(l.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(l.pos)
+		return position, err
 	}
 
 	if position, err = l.r.Compile(c); err != nil {
@@ -67,7 +70,9 @@ func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = l.l.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpGreaterThanEqual), nil
+	position = c.Emit(code.OpGreaterThanEqual)
+	c.Bookmark(l.pos)
+	return
 }
 
 func (l LessEq) IsConstExpression() bool {

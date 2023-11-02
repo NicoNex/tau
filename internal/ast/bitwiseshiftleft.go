@@ -9,37 +9,37 @@ import (
 )
 
 type BitwiseLeftShift struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewBitwiseLeftShift(l, r Node) Node {
-	return BitwiseLeftShift{l, r}
-}
-
-func (b BitwiseLeftShift) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(b.l.Eval(env))
-		right = obj.Unwrap(b.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func NewBitwiseLeftShift(l, r Node, pos int) Node {
+	return BitwiseLeftShift{
+		l:   l,
+		r:   r,
+		pos: pos,
 	}
-	if takesPrecedence(right) {
-		return right
+}
+
+func (b BitwiseLeftShift) Eval() (obj.Object, error) {
+	left, err := b.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
+	}
+
+	right, err := b.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType) {
-		return obj.NewError("unsupported operator '<<' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '<<' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType) {
-		return obj.NewError("unsupported operator '<<' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '<<' for type %v", right.Type())
 	}
-
-	l := left.(obj.Integer)
-	r := right.(obj.Integer)
-	return obj.Integer(l << r)
+	return obj.NewInteger(left.Int() << right.Int()), nil
 }
 
 func (b BitwiseLeftShift) String() string {
@@ -48,7 +48,13 @@ func (b BitwiseLeftShift) String() string {
 
 func (b BitwiseLeftShift) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+		o, err := b.Eval()
+		if err != nil {
+			return 0, c.NewError(b.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(b.pos)
+		return position, err
 	}
 
 	if position, err = b.l.Compile(c); err != nil {
@@ -57,7 +63,9 @@ func (b BitwiseLeftShift) Compile(c *compiler.Compiler) (position int, err error
 	if position, err = b.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpBwLShift), nil
+	position = c.Emit(code.OpBwLShift)
+	c.Bookmark(b.pos)
+	return
 }
 
 func (b BitwiseLeftShift) IsConstExpression() bool {

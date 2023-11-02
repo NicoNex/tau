@@ -9,41 +9,41 @@ import (
 )
 
 type Mod struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewMod(l, r Node) Node {
-	return Mod{l, r}
-}
-
-func (m Mod) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(m.l.Eval(env))
-		right = obj.Unwrap(m.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func NewMod(l, r Node, pos int) Node {
+	return Mod{
+		l:   l,
+		r:   r,
+		pos: pos,
 	}
-	if takesPrecedence(right) {
-		return right
+}
+
+func (m Mod) Eval() (obj.Object, error) {
+	left, err := m.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
+	}
+
+	right, err := m.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType) {
-		return obj.NewError("unsupported operator '%%' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '%%' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType) {
-		return obj.NewError("unsupported operator '%%' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '%%' for type %v", right.Type())
+	}
+	if right.Int() == 0 {
+		return obj.NullObj, fmt.Errorf("can't divide by 0")
 	}
 
-	l := left.(obj.Integer)
-	r := right.(obj.Integer)
-
-	if r == 0 {
-		return obj.NewError("can't divide by 0")
-	}
-	return obj.Integer(l % r)
+	return obj.NewInteger(left.Int() % right.Int()), nil
 }
 
 func (m Mod) String() string {
@@ -52,7 +52,13 @@ func (m Mod) String() string {
 
 func (m Mod) Compile(c *compiler.Compiler) (position int, err error) {
 	if m.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(m.Eval(nil))), nil
+		o, err := m.Eval()
+		if err != nil {
+			return 0, c.NewError(m.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(m.pos)
+		return position, err
 	}
 
 	if position, err = m.l.Compile(c); err != nil {
@@ -61,7 +67,9 @@ func (m Mod) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = m.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpMod), nil
+	position = c.Emit(code.OpMod)
+	c.Bookmark(m.pos)
+	return
 }
 
 func (m Mod) IsConstExpression() bool {

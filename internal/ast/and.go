@@ -9,28 +9,31 @@ import (
 )
 
 type And struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewAnd(l, r Node) Node {
-	return And{l, r}
+func NewAnd(l, r Node, pos int) Node {
+	return And{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
-func (a And) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(a.l.Eval(env))
-		right = obj.Unwrap(a.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
-	}
-	if takesPrecedence(right) {
-		return right
+func (a And) Eval() (obj.Object, error) {
+	left, err := a.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
-	return obj.ParseBool(obj.IsTruthy(left) && obj.IsTruthy(right))
+	right, err := a.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
+	}
+
+	return obj.ParseBool(obj.IsTruthy(left) && obj.IsTruthy(right)), nil
 }
 
 func (a And) String() string {
@@ -39,7 +42,13 @@ func (a And) String() string {
 
 func (a And) Compile(c *compiler.Compiler) (position int, err error) {
 	if a.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(a.Eval(nil))), nil
+		o, err := a.Eval()
+		if err != nil {
+			return 0, c.NewError(a.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(a.pos)
+		return position, err
 	}
 
 	if position, err = a.l.Compile(c); err != nil {
@@ -48,7 +57,9 @@ func (a And) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = a.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpAnd), nil
+	position = c.Emit(code.OpAnd)
+	c.Bookmark(a.pos)
+	return
 }
 
 func (a And) IsConstExpression() bool {

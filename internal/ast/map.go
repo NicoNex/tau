@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -10,37 +11,20 @@ import (
 	"github.com/NicoNex/tau/internal/obj"
 )
 
-type Map [][2]Node
-
-func NewMap(pairs ...[2]Node) Node {
-	return Map(pairs)
+type Map struct {
+	m   [][2]Node
+	pos int
 }
 
-func (m Map) Eval(env *obj.Env) obj.Object {
-	var ret = obj.NewMap()
-
-	for _, pair := range m {
-		var key, val = pair[0], pair[1]
-
-		k := obj.Unwrap(key.Eval(env))
-		if takesPrecedence(k) {
-			return k
-		}
-
-		h, ok := k.(obj.Hashable)
-		if !ok {
-			return obj.NewError("invalid map key type %v", k.Type())
-		}
-
-		v := obj.Unwrap(val.Eval(env))
-		if takesPrecedence(v) {
-			return v
-		}
-
-		ret.Set(h.KeyHash(), obj.MapPair{Key: k, Value: v})
+func NewMap(pos int, pairs ...[2]Node) Node {
+	return Map{
+		m:   pairs,
+		pos: pos,
 	}
+}
 
-	return ret
+func (m Map) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Index: not a constant expression")
 }
 
 func (m Map) String() string {
@@ -50,7 +34,7 @@ func (m Map) String() string {
 	)
 
 	buf.WriteString("{")
-	for _, pair := range m {
+	for _, pair := range m.m {
 		var (
 			k   = pair[0]
 			v   = pair[1]
@@ -72,7 +56,7 @@ func (m Map) String() string {
 
 		buf.WriteString(fmt.Sprintf("%s: %s", key, val))
 
-		if i < len(m) {
+		if i < len(m.m) {
 			buf.WriteString(", ")
 		}
 		i += 1
@@ -82,11 +66,11 @@ func (m Map) String() string {
 }
 
 func (m Map) Compile(c *compiler.Compiler) (position int, err error) {
-	sort.Slice(m, func(i, j int) bool {
-		return m[i][0].String() < m[j][0].String()
+	sort.Slice(m.m, func(i, j int) bool {
+		return m.m[i][0].String() < m.m[j][0].String()
 	})
 
-	for _, pair := range m {
+	for _, pair := range m.m {
 		if position, err = pair[0].Compile(c); err != nil {
 			return
 		}
@@ -96,7 +80,9 @@ func (m Map) Compile(c *compiler.Compiler) (position int, err error) {
 		}
 	}
 
-	return c.Emit(code.OpMap, len(m)*2), nil
+	position = c.Emit(code.OpMap, len(m.m)*2)
+	c.Bookmark(m.pos)
+	return
 }
 
 func (m Map) IsConstExpression() bool {

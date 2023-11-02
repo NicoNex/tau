@@ -1,11 +1,19 @@
 package compiler
 
+// #include "bytecode.h"
+import "C"
+
 import (
 	"errors"
+	"fmt"
+	"unsafe"
 
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/obj"
+	"github.com/NicoNex/tau/internal/tauerr"
 )
+
+type Bytecode = C.struct_bytecode
 
 type Compilable interface {
 	Compile(c *Compiler) (int, error)
@@ -21,21 +29,20 @@ type CompilationScope struct {
 	instructions code.Instructions
 	lastInst     EmittedInst
 	prevInst     EmittedInst
+	bookmarks    []tauerr.Bookmark
 }
 
 type Compiler struct {
-	constants *[]obj.Object
+	constants   *[]obj.Object
+	scopes      []CompilationScope
+	scopeIndex  int
+	fileName    string
+	fileContent string
 	*SymbolTable
-	scopes     []CompilationScope
-	scopeIndex int
-}
-
-type Bytecode struct {
-	Instructions code.Instructions
-	Constants    []obj.Object
 }
 
 const (
+	GenericPlaceholder  = 9999
 	ContinuePlaceholder = 9998
 	BreakPlaceholder    = 9997
 )
@@ -43,8 +50,8 @@ const (
 func New() *Compiler {
 	var st = NewSymbolTable()
 
-	for i, b := range obj.Builtins {
-		st.DefineBuiltin(i, b.Name)
+	for i, name := range obj.Builtins {
+		st.DefineBuiltin(i, name)
 	}
 
 	return &Compiler{
@@ -57,6 +64,21 @@ func New() *Compiler {
 func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
 	return &Compiler{
 		SymbolTable: s,
+		scopes:      []CompilationScope{{}},
+		constants:   constants,
+	}
+}
+
+func NewImport(numDefs int, constants *[]obj.Object) *Compiler {
+	var st = NewSymbolTable()
+
+	st.NumDefs = numDefs
+	for i, name := range obj.Builtins {
+		st.DefineBuiltin(i, name)
+	}
+
+	return &Compiler{
+		SymbolTable: st,
 		scopes:      []CompilationScope{{}},
 		constants:   constants,
 	}
@@ -184,13 +206,14 @@ func (c *Compiler) EnterScope() {
 	c.SymbolTable = NewEnclosedSymbolTable(c.SymbolTable)
 }
 
-func (c *Compiler) LeaveScope() code.Instructions {
+func (c *Compiler) LeaveScope() (code.Instructions, []tauerr.Bookmark) {
 	ins := c.scopes[c.scopeIndex].instructions
+	bookmarks := c.scopes[c.scopeIndex].bookmarks
 	c.scopes = c.scopes[:len(c.scopes)-1]
 	c.scopeIndex--
 	c.SymbolTable = c.SymbolTable.outer
 
-	return ins
+	return ins, bookmarks
 }
 
 // Returns the position to the last instruction.
@@ -198,21 +221,40 @@ func (c *Compiler) Pos() int {
 	return len(c.scopes[c.scopeIndex].instructions)
 }
 
+func (c *Compiler) Bookmark(pos int) {
+	if c.fileContent == "" {
+		return
+	}
+
+	b := tauerr.NewBookmark(c.fileContent, pos, c.Pos())
+	c.scopes[c.scopeIndex].bookmarks = append(c.scopes[c.scopeIndex].bookmarks, b)
+}
+
+func (c *Compiler) UnresolvedError(name string, pos int) error {
+	if c.fileName == "" || c.fileContent == "" {
+		return fmt.Errorf("undefined variable %s", name)
+	}
+
+	return tauerr.New(c.fileName, c.fileContent, pos, "undefined variable %s", name)
+}
+
+func (c *Compiler) NewError(pos int, s string, a ...any) error {
+	if c.fileName == "" || c.fileContent == "" {
+		return fmt.Errorf(s, a...)
+	}
+
+	return tauerr.New(c.fileName, c.fileContent, pos, s, a...)
+}
+
 func (c *Compiler) Compile(node Compilable) error {
 	_, err := node.Compile(c)
+	c.Emit(code.OpHalt)
 	return err
 }
 
-func (c *Compiler) Bytecode() *Bytecode {
-	return &Bytecode{
-		Instructions: c.scopes[c.scopeIndex].instructions,
-		Constants:    *c.constants,
-	}
-}
-
-func (c *Compiler) SetBytecode(b *Bytecode) {
-	c.scopes[c.scopeIndex].instructions = b.Instructions
-	*c.constants = b.Constants
+func (c *Compiler) SetFileInfo(name, content string) {
+	c.fileName = name
+	c.fileContent = content
 }
 
 func (c *Compiler) LoadSymbol(s Symbol) int {
@@ -230,4 +272,73 @@ func (c *Compiler) LoadSymbol(s Symbol) int {
 	default:
 		return 0
 	}
+}
+
+func (c *Compiler) Bytecode() Bytecode {
+	b := Bytecode{
+		len:     C.uint32_t(len(c.scopes[c.scopeIndex].instructions)),
+		nconsts: C.uint32_t(len(*c.constants)),
+		bklen:   C.uint32_t(len(c.scopes[c.scopeIndex].bookmarks)),
+		ndefs:   C.uint32_t(c.NumDefs),
+	}
+	if len(c.scopes[c.scopeIndex].instructions) > 0 {
+		b.insts = (*C.uchar)(unsafe.Pointer(&c.scopes[c.scopeIndex].instructions[0]))
+	}
+	if len(*c.constants) > 0 {
+		b.consts = (*C.struct_object)(unsafe.Pointer(&(*c.constants)[0]))
+	}
+	if len(c.scopes[c.scopeIndex].bookmarks) > 0 {
+		b.bookmarks = (*C.struct_bookmark)(unsafe.Pointer(&c.scopes[c.scopeIndex].bookmarks[0]))
+	}
+	return b
+}
+
+func NewBytecode(insts []byte, consts []obj.Object, bookmarks []tauerr.Bookmark, ndefs int) Bytecode {
+	return Bytecode{
+		insts:     (*C.uchar)(unsafe.Pointer(&insts[0])),
+		len:       C.uint32_t(len(insts)),
+		consts:    (*C.struct_object)(unsafe.Pointer(&consts[0])),
+		nconsts:   C.uint32_t(len(consts)),
+		bookmarks: (*C.struct_bookmark)(unsafe.Pointer(&bookmarks[0])),
+		bklen:     C.uint32_t(len(bookmarks)),
+		ndefs:     C.uint32_t(ndefs),
+	}
+}
+
+func DecodeBytecode(b []byte) Bytecode {
+	return C.tau_decode((*C.uint8_t)(unsafe.Pointer(&b[0])), C.size_t(len(b)))
+}
+
+func (b Bytecode) Encode() []byte {
+	buf := C.tau_encode(b)
+	defer C.free_buffer(buf)
+	return C.GoBytes(unsafe.Pointer(buf.buf), C.int(buf.len))
+}
+
+func (b Bytecode) Insts() []byte {
+	return C.GoBytes(unsafe.Pointer(b.insts), C.int(b.len))
+}
+
+func (b Bytecode) Consts() *obj.Object {
+	return (*obj.Object)(unsafe.Pointer(b.consts))
+}
+
+func (b Bytecode) Len() uint {
+	return uint(b.len)
+}
+
+func (b Bytecode) NConsts() uint {
+	return uint(b.nconsts)
+}
+
+func (b Bytecode) BKLen() uint {
+	return uint(b.bklen)
+}
+
+func (b Bytecode) Bookmarks() *C.struct_bookmark {
+	return b.bookmarks
+}
+
+func (b Bytecode) NDefs() uint {
+	return uint(b.ndefs)
 }

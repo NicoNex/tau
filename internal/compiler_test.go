@@ -17,7 +17,7 @@ type compilerTestCase struct {
 }
 
 func parse(input string) compiler.Compilable {
-	res, _ := parser.Parse(input)
+	res, _ := parser.Parse("<test>", input)
 	return res
 }
 
@@ -63,6 +63,7 @@ func TestCompilerIntegerArithmetic(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -71,6 +72,7 @@ func TestCompilerIntegerArithmetic(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -79,6 +81,7 @@ func TestCompilerIntegerArithmetic(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -87,6 +90,7 @@ func TestCompilerIntegerArithmetic(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -95,6 +99,7 @@ func TestCompilerIntegerArithmetic(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -105,6 +110,7 @@ func TestCompilerIntegerArithmetic(t *testing.T) {
 				code.Make(code.OpPop),
 				code.Make(code.OpConstant, 1),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -112,7 +118,9 @@ func TestCompilerIntegerArithmetic(t *testing.T) {
 			expectedConstants: []any{-1},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpPop)},
+				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
+			},
 		},
 	}
 
@@ -129,6 +137,7 @@ func TestCompilerFloatArithmetic(t *testing.T) {
 				code.Make(code.OpPop),
 				code.Make(code.OpConstant, 1),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -137,6 +146,7 @@ func TestCompilerFloatArithmetic(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -145,6 +155,7 @@ func TestCompilerFloatArithmetic(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -153,6 +164,7 @@ func TestCompilerFloatArithmetic(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -161,6 +173,7 @@ func TestCompilerFloatArithmetic(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -168,7 +181,9 @@ func TestCompilerFloatArithmetic(t *testing.T) {
 			expectedConstants: []any{-1.37},
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
-				code.Make(code.OpPop)},
+				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
+			},
 		},
 	}
 
@@ -262,6 +277,7 @@ func TestCompilerBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpTrue),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -270,6 +286,7 @@ func TestCompilerBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpFalse),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -285,6 +302,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -293,6 +311,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -301,6 +320,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -309,6 +329,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -317,6 +338,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -325,6 +347,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -333,6 +356,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -341,6 +365,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -349,6 +374,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -357,6 +383,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -365,6 +392,7 @@ func TestBooleanExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -393,6 +421,8 @@ func TestCompilerConditionals(t *testing.T) {
 				code.Make(code.OpConstant, 1),
 				// 0015
 				code.Make(code.OpPop),
+				// 0016
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -415,6 +445,8 @@ func TestCompilerConditionals(t *testing.T) {
 				code.Make(code.OpConstant, 2),
 				// 0017
 				code.Make(code.OpPop),
+				// 0018
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -433,6 +465,7 @@ func TestGlobalAssignments(t *testing.T) {
 				code.Make(code.OpConstant, 1),
 				code.Make(code.OpSetGlobal, 1),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -444,6 +477,7 @@ func TestGlobalAssignments(t *testing.T) {
 				code.Make(code.OpPop),
 				code.Make(code.OpGetGlobal, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -458,6 +492,7 @@ func TestGlobalAssignments(t *testing.T) {
 				code.Make(code.OpPop),
 				code.Make(code.OpGetGlobal, 1),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -467,6 +502,7 @@ func TestGlobalAssignments(t *testing.T) {
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpSetGlobal, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -481,6 +517,7 @@ func TestGlobalAssignments(t *testing.T) {
 				code.Make(code.OpSub),
 				code.Make(code.OpSetGlobal, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -495,6 +532,7 @@ func TestGlobalAssignments(t *testing.T) {
 				code.Make(code.OpAdd),
 				code.Make(code.OpSetGlobal, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -510,6 +548,7 @@ func TestCompilerStringExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -518,6 +557,7 @@ func TestCompilerStringExpressions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpConstant, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -532,6 +572,7 @@ func TestCompilerListLiterals(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpList, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -543,6 +584,7 @@ func TestCompilerListLiterals(t *testing.T) {
 				code.Make(code.OpConstant, 2),
 				code.Make(code.OpList, 3),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -554,6 +596,7 @@ func TestCompilerListLiterals(t *testing.T) {
 				code.Make(code.OpConstant, 2),
 				code.Make(code.OpList, 3),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -569,6 +612,7 @@ func TestCompilerMapLiterals(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpMap, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -583,6 +627,7 @@ func TestCompilerMapLiterals(t *testing.T) {
 				code.Make(code.OpConstant, 5),
 				code.Make(code.OpMap, 6),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -595,6 +640,7 @@ func TestCompilerMapLiterals(t *testing.T) {
 				code.Make(code.OpConstant, 3),
 				code.Make(code.OpMap, 4),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -615,6 +661,7 @@ func TestCompilerIndexExpressions(t *testing.T) {
 				code.Make(code.OpConstant, 3),
 				code.Make(code.OpIndex),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -627,6 +674,7 @@ func TestCompilerIndexExpressions(t *testing.T) {
 				code.Make(code.OpConstant, 2),
 				code.Make(code.OpIndex),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -652,6 +700,7 @@ a.a = 2`,
 				code.Make(code.OpConstant, 1),
 				code.Make(code.OpDefine),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -673,6 +722,7 @@ func TestCompilerFunctions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpClosure, 1, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -690,6 +740,7 @@ func TestCompilerFunctions(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpClosure, 2, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -709,6 +760,7 @@ func TestFunctionsWithoutReturnValue(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpClosure, 0, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -730,6 +782,7 @@ func TestCompilerFunctionCalls(t *testing.T) {
 				code.Make(code.OpClosure, 1, 0), // The compiled function
 				code.Make(code.OpCall, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -751,6 +804,7 @@ noArg()
 				code.Make(code.OpGetGlobal, 0),
 				code.Make(code.OpCall, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -772,6 +826,7 @@ oneArg(24)
 				code.Make(code.OpConstant, 1),
 				code.Make(code.OpCall, 1),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -797,6 +852,7 @@ manyArg(24, 25, 26)
 				code.Make(code.OpConstant, 3),
 				code.Make(code.OpCall, 3),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -819,6 +875,7 @@ oneArg(24)
 				code.Make(code.OpConstant, 1),
 				code.Make(code.OpCall, 1),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -849,6 +906,7 @@ manyArg(24, 25, 26)
 				code.Make(code.OpConstant, 3),
 				code.Make(code.OpCall, 3),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -876,6 +934,7 @@ fn() { num }
 				code.Make(code.OpPop),
 				code.Make(code.OpClosure, 1, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -898,6 +957,7 @@ fn() {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpClosure, 1, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -926,6 +986,7 @@ fn() {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpClosure, 2, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -942,6 +1003,7 @@ func TestCompilerBuiltins(t *testing.T) {
 				code.Make(code.OpList, 0),
 				code.Make(code.OpCall, 1),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -957,6 +1019,7 @@ func TestCompilerBuiltins(t *testing.T) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpClosure, 0, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}
@@ -988,6 +1051,7 @@ fn(a) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpClosure, 1, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -1024,6 +1088,7 @@ fn(a) {
 			expectedInstructions: []code.Instructions{
 				code.Make(code.OpClosure, 2, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 		{
@@ -1082,6 +1147,7 @@ fn() {
 				code.Make(code.OpPop),
 				code.Make(code.OpClosure, 6, 0),
 				code.Make(code.OpPop),
+				code.Make(code.OpHalt),
 			},
 		},
 	}

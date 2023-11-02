@@ -9,29 +9,30 @@ import (
 )
 
 type Bang struct {
-	n Node
+	n   Node
+	pos int
 }
 
-func NewBang(n Node) Node {
-	return Bang{n}
+func NewBang(n Node, pos int) Node {
+	return Bang{
+		n:   n,
+		pos: pos,
+	}
 }
 
-func (b Bang) Eval(env *obj.Env) obj.Object {
-	var value = obj.Unwrap(b.n.Eval(env))
-
-	if takesPrecedence(value) {
-		return value
+func (b Bang) Eval() (obj.Object, error) {
+	value, err := b.n.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
-	switch v := value.(type) {
-	case *obj.Boolean:
-		return obj.ParseBool(!v.Val())
-
-	case *obj.Null:
-		return obj.True
-
+	switch value.Type() {
+	case obj.BoolType:
+		return obj.ParseBool(!obj.IsTruthy(value)), nil
+	case obj.NullType:
+		return obj.TrueObj, nil
 	default:
-		return obj.False
+		return obj.FalseObj, nil
 	}
 }
 
@@ -41,13 +42,21 @@ func (b Bang) String() string {
 
 func (b Bang) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+		o, err := b.Eval()
+		if err != nil {
+			return 0, c.NewError(b.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(b.pos)
+		return position, err
 	}
 
 	if position, err = b.n.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpBang), nil
+	position = c.Emit(code.OpBang)
+	c.Bookmark(b.pos)
+	return
 }
 
 func (b Bang) IsConstExpression() bool {

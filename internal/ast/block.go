@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"strings"
 
 	"github.com/NicoNex/tau/internal/code"
@@ -14,16 +15,8 @@ func NewBlock() Block {
 	return Block([]Node{})
 }
 
-func (b Block) Eval(env *obj.Env) obj.Object {
-	var res obj.Object
-
-	for _, n := range b {
-		res = obj.Unwrap(n.Eval(env))
-		if res != nil && takesPrecedence(res) {
-			return res
-		}
-	}
-	return res
+func (b Block) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Block: not a constant expression")
 }
 
 func (b Block) String() string {

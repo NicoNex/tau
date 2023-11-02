@@ -9,37 +9,37 @@ import (
 )
 
 type BitwiseOr struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewBitwiseOr(l, r Node) Node {
-	return BitwiseOr{l, r}
-}
-
-func (b BitwiseOr) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(b.l.Eval(env))
-		right = obj.Unwrap(b.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func NewBitwiseOr(l, r Node, pos int) Node {
+	return BitwiseOr{
+		l:   l,
+		r:   r,
+		pos: pos,
 	}
-	if takesPrecedence(right) {
-		return right
+}
+
+func (b BitwiseOr) Eval() (obj.Object, error) {
+	left, err := b.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
+	}
+
+	right, err := b.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType) {
-		return obj.NewError("unsupported operator '|' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '|' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType) {
-		return obj.NewError("unsupported operator '|' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '|' for type %v", right.Type())
 	}
-
-	l := left.(obj.Integer)
-	r := right.(obj.Integer)
-	return obj.Integer(l | r)
+	return obj.NewInteger(left.Int() | right.Int()), nil
 }
 
 func (b BitwiseOr) String() string {
@@ -48,7 +48,13 @@ func (b BitwiseOr) String() string {
 
 func (b BitwiseOr) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(b.Eval(nil))), nil
+		o, err := b.Eval()
+		if err != nil {
+			return 0, c.NewError(b.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(b.pos)
+		return position, err
 	}
 
 	if position, err = b.l.Compile(c); err != nil {
@@ -57,7 +63,9 @@ func (b BitwiseOr) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = b.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpBwOr), nil
+	position = c.Emit(code.OpBwOr)
+	c.Bookmark(b.pos)
+	return
 }
 
 func (b BitwiseOr) IsConstExpression() bool {

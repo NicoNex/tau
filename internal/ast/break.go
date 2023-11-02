@@ -1,6 +1,8 @@
 package ast
 
 import (
+	"errors"
+
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
@@ -12,8 +14,8 @@ func NewBreak() Break {
 	return Break{}
 }
 
-func (b Break) Eval(_ *obj.Env) obj.Object {
-	return obj.BreakObj
+func (b Break) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Break: not a constant expression")
 }
 
 func (b Break) String() string {

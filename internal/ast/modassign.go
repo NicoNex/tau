@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/compiler"
@@ -8,55 +9,21 @@ import (
 )
 
 type ModAssign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewModAssign(l, r Node) Node {
-	return ModAssign{l, r}
+func NewModAssign(l, r Node, pos int) Node {
+	return ModAssign{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
-func (m ModAssign) Eval(env *obj.Env) obj.Object {
-	var (
-		name  string
-		left  = m.l.Eval(env)
-		right = obj.Unwrap(m.r.Eval(env))
-	)
-
-	if ident, ok := m.l.(Identifier); ok {
-		name = ident.String()
-	}
-
-	if takesPrecedence(left) {
-		return left
-	}
-	if takesPrecedence(right) {
-		return right
-	}
-
-	if !obj.AssertTypes(left, obj.IntType) {
-		return obj.NewError("unsupported operator '%%=' for type %v", left.Type())
-	}
-	if !obj.AssertTypes(right, obj.IntType) {
-		return obj.NewError("unsupported operator '%%=' for type %v", right.Type())
-	}
-
-	if gs, ok := left.(obj.GetSetter); ok {
-		l := gs.Object().(obj.Integer)
-		r := right.(obj.Integer)
-		if r == 0 {
-			return obj.NewError("can't divide by 0")
-		}
-		return gs.Set(obj.Integer(l % r))
-	}
-
-	l := left.(obj.Integer)
-	r := right.(obj.Integer)
-
-	if r == 0 {
-		return obj.NewError("can't divide by 0")
-	}
-	return env.Set(name, obj.Integer(l%r))
+func (m ModAssign) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.ModAssign: not a constant expression")
 }
 
 func (m ModAssign) String() string {
@@ -64,8 +31,10 @@ func (m ModAssign) String() string {
 }
 
 func (m ModAssign) Compile(c *compiler.Compiler) (position int, err error) {
-	n := Assign{m.l, Mod{m.l, m.r}}
-	return n.Compile(c)
+	n := Assign{l: m.l, r: Mod{l: m.l, r: m.r, pos: m.pos}, pos: m.pos}
+	position, err = n.Compile(c)
+	c.Bookmark(n.pos)
+	return
 }
 
 func (m ModAssign) IsConstExpression() bool {

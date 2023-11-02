@@ -9,38 +9,40 @@ import (
 )
 
 type Divide struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewDivide(l, r Node) Node {
-	return Divide{l, r}
-}
-
-func (d Divide) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(d.l.Eval(env))
-		right = obj.Unwrap(d.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func NewDivide(l, r Node, pos int) Node {
+	return Divide{
+		l:   l,
+		r:   r,
+		pos: pos,
 	}
-	if takesPrecedence(right) {
-		return right
+}
+
+func (d Divide) Eval() (obj.Object, error) {
+
+	left, err := d.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
+	}
+
+	right, err := d.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '/' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '/' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '/' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '/' for type %v", right.Type())
 	}
 
-	left, right = obj.ToFloat(left, right)
-	l := left.(obj.Float)
-	r := right.(obj.Float)
-	return obj.Float(l / r)
+	l, r := obj.ToFloat(left, right)
+	return obj.NewFloat(l / r), nil
 }
 
 func (d Divide) String() string {
@@ -49,7 +51,13 @@ func (d Divide) String() string {
 
 func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
 	if d.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(d.Eval(nil))), nil
+		o, err := d.Eval()
+		if err != nil {
+			return 0, c.NewError(d.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(d.pos)
+		return position, err
 	}
 
 	if position, err = d.l.Compile(c); err != nil {
@@ -58,7 +66,9 @@ func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = d.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpDiv), nil
+	position = c.Emit(code.OpDiv)
+	c.Bookmark(d.pos)
+	return
 }
 
 func (d Divide) IsConstExpression() bool {

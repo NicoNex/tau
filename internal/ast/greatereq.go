@@ -9,46 +9,43 @@ import (
 )
 
 type GreaterEq struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewGreaterEq(l, r Node) Node {
-	return GreaterEq{l, r}
-}
-
-func (g GreaterEq) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(g.l.Eval(env))
-		right = obj.Unwrap(g.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func NewGreaterEq(l, r Node, pos int) Node {
+	return GreaterEq{
+		l:   l,
+		r:   r,
+		pos: pos,
 	}
-	if takesPrecedence(right) {
-		return right
+}
+
+func (g GreaterEq) Eval() (obj.Object, error) {
+	left, err := g.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
+	}
+
+	right, err := g.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	switch {
 	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
-		l := left.(obj.Integer)
-		r := right.(obj.Integer)
-		return obj.ParseBool(l >= r)
+		return obj.ParseBool(left.Int() >= right.Int()), nil
 
 	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
-		left, right = obj.ToFloat(left, right)
-		l := left.(obj.Float)
-		r := right.(obj.Float)
-		return obj.ParseBool(l >= r)
+		l, r := obj.ToFloat(left, right)
+		return obj.ParseBool(l >= r), nil
 
 	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String)
-		r := right.(obj.String)
-		return obj.ParseBool(l >= r)
+		return obj.ParseBool(left.String() >= right.String()), nil
 
 	default:
-		return obj.NewError("unsupported operator '>=' for types %v and %v", left.Type(), right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '>=' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -58,7 +55,13 @@ func (g GreaterEq) String() string {
 
 func (g GreaterEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if g.IsConstExpression() {
-		return c.Emit(code.OpConstant, c.AddConstant(g.Eval(nil))), nil
+		o, err := g.Eval()
+		if err != nil {
+			return 0, c.NewError(g.pos, err.Error())
+		}
+		position = c.Emit(code.OpConstant, c.AddConstant(o))
+		c.Bookmark(g.pos)
+		return position, err
 	}
 
 	if position, err = g.l.Compile(c); err != nil {
@@ -67,7 +70,9 @@ func (g GreaterEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = g.r.Compile(c); err != nil {
 		return
 	}
-	return c.Emit(code.OpGreaterThanEqual), nil
+	position = c.Emit(code.OpGreaterThanEqual)
+	c.Bookmark(g.pos)
+	return
 }
 
 func (g GreaterEq) IsConstExpression() bool {

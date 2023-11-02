@@ -1,0 +1,53 @@
+#!/usr/bin/env tau
+
+# message returns an object that contains additional information to
+# the provided data and is used by processMessages.
+message = fn(id, data) {
+	m = new()
+	m.ID = id
+	m.Data = data
+
+	return m
+}
+
+# plumber listens from the data pipe (dataPipe) and sends the received data object
+# to the message pipe (msgPipe) including the provided ID.
+plumber = fn(id, dataPipe, msgPipe) {
+	for d = recv(dataPipe) {
+		send(msgPipe, message(id, d))
+	}
+}
+
+someFunction = fn(p) {
+	# Do something with the pipe in input.
+}
+
+someOtherFunction = fn(p) {
+	# Do something with the pipe in input.
+}
+
+main = fn() {
+	p = pipe()
+	stop = pipe()
+	messages = pipe()
+
+	tau plumber(0, stop, messages)
+	tau plumber(1, p, messages)
+
+	tau someFunction(p)
+	tau someOtherFunction(stop)
+
+	# listen for messages in the message pipe (msgPipe) and runs
+	# a different operation for each received ID.
+	for msg = recv(msgPipe) {
+		if msg.ID == 0 {
+			close(p)
+			close(stop)
+			close(messages)
+			break
+		} else if msg.ID == 1 {
+			# do something with msg.Data
+			println(msg.Data)
+		}
+	}
+}

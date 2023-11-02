@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
@@ -9,33 +10,21 @@ import (
 )
 
 type Assign struct {
-	l Node
-	r Node
+	l   Node
+	r   Node
+	pos int
 }
 
-func NewAssign(l, r Node) Node {
-	return Assign{l, r}
+func NewAssign(l, r Node, pos int) Node {
+	return Assign{
+		l:   l,
+		r:   r,
+		pos: pos,
+	}
 }
 
-func (a Assign) Eval(env *obj.Env) obj.Object {
-	if left, ok := a.l.(Identifier); ok {
-		right := obj.Unwrap(a.r.Eval(env))
-		if takesPrecedenceNoError(right) {
-			return right
-		}
-		return env.Set(left.String(), right)
-	}
-
-	left := a.l.Eval(env)
-	if s, ok := left.(obj.Setter); ok {
-		right := obj.Unwrap(a.r.Eval(env))
-		if takesPrecedence(right) {
-			return right
-		}
-		return s.Set(right)
-	}
-
-	return obj.NewError("cannot assign to literal")
+func (a Assign) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Assign: not a constant expression")
 }
 
 func (a Assign) String() string {
@@ -43,17 +32,23 @@ func (a Assign) String() string {
 }
 
 func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
+	defer c.Bookmark(position)
+
 	switch left := a.l.(type) {
 	case Identifier:
-		symbol := c.Define(string(left))
+		symbol := c.Define(left.String())
 		if position, err = a.r.Compile(c); err != nil {
 			return
 		}
 
 		if symbol.Scope == compiler.GlobalScope {
-			return c.Emit(code.OpSetGlobal, symbol.Index), nil
+			position = c.Emit(code.OpSetGlobal, symbol.Index)
+			c.Bookmark(a.pos)
+			return
 		} else {
-			return c.Emit(code.OpSetLocal, symbol.Index), nil
+			position = c.Emit(code.OpSetLocal, symbol.Index)
+			c.Bookmark(a.pos)
+			return
 		}
 
 	case Dot, Index:
@@ -63,7 +58,9 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 		if position, err = a.r.Compile(c); err != nil {
 			return
 		}
-		return c.Emit(code.OpDefine), nil
+		position = c.Emit(code.OpDefine)
+		c.Bookmark(a.pos)
+		return
 
 	default:
 		return 0, fmt.Errorf("cannot assign to literal")

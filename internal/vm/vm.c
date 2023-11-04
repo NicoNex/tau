@@ -646,7 +646,6 @@ static inline void vm_exec_bang(struct vm * restrict vm) {
 	}
 }
 
-// TODO: add support for bytes.
 static inline void vm_exec_index(struct vm * restrict vm) {
 	struct object *index = unwrap(&vm_stack_pop(vm));
 	struct object *left = unwrap(&vm_stack_pop(vm));
@@ -658,13 +657,22 @@ static inline void vm_exec_index(struct vm * restrict vm) {
 		size_t len = left->data.str->len;
 		int64_t idx = index->data.i;
 
-		if (idx < 0 || idx > len) {
+		if (idx < 0 || idx >= len) {
 			vm_errorf(vm, "index out of range");
 		}
 		char *new_str = malloc(sizeof(char) * 2);
 		new_str[0] = str[idx];
 		new_str[1] = '\0';
 		vm_stack_push(vm, new_string_obj(new_str, 2));
+	} else if (ASSERT(left, obj_bytes) && ASSERT(index, obj_integer)) {
+		uint8_t *b = left->data.bytes->bytes;
+		size_t len = left->data.bytes->len;
+		int64_t idx = index->data.i;
+
+		if (idx < 0 || idx >= len) {
+			vm_errorf(vm, "index out of range");
+		}
+		vm_stack_push(vm, new_integer_obj(b[idx]));
 	} else if (ASSERT(left, obj_map) && ASSERT4(index, obj_integer, obj_float, obj_string, obj_boolean)) {
 		vm_stack_push(vm, new_getsetter_obj(*left, *index, map_getsetter_get, map_getsetter_set));
 	} else {

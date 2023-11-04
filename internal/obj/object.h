@@ -61,6 +61,12 @@ struct string {
 	uint32_t *m_parent;
 };
 
+struct bytes {
+	uint8_t *bytes;
+	size_t len;
+	uint32_t *m_parent;
+};
+
 struct pipe {
 	struct object *buf;
 	size_t cap;
@@ -81,6 +87,7 @@ union data {
 	struct function *fn;
 	struct closure *cl;
 	struct string *str;
+	struct bytes *bytes;
 	struct list *list;
 	struct map *map;
 	struct object_node **obj;
@@ -154,6 +161,13 @@ struct object new_string_slice(char *str, size_t len, uint32_t *m_parent);
 char *string_str(struct object o);
 void mark_string_obj(struct object s);
 void dispose_string_obj(struct object o);
+
+// Bytes object.
+struct object new_bytes_obj(uint8_t *bytes, size_t len);
+struct object new_bytes_slice(uint8_t *bytes, size_t len, uint32_t *m_parent);
+char *bytes_str(struct object o);
+void mark_bytes_obj(struct object o);
+void dispose_bytes_obj(struct object o);
 
 // Error object.
 struct object new_error_obj(char *msg, size_t len);

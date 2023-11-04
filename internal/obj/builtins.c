@@ -43,8 +43,8 @@ BUILTIN(_len_b) {
 	case obj_error:
 	case obj_string:
 		return new_integer_obj(arg.data.str->len);
-	// case obj_bytes:
-	// 	return new_integer_obj(arg.data.bytes->len);
+	case obj_bytes:
+		return new_integer_obj(arg.data.bytes->len);
 	default:
 		return errorf("len: object of type \"%s\" has no length", otype_str(arg.type));
 	}
@@ -470,9 +470,49 @@ BUILTIN(_slice_b) {
 		uint32_t *m_parent = args[0].data.str->m_parent != NULL ? args[0].data.str->m_parent : args[0].marked;
 		return new_string_slice(&args[0].data.str->str[start], end-start, m_parent);
 	}
-	// case obj_bytes:
+	case obj_bytes: {
+		if (end > args[0].data.bytes->len) {
+			return errorf("slice: bytes bounds out of range %d with capacity %lu", end, args[0].data.list->len);
+		} else if (start == end) {
+			return new_bytes_obj(NULL, 0);
+		}
+		// If the parent is a slice, propagate its marked parent flag for the gc,
+		// otherwise use the default marked flag.
+		uint32_t *m_parent = args[0].data.bytes->m_parent != NULL ? args[0].data.bytes->m_parent : args[0].marked;
+		return new_bytes_slice(&args[0].data.bytes->bytes[start], end-start, m_parent);
+	}
 	default:
 		return errorf("slice: first argument must be a list or string, got %s instead", otype_str(args[0].type));
+	}
+}
+
+// TODO: eventually add the obj_integer case like in Python.
+BUILTIN(_bytes_b) {
+	if (len != 1) {
+		return errorf("bytes: wrong number of arguments, expected 1, got %lu", len);
+	}
+	UNWRAP_ARGS();
+
+	struct object arg = args[0];
+	switch (arg.type) {
+	case obj_string:
+		return new_bytes_slice(arg.data.str->str, arg.data.str->len, arg.marked);
+	case obj_list: {
+		size_t len = arg.data.list->len;
+		struct object *list = arg.data.list->list;
+		uint8_t *b = malloc(sizeof(uint8_t) * len);
+
+		for (uint32_t i = 0; i < len; i++) {
+			if (list[i].type != obj_integer) {
+				free(b);
+				return errorf("bytes: list cannot be converted to bytes");
+			}
+			b[i] = list[i].data.i;
+		}
+		return new_bytes_obj(b, len);
+	}
+	default:
+		return errorf("bytes: %s cannot be converted to bytes", otype_str(arg.type));
 	}
 }
 
@@ -500,5 +540,5 @@ const builtin builtins[NUM_BUILTINS] = {
 	_bin_b,
 	_slice_b,
 	NULL, // open
-	NULL // bytes
+	_bytes_b
 };

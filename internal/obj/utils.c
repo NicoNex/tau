@@ -55,7 +55,7 @@ char *object_str(struct object o) {
 	case obj_pipe:
 		return strdup("<pipe>");
 	case obj_bytes:
-		return strdup("<unimplemented bytes>");
+		return bytes_str(o);
 	case obj_getsetter:
 		return getsetter_str(o);
 	case obj_native:
@@ -88,6 +88,9 @@ inline void mark_obj(struct object o) {
 			break;
 		case obj_string:
 			mark_string_obj(o);
+			break;
+		case obj_bytes:
+			mark_bytes_obj(o);
 			break;
 		case obj_pipe:
 			mark_pipe_obj(o);
@@ -126,7 +129,7 @@ void free_obj(struct object o) {
 		dispose_pipe_obj(o);
 		return;
 	case obj_bytes:
-		puts("no free function for bytes");
+		dispose_bytes_obj(o);
 		return;
 	case obj_getsetter:
 		dispose_getsetter_obj(o);

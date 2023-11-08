@@ -72,6 +72,7 @@ static struct object print_b(struct object *args, size_t len) {
 	return null_obj;
 }
 
+// TODO: implement input_b.
 static struct object input_b(struct object *args, size_t len) {
 	return errorf("input: unimplemented");
 }
@@ -116,8 +117,8 @@ static struct object type_b(struct object *args, size_t len) {
 }
 
 static struct object int_b(struct object *args, size_t len) {
-	if (len != 1) {
-		return errorf("int: wrong number of arguments, expected 1, got %lu", len);
+	if (len != 1 && len != 2) {
+		return errorf("int: wrong number of arguments, expected 1 or 2, got %lu", len);
 	}
 	unwrap_args(args, len);
 
@@ -139,7 +140,20 @@ static struct object int_b(struct object *args, size_t len) {
 	}
 
 	case obj_native:
-		return new_integer_obj(*(int64_t*)args[0].data.handle);
+		if (len == 1) {
+			return new_integer_obj(*(int32_t*)args[0].data.handle);
+		} else if (args[1].type != obj_integer) {
+			return errorf("int: second argument must be an integer");
+		}
+
+		switch (args[1].data.i) {
+		case 0:  return new_integer_obj(*(int32_t*)args[0].data.handle);
+		case 8:  return new_integer_obj(*(int8_t*)args[0].data.handle);
+		case 16: return new_integer_obj(*(int16_t*)args[0].data.handle);
+		case 32: return new_integer_obj(*(int32_t*)args[0].data.handle);
+		case 64: return new_integer_obj(*(int64_t*)args[0].data.handle);
+		default: return errorf("int: invalid bit size, must be a power of 2 and not exceed 64, got %lld", args[1].data.i);
+		}
 
 	default: {
 		char *s = object_str(args[0]);
@@ -151,8 +165,8 @@ static struct object int_b(struct object *args, size_t len) {
 }
 
 static struct object float_b(struct object *args, size_t len) {
-	if (len != 1) {
-		return errorf("int: wrong number of arguments, expected 1, got %lu", len);
+	if (len != 1 && len != 2) {
+		return errorf("float: wrong number of arguments, expected 1 or 2, got %lu", len);
 	}
 	unwrap_args(args, len);
 
@@ -174,7 +188,18 @@ static struct object float_b(struct object *args, size_t len) {
 	}
 
 	case obj_native:
-		return new_float_obj(*(double*)args[0].data.handle);
+		if (len == 1) {
+			return new_float_obj(*(double*)args[0].data.handle);
+		} else if (args[1].type != obj_integer) {
+			return errorf("float: second argument must be an integer");
+		}
+
+		switch (args[1].data.i) {
+		case 0:  return new_float_obj(*(float*)args[0].data.handle);
+		case 32: return new_float_obj(*(float*)args[0].data.handle);
+		case 64: return new_float_obj(*(double*)args[0].data.handle);
+		default: return errorf("float: invalid bit size, must be either 0, 32 or 64, got %lld", args[1].data.i);
+		}
 
 	default: {
 		char *s = object_str(args[0]);

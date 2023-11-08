@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <setjmp.h>
+#include <dlfcn.h>
 
 #include "vm.h"
 #include "opcode.h"
@@ -219,9 +220,21 @@ static inline void vm_exec_dot(struct vm * restrict vm) {
 		vm_stack_push(vm, new_getsetter_obj(*left, *right, object_getsetter_get, object_getsetter_set));
 		return;
 
-	case obj_native:
-		vm_stack_push(vm, new_getsetter_obj(*left, *right, native_getsetter_get, native_getsetter_set));
+	case obj_native: {
+		// Pointer to the native object.
+		void *ptr = dlsym(left->data.handle, right->data.str->str);
+		if (ptr == NULL) {
+			vm_stack_push(vm, errorf("no object with name \"%s\" found", right->data.str->str));
+			return;
+		}
+		struct object o = (struct object) {
+			.data.handle = ptr,
+			.type = obj_native,
+			.marked = MARKPTR()
+		};
+		vm_stack_push(vm, o);
 		return;
+	}
 
 	default:
 		vm_errorf(vm, "%s object has no attribute %s", otype_str(left->type), object_str(*right));

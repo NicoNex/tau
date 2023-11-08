@@ -171,6 +171,7 @@ void dispose_bytes_obj(struct object o);
 
 // Error object.
 struct object new_error_obj(char *msg, size_t len);
+struct object errorf(char *fmt, ...);
 char *error_str(struct object o);
 void dispose_error_obj(struct object o);
 
@@ -240,16 +241,10 @@ struct object new_getsetter_obj(struct object l, struct object r, getfn get, set
 char *getsetter_str(struct object o);
 void dispose_getsetter_obj(struct object o);
 
-// Native object.
-struct object native_getsetter_get(struct getsetter *gs);
-struct object native_getsetter_set(struct getsetter *gs, struct object val);
-void dispose_native_obj(struct object o);
-
 // Util functions.
 char *otype_str(enum obj_type t);
 char *object_str(struct object o);
 void print_obj(struct object o);
 void mark_obj(struct object o);
 void free_obj(struct object o);
-struct object errorf(char *fmt, ...);
 uint64_t fnv64a(char *s);

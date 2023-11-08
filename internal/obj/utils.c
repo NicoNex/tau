@@ -1,7 +1,6 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdio.h>
-#include <stdarg.h>
 #include "object.h"
 
 char *otype_str(enum obj_type t) {
@@ -11,6 +10,7 @@ char *otype_str(enum obj_type t) {
 		"int",
 		"float",
 		"builtin",
+		"getsetter",
 		"string",
 		"error",
 		"list",
@@ -20,7 +20,6 @@ char *otype_str(enum obj_type t) {
 		"object",
 		"pipe",
 		"bytes",
-		"getsetter",
 		"native"
 	};
 	return t <= obj_native ? strings[t] : "corrupted";
@@ -135,21 +134,10 @@ void free_obj(struct object o) {
 		dispose_getsetter_obj(o);
 		return;
 	case obj_native:
-		dispose_native_obj(o);
+		free(o.marked);
+		free(o.data.handle);
 		return;
 	default:
 		return;
 	}
-}
-
-inline struct object errorf(char *fmt, ...) {
-	char *msg = malloc(sizeof(char) * 256);
-	msg[255] = '\n';
-
-	va_list ap;
-	va_start(ap, fmt);
-	vsnprintf(msg, 256, fmt, ap);
-	va_end(ap);
-
-	return new_error_obj(msg, strlen(msg));
 }

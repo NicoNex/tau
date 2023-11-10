@@ -72,9 +72,33 @@ static struct object print_b(struct object *args, size_t len) {
 	return null_obj;
 }
 
-// TODO: implement input_b.
 static struct object input_b(struct object *args, size_t len) {
-	return errorf("input: unimplemented");
+	unwrap_args(args, len);
+	if (len == 1) {
+		if (args[0].type != obj_string) {
+			return errorf("input: argument must be a string, got %s", otype_str(args[0].type));
+		}
+		fputs(args[0].data.str->str, stdout);
+	}
+
+	char tmp;
+	char *input = NULL;
+	size_t ilen = 0;
+
+	do {
+		tmp = getchar();
+		char *reinput = realloc(input, ilen + 1);
+		if (reinput == NULL) {
+			free(input);
+			return errorf("input: error allocating memory");
+		}
+		input = reinput;
+		input[ilen++] = tmp;
+
+	} while (tmp != '\n' && tmp != '\0');
+	input[ilen - 1] = '\0';
+
+	return new_string_obj(input, ilen);
 }
 
 static struct object string_b(struct object *args, size_t len) {

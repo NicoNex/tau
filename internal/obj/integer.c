@@ -1,10 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <inttypes.h>
 #include "object.h"
 
 char *integer_str(struct object o) {
 	char *str = calloc(64, sizeof(char));
-	sprintf(str, "%lld", o.data.i);
+	sprintf(str, "%" PRId64, o.data.i);
 
 	return str;
 }

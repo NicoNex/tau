@@ -18,5 +18,8 @@ jobs:
       - name: Install automake on macOS
         if: runner.os == 'macOS'
         run: brew install automake
+      - name: Install MinGW on Windows
+        if: runner.os == 'Windows'
+        run: choco install make autoconf automake libtool
       - run: make
       - run: ./tau --help

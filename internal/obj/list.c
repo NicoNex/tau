@@ -90,29 +90,6 @@ struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent
 	};
 }
 
-struct object list_getsetter_get(struct getsetter *gs) {
-	struct object *list = gs->l.data.list->list;
-	size_t listlen = gs->l.data.list->len;
-	int64_t idx = gs->r.data.i;
-
-	if (idx < 0 || idx >= listlen) {
-		return new_error_obj(strdup("index out of range"), 18);
-	}
-	return list[idx];
-}
-
-struct object list_getsetter_set(struct getsetter *gs, struct object val) {
-	struct object *list = gs->l.data.list->list;
-	size_t listlen = gs->l.data.list->len;
-	int64_t idx = gs->r.data.i;
-
-	if (idx < 0 || idx >= listlen) {
-		return new_error_obj(strdup("index out of range"), 18);
-	}
-	list[idx] = val;
-	return val;
-}
-
 inline struct list new_list(size_t cap) {
 	return (struct list) {
 		.list = malloc(sizeof(struct object) * cap),

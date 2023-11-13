@@ -42,6 +42,18 @@ func (i Index) Compile(c *compiler.Compiler) (position int, err error) {
 	return
 }
 
+// CompileDefine assumes the index operation is for defining a value.
+func (i Index) CompileDefine(c *compiler.Compiler) (position int, err error) {
+	if position, err = i.left.Compile(c); err != nil {
+		return
+	}
+	if position, err = i.index.Compile(c); err != nil {
+		return
+	}
+	c.Bookmark(i.pos)
+	return
+}
+
 func (i Index) IsConstExpression() bool {
 	return false
 }

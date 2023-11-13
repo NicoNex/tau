@@ -10,7 +10,6 @@ char *otype_str(enum obj_type t) {
 		"int",
 		"float",
 		"builtin",
-		"getsetter",
 		"string",
 		"error",
 		"list",
@@ -55,8 +54,6 @@ char *object_str(struct object o) {
 		return strdup("<pipe>");
 	case obj_bytes:
 		return bytes_str(o);
-	case obj_getsetter:
-		return getsetter_str(o);
 	case obj_native:
 		return strdup("<native>");
 	default:
@@ -129,9 +126,6 @@ void free_obj(struct object o) {
 		return;
 	case obj_bytes:
 		dispose_bytes_obj(o);
-		return;
-	case obj_getsetter:
-		dispose_getsetter_obj(o);
 		return;
 	case obj_native:
 		free(o.marked);

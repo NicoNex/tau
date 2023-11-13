@@ -7,17 +7,6 @@
 #include <math.h>
 #include "object.h"
 
-static inline __attribute__((always_inline))
-void unwrap_args(struct object *args, size_t len) {
-	for (uint32_t i = 0; i < len; i++) {
-		if (args[i].type == obj_getsetter) {
-			struct getsetter *gs = args[i].data.gs;
-			args[i] = gs->get(gs);
-			free(gs);
-		}
-	}
-}
-
 struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len)) {
 	return (struct object) {
 		.data.builtin = builtin,
@@ -30,7 +19,6 @@ static struct object len_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("len: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	struct object arg = args[0];
 
@@ -48,7 +36,6 @@ static struct object len_b(struct object *args, size_t len) {
 }
 
 static struct object println_b(struct object *args, size_t len) {
-	unwrap_args(args, len);
 
 	for (uint32_t i = 0; i < len; i++) {
 		char *s = object_str(args[i]);
@@ -61,7 +48,6 @@ static struct object println_b(struct object *args, size_t len) {
 }
 
 static struct object print_b(struct object *args, size_t len) {
-	unwrap_args(args, len);
 
 	for (uint32_t i = 0; i < len; i++) {
 		char *s = object_str(args[i]);
@@ -73,7 +59,6 @@ static struct object print_b(struct object *args, size_t len) {
 }
 
 static struct object input_b(struct object *args, size_t len) {
-	unwrap_args(args, len);
 	if (len == 1) {
 		if (args[0].type != obj_string) {
 			return errorf("input: argument must be a string, got %s", otype_str(args[0].type));
@@ -105,7 +90,6 @@ static struct object string_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("string: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	switch (args[0].type) {
 	case obj_native: {
@@ -121,7 +105,6 @@ static struct object string_b(struct object *args, size_t len) {
 }
 
 static struct object error_b(struct object *args, size_t len) {
-	unwrap_args(args, len);
 	if (len != 1) {
 		return errorf("error: wrong number of arguments, expected 1, got %lu", len);
 	} else if (args[0].type != obj_string) {
@@ -134,7 +117,6 @@ static struct object type_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("type: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	char *s = otype_str(args[0].type);
 	return new_string_obj(strdup(s), strlen(s));
@@ -144,7 +126,6 @@ static struct object int_b(struct object *args, size_t len) {
 	if (len != 1 && len != 2) {
 		return errorf("int: wrong number of arguments, expected 1 or 2, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	switch (args[0].type) {
 	case obj_integer:
@@ -192,7 +173,6 @@ static struct object float_b(struct object *args, size_t len) {
 	if (len != 1 && len != 2) {
 		return errorf("float: wrong number of arguments, expected 1 or 2, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	switch (args[0].type) {
 	case obj_integer:
@@ -235,7 +215,6 @@ static struct object float_b(struct object *args, size_t len) {
 }
 
 static struct object exit_b(struct object *args, size_t len) {
-	unwrap_args(args, len);
 
 	switch (len) {
 	case 0:
@@ -273,7 +252,6 @@ static struct object append_b(struct object *args, size_t len) {
 	if (len < 2) {
 		return errorf("append: wrong number of arguments, expected at least 2");
 	}
-	unwrap_args(args, len);
 
 	if (args[0].type != obj_list) {
 		return errorf("append: first argument must be a list");
@@ -323,7 +301,6 @@ static struct object failed_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("failed: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	return parse_bool(args[0].type == obj_error);
 }
@@ -332,7 +309,6 @@ static struct object plugin_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("plugin: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	if (args[0].type != obj_string) {
 		return errorf("plugin: first argument must be string, got %s instead", otype_str(args[0].type));
@@ -351,7 +327,6 @@ static struct object plugin_b(struct object *args, size_t len) {
 }
 
 static struct object pipe_b(struct object *args, size_t len) {
-	unwrap_args(args, len);
 	switch (len) {
 	case 0:
 		return new_pipe();
@@ -372,7 +347,6 @@ static struct object send_b(struct object *args, size_t len) {
 	if (len != 2) {
 		return errorf("send: wrong number of arguments, expected 2, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	struct object pipe = args[0];
 	struct object o = args[1];
@@ -390,7 +364,6 @@ static struct object recv_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("recv: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	if (args[0].type != obj_pipe) {
 		return errorf("recv: first argument must be a pipe, got %s instead", otype_str(args[0].type));
@@ -402,7 +375,6 @@ static struct object close_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("close: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	if (args[0].type != obj_pipe) {
 		return errorf("close: first argument must be a pipe, got %s instead", otype_str(args[0].type));
@@ -417,7 +389,6 @@ static struct object hex_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("hex: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	if (args[0].type != obj_integer) {
 		return errorf("hex: first argument must be int, got %s instead", otype_str(args[0].type));
@@ -436,7 +407,6 @@ static struct object oct_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("oct: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	if (args[0].type != obj_integer) {
 		return errorf("oct: first argument must be int, got %s instead", otype_str(args[0].type));
@@ -455,7 +425,6 @@ static struct object bin_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("bin: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	if (args[0].type != obj_integer) {
 		return errorf("bin: first argument must be int, got %s instead", otype_str(args[0].type));
@@ -476,7 +445,6 @@ static struct object slice_b(struct object *args, size_t len) {
 	if (len != 3) {
 		return errorf("slice: wrong number of arguments, expected 3, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	if (args[1].type != obj_integer) {
 		return errorf("slice: second argument must be an int, got %s instead", otype_str(args[1].type));
@@ -537,7 +505,6 @@ static struct object bytes_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("bytes: wrong number of arguments, expected 1, got %lu", len);
 	}
-	unwrap_args(args, len);
 
 	struct object arg = args[0];
 	switch (arg.type) {

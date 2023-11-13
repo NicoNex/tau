@@ -19,7 +19,7 @@
 #define vm_push_frame(vm, frame) vm->frames[++vm->frame_idx] = frame
 #define vm_pop_frame(vm) (&vm->frames[vm->frame_idx--])
 
-#define vm_stack_push(vm, obj) vm->stack[vm->sp++] = obj
+#define vm_stack_push(vm, obj) vm->stack[vm->sp++] = (obj)
 #define vm_stack_pop(vm) (vm->stack[--vm->sp])
 #define vm_stack_pop_ignore(vm) vm->sp--
 #define vm_stack_peek(vm) (vm->stack[vm->sp-1])
@@ -36,7 +36,7 @@
 	#define DISPATCH() puts(opcode_str(*frame->ip)); goto *jump_table[*frame->ip++]
 #endif
 
-#define ASSERT(obj, t) (obj->type == t)
+#define ASSERT(obj, t) ((obj)->type == t)
 #define ASSERT2(obj, t1, t2) (ASSERT(obj, t1) || ASSERT(obj, t2))
 #define ASSERT4(obj, t1, t2, t3, t4) (ASSERT(obj, t1) || ASSERT(obj, t2) || ASSERT(obj, t3) || ASSERT(obj, t4))
 #define M_ASSERT(o1, o2, t) (ASSERT(o1, t) && ASSERT(o2, t))
@@ -187,44 +187,24 @@ void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
 	vm_push_frame(vm, halt_frame);
 }
 
-static inline __attribute__((always_inline))
-struct object *unwrap(struct object *o) {
-	if (o->type == obj_getsetter) {
-		struct getsetter *gs = o->data.gs;
-		*o = gs->get(gs);
-		free(gs);
-	}
-	return o;
-}
-
-static inline __attribute__((always_inline))
-struct object unwraps(struct object o) {
-	if (o.type == obj_getsetter) {
-		struct getsetter *gs = o.data.gs;
-		o = gs->get(gs);
-		free(gs);
-	}
-	return o;
-}
-
 static inline void vm_exec_dot(struct vm * restrict vm) {
-	struct object *right = &vm_stack_pop(vm);
-	struct object *left = unwrap(&vm_stack_pop(vm));
+	struct object right = vm_stack_pop(vm);
+	struct object left = vm_stack_pop(vm);
 
-	if (!ASSERT(right, obj_string)) {
-		vm_errorf(vm, "%s object has no attribute %s", otype_str(left->type), object_str(*right));
+	if (right.type != obj_string) {
+		vm_errorf(vm, "%s object has no attribute %s", otype_str(left.type), object_str(right));
 	}
 
-	switch (left->type) {
+	switch (left.type) {
 	case obj_object:
-		vm_stack_push(vm, new_getsetter_obj(*left, *right, object_getsetter_get, object_getsetter_set));
+		vm_stack_push(vm, object_get(left, right.data.str->str));
 		return;
 
 	case obj_native: {
 		// Pointer to the native object.
-		void *ptr = dlsym(left->data.handle, right->data.str->str);
+		void *ptr = dlsym(left.data.handle, right.data.str->str);
 		if (ptr == NULL) {
-			vm_stack_push(vm, errorf("no object with name \"%s\" found", right->data.str->str));
+			vm_stack_push(vm, errorf("no object with name \"%s\" found", right.data.str->str));
 			return;
 		}
 		struct object o = (struct object) {
@@ -237,20 +217,43 @@ static inline void vm_exec_dot(struct vm * restrict vm) {
 	}
 
 	default:
-		vm_errorf(vm, "%s object has no attribute %s", otype_str(left->type), object_str(*right));
+		vm_errorf(vm, "%s object has no attribute %s", otype_str(left.type), object_str(right));
 	}
 }
 
 static inline void vm_exec_define(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = &vm_stack_pop(vm);
+	struct object val = vm_stack_pop(vm);
+	struct object field = vm_stack_pop(vm);
+	struct object target = vm_stack_pop(vm);
 
-	if (!ASSERT(left, obj_getsetter)) {
-		vm_errorf(vm, "cannot assign to type \"%s\"", otype_str(left->type));
+	switch (target.type) {
+	case obj_object:
+		vm_stack_push(vm, object_set(target, field.data.str->str, val));
+		return;
+
+	case obj_list: {
+		struct object *list = target.data.list->list;
+		size_t len = target.data.list->len;
+		int64_t idx = field.data.i;
+
+		if (idx < 0 || idx >= len) {
+			vm_stack_push(vm, errorf("index out of range"));
+			return;
+		}
+		list[idx] = val;
+		vm_stack_push(vm, val);
+		return;
 	}
-	struct getsetter *gs = left->data.gs;
-	vm_stack_push(vm, gs->set(gs, *right));
-	free(gs);
+
+	case obj_map: {
+		struct map_pair mp = map_set(target, field, val);
+		vm_stack_push(vm, mp.val);
+		return;
+	}
+
+	default:
+		vm_errorf(vm, "cannot assign to type \"%s\"", otype_str(target.type));
+	}
 }
 
 static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, uint32_t num_free) {
@@ -353,7 +356,7 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 }
 
 static inline double to_double(struct object * restrict o) {
-	if (ASSERT(o, obj_integer)) {
+	if (o->type == obj_integer) {
 		return o->data.i;
 	}
 	return o->data.f;
@@ -383,8 +386,8 @@ static inline void unsupported_prefix_operator_error(struct vm * restrict vm, ch
 }
 
 static inline void vm_exec_add(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (M_ASSERT(left, right, obj_integer)) {
 		left->data.i += right->data.i;
@@ -409,8 +412,8 @@ static inline void vm_exec_add(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_sub(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (M_ASSERT(left, right, obj_integer)) {
 		left->data.i -= right->data.i;
@@ -425,8 +428,8 @@ static inline void vm_exec_sub(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_mul(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (M_ASSERT(left, right, obj_integer)) {
 		left->data.i *= right->data.i;
@@ -441,8 +444,8 @@ static inline void vm_exec_mul(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_div(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (M_ASSERT2(left, right, obj_integer, obj_float)) {
 		double l = to_double(left);
@@ -455,8 +458,8 @@ static inline void vm_exec_div(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_mod(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (!M_ASSERT(left, right, obj_integer)) {
 		unsupported_operator_error(vm, "%", left, right);
@@ -465,22 +468,22 @@ static inline void vm_exec_mod(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_and(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_pop(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_pop(vm);
 
 	vm_stack_push(vm, parse_bool(is_truthy(left) && is_truthy(right)));
 }
 
 static inline void vm_exec_or(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_pop(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_pop(vm);
 
 	vm_stack_push(vm, parse_bool(is_truthy(left) || is_truthy(right)));
 }
 
 static inline void vm_exec_bw_and(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (!M_ASSERT(left, right, obj_integer)) {
 		unsupported_operator_error(vm, "&", left, right);
@@ -489,8 +492,8 @@ static inline void vm_exec_bw_and(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_bw_or(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (!M_ASSERT(left, right, obj_integer)) {
 		unsupported_operator_error(vm, "|", left, right);
@@ -499,8 +502,8 @@ static inline void vm_exec_bw_or(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_bw_xor(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (!M_ASSERT(left, right, obj_integer)) {
 		unsupported_operator_error(vm, "^", left, right);
@@ -509,7 +512,7 @@ static inline void vm_exec_bw_xor(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_bw_not(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_peek(vm);
 
 	if (!ASSERT(right, obj_integer)) {
 		unsupported_prefix_operator_error(vm, "~", right);
@@ -518,8 +521,8 @@ static inline void vm_exec_bw_not(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_bw_lshift(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (!M_ASSERT(left, right, obj_integer)) {
 		unsupported_operator_error(vm, "<<", left, right);
@@ -528,8 +531,8 @@ static inline void vm_exec_bw_lshift(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_bw_rshift(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (!M_ASSERT(left, right, obj_integer)) {
 		unsupported_operator_error(vm, ">>", left, right);
@@ -538,8 +541,8 @@ static inline void vm_exec_bw_rshift(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_eq(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (M_ASSERT(left, right, obj_string)) {
 		char *l = left->data.str->str;
@@ -561,8 +564,8 @@ static inline void vm_exec_eq(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_not_eq(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (M_ASSERT(left, right, obj_string)) {
 		char *l = left->data.str->str;
@@ -584,8 +587,8 @@ static inline void vm_exec_not_eq(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_greater_than(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (M_ASSERT(left, right, obj_integer)) {
 		left->data.i = left->data.i > right->data.i;
@@ -606,8 +609,8 @@ static inline void vm_exec_greater_than(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_greater_than_eq(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_peek(vm);
 
 	if (M_ASSERT(left, right, obj_integer)) {
 		left->data.i = left->data.i >= right->data.i;
@@ -628,7 +631,7 @@ static inline void vm_exec_greater_than_eq(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_minus(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_peek(vm));
+	struct object *right = &vm_stack_peek(vm);
 
 	switch (right->type) {
 	case obj_integer:
@@ -644,7 +647,7 @@ static inline void vm_exec_minus(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_bang(struct vm * restrict vm) {
-	struct object *right = unwrap(&vm_stack_pop(vm));
+	struct object *right = &vm_stack_pop(vm);
 
 	switch (right->type) {
 	case obj_boolean:
@@ -659,16 +662,24 @@ static inline void vm_exec_bang(struct vm * restrict vm) {
 	}
 }
 
+// TODO: improve type assertion.
 static inline void vm_exec_index(struct vm * restrict vm) {
-	struct object *index = unwrap(&vm_stack_pop(vm));
-	struct object *left = unwrap(&vm_stack_pop(vm));
+	struct object *right = &vm_stack_pop(vm);
+	struct object *left = &vm_stack_pop(vm);
 
-	if (ASSERT(left, obj_list) && ASSERT(index, obj_integer)) {
-		vm_stack_push(vm, new_getsetter_obj(*left, *index, list_getsetter_get, list_getsetter_set));
-	} else if (ASSERT(left, obj_string) && ASSERT(index, obj_integer)) {
+	if (ASSERT(left, obj_list) && ASSERT(right, obj_integer)) {
+		struct object *list = left->data.list->list;
+		size_t len = left->data.list->len;
+		int64_t idx = right->data.i;
+
+		if (idx < 0 || idx >= len) {
+			vm_errorf(vm, "index out of range");
+		}
+		vm_stack_push(vm, list[idx]);
+	} else if (ASSERT(left, obj_string) && ASSERT(right, obj_integer)) {
 		char *str = left->data.str->str;
 		size_t len = left->data.str->len;
-		int64_t idx = index->data.i;
+		int64_t idx = right->data.i;
 
 		if (idx < 0 || idx >= len) {
 			vm_errorf(vm, "index out of range");
@@ -677,19 +688,20 @@ static inline void vm_exec_index(struct vm * restrict vm) {
 		new_str[0] = str[idx];
 		new_str[1] = '\0';
 		vm_stack_push(vm, new_string_obj(new_str, 2));
-	} else if (ASSERT(left, obj_bytes) && ASSERT(index, obj_integer)) {
+	} else if (ASSERT(left, obj_bytes) && ASSERT(right, obj_integer)) {
 		uint8_t *b = left->data.bytes->bytes;
 		size_t len = left->data.bytes->len;
-		int64_t idx = index->data.i;
+		int64_t idx = right->data.i;
 
 		if (idx < 0 || idx >= len) {
 			vm_errorf(vm, "index out of range");
 		}
 		vm_stack_push(vm, new_integer_obj(b[idx]));
-	} else if (ASSERT(left, obj_map) && ASSERT4(index, obj_integer, obj_float, obj_string, obj_boolean)) {
-		vm_stack_push(vm, new_getsetter_obj(*left, *index, map_getsetter_get, map_getsetter_set));
+	} else if (ASSERT(left, obj_map) && ASSERT4(right, obj_integer, obj_float, obj_string, obj_boolean)) {
+		struct map_pair mp = map_get(*left, *right);
+		vm_stack_push(vm, mp.val);
 	} else {
-		vm_errorf(vm, "invalid index operator for types %s and %s", otype_str(left->type), otype_str(index->type));
+		vm_errorf(vm, "invalid index operator for types %s and %s", otype_str(left->type), otype_str(right->type));
 	}
 }
 
@@ -723,7 +735,7 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 
 	// Convert Tau types to C types.
 	for (int64_t i = numargs - 1; i >= 0; i--) {
-		struct object *o = unwrap(&vm_stack_pop(vm));
+		struct object *o = &vm_stack_pop(vm);
 
 		switch (o->type) {
 		case obj_boolean:
@@ -772,7 +784,7 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 }
 
 static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
-	struct object *o = unwrap(&vm->stack[vm->sp-1-numargs]);
+	struct object *o = &vm->stack[vm->sp-1-numargs];
 
 	switch (o->type) {
 	case obj_closure:
@@ -812,7 +824,7 @@ static int call_builtin_and_cleanup(void *data) {
 
 static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num_args) {
 	thrd_t thread;
-	struct object *o = unwrap(&vm->stack[vm->sp-1-num_args]);
+	struct object *o = &vm->stack[vm->sp-1-num_args];
 
 	switch (o->type) {
 	case obj_closure: {
@@ -856,7 +868,7 @@ static inline void vm_exec_return(struct vm * restrict vm) {
 }
 
 static inline void vm_exec_return_value(struct vm * restrict vm) {
-	struct object *o = unwrap(&vm_stack_pop(vm));
+	struct object *o = &vm_stack_pop(vm);
 	struct frame *frame = vm_pop_frame(vm);
 	vm->sp = frame->base_ptr - 1;
 	vm_stack_push(vm, *o);
@@ -868,7 +880,7 @@ struct object vm_last_popped_stack_elem(struct vm * restrict vm) {
 
 static void vm_mark_stack(struct vm * restrict vm) {
 	for (int32_t i = vm->sp - 1; i >= 0; i--) {
-		if (vm->stack[i].type > obj_getsetter) {
+		if (vm->stack[i].type > obj_builtin) {
 			mark_obj(vm->stack[i]);
 		}
 	}
@@ -879,7 +891,7 @@ static void vm_mark_consts(struct vm * restrict vm) {
 	size_t len = vm->state.consts.len;
 
 	for (size_t i = 0; i < len; i++) {
-		if (consts[i].type > obj_getsetter) {
+		if (consts[i].type > obj_builtin) {
 			mark_obj(consts[i]);
 		}
 	}
@@ -890,7 +902,7 @@ static void vm_mark_globals(struct vm * restrict vm) {
 	size_t len = vm->state.globals->len;
 
 	for (uint32_t i = 0; i < len; i++) {
-		if (globals[i].type > obj_getsetter) {
+		if (globals[i].type > obj_builtin) {
 			mark_obj(globals[i]);
 		}
 	}
@@ -1184,7 +1196,7 @@ int vm_run(struct vm * restrict vm) {
 		uint16_t pos = read_uint16(frame->ip);
 		frame->ip += 2;
 
-		struct object *cond = unwrap(&vm_stack_pop(vm));
+		struct object *cond = &vm_stack_pop(vm);
 		if (!is_truthy(cond)) {
 			frame->ip = &frame->start[pos];
 		}
@@ -1211,7 +1223,7 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_SET_GLOBAL: {
 		uint32_t global_idx = read_uint16(frame->ip);
 		frame->ip += 2;
-		pool_insert(vm->state.globals, global_idx, unwraps(vm_stack_peek(vm)));
+		pool_insert(vm->state.globals, global_idx, vm_stack_peek(vm));
 		DISPATCH();
 	}
 
@@ -1223,7 +1235,7 @@ int vm_run(struct vm * restrict vm) {
 
 	TARGET_SET_LOCAL: {
 		uint32_t local_idx = read_uint8(frame->ip++);
-		vm->stack[frame->base_ptr+local_idx] = unwraps(vm_stack_peek(vm));
+		vm->stack[frame->base_ptr+local_idx] = vm_stack_peek(vm);
 		DISPATCH();
 	}
 

@@ -141,13 +141,3 @@ void mark_map_obj(struct object m) {
 	*m.marked = 1;
 	mark_map_children(m.data.map->root);
 }
-
-struct object map_getsetter_get(struct getsetter *gs) {
-	struct map_pair mp = map_get(gs->l, gs->r);
-	return mp.val;
-}
-
-struct object map_getsetter_set(struct getsetter *gs, struct object val) {
-	struct map_pair mp = map_set(gs->l, gs->r, val);
-	return mp.val;
-}

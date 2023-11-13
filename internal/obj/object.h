@@ -15,7 +15,6 @@ enum obj_type {
 	obj_integer,
 	obj_float,
 	obj_builtin,
-	obj_getsetter,
 	obj_string,
 	obj_error,
 	obj_list,
@@ -92,7 +91,6 @@ union data {
 	struct map *map;
 	struct object_node **obj;
 	struct pipe *pipe;
-	struct getsetter *gs;
 	struct object (*builtin)(struct object *args, size_t len);
 };
 
@@ -101,16 +99,6 @@ struct object {
 	enum obj_type type;
 	uint32_t *marked;
 };
-
-struct getsetter {
-	struct object l;
-	struct object r;
-	struct object (*get)(struct getsetter *gs);
-	struct object (*set)(struct getsetter *gs, struct object o);
-};
-
-typedef struct object (*getfn)(struct getsetter *gs);
-typedef struct object (*setfn)(struct getsetter *gs, struct object o);
 
 struct key_hash {
 	enum obj_type type;
@@ -178,8 +166,6 @@ void dispose_error_obj(struct object o);
 // List object.
 struct object new_list_obj(struct object *list, size_t len);
 struct object new_list_obj_data(struct object *list, size_t len, size_t cap);
-struct object list_getsetter_get(struct getsetter *gs);
-struct object list_getsetter_set(struct getsetter *gs, struct object val);
 struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent);
 char *list_str(struct object o);
 void mark_list_obj(struct object l);
@@ -201,8 +187,6 @@ void dispose_pipe_obj(struct object pipe);
 struct object new_map();
 struct map_pair map_get(struct object map, struct object k);
 struct map_pair map_set(struct object map, struct object k, struct object v);
-struct object map_getsetter_get(struct getsetter *gs);
-struct object map_getsetter_set(struct getsetter *gs, struct object val);
 void mark_map_obj(struct object m);
 char *map_str(struct object map);
 void dispose_map_obj(struct object map);
@@ -211,8 +195,6 @@ void dispose_map_obj(struct object map);
 struct object new_object();
 struct object object_get(struct object obj, char *name);
 struct object object_set(struct object obj, char *name, struct object val);
-struct object object_getsetter_get(struct getsetter *gs);
-struct object object_getsetter_set(struct getsetter *gs, struct object val);
 struct object object_to_module(struct object o);
 void mark_object_obj(struct object o);
 char *object_obj_str(struct object obj);
@@ -235,11 +217,6 @@ void mark_closure_obj(struct object c);
 typedef struct object (*builtin)(struct object *args, size_t len);
 extern const builtin builtins[NUM_BUILTINS];
 struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len));
-
-// Getsetter object.
-struct object new_getsetter_obj(struct object l, struct object r, getfn get, setfn set);
-char *getsetter_str(struct object o);
-void dispose_getsetter_obj(struct object o);
 
 // Util functions.
 char *otype_str(enum obj_type t);

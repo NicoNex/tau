@@ -65,21 +65,20 @@ type (
 )
 
 const (
-	NullType      Type = C.obj_null      // null
-	BoolType           = C.obj_boolean   // bool
-	IntType            = C.obj_integer   // int
-	FloatType          = C.obj_float     // float
-	BuiltinType        = C.obj_builtin   // builtin
-	StringType         = C.obj_string    // string
-	ErrorType          = C.obj_error     // error
-	ListType           = C.obj_list      // list
-	MapType            = C.obj_map       // map
-	FunctionType       = C.obj_function  // function
-	ClosureType        = C.obj_closure   // closure
-	ObjectType         = C.obj_object    // object
-	PipeType           = C.obj_pipe      // pipe
-	BytesType          = C.obj_bytes     // bytes
-	GetsetterType      = C.obj_getsetter // getsetter
+	NullType     Type = C.obj_null     // null
+	BoolType          = C.obj_boolean  // bool
+	IntType           = C.obj_integer  // int
+	FloatType         = C.obj_float    // float
+	BuiltinType       = C.obj_builtin  // builtin
+	StringType        = C.obj_string   // string
+	ErrorType         = C.obj_error    // error
+	ListType          = C.obj_list     // list
+	MapType           = C.obj_map      // map
+	FunctionType      = C.obj_function // function
+	ClosureType       = C.obj_closure  // closure
+	ObjectType        = C.obj_object   // object
+	PipeType          = C.obj_pipe     // pipe
+	BytesType         = C.obj_bytes    // bytes
 )
 
 var (

@@ -90,7 +90,7 @@ var typemap = map[Type]string{
 
 	Assign:         "=",
 	Plus:           "+",
-	Minus:          "*",
+	Minus:          "-",
 	Slash:          "/",
 	Asterisk:       "*",
 	Modulus:        "%",

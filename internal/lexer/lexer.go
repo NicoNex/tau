@@ -217,9 +217,6 @@ func lexTimes(l *lexer) stateFn {
 	case '=':
 		l.emit(item.AsteriskAssign)
 
-	case '*':
-		l.emit(item.Power)
-
 	default:
 		l.backup()
 		l.emit(item.Asterisk)

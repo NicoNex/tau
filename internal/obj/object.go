@@ -121,6 +121,10 @@ func (o Object) Type() Type {
 	return o._type
 }
 
+func (o Object) TypeString() string {
+	return C.GoString(C.otype_str(o._type))
+}
+
 func (o Object) String() string {
 	cstr := C.object_str(o)
 	defer C.free(unsafe.Pointer(cstr))
@@ -179,6 +183,14 @@ func GoError(o Object) error {
 		return errors.New(C.GoString(C.error_msg(o)))
 	}
 	return nil
+}
+
+func NewBool(b bool) Object {
+	if b {
+		return C.true_obj
+	} else {
+		return C.false_obj
+	}
 }
 
 func NewInteger(i int64) Object {

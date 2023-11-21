@@ -88,6 +88,11 @@ func (vm VM) Free() {
 	C.vm_dispose(vm)
 }
 
+func (vm VM) LastPoppedStackObj() obj.Object {
+	o := C.vm_last_popped_stack_elem(vm)
+	return *(*obj.Object)(unsafe.Pointer(&o))
+}
+
 func cobj(o obj.Object) C.struct_object {
 	return *(*C.struct_object)(unsafe.Pointer(&o))
 }

@@ -103,6 +103,21 @@ static inline void _map_dispose(struct map_node *n) {
 	}
 }
 
+static inline void _map_keys(struct map_node *n, struct list *list) {
+	if (n != NULL) {
+		list->list[list->len++] = n->val.key;
+		_map_keys(n->l, list);
+		_map_keys(n->r, list);
+	}
+}
+
+struct object map_keys(struct object map) {
+	struct object list = make_list(map.data.map->len);
+
+	_map_keys(map.data.map->root, list.data.list);
+	return list;
+}
+
 struct map_pair map_get(struct object map, struct object o) {
 	return _map_get(map.data.map->root, hash(o));
 }

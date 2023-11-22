@@ -500,6 +500,15 @@ static struct object slice_b(struct object *args, size_t len) {
 	}
 }
 
+static struct object keys_b(struct object *args, size_t len) {
+	if (len != 1) {
+		return errorf("keys: wrong number of arguments, expected 1, got %lu", len);
+	} else if (args[0].type != obj_map) {
+		return errorf("keys: argument must be a map, got %s instead", otype_str(args[0].type));
+	}
+	return map_keys(args[0]);
+}
+
 // TODO: eventually add the obj_integer case like in Python.
 static struct object bytes_b(struct object *args, size_t len) {
 	if (len != 1) {
@@ -552,6 +561,6 @@ const builtin builtins[NUM_BUILTINS] = {
 	oct_b,
 	bin_b,
 	slice_b,
-	NULL, // open
+	keys_b,
 	bytes_b
 };

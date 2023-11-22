@@ -48,6 +48,20 @@ void mark_list_obj(struct object l) {
 	}
 }
 
+struct object make_list(size_t cap) {
+	struct list *l = malloc(sizeof(struct list));
+	l->list = calloc(cap, sizeof(struct object));
+	l->len = 0;
+	l->cap = cap;
+	l->m_parent = NULL;
+
+	return (struct object) {
+		.data.list = l,
+		.type = obj_list,
+		.marked = MARKPTR()
+	};
+}
+
 struct object new_list_obj(struct object *list, size_t len) {
 	struct list *l = malloc(sizeof(struct list));
 	l->list = list;
@@ -58,7 +72,7 @@ struct object new_list_obj(struct object *list, size_t len) {
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = MARKPTR(),
+		.marked = MARKPTR()
 	};
 }
 
@@ -88,24 +102,6 @@ struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent
 		.type = obj_list,
 		.marked = MARKPTR(),
 	};
-}
-
-inline struct list new_list(size_t cap) {
-	return (struct list) {
-		.list = malloc(sizeof(struct object) * cap),
-		.cap = cap,
-		.len = 0
-	};
-}
-
-inline void list_insert(struct list *l, struct object o, size_t idx) {
-	if (idx >= l->cap) {
-		if (l->cap == 0) l->cap = 1;
-		while (l->cap <= idx) l->cap *= 2;
-		l->list = realloc(l->list, sizeof(struct object) * l->cap);
-	}
-	l->list[idx] = o;
-	l->len++;
 }
 
 inline struct list list_copy(struct list l) {

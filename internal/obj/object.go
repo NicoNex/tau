@@ -108,7 +108,7 @@ var (
 		"oct",
 		"bin",
 		"slice",
-		"open",
+		"keys",
 		"bytes",
 	}
 

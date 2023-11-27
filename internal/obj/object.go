@@ -109,6 +109,7 @@ var (
 		"bin",
 		"slice",
 		"keys",
+		"delete",
 		"bytes",
 	}
 

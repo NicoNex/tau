@@ -188,6 +188,7 @@ struct map_pair map_get(struct object map, struct object k);
 struct map_pair map_set(struct object map, struct object k, struct object v);
 void mark_map_obj(struct object m);
 char *map_str(struct object map);
+void map_delete(struct object map, struct object key);
 void dispose_map_obj(struct object map);
 struct object map_keys(struct object map);
 

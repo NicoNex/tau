@@ -509,6 +509,26 @@ static struct object keys_b(struct object *args, size_t len) {
 	return map_keys(args[0]);
 }
 
+static struct object delete_b(struct object *args, size_t len) {
+	if (len != 2) {
+		return errorf("delete: wrong number of arguments, expected 2, got %lu", len);
+	} else if (args[0].type != obj_map) {
+		return errorf("delete: first argument must be a map, got %s instead", otype_str(args[0].type));
+	}
+
+	switch (args[1].type) {
+	case obj_boolean:
+	case obj_integer:
+	case obj_float:
+	case obj_string:
+	case obj_error:
+		map_delete(args[0], args[1]);
+		return null_obj;
+	default:
+		return errorf("delete: second argument must be one of boolean integer float string error, got %s instead", otype_str(args[1].type));
+	}
+}
+
 // TODO: eventually add the obj_integer case like in Python.
 static struct object bytes_b(struct object *args, size_t len) {
 	if (len != 1) {
@@ -562,5 +582,6 @@ const builtin builtins[NUM_BUILTINS] = {
 	bin_b,
 	slice_b,
 	keys_b,
+	delete_b,
 	bytes_b
 };

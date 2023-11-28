@@ -1,6 +1,6 @@
 package obj
 
-// #cgo CFLAGS: -Ofast -mtune=native -Ilibffi/include
+// #cgo CFLAGS: -Ofast -Ilibffi/include
 // #cgo LDFLAGS: -Llibffi/lib -lffi -lm
 // #include <stdio.h>
 // #include <stdlib.h>
@@ -43,7 +43,9 @@ package obj
 // }
 //
 // static void set_stdout(int fd, const char *name) {
+// #if !defined(_WIN32) && !defined(WIN32)
 //	stdout = fdopen(fd, name);
+// #endif
 // }
 import "C"
 

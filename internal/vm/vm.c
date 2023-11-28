@@ -3,12 +3,12 @@
 #include <string.h>
 #include <stdlib.h>
 #include <setjmp.h>
-#include <dlfcn.h>
 
 #include "vm.h"
 #include "opcode.h"
 #include "thrd.h"
 #include "_cgo_export.h"
+#include "../obj/plugin.h"
 #include "../obj/libffi/include/ffi.h"
 
 #define read_uint8(b) ((b)[0])
@@ -384,6 +384,15 @@ static inline void unsupported_operator_error(struct vm * restrict vm, char *op,
 static inline void unsupported_prefix_operator_error(struct vm * restrict vm, char *op, struct object *o) {
 	vm_errorf(vm, "unsupported operator '%s' for type %s", op, otype_str(o->type));
 }
+
+#if defined(_WIN32) || defined(WIN32)
+	char *stpcpy(char *restrict dst, const char *restrict src) {
+		char *p = mempcpy(dst, src, strlen(src));
+		*p = '\0';
+
+		return p;
+	}
+#endif
 
 static inline void vm_exec_add(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);

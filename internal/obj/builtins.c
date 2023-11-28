@@ -3,9 +3,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include <errno.h>
-#include <dlfcn.h>
 #include <math.h>
 #include "object.h"
+#include "plugin.h"
 
 struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len)) {
 	return (struct object) {

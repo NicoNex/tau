@@ -4,6 +4,7 @@
 	#include <threads.h>
 #elif defined(_WIN32) || defined(WIN32)
 	#include <windows.h>
+	#include <process.h>
 
 	// Thread
 	#define thrd_t HANDLE
@@ -13,7 +14,7 @@
 	// Mutex
 	#define mtx_t CRITICAL_SECTION
 	#define mtx_plain NULL
-	#define mtx_init InitializeCriticalSection
+	#define mtx_init(cs, mode) InitializeCriticalSection((cs))
 	#define mtx_lock EnterCriticalSection
 	#define mtx_unlock LeaveCriticalSection
 	#define mtx_destroy DeleteCriticalSection
@@ -24,7 +25,7 @@
 	#define cnd_broadcast WakeAllConditionVariable
 	#define cnd_signal WakeConditionVariable
 	#define cnd_wait(cond, mtx) while (!SleepConditionVariableCS(cond, mtx, INFINITE)) {}
-	#define cnd_destroy DeleteConditionVariable
+	#define cnd_destroy(cnd)
 #else
 	#include <pthread.h>
 

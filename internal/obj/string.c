@@ -2,6 +2,16 @@
 #include <string.h>
 #include "object.h"
 
+#if defined(_WIN32) || defined(WIN32)
+	char *strndup(char * restrict s, size_t len) {
+		char *dup = malloc(sizeof(char) * len + 1);
+		dup[len] = '\0';
+		memcpy(dup, s, sizeof(char) * len);
+
+		return dup;
+	}
+#endif
+
 void dispose_string_obj(struct object o) {
 	// Free everything if it's not a slice (marked parent bit is set to NULL).
 	if (o.data.str->m_parent == NULL) {

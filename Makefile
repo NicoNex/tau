@@ -26,7 +26,7 @@ ifneq ($(origin CC), undefined)
 	endif
 endif
 
-.PHONY: all tau libffi debug install profile run
+.PHONY: all tau libffi install profile run
 
 all: libffi tau
 
@@ -35,12 +35,19 @@ tau:
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go build -o $(DIR)/tau
 
 libffi:
-	cd libffi && \
+	if [ ! -d libffi ] || [ $$(ls -1q libffi | wc -l) -eq 0 ]; then \
+	    git submodule init; \
+	    git submodule update --recursive; \
+	fi
+
+	CC=$(CC) cd libffi && \
 	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
 	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static && \
 	make install CC=$(CC)
 
-debug: CGO_CFLAGS='-DDEBUG' all
+debug:
+	cd cmd/tau && \
+	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DDEBUG -DGC_DEBUG" CGO_LDFLAGS="$(LDFLAGS)" go build -o $(DIR)/tau
 
 install: all
 	mv tau /usr/bin

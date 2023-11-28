@@ -164,14 +164,13 @@ char *error_str(struct object o);
 void dispose_error_obj(struct object o);
 
 // List object.
+struct object make_list(size_t cap);
 struct object new_list_obj(struct object *list, size_t len);
 struct object new_list_obj_data(struct object *list, size_t len, size_t cap);
 struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent);
 char *list_str(struct object o);
 void mark_list_obj(struct object l);
 void dispose_list_obj(struct object o);
-struct list new_list(size_t cap);
-void list_insert(struct list *l, struct object o, size_t idx);
 struct list list_copy(struct list l);
 
 // Pipe object.
@@ -189,7 +188,9 @@ struct map_pair map_get(struct object map, struct object k);
 struct map_pair map_set(struct object map, struct object k, struct object v);
 void mark_map_obj(struct object m);
 char *map_str(struct object map);
+void map_delete(struct object map, struct object key);
 void dispose_map_obj(struct object map);
+struct object map_keys(struct object map);
 
 // Object object.
 struct object new_object();

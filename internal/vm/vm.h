@@ -30,11 +30,6 @@ struct state {
 	uint32_t ndefs;
 };
 
-struct heap {
-	uint32_t size;
-	struct object values[HEAP_SIZE];
-};
-
 struct vm {
 	struct state state;
 	struct object stack[STACK_SIZE];

@@ -10,8 +10,12 @@ inline uint64_t fnv64a(char *s) {
 
 	while (*s) {
 		hash ^= (uint64_t)*s++;
+	#if defined(NO_FNV_GCC_OPTIMIZATION)
+		hash *= FNV_64_PRIME;
+	#else
 		hash += (hash << 1) + (hash << 4) + (hash << 5) +
 				(hash << 7) + (hash << 8) + (hash << 40);
+	#endif
 	}
 	return hash;
 }
@@ -46,7 +50,7 @@ struct key_hash hash(struct object o) {
 	}
 }
 
-static inline struct map_pair _map_get(struct map_node * restrict n, struct key_hash k) {
+static inline struct map_pair _map_get(struct map_node *n, struct key_hash k) {
 	if (n == NULL) {
 		return (struct map_pair) {
 			.key = null_obj,
@@ -54,7 +58,7 @@ static inline struct map_pair _map_get(struct map_node * restrict n, struct key_
 		};
 	}
 
-	int32_t cmp = memcmp(&k, &n->key, sizeof(struct key_hash));
+	int cmp = memcmp(&k, &n->key, sizeof(struct key_hash));
 	if (cmp == 0) {
 		return n->val;
 	} else if (cmp < 0) {
@@ -64,7 +68,7 @@ static inline struct map_pair _map_get(struct map_node * restrict n, struct key_
 	}
 }
 
-static void mark_map_children(struct map_node * restrict n) {
+static void mark_map_children(struct map_node *n) {
 	if (n != NULL) {
 		mark_obj(n->val.key);
 		mark_obj(n->val.val);
@@ -84,7 +88,7 @@ static inline void _map_set(struct map_node **n, struct key_hash k, struct map_p
 		return;
 	}
 
-	int32_t cmp = memcmp(&k, &(*n)->key, sizeof(struct key_hash));
+	int cmp = memcmp(&k, &(*n)->key, sizeof(struct key_hash));
 	if (cmp == 0) {
 		(*n)->key = k;
 		(*n)->val = v;
@@ -135,7 +139,7 @@ static inline void _map_delete(struct map_node **root, struct map_node **n, stru
 	}
 }
 
-static inline void _map_dispose(struct map_node * restrict n) {
+static inline void _map_dispose(struct map_node *n) {
 	if (n != NULL) {
 		if (n->l != NULL) _map_dispose(n->l);
 		if (n->r != NULL) _map_dispose(n->r);
@@ -143,7 +147,7 @@ static inline void _map_dispose(struct map_node * restrict n) {
 	}
 }
 
-static inline void _map_keys(struct map_node * restrict n, struct list *list) {
+static inline void _map_keys(struct map_node *n, struct list *list) {
 	if (n != NULL) {
 		list->list[list->len++] = n->val.key;
 		_map_keys(n->l, list);
@@ -172,6 +176,7 @@ struct map_pair map_set(struct object map, struct object k, struct object v) {
 
 void map_delete(struct object map, struct object key) {
 	_map_delete(&map.data.map->root, &map.data.map->root, hash(key));
+	map.data.map->len--;
 }
 
 void dispose_map_obj(struct object map) {

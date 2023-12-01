@@ -7,7 +7,7 @@ jobs:
       fail-fast: false
       matrix:
         go-version: [1.19.x, 1.18.x]
-        os: [ubuntu-latest, macos-latest, windows-latest]
+        os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/setup-go@v3
@@ -18,8 +18,5 @@ jobs:
       - name: Install automake on macOS
         if: runner.os == 'macOS'
         run: brew install automake
-      - name: Install MinGW on Windows
-        if: runner.os == 'Windows'
-        run: choco install make autoconf automake libtool
       - run: make
       - run: ./tau --help

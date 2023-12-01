@@ -3,7 +3,7 @@ GCC := $(shell which gcc)
 DEFAULT_CC = $(CC)
 
 CFLAGS = -g -Ofast -I$(DIR)/internal/obj/libffi/include
-LDFLAGS = -L$(DIR)/internal/obj/libffi/include -lffi -lm
+LDFLAGS = -L$(DIR)/internal/obj/libffi/lib $(DIR)/internal/obj/libffi/lib/libffi.a -lm
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)

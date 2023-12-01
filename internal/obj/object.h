@@ -9,7 +9,7 @@
 #define NUM_BUILTINS 26
 #define MARKPTR() calloc(1, sizeof(uint32_t))
 
-enum obj_type {
+enum obj_type: uint64_t {
 	obj_null,
 	obj_boolean,
 	obj_integer,
@@ -103,7 +103,7 @@ struct object {
 struct key_hash {
 	enum obj_type type;
 	uint64_t val;
-};
+} __attribute__((packed));
 
 struct map_pair {
 	struct object key;

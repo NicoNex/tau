@@ -50,7 +50,7 @@ struct key_hash hash(struct object o) {
 	}
 }
 
-static inline struct map_pair _map_get(struct map_node *n, struct key_hash k) {
+static inline struct map_pair _map_get(struct map_node * restrict n, struct key_hash k) {
 	if (n == NULL) {
 		return (struct map_pair) {
 			.key = null_obj,
@@ -68,7 +68,7 @@ static inline struct map_pair _map_get(struct map_node *n, struct key_hash k) {
 	}
 }
 
-static void mark_map_children(struct map_node *n) {
+static void mark_map_children(struct map_node * restrict n) {
 	if (n != NULL) {
 		mark_obj(n->val.key);
 		mark_obj(n->val.val);
@@ -139,7 +139,7 @@ static inline void _map_delete(struct map_node **root, struct map_node **n, stru
 	}
 }
 
-static inline void _map_dispose(struct map_node *n) {
+static inline void _map_dispose(struct map_node * restrict n) {
 	if (n != NULL) {
 		if (n->l != NULL) _map_dispose(n->l);
 		if (n->r != NULL) _map_dispose(n->r);
@@ -147,7 +147,7 @@ static inline void _map_dispose(struct map_node *n) {
 	}
 }
 
-static inline void _map_keys(struct map_node *n, struct list *list) {
+static inline void _map_keys(struct map_node * restrict n, struct list *list) {
 	if (n != NULL) {
 		list->list[list->len++] = n->val.key;
 		_map_keys(n->l, list);

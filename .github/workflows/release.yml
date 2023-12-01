@@ -1,0 +1,205 @@
+---
+name: "tagged-release"
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build_linux_amd64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21.x
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build for Linux x86_64
+        run: |
+          git submodule init && git submodule update
+          make
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux_amd64
+          path: ./tau
+
+  build_linux_arm64:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21.x
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build for Linux aarch64
+        run: |
+          git submodule init && git submodule update
+          make
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: linux_arm64
+          path: ./tau
+
+  build_macos_amd64:
+    runs-on: macos-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21.x
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build for macOS x86_64
+        run: |
+          git submodule init && git submodule update
+          brew install automake
+          make
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos_amd64
+          path: ./tau
+
+  build_macos_arm64:
+    runs-on: macos-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21.x
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build for macOS aarch64
+        run: |
+          git submodule init && git submodule update
+          brew install automake
+          make
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos_arm64
+          path: ./tau
+
+  build_windows_amd64:
+    runs-on: windows-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21.x
+      - name: Checkout code
+        uses: actions/checkout@v2
+      - name: Build for Windows x86_64
+        run: |
+          choco install make autoconf automake libtool
+          make
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows_amd64
+          path: ./tau.exe
+
+  release:
+    needs:
+      - build_linux_amd64
+      - build_linux_arm64
+      - build_macos_amd64
+      - build_macos_arm64
+      - build_windows_amd64
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set up Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.21.x
+
+      - name: Determine Tag
+        id: determine_tag
+        run: echo "TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
+
+      - name: Determine Platform and Arch
+        id: determine_platform_arch
+        run: echo "PLATFORM_ARCH=$(go env GOOS)_$(go env GOARCH)" >> $GITHUB_ENV
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: linux_amd64
+        if: ${{ success() }}
+      - name: Create Release - Linux x86_64
+        id: create_release_linux_amd64
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./path/to/your/linux/amd64/tau
+          name: tau_${{ env.TAG }}_linux_amd64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: linux_arm64
+        if: ${{ success() }}
+      - name: Create Release - Linux aarch64
+        id: create_release_linux_arm64
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./path/to/your/linux/arm64/tau
+          name: tau_${{ env.TAG }}_linux_arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: macos_amd64
+        if: ${{ success() }}
+      - name: Create Release - macOS x86_64
+        id: create_release_macos_amd64
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./path/to/your/macos/amd64/tau
+          name: tau_${{ env.TAG }}_macos_amd64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: macos_arm64
+        if: ${{ success() }}
+      - name: Create Release - macOS aarch64
+        id: create_release_macos_arm64
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./path/to/your/macos/arm64/tau
+          name: tau_${{ env.TAG }}_macos_arm64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Download artifacts
+        uses: actions/download-artifact@v2
+        with:
+          name: windows_amd64
+        if: ${{ success() }}
+      - name: Create Release - Windows x86_64
+        id: create_release_windows_amd64
+        uses: softprops/action-gh-release@v1
+        with:
+          files: ./path/to/your/windows/amd64/tau.exe
+          name: tau_${{ env.TAG }}_windows_amd64
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get Release URLs
+        run: |
+          echo "Linux x86_64 Release URL - ${{ steps.create_release_linux_amd64.outputs.html_url }}"
+          echo "Linux aarch64 Release URL - ${{ steps.create_release_linux_arm64.outputs.html_url }}"
+          echo "macOS x86_64 Release URL - ${{ steps.create_release_macos_amd64.outputs.html_url }}"
+          echo "macOS aarch64 Release URL - ${{ steps.create_release_macos_arm64.outputs.html_url }}"
+          echo "Windows x86_64 Release URL - ${{ steps.create_release_windows_amd64.outputs.html_url }}"

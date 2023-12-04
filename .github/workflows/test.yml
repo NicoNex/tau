@@ -5,7 +5,7 @@ jobs:
   test:
     strategy:
       matrix:
-        go-version: [1.19.x, 1.18.x]
+        go-version: [1.21.x, 1.19.x]
         os: [ubuntu-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
@@ -18,4 +18,4 @@ jobs:
         if: runner.os == 'macOS'
         run: brew install automake
       - run: make libffi
-      - run: go test ./...
+      - run: make test

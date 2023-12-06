@@ -1,205 +1,114 @@
 ---
-name: "tagged-release"
-
+name: Release
 on:
   push:
     tags:
       - "v*"
 
 jobs:
-  build_linux_amd64:
+
+  # Build for Linux
+  build-ubuntu:
     runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.21.x
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Build for Linux x86_64
-        run: |
-          git submodule init && git submodule update
-          make
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: linux_amd64
-          path: ./tau
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: 1.21.x
+        arch: [x86_64, aarch64]
 
-  build_linux_arm64:
-    runs-on: ubuntu-latest
     steps:
-      - name: Set up Go
+      - name: Build
         uses: actions/setup-go@v3
-        with:
-          go-version: 1.21.x
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Build for Linux aarch64
-        run: |
-          git submodule init && git submodule update
-          make
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: linux_arm64
-          path: ./tau
+          with:
+            go-version ${{ matrix.go-version }}
+        - uses: actions/checkout@v3
+        - run: git submodule init && git submodule update
+        - run: make && mv tau tau-${{ runner.os }}-${{ runner.arch }}
+        - name: Archive artifacts
+          uses: actions/upload-artifact@v2
+          with:
+            name: linux-${{ runner.arch }}
+            path: ./tau-${{ runner.os }}-${{ runner.arch }}
 
-  build_macos_amd64:
+  # Build for MacOS
+  build-macos:
     runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: 1.21.x
+        arch: [x86_64, aarch64]
+
     steps:
-      - name: Set up Go
+      - name: Build
         uses: actions/setup-go@v3
         with:
-          go-version: 1.21.x
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Build for macOS x86_64
-        run: |
-          git submodule init && git submodule update
-          brew install automake
-          make
+          go-version: ${{ matrix.go-version }}
+      - uses: actions/checkout@v3
+      - run: git submodule init && git submodule update
+      - run: brew install automake
+      - run: make && mv tau tau-${{ runner.os }}-${{ runner.arch }}
       - name: Archive artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: macos_amd64
-          path: ./tau
+          name: macos-${{ runner.arch }}
+          path: ./tau-${{ runner.os }}-${{ runner.arch }}
 
-  build_macos_arm64:
-    runs-on: macos-latest
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.21.x
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Build for macOS aarch64
-        run: |
-          git submodule init && git submodule update
-          brew install automake
-          make
-      - name: Archive artifacts
-        uses: actions/upload-artifact@v2
-        with:
-          name: macos_arm64
-          path: ./tau
-
-  build_windows_amd64:
+  # Build for Windows MSYS2
+  build-msys2:
     runs-on: windows-latest
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
+    strategy:
+      fail-fast: false
+        matrix:
           go-version: 1.21.x
-      - name: Checkout code
-        uses: actions/checkout@v2
-      - name: Build for Windows x86_64
-        run: |
-          choco install make autoconf automake libtool
-          make
+          include:
+            - MSYSTEM: MINGW64
+              MSYS2_ARCH: x86_64
+
+    steps:
+      - uses: actions/setup-go@v3
+        with:
+          go-version ${{ matrix.go-version }}
+      - run: git config --global core.autocrlf input
+      - uses: actions/checkout@v3
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: ${{ matrix.MSYSTEM }}
+          update: true
+          install: >-
+              base-devel
+              autoconf-wrapper
+              autoconf
+              automake
+              libtool
+              make
+              dejagnu
+              mingw-w64-${{ matrix.MSYS2_ARCH }}-gcc
+              mingw-w64-${{ matrix.MSYS2_ARCH }}-gcc-libs
+              unzip
+              go
+
+      - run: |
+        set -x
+        cd $(cygpath $RUNNER_WORKSPACE)/tau/libffi
+        wget https://rl.gl/cli/rlgl-windows-amd64.zip
+        unzip rlgl-windows-amd64.zip
+        autoreconf -f -v -i
+        CC=${{ matrix.MSYS2_ARCH }}-w64-mingw32-gcc CXX=${{ matrix.MSYS2_ARCH }}-w64-mingw32-g++ ./configure --prefix=${{ github.workspace }}/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory
+        make
+        TERM=none DEJAGNU=$(pwd)/.ci/site.exp BOARDSDIR=$(pwd)/.ci GCC_COLORS= make check || true
+        ./rlgl/rlgl.exe l --key=0LIBFFI-0LIBFFI-0LIBFFI-0LIBFFI https://rl.gl
+        ./rlgl/rlgl.exe e \
+                        -l project=libffi \
+                        -l sha=${GITHUB_SHA:0:7} \
+                        -l CC=${{ matrix.MSYS2_ARCH }}-w64-mingw32-gcc \
+                        -l host=x86_64-pc-cygwin \
+                        --policy=https://github.com/libffi/rlgl-policy.git $(find . -name libffi.log)
+        shell: msys2 {0}
+
+      - run: make tau && mv tau tau-${{ runner.os }}-${{ runner.arch }}.exe
       - name: Archive artifacts
         uses: actions/upload-artifact@v2
         with:
-          name: windows_amd64
-          path: ./tau.exe
-
-  release:
-    needs:
-      - build_linux_amd64
-      - build_linux_arm64
-      - build_macos_amd64
-      - build_macos_arm64
-      - build_windows_amd64
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set up Go
-        uses: actions/setup-go@v3
-        with:
-          go-version: 1.21.x
-
-      - name: Determine Tag
-        id: determine_tag
-        run: echo "TAG=$(git describe --tags --abbrev=0)" >> $GITHUB_ENV
-
-      - name: Determine Platform and Arch
-        id: determine_platform_arch
-        run: echo "PLATFORM_ARCH=$(go env GOOS)_$(go env GOARCH)" >> $GITHUB_ENV
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: linux_amd64
-        if: ${{ success() }}
-      - name: Create Release - Linux x86_64
-        id: create_release_linux_amd64
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ./path/to/your/linux/amd64/tau
-          name: tau_${{ env.TAG }}_linux_amd64
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: linux_arm64
-        if: ${{ success() }}
-      - name: Create Release - Linux aarch64
-        id: create_release_linux_arm64
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ./path/to/your/linux/arm64/tau
-          name: tau_${{ env.TAG }}_linux_arm64
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: macos_amd64
-        if: ${{ success() }}
-      - name: Create Release - macOS x86_64
-        id: create_release_macos_amd64
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ./path/to/your/macos/amd64/tau
-          name: tau_${{ env.TAG }}_macos_amd64
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: macos_arm64
-        if: ${{ success() }}
-      - name: Create Release - macOS aarch64
-        id: create_release_macos_arm64
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ./path/to/your/macos/arm64/tau
-          name: tau_${{ env.TAG }}_macos_arm64
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Download artifacts
-        uses: actions/download-artifact@v2
-        with:
-          name: windows_amd64
-        if: ${{ success() }}
-      - name: Create Release - Windows x86_64
-        id: create_release_windows_amd64
-        uses: softprops/action-gh-release@v1
-        with:
-          files: ./path/to/your/windows/amd64/tau.exe
-          name: tau_${{ env.TAG }}_windows_amd64
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Get Release URLs
-        run: |
-          echo "Linux x86_64 Release URL - ${{ steps.create_release_linux_amd64.outputs.html_url }}"
-          echo "Linux aarch64 Release URL - ${{ steps.create_release_linux_arm64.outputs.html_url }}"
-          echo "macOS x86_64 Release URL - ${{ steps.create_release_macos_amd64.outputs.html_url }}"
-          echo "macOS aarch64 Release URL - ${{ steps.create_release_macos_arm64.outputs.html_url }}"
-          echo "Windows x86_64 Release URL - ${{ steps.create_release_windows_amd64.outputs.html_url }}"
+          name: macos-${{ runner.arch }}
+          path: ./tau-${{ runner.os }}-${{ runner.arch }}.exe

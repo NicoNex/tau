@@ -22,33 +22,28 @@ func NewMod(l, r Node, pos int) Node {
 	}
 }
 
-func (m Mod) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(m.l.Eval(env))
-		right = obj.Unwrap(m.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func (m Mod) Eval() (obj.Object, error) {
+	left, err := m.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
-	if takesPrecedence(right) {
-		return right
+
+	right, err := m.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType) {
-		return obj.NewError("unsupported operator '%%' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '%%' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType) {
-		return obj.NewError("unsupported operator '%%' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '%%' for type %v", right.Type())
+	}
+	if int64(right.(obj.Integer)) == 0 {
+		return obj.NullObj, fmt.Errorf("can't divide by 0")
 	}
 
-	l := left.(obj.Integer)
-	r := right.(obj.Integer)
-
-	if r == 0 {
-		return obj.NewError("can't divide by 0")
-	}
-	return obj.Integer(l % r)
+	return obj.NewInteger(int64(left.(obj.Integer)) % int64(right.(obj.Integer))), nil
 }
 
 func (m Mod) String() string {
@@ -57,13 +52,13 @@ func (m Mod) String() string {
 
 func (m Mod) Compile(c *compiler.Compiler) (position int, err error) {
 	if m.IsConstExpression() {
-		o := m.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(m.pos, string(e))
+		o, err := m.Eval()
+		if err != nil {
+			return 0, c.NewError(m.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(m.pos)
-		return
+		return position, err
 	}
 
 	if position, err = m.l.Compile(c); err != nil {

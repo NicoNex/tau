@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
@@ -26,29 +27,8 @@ func NewFor(cond, body, before, after Node, pos int) Node {
 	}
 }
 
-func (f For) Eval(env *obj.Env) obj.Object {
-	if f.before != nil {
-		obj.Unwrap(f.before.Eval(env))
-	}
-
-loop:
-	for obj.IsTruthy(obj.Unwrap(f.cond.Eval(env))) {
-		switch o := obj.Unwrap(f.body.Eval(env)); {
-		case o == nil:
-			break
-
-		case isError(o) || isReturn(o):
-			return o
-
-		case isBreak(o):
-			break loop
-		}
-
-		if f.after != nil {
-			obj.Unwrap(f.after.Eval(env))
-		}
-	}
-	return obj.NullObj
+func (f For) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.For: not a constant expression")
 }
 
 func (f For) String() string {
@@ -67,7 +47,7 @@ func (f For) Compile(c *compiler.Compiler) (position int, err error) {
 		return
 	}
 
-	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, 9999)
+	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, compiler.GenericPlaceholder)
 
 	startBody := c.Pos()
 	if position, err = f.body.Compile(c); err != nil {

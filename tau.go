@@ -19,7 +19,7 @@ import (
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-const TauVersion = "v1.5.0"
+const TauVersion = "v1.6.0"
 
 var ErrParseError = errors.New("error: parse error")
 
@@ -131,23 +131,6 @@ func ExecFileVM(f string) (err error) {
 	}
 
 	return
-}
-
-func ExecFileEval(f string) error {
-	var env = obj.NewEnv(f)
-
-	b := readFile(f)
-	res, errs := parser.Parse(f, string(b))
-	if len(errs) != 0 {
-		for _, e := range errs {
-			fmt.Println(e)
-		}
-		return ErrParseError
-	}
-
-	res.Eval(env)
-
-	return nil
 }
 
 func CompileFiles(files []string) error {

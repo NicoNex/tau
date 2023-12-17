@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
@@ -22,38 +23,8 @@ func NewDot(l, r Node, pos int) Node {
 	}
 }
 
-func (d Dot) Eval(env *obj.Env) obj.Object {
-	var left = obj.Unwrap(d.l.Eval(env))
-
-	if takesPrecedence(left) {
-		return left
-	}
-
-	switch l := left.(type) {
-	case obj.MapGetSetter:
-		return &obj.GetSetterImpl{
-			GetFunc: func() (obj.Object, bool) {
-				return l.Get(d.r.String())
-			},
-			SetFunc: func(o obj.Object) obj.Object {
-				return l.Set(d.r.String(), o)
-			},
-		}
-
-	case obj.GetSetter:
-		m := l.Object().(obj.MapGetSetter)
-		return &obj.GetSetterImpl{
-			GetFunc: func() (obj.Object, bool) {
-				return m.Get(d.r.String())
-			},
-			SetFunc: func(o obj.Object) obj.Object {
-				return m.Set(d.r.String(), o)
-			},
-		}
-
-	default:
-		return obj.NewError("%v object has no attribute %s", left.Type(), d.r)
-	}
+func (d Dot) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Dot: not a constant expression")
 }
 
 func (d Dot) String() string {
@@ -69,6 +40,19 @@ func (d Dot) Compile(c *compiler.Compiler) (position int, err error) {
 	}
 	position = c.Emit(code.OpConstant, c.AddConstant(obj.NewString(d.r.String())))
 	position = c.Emit(code.OpDot)
+	c.Bookmark(d.pos)
+	return
+}
+
+// CompileDefine assumes the dot operation is for defining a value.
+func (d Dot) CompileDefine(c *compiler.Compiler) (position int, err error) {
+	if position, err = d.l.Compile(c); err != nil {
+		return
+	}
+	if _, ok := d.r.(Identifier); !ok {
+		return position, fmt.Errorf("expected identifier with dot operator, got %T", d.r)
+	}
+	position = c.Emit(code.OpConstant, c.AddConstant(obj.NewString(d.r.String())))
 	c.Bookmark(d.pos)
 	return
 }

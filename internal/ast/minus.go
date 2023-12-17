@@ -22,36 +22,30 @@ func NewMinus(l, r Node, pos int) Node {
 	}
 }
 
-func (m Minus) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(m.l.Eval(env))
-		right = obj.Unwrap(m.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func (m Minus) Eval() (obj.Object, error) {
+	left, err := m.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
-	if takesPrecedence(right) {
-		return right
+
+	right, err := m.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '-' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '-' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '-' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '-' for type %v", right.Type())
 	}
 
 	if obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType) {
-		l := left.(obj.Integer)
-		r := right.(obj.Integer)
-		return obj.Integer(l - r)
+		return obj.NewInteger(int64(left.(obj.Integer)) - int64(right.(obj.Integer))), nil
 	}
 
-	left, right = obj.ToFloat(left, right)
-	l := left.(obj.Float)
-	r := right.(obj.Float)
-	return obj.Float(l - r)
+	l, r := obj.ToFloat(left, right)
+	return obj.NewFloat(float64(l.(obj.Float)) - float64(r.(obj.Float))), nil
 }
 
 func (m Minus) String() string {
@@ -60,13 +54,13 @@ func (m Minus) String() string {
 
 func (m Minus) Compile(c *compiler.Compiler) (position int, err error) {
 	if m.IsConstExpression() {
-		o := m.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(m.pos, string(e))
+		o, err := m.Eval()
+		if err != nil {
+			return 0, c.NewError(m.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(m.pos)
-		return
+		return position, err
 	}
 
 	if position, err = m.l.Compile(c); err != nil {

@@ -1,6 +1,8 @@
 package ast
 
 import (
+	"errors"
+
 	"github.com/NicoNex/tau/internal/code"
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
@@ -12,8 +14,8 @@ func NewContinue() Continue {
 	return Continue{}
 }
 
-func (c Continue) Eval(_ *obj.Env) obj.Object {
-	return obj.ContinueObj
+func (c Continue) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.ConcurrentCall: not a constant expression")
 }
 
 func (c Continue) String() string {

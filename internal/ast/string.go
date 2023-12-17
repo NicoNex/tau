@@ -27,20 +27,15 @@ func NewString(file, s string, parse parseFn, pos int) (Node, error) {
 
 	i := newInterpolator(file, str, parse)
 	nodes, str, err := i.nodes()
+
+	if len(nodes) == 0 {
+		return NewRawString(str), nil
+	}
 	return String{s: str, parse: parse, substr: nodes, pos: pos}, err
 }
 
-func (s String) Eval(env *obj.Env) obj.Object {
-	if len(s.substr) == 0 {
-		return obj.String(s.s)
-	}
-
-	var subs = make([]any, len(s.substr))
-	for i, sub := range s.substr {
-		subs[i] = sub.Eval(env)
-	}
-
-	return obj.String(fmt.Sprintf(s.s, subs...))
+func (s String) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.String: not a constant expression")
 }
 
 func (s String) String() string {
@@ -129,14 +124,6 @@ func escapeRune(r rune) (rune, error) {
 	default:
 		return r, fmt.Errorf(`unknown escape "\%c"`, r)
 	}
-}
-
-func toAnySlice(args []obj.Object) []any {
-	var ret = make([]any, len(args))
-	for i, a := range args {
-		ret[i] = a
-	}
-	return ret
 }
 
 const eof = -1
@@ -264,7 +251,7 @@ func (i *interpolator) nodes() ([]Node, string, error) {
 			}
 
 			nodes = append(nodes, tree)
-			i.WriteString("%v")
+			i.WriteByte(0xff)
 			continue
 		} else if r == '}' {
 			if i.peek() != '}' {

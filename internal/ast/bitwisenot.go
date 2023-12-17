@@ -20,19 +20,17 @@ func NewBitwiseNot(n Node, pos int) Node {
 	}
 }
 
-func (b BitwiseNot) Eval(env *obj.Env) obj.Object {
-	var value = obj.Unwrap(b.n.Eval(env))
-
-	if takesPrecedence(value) {
-		return value
+func (b BitwiseNot) Eval() (obj.Object, error) {
+	value, err := b.n.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(value, obj.IntType) {
-		return obj.NewError("unsupported operator '~' for type %v", value.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '~' for type %v", value.Type())
 	}
 
-	n := value.(obj.Integer)
-	return obj.Integer(^n)
+	return obj.NewInteger(^int64(value.(obj.Integer))), nil
 }
 
 func (b BitwiseNot) String() string {
@@ -41,13 +39,13 @@ func (b BitwiseNot) String() string {
 
 func (b BitwiseNot) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		o := b.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(b.pos, string(e))
+		o, err := b.Eval()
+		if err != nil {
+			return 0, c.NewError(b.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(b.pos)
-		return
+		return position, err
 	}
 
 	if position, err = b.n.Compile(c); err != nil {

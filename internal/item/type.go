@@ -39,7 +39,6 @@ const (
 	GTEQ
 	And
 	Or
-	In
 	BwAnd
 	BwNot
 	BwOr
@@ -104,7 +103,6 @@ var typemap = map[Type]string{
 	GTEQ:           ">=",
 	And:            "&&",
 	Or:             "||",
-	In:             "in",
 	PlusAssign:     "+=",
 	MinusAssign:    "-=",
 	AsteriskAssign: "*=",
@@ -152,7 +150,6 @@ var typemap = map[Type]string{
 }
 
 var keywords = map[string]Type{
-	"in":       In,
 	"fn":       Function,
 	"for":      For,
 	"continue": Continue,

@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/compiler"
@@ -21,42 +22,8 @@ func NewDivideAssign(l, r Node, pos int) Node {
 	}
 }
 
-func (d DivideAssign) Eval(env *obj.Env) obj.Object {
-	var (
-		name  string
-		left  = d.l.Eval(env)
-		right = obj.Unwrap(d.r.Eval(env))
-	)
-
-	if ident, ok := d.l.(Identifier); ok {
-		name = ident.String()
-	}
-
-	if takesPrecedence(left) {
-		return left
-	}
-	if takesPrecedence(right) {
-		return right
-	}
-
-	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '/=' for type %v", left.Type())
-	}
-	if !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '/=' for type %v", right.Type())
-	}
-
-	if gs, ok := left.(obj.GetSetter); ok {
-		leftFl, rightFl := obj.ToFloat(gs.Object(), right)
-		l := leftFl.(obj.Float)
-		r := rightFl.(obj.Float)
-		return gs.Set(obj.Float(l / r))
-	}
-
-	leftFl, rightFl := obj.ToFloat(left, right)
-	l := leftFl.(obj.Float)
-	r := rightFl.(obj.Float)
-	return env.Set(name, obj.Float(l/r))
+func (d DivideAssign) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.DivideAssign: not a constant expression")
 }
 
 func (d DivideAssign) String() string {

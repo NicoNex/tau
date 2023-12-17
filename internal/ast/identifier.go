@@ -1,6 +1,8 @@
 package ast
 
 import (
+	"errors"
+
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
 )
@@ -17,14 +19,8 @@ func NewIdentifier(name string, pos int) Identifier {
 	}
 }
 
-func (i Identifier) Eval(env *obj.Env) obj.Object {
-	if c, ok := env.Get(i.name); ok {
-		return c
-	} else if o, ok := obj.ResolveBuiltin(i.name); ok {
-		return o
-	}
-
-	return obj.NewError("name %q is not defined", i)
+func (i Identifier) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Identifier: not a constant expression")
 }
 
 func (i Identifier) String() string {

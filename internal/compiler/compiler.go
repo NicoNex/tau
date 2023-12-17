@@ -42,6 +42,7 @@ type Bytecode struct {
 }
 
 const (
+	GenericPlaceholder  = 9999
 	ContinuePlaceholder = 9998
 	BreakPlaceholder    = 9997
 )
@@ -232,6 +233,7 @@ func (c *Compiler) NewError(pos int, s string, a ...any) error {
 
 func (c *Compiler) Compile(node Compilable) error {
 	_, err := node.Compile(c)
+	c.Emit(code.OpHalt)
 	return err
 }
 

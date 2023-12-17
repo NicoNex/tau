@@ -22,45 +22,37 @@ func NewPlus(l, r Node, pos int) Node {
 	}
 }
 
-func (p Plus) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(p.l.Eval(env))
-		right = obj.Unwrap(p.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func (p Plus) Eval() (obj.Object, error) {
+	left, err := p.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
-	if takesPrecedence(right) {
-		return right
+
+	right, err := p.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType, obj.FloatType, obj.StringType) {
-		return obj.NewError("unsupported operator '+' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '+' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType, obj.FloatType, obj.StringType) {
-		return obj.NewError("unsupported operator '+' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '+' for type %v", right.Type())
 	}
 
 	switch {
 	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String)
-		r := right.(obj.String)
-		return obj.String(l + r)
+		return obj.NewString(left.String() + right.String()), nil
 
 	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
-		l := left.(obj.Integer)
-		r := right.(obj.Integer)
-		return obj.Integer(l + r)
+		return obj.NewInteger(int64(left.(obj.Integer)) + int64(right.(obj.Integer))), nil
 
 	case obj.AssertTypes(left, obj.FloatType, obj.IntType) && obj.AssertTypes(right, obj.FloatType, obj.IntType):
-		left, right = obj.ToFloat(left, right)
-		l := left.(obj.Float)
-		r := right.(obj.Float)
-		return obj.Float(l + r)
+		l, r := obj.ToFloat(left, right)
+		return obj.NewFloat(float64(l.(obj.Float)) + float64(r.(obj.Float))), nil
 
 	default:
-		return obj.NewError(
+		return obj.NullObj, fmt.Errorf(
 			"invalid operation %v + %v (wrong types %v and %v)",
 			left, right, left.Type(), right.Type(),
 		)
@@ -73,13 +65,13 @@ func (p Plus) String() string {
 
 func (p Plus) Compile(c *compiler.Compiler) (position int, err error) {
 	if p.IsConstExpression() {
-		o := p.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(p.pos, string(e))
+		o, err := p.Eval()
+		if err != nil {
+			return 0, c.NewError(p.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(p.pos)
-		return
+		return position, err
 	}
 
 	if position, err = p.l.Compile(c); err != nil {

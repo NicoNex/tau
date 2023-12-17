@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
@@ -24,26 +25,8 @@ func NewIfExpr(cond, body, alt Node, pos int) Node {
 	}
 }
 
-func (i IfExpr) Eval(env *obj.Env) obj.Object {
-	var cond = obj.Unwrap(i.cond.Eval(env))
-
-	if takesPrecedence(cond) {
-		return cond
-	}
-
-	switch c := cond.(type) {
-	case *obj.Boolean:
-		if c.Val() {
-			return obj.Unwrap(i.body.Eval(env))
-		}
-		return i.alternative(env)
-
-	case *obj.Null:
-		return i.alternative(env)
-
-	default:
-		return obj.Unwrap(i.body.Eval(env))
-	}
+func (i IfExpr) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.IfExpr: not a constant expression")
 }
 
 func (i IfExpr) String() string {
@@ -53,18 +36,11 @@ func (i IfExpr) String() string {
 	return fmt.Sprintf("if %v { %v }", i.cond, i.body)
 }
 
-func (i IfExpr) alternative(env *obj.Env) obj.Object {
-	if i.altern != nil {
-		return obj.Unwrap(i.altern.Eval(env))
-	}
-	return obj.NullObj
-}
-
 func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = i.cond.Compile(c); err != nil {
 		return
 	}
-	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, 9999)
+	jumpNotTruthyPos := c.Emit(code.OpJumpNotTruthy, compiler.GenericPlaceholder)
 	if position, err = i.body.Compile(c); err != nil {
 		return
 	}
@@ -73,7 +49,7 @@ func (i IfExpr) Compile(c *compiler.Compiler) (position int, err error) {
 		c.RemoveLast()
 	}
 
-	jumpPos := c.Emit(code.OpJump, 9999)
+	jumpPos := c.Emit(code.OpJump, compiler.GenericPlaceholder)
 	c.ReplaceOperand(jumpNotTruthyPos, c.Pos())
 
 	if i.altern == nil {

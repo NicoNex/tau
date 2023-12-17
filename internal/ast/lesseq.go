@@ -22,38 +22,30 @@ func NewLessEq(l, r Node, pos int) Node {
 	}
 }
 
-func (l LessEq) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(l.l.Eval(env))
-		right = obj.Unwrap(l.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func (l LessEq) Eval() (obj.Object, error) {
+	left, err := l.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
-	if takesPrecedence(right) {
-		return right
+
+	right, err := l.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	switch {
 	case obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType):
-		l := left.(obj.Integer)
-		r := right.(obj.Integer)
-		return obj.ParseBool(l <= r)
+		return obj.ParseBool(int64(left.(obj.Integer)) <= int64(right.(obj.Integer))), nil
 
 	case obj.AssertTypes(left, obj.IntType, obj.FloatType) && obj.AssertTypes(right, obj.IntType, obj.FloatType):
-		left, right = obj.ToFloat(left, right)
-		l := left.(obj.Float)
-		r := right.(obj.Float)
-		return obj.ParseBool(l <= r)
+		l, r := obj.ToFloat(left, right)
+		return obj.ParseBool(float64(l.(obj.Float)) <= float64(r.(obj.Float))), nil
 
 	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String)
-		r := right.(obj.String)
-		return obj.ParseBool(l <= r)
+		return obj.ParseBool(left.String() <= right.String()), nil
 
 	default:
-		return obj.NewError("unsupported operator '<=' for types %v and %v", left.Type(), right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '<=' for types %v and %v", left.Type(), right.Type())
 	}
 }
 
@@ -63,13 +55,13 @@ func (l LessEq) String() string {
 
 func (l LessEq) Compile(c *compiler.Compiler) (position int, err error) {
 	if l.IsConstExpression() {
-		o := l.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(l.pos, string(e))
+		o, err := l.Eval()
+		if err != nil {
+			return 0, c.NewError(l.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(l.pos)
-		return
+		return position, err
 	}
 
 	if position, err = l.r.Compile(c); err != nil {

@@ -12,8 +12,8 @@ func NewNull() Null {
 	return Null{}
 }
 
-func (n Null) Eval(_ *obj.Env) obj.Object {
-	return obj.NullObj
+func (n Null) Eval() (obj.Object, error) {
+	return obj.NullObj, nil
 }
 
 func (n Null) String() string {

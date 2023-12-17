@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
@@ -14,6 +15,10 @@ type Assign struct {
 	pos int
 }
 
+type Definable interface {
+	CompileDefine(c *compiler.Compiler) (position int, err error)
+}
+
 func NewAssign(l, r Node, pos int) Node {
 	return Assign{
 		l:   l,
@@ -22,25 +27,8 @@ func NewAssign(l, r Node, pos int) Node {
 	}
 }
 
-func (a Assign) Eval(env *obj.Env) obj.Object {
-	if left, ok := a.l.(Identifier); ok {
-		right := obj.Unwrap(a.r.Eval(env))
-		if takesPrecedenceNoError(right) {
-			return right
-		}
-		return env.Set(left.String(), right)
-	}
-
-	left := a.l.Eval(env)
-	if s, ok := left.(obj.Setter); ok {
-		right := obj.Unwrap(a.r.Eval(env))
-		if takesPrecedence(right) {
-			return right
-		}
-		return s.Set(right)
-	}
-
-	return obj.NewError("cannot assign to literal")
+func (a Assign) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Assign: not a constant expression")
 }
 
 func (a Assign) String() string {
@@ -67,8 +55,8 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 			return
 		}
 
-	case Dot, Index:
-		if position, err = a.l.Compile(c); err != nil {
+	case Definable:
+		if position, err = left.CompileDefine(c); err != nil {
 			return
 		}
 		if position, err = a.r.Compile(c); err != nil {

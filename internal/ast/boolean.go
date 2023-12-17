@@ -12,8 +12,8 @@ func NewBoolean(b bool) Node {
 	return Boolean(b)
 }
 
-func (b Boolean) Eval(env *obj.Env) obj.Object {
-	return obj.ParseBool(bool(b))
+func (b Boolean) Eval() (obj.Object, error) {
+	return obj.ParseBool(bool(b)), nil
 }
 
 func (b Boolean) String() string {

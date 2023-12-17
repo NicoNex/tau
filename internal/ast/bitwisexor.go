@@ -22,29 +22,24 @@ func NewBitwiseXor(l, r Node, pos int) Node {
 	}
 }
 
-func (b BitwiseXor) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(b.l.Eval(env))
-		right = obj.Unwrap(b.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
+func (b BitwiseXor) Eval() (obj.Object, error) {
+	left, err := b.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
-	if takesPrecedence(right) {
-		return right
+
+	right, err := b.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType) {
-		return obj.NewError("unsupported operator '^' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '^' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType) {
-		return obj.NewError("unsupported operator '^' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '^' for type %v", right.Type())
 	}
-
-	l := left.(obj.Integer)
-	r := right.(obj.Integer)
-	return obj.Integer(l ^ r)
+	return obj.NewInteger(int64(left.(obj.Integer)) ^ int64(right.(obj.Integer))), nil
 }
 
 func (b BitwiseXor) String() string {
@@ -53,13 +48,13 @@ func (b BitwiseXor) String() string {
 
 func (b BitwiseXor) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
-		o := b.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(b.pos, string(e))
+		o, err := b.Eval()
+		if err != nil {
+			return 0, c.NewError(b.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(b.pos)
-		return
+		return position, err
 	}
 
 	if position, err = b.l.Compile(c); err != nil {

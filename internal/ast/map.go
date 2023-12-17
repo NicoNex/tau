@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
@@ -22,31 +23,8 @@ func NewMap(pos int, pairs ...[2]Node) Node {
 	}
 }
 
-func (m Map) Eval(env *obj.Env) obj.Object {
-	var ret = obj.NewMap()
-
-	for _, pair := range m.m {
-		var key, val = pair[0], pair[1]
-
-		k := obj.Unwrap(key.Eval(env))
-		if takesPrecedence(k) {
-			return k
-		}
-
-		h, ok := k.(obj.Hashable)
-		if !ok {
-			return obj.NewError("invalid map key type %v", k.Type())
-		}
-
-		v := obj.Unwrap(val.Eval(env))
-		if takesPrecedence(v) {
-			return v
-		}
-
-		ret.Set(h.KeyHash(), obj.MapPair{Key: k, Value: v})
-	}
-
-	return ret
+func (m Map) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Index: not a constant expression")
 }
 
 func (m Map) String() string {

@@ -12,25 +12,6 @@ type Object interface {
 	String() string
 }
 
-type Getter interface {
-	Object() Object
-}
-
-type Setter interface {
-	Set(Object) Object
-}
-
-type GetSetter interface {
-	Object
-	Getter
-	Setter
-}
-
-type MapGetSetter interface {
-	Get(string) (Object, bool)
-	Set(string, Object) Object
-}
-
 type KeyHash struct {
 	Type  Type
 	Value uint64
@@ -38,10 +19,6 @@ type KeyHash struct {
 
 type Hashable interface {
 	KeyHash() KeyHash
-}
-
-type setter interface {
-	Set(string, Object) Object
 }
 
 //go:generate stringer -linecomment -type=Type
@@ -80,13 +57,6 @@ func ParseBool(b bool) Object {
 		return True
 	}
 	return False
-}
-
-func Unwrap(o Object) Object {
-	if g, ok := o.(Getter); ok {
-		return g.Object()
-	}
-	return o
 }
 
 func AssertTypes(o Object, types ...Type) bool {

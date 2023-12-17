@@ -253,27 +253,12 @@ func (vm *VM) execDot() error {
 	)
 
 	switch l := left.(type) {
-	case obj.MapGetSetter:
-		return vm.push(&obj.GetSetterImpl{
-			GetFunc: func() (obj.Object, bool) {
-				return l.Get(right.String())
-			},
-			SetFunc: func(o obj.Object) obj.Object {
-				return l.Set(right.String(), o)
-			},
-		})
+	case obj.Class:
+		o, _ := l.Get(string(right.(obj.String)))
+		return vm.push(o)
 
-	case obj.GetSetter:
-		m := l.Object().(obj.MapGetSetter)
-		return vm.push(&obj.GetSetterImpl{
-			GetFunc: func() (obj.Object, bool) {
-				return m.Get(right.String())
-			},
-
-			SetFunc: func(o obj.Object) obj.Object {
-				return m.Set(right.String(), o)
-			},
-		})
+	case obj.NativePlugin, obj.NativeStruct:
+		return vm.errorf("native unimplemented")
 
 	default:
 		return vm.errorf("%v object has no attribute %s", left.Type(), right)
@@ -282,21 +267,43 @@ func (vm *VM) execDot() error {
 
 func (vm *VM) execDefine() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = vm.pop()
+		val    = vm.pop()
+		field  = vm.pop()
+		target = vm.pop()
 	)
 
-	l, ok := left.(obj.Setter)
-	if !ok {
-		return vm.errorf("cannot assign to type %v", left.Type())
+	switch t := target.(type) {
+	case obj.Class:
+		t.Set(string(field.(obj.String)), val)
+		vm.push(val)
+
+	case obj.List:
+		idx := int(field.(obj.Integer))
+
+		if idx < 0 || idx >= len(t) {
+			return vm.errorf("index out of range")
+		}
+		t[idx] = val
+		vm.push(val)
+
+	case obj.Map:
+		h, ok := field.(obj.Hashable)
+		if !ok {
+			return vm.errorf("%v object is not hashable", field.Type())
+		}
+		t.Set(h.KeyHash(), obj.MapPair{Key: field, Value: val})
+		vm.push(val)
+
+	default:
+		return vm.errorf("cannot assign to type %q", target.Type())
 	}
-	return vm.push(l.Set(right))
+	return nil
 }
 
 func (vm *VM) execAdd() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	switch {
@@ -323,8 +330,8 @@ func (vm *VM) execAdd() error {
 
 func (vm *VM) execSub() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	switch {
@@ -346,8 +353,8 @@ func (vm *VM) execSub() error {
 
 func (vm *VM) execMul() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	switch {
@@ -369,8 +376,8 @@ func (vm *VM) execMul() error {
 
 func (vm *VM) execDiv() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) || !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
@@ -385,8 +392,8 @@ func (vm *VM) execDiv() error {
 
 func (vm *VM) execMod() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
@@ -404,8 +411,8 @@ func (vm *VM) execMod() error {
 
 func (vm *VM) execBwAnd() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
@@ -419,8 +426,8 @@ func (vm *VM) execBwAnd() error {
 
 func (vm *VM) execBwOr() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
@@ -434,8 +441,8 @@ func (vm *VM) execBwOr() error {
 
 func (vm *VM) execBwXor() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
@@ -448,7 +455,7 @@ func (vm *VM) execBwXor() error {
 }
 
 func (vm *VM) execBwNot() error {
-	var left = obj.Unwrap(vm.pop())
+	var left = vm.pop()
 
 	if !obj.AssertTypes(left, obj.IntType) {
 		return fmt.Errorf("unsupported operator '~' for type %v", left.Type())
@@ -460,8 +467,8 @@ func (vm *VM) execBwNot() error {
 
 func (vm *VM) execBwLShift() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
@@ -475,8 +482,8 @@ func (vm *VM) execBwLShift() error {
 
 func (vm *VM) execBwRShift() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	if !obj.AssertTypes(left, obj.IntType) || !obj.AssertTypes(right, obj.IntType) {
@@ -490,8 +497,8 @@ func (vm *VM) execBwRShift() error {
 
 func (vm *VM) execEqual() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	switch {
@@ -521,8 +528,8 @@ func (vm *VM) execEqual() error {
 
 func (vm *VM) execNotEqual() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	switch {
@@ -552,75 +559,17 @@ func (vm *VM) execNotEqual() error {
 
 func (vm *VM) execAnd() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	return vm.push(obj.ParseBool(obj.IsTruthy(left) && obj.IsTruthy(right)))
 }
 
-func (vm *VM) execIn() error {
-	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
-	)
-
-	if !obj.AssertTypes(left, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType, obj.NullType) {
-		return fmt.Errorf("unsupported operator 'in' for type %v", left.Type())
-	}
-	if !obj.AssertTypes(right, obj.ListType, obj.StringType) {
-		return fmt.Errorf("unsupported operator 'in' for type %v", right.Type())
-	}
-
-	switch {
-	case obj.AssertTypes(left, obj.StringType) && obj.AssertTypes(right, obj.StringType):
-		l := left.(obj.String).Val()
-		r := right.(obj.String).Val()
-		return vm.push(obj.ParseBool(strings.Contains(r, l)))
-
-	case obj.AssertTypes(right, obj.ListType):
-		for _, o := range right.(obj.List) {
-			if !obj.AssertTypes(left, o.Type()) {
-				continue
-			}
-			if obj.AssertTypes(left, obj.BoolType, obj.NullType) && left == o {
-				return vm.push(obj.True)
-			}
-
-			switch l := left.(type) {
-			case obj.String:
-				r := o.(obj.String)
-				if l == r {
-					return vm.push(obj.True)
-				}
-
-			case obj.Integer:
-				r := o.(obj.Integer)
-				if l == r {
-					return vm.push(obj.True)
-				}
-
-			case obj.Float:
-				r := o.(obj.Float)
-				if l == r {
-					return vm.push(obj.True)
-				}
-			}
-		}
-		return vm.push(obj.False)
-
-	default:
-		return vm.errorf(
-			"invalid operation %v in %v (wrong types %v and %v)",
-			left, right, left.Type(), right.Type(),
-		)
-	}
-}
-
 func (vm *VM) execOr() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	return vm.push(obj.ParseBool(obj.IsTruthy(left) || obj.IsTruthy(right)))
@@ -628,8 +577,8 @@ func (vm *VM) execOr() error {
 
 func (vm *VM) execGreaterThan() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	switch {
@@ -656,8 +605,8 @@ func (vm *VM) execGreaterThan() error {
 
 func (vm *VM) execGreaterThanEqual() error {
 	var (
-		right = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		right = vm.pop()
+		left  = vm.pop()
 	)
 
 	switch {
@@ -684,8 +633,8 @@ func (vm *VM) execGreaterThanEqual() error {
 
 func (vm *VM) execIndex() error {
 	var (
-		index = obj.Unwrap(vm.pop())
-		left  = obj.Unwrap(vm.pop())
+		index = vm.pop()
+		left  = vm.pop()
 	)
 
 	switch {
@@ -693,22 +642,10 @@ func (vm *VM) execIndex() error {
 		l := left.(obj.List)
 		i := int(index.(obj.Integer))
 
-		return vm.push(&obj.GetSetterImpl{
-			GetFunc: func() (obj.Object, bool) {
-				if i < 0 || i >= len(l) {
-					return obj.NewError("intex out of range"), false
-				}
-				return l[i], true
-			},
-
-			SetFunc: func(o obj.Object) obj.Object {
-				if i < 0 || int(i) >= len(l) {
-					return obj.NewError("intex out of range")
-				}
-				l[i] = o
-				return o
-			},
-		})
+		if i < 0 || i >= len(l) {
+			return vm.errorf("index out of range")
+		}
+		return vm.push(l[i])
 
 	case obj.AssertTypes(left, obj.BytesType) && obj.AssertTypes(index, obj.IntType):
 		b := left.(obj.Bytes)
@@ -731,18 +668,7 @@ func (vm *VM) execIndex() error {
 	case obj.AssertTypes(left, obj.MapType) && obj.AssertTypes(index, obj.IntType, obj.FloatType, obj.StringType, obj.BoolType):
 		m := left.(obj.Map)
 		k := index.(obj.Hashable)
-
-		return vm.push(&obj.GetSetterImpl{
-			GetFunc: func() (obj.Object, bool) {
-				v := m.Get(k.KeyHash()).Value
-				return v, v != obj.NullObj
-			},
-
-			SetFunc: func(o obj.Object) obj.Object {
-				m.Set(k.KeyHash(), obj.MapPair{Key: index, Value: o})
-				return o
-			},
-		})
+		return vm.push(m.Get(k.KeyHash()).Value)
 
 	default:
 		return vm.errorf("invalid index operator for types %v and %v", left.Type(), index.Type())
@@ -750,7 +676,7 @@ func (vm *VM) execIndex() error {
 }
 
 func (vm *VM) execBang() error {
-	var right = obj.Unwrap(vm.pop())
+	var right = vm.pop()
 
 	switch b := right.(type) {
 	case *obj.Boolean:
@@ -765,7 +691,7 @@ func (vm *VM) execBang() error {
 }
 
 func (vm *VM) execMinus() error {
-	var right = obj.Unwrap(vm.pop())
+	var right = vm.pop()
 
 	switch r := right.(type) {
 	case obj.Integer:
@@ -780,7 +706,7 @@ func (vm *VM) execMinus() error {
 }
 
 func (vm *VM) execReturnValue() error {
-	retVal := obj.Unwrap(vm.pop())
+	retVal := vm.pop()
 	frame := vm.popFrame()
 	vm.sp = frame.basePointer - 1
 
@@ -798,8 +724,8 @@ func (vm *VM) execCurrentClosure() error {
 	return vm.push(vm.currentFrame().cl)
 }
 
-func (vm *VM) call(o obj.Object, numArgs int) error {
-	switch fn := obj.Unwrap(o).(type) {
+func (vm *VM) execCall(numArgs int) error {
+	switch fn := vm.stack[vm.sp-1-numArgs].(type) {
 	case *obj.Closure:
 		return vm.callClosure(fn, numArgs)
 	case obj.Builtin:
@@ -807,10 +733,6 @@ func (vm *VM) call(o obj.Object, numArgs int) error {
 	default:
 		return vm.errorf("calling non-function")
 	}
-}
-
-func (vm *VM) execCall(numArgs int) error {
-	return vm.call(vm.stack[vm.sp-1-numArgs], numArgs)
 }
 
 func (vm *VM) execConcurrentCall(numArgs int) error {
@@ -835,7 +757,7 @@ func (vm *VM) execConcurrentCall(numArgs int) error {
 		func() { copy(tvm.Globals, vm.Globals) },
 	)
 
-	if err := tvm.call(vm.stack[vm.sp-1-numArgs], numArgs); err != nil {
+	if err := tvm.execCall(numArgs); err != nil {
 		return err
 	}
 	go tvm.Run()
@@ -919,7 +841,7 @@ func (vm *VM) Run() (err error) {
 		}
 	}()
 
-	for vm.currentFrame().ip < len(vm.currentFrame().Instructions())-1 && err == nil {
+	for err == nil {
 		vm.currentFrame().ip++
 
 		ip = vm.currentFrame().ip
@@ -940,7 +862,7 @@ func (vm *VM) Run() (err error) {
 			pos := int(code.ReadUint16(ins[ip+1:]))
 			vm.currentFrame().ip += 2
 
-			if cond := obj.Unwrap(vm.pop()); !obj.IsTruthy(cond) {
+			if cond := vm.pop(); !obj.IsTruthy(cond) {
 				vm.currentFrame().ip = pos - 1
 			}
 
@@ -1098,9 +1020,6 @@ func (vm *VM) Run() (err error) {
 		case code.OpAnd:
 			err = vm.execAnd()
 
-		case code.OpIn:
-			err = vm.execIn()
-
 		case code.OpOr:
 			err = vm.execOr()
 
@@ -1112,6 +1031,9 @@ func (vm *VM) Run() (err error) {
 
 		case code.OpPop:
 			vm.pop()
+
+		case code.OpHalt:
+			return
 		}
 
 	}

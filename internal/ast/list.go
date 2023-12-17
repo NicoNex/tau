@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -20,17 +21,9 @@ func NewList(elements ...Node) Node {
 	return ret
 }
 
-func (l List) Eval(env *obj.Env) obj.Object {
-	var elements []obj.Object
-
-	for _, e := range l {
-		v := obj.Unwrap(e.Eval(env))
-		if takesPrecedence(v) {
-			return v
-		}
-		elements = append(elements, v)
-	}
-	return obj.NewList(elements...)
+// TODO: optimise this for the case where all the list elements are constant expressions.
+func (l List) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Index: not a constant expression")
 }
 
 func (l List) String() string {

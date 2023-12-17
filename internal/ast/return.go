@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/code"
@@ -20,8 +21,8 @@ func NewReturn(n Node, pos int) Node {
 	}
 }
 
-func (r Return) Eval(env *obj.Env) obj.Object {
-	return obj.NewReturn(obj.Unwrap(r.v.Eval(env)))
+func (r Return) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Return: not a constant expression")
 }
 
 func (r Return) String() string {

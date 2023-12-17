@@ -22,20 +22,18 @@ func NewOr(l, r Node, pos int) Node {
 	}
 }
 
-func (o Or) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(o.l.Eval(env))
-		right = obj.Unwrap(o.r.Eval(env))
-	)
-
-	if takesPrecedence(left) {
-		return left
-	}
-	if takesPrecedence(right) {
-		return right
+func (o Or) Eval() (obj.Object, error) {
+	left, err := o.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
-	return obj.ParseBool(obj.IsTruthy(left) || obj.IsTruthy(right))
+	right, err := o.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
+	}
+
+	return obj.ParseBool(obj.IsTruthy(left) || obj.IsTruthy(right)), nil
 }
 
 func (o Or) String() string {
@@ -44,13 +42,13 @@ func (o Or) String() string {
 
 func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
 	if o.IsConstExpression() {
-		object := o.Eval(nil)
-		if e, ok := object.(obj.Error); ok {
-			return 0, c.NewError(o.pos, string(e))
+		object, err := o.Eval()
+		if err != nil {
+			return 0, c.NewError(o.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(object))
 		c.Bookmark(o.pos)
-		return
+		return position, err
 	}
 
 	if position, err = o.l.Compile(c); err != nil {

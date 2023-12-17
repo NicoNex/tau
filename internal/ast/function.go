@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -24,14 +25,8 @@ func NewFunction(params []Identifier, body Node, pos int) Node {
 	}
 }
 
-func (f Function) Eval(env *obj.Env) obj.Object {
-	var params []string
-
-	for _, p := range f.params {
-		params = append(params, p.String())
-	}
-
-	return obj.NewFunction(params, env, f.body)
+func (f Function) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Function: not a constant expression")
 }
 
 func (f Function) String() string {

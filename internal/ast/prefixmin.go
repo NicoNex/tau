@@ -20,23 +20,19 @@ func NewPrefixMinus(n Node, pos int) Node {
 	}
 }
 
-func (p PrefixMinus) Eval(env *obj.Env) obj.Object {
-	var value = obj.Unwrap(p.n.Eval(env))
-
-	if takesPrecedence(value) {
-		return value
+func (p PrefixMinus) Eval() (obj.Object, error) {
+	right, err := p.n.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
-	switch v := value.(type) {
+	switch r := right.(type) {
 	case obj.Integer:
-		return obj.Integer(-v.Val())
-
+		return obj.NewInteger(-int64(r)), nil
 	case obj.Float:
-		return obj.Float(-v.Val())
-
+		return obj.NewFloat(-float64(r)), nil
 	default:
-		return obj.NewError("unsupported prefix operator '-' for type %v", value.Type())
-
+		return obj.NullObj, fmt.Errorf("unsupported prefix operator '-' for type %v", right.Type())
 	}
 }
 
@@ -46,13 +42,13 @@ func (p PrefixMinus) String() string {
 
 func (p PrefixMinus) Compile(c *compiler.Compiler) (position int, err error) {
 	if p.IsConstExpression() {
-		o := p.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(p.pos, string(e))
+		o, err := p.Eval()
+		if err != nil {
+			return 0, c.NewError(p.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(p.pos)
-		return
+		return position, err
 	}
 
 	if position, err = p.n.Compile(c); err != nil {

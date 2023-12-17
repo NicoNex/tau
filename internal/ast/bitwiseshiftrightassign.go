@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/NicoNex/tau/internal/compiler"
@@ -21,40 +22,8 @@ func NewBitwiseShiftRightAssign(l, r Node, pos int) Node {
 	}
 }
 
-func (b BitwiseShiftRightAssign) Eval(env *obj.Env) obj.Object {
-	var (
-		name  string
-		left  = b.l.Eval(env)
-		right = obj.Unwrap(b.r.Eval(env))
-	)
-
-	if ident, ok := b.l.(Identifier); ok {
-		name = ident.String()
-	}
-
-	if takesPrecedence(left) {
-		return left
-	}
-	if takesPrecedence(right) {
-		return right
-	}
-
-	if !obj.AssertTypes(left, obj.IntType) {
-		return obj.NewError("unsupported operator '>>=' for type %v", left.Type())
-	}
-	if !obj.AssertTypes(right, obj.IntType) {
-		return obj.NewError("unsupported operator '>>=' for type %v", right.Type())
-	}
-
-	if gs, ok := left.(obj.GetSetter); ok {
-		l := gs.Object().(obj.Integer)
-		r := right.(obj.Integer)
-		return gs.Set(obj.Integer(l >> r))
-	}
-
-	l := left.(obj.Integer)
-	r := right.(obj.Integer)
-	return env.Set(name, obj.Integer(l>>r))
+func (b BitwiseShiftRightAssign) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.BitwiseShiftRightAssign: not a constant expression")
 }
 
 func (b BitwiseShiftRightAssign) String() string {

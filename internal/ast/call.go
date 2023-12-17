@@ -1,6 +1,7 @@
 package ast
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -23,47 +24,8 @@ func NewCall(fn Node, args []Node, pos int) Node {
 	}
 }
 
-func (c Call) Eval(env *obj.Env) obj.Object {
-	var fnObj = obj.Unwrap(c.Fn.Eval(env))
-
-	if takesPrecedence(fnObj) {
-		return fnObj
-	}
-
-	switch fn := fnObj.(type) {
-	case *obj.Function:
-		var args []obj.Object
-
-		if len(c.Args) != len(fn.Params) {
-			return obj.NewError(
-				"wrong number of arguments: expected %d, got %d",
-				len(fn.Params),
-				len(c.Args),
-			)
-		}
-
-		for _, a := range c.Args {
-			o := obj.Unwrap(a.Eval(env))
-			if takesPrecedence(o) {
-				return o
-			}
-			args = append(args, o)
-		}
-
-		extEnv := extendEnv(fn, args)
-		return unwrapReturn(fn.Body.Eval(extEnv))
-
-	case obj.Builtin:
-		var args []obj.Object
-
-		for _, a := range c.Args {
-			args = append(args, obj.Unwrap(a.Eval(env)))
-		}
-		return fn(args...)
-
-	default:
-		return obj.NewError("%q object is not callable", fnObj.Type())
-	}
+func (c Call) Eval() (obj.Object, error) {
+	return obj.NullObj, errors.New("ast.Call: not a constant expression")
 }
 
 func (c Call) String() string {
@@ -73,22 +35,6 @@ func (c Call) String() string {
 		args = append(args, a.String())
 	}
 	return fmt.Sprintf("%v(%s)", c.Fn, strings.Join(args, ", "))
-}
-
-func extendEnv(fn *obj.Function, args []obj.Object) *obj.Env {
-	var env = obj.NewEnvWrap(fn.Env)
-
-	for i, p := range fn.Params {
-		env.Set(p, args[i])
-	}
-	return env
-}
-
-func unwrapReturn(o obj.Object) obj.Object {
-	if ret, ok := o.(obj.Return); ok {
-		return ret.Val()
-	}
-	return o
 }
 
 func (c Call) Compile(comp *compiler.Compiler) (position int, err error) {

@@ -22,30 +22,27 @@ func NewDivide(l, r Node, pos int) Node {
 	}
 }
 
-func (d Divide) Eval(env *obj.Env) obj.Object {
-	var (
-		left  = obj.Unwrap(d.l.Eval(env))
-		right = obj.Unwrap(d.r.Eval(env))
-	)
+func (d Divide) Eval() (obj.Object, error) {
 
-	if takesPrecedence(left) {
-		return left
+	left, err := d.l.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
-	if takesPrecedence(right) {
-		return right
+
+	right, err := d.r.Eval()
+	if err != nil {
+		return obj.NullObj, err
 	}
 
 	if !obj.AssertTypes(left, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '/' for type %v", left.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '/' for type %v", left.Type())
 	}
 	if !obj.AssertTypes(right, obj.IntType, obj.FloatType) {
-		return obj.NewError("unsupported operator '/' for type %v", right.Type())
+		return obj.NullObj, fmt.Errorf("unsupported operator '/' for type %v", right.Type())
 	}
 
-	left, right = obj.ToFloat(left, right)
-	l := left.(obj.Float)
-	r := right.(obj.Float)
-	return obj.Float(l / r)
+	l, r := obj.ToFloat(left, right)
+	return obj.NewFloat(float64(l.(obj.Float)) / float64(r.(obj.Float))), nil
 }
 
 func (d Divide) String() string {
@@ -54,13 +51,13 @@ func (d Divide) String() string {
 
 func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
 	if d.IsConstExpression() {
-		o := d.Eval(nil)
-		if e, ok := o.(obj.Error); ok {
-			return 0, c.NewError(d.pos, string(e))
+		o, err := d.Eval()
+		if err != nil {
+			return 0, c.NewError(d.pos, err.Error())
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(d.pos)
-		return
+		return position, err
 	}
 
 	if position, err = d.l.Compile(c); err != nil {

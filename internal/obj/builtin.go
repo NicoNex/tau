@@ -52,7 +52,7 @@ var Builtins = []BuiltinImpl{
 				return NewError("len: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			switch o := Unwrap(args[0]).(type) {
+			switch o := args[0].(type) {
 			case List:
 				return Integer(len(o))
 			case String:
@@ -83,7 +83,6 @@ var Builtins = []BuiltinImpl{
 		Builtin: func(args ...Object) Object {
 			var tmp string
 
-			args = UnwrapAll(args)
 			switch l := len(args); l {
 			case 0:
 				fmt.Scanln(&tmp)
@@ -105,7 +104,6 @@ var Builtins = []BuiltinImpl{
 				return NewError("string: no argument provided")
 			}
 
-			args = UnwrapAll(args)
 			if b, ok := args[0].(Bytes); ok {
 				return String(b)
 			}
@@ -134,7 +132,6 @@ var Builtins = []BuiltinImpl{
 				return NewError("int: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			args = UnwrapAll(args)
 			switch o := args[0].(type) {
 			case Integer:
 				return Integer(o)
@@ -160,7 +157,6 @@ var Builtins = []BuiltinImpl{
 				return NewError("float: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			args = UnwrapAll(args)
 			switch o := args[0].(type) {
 			case Integer:
 				return Float(o)
@@ -182,8 +178,6 @@ var Builtins = []BuiltinImpl{
 	{
 		Name: "exit",
 		Builtin: func(args ...Object) Object {
-			args = UnwrapAll(args)
-
 			switch l := len(args); l {
 			case 0:
 				os.Exit(0)
@@ -227,7 +221,6 @@ var Builtins = []BuiltinImpl{
 				return NewError("append: no argument provided")
 			}
 
-			args = UnwrapAll(args)
 			lst, ok := args[0].(List)
 			if !ok {
 				return NewError("append: first argument must be a list")
@@ -237,81 +230,6 @@ var Builtins = []BuiltinImpl{
 				return append(lst, args[1:]...)
 			}
 			return lst
-		},
-	},
-	{
-		Name: "push",
-		Builtin: func(args ...Object) Object {
-			if len(args) == 0 {
-				return NewError("push: no argument provided")
-			}
-
-			args = UnwrapAll(args)
-			lst, ok := args[0].(List)
-			if !ok {
-				return NewError("push: first argument must be a list")
-			}
-
-			if len(args) > 1 {
-				var tmp List
-
-				for i := len(args) - 1; i > 0; i-- {
-					tmp = append(tmp, args[i])
-				}
-
-				return append(tmp, lst...)
-			}
-			return lst
-		},
-	},
-	{
-		Name: "range",
-		Builtin: func(args ...Object) Object {
-			args = UnwrapAll(args)
-
-			switch len(args) {
-			case 1:
-				if stop, ok := args[0].(Integer); ok {
-					return listify(0, int(stop), 1)
-				}
-				return NewError("range: start value must be an int")
-
-			case 2:
-				start, ok := args[0].(Integer)
-				if !ok {
-					return NewError("range: start value must be an int")
-				}
-
-				stop, ok := args[1].(Integer)
-				if !ok {
-					return NewError("range: stop value must be an int")
-				}
-				return listify(int(start), int(stop), 1)
-
-			case 3:
-				start, ok := args[0].(Integer)
-				if !ok {
-					return NewError("range: start value must be an int")
-				}
-
-				stop, ok := args[1].(Integer)
-				if !ok {
-					return NewError("range: stop value must be an int")
-				}
-
-				step, ok := args[2].(Integer)
-				if !ok {
-					return NewError("range: step value must be an int")
-				}
-
-				if s := int(step); s != 0 {
-					return listify(int(start), int(stop), s)
-				}
-				return NewError("range: step value must not be zero")
-
-			default:
-				return NewError("range: wrong number of arguments, max 3, got %d", len(args))
-			}
 		},
 	},
 	{
@@ -330,7 +248,7 @@ var Builtins = []BuiltinImpl{
 				return NewError("failed: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			_, ok := Unwrap(args[0]).(Error)
+			_, ok := args[0].(Error)
 			return ParseBool(ok)
 		},
 	},
@@ -341,7 +259,7 @@ var Builtins = []BuiltinImpl{
 				return NewError("plugin: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			str, ok := Unwrap(args[0]).(String)
+			str, ok := args[0].(String)
 			if !ok {
 				return NewError("plugin: first argument must be a string, got %s instead", args[0].Type())
 			}
@@ -357,7 +275,7 @@ var Builtins = []BuiltinImpl{
 				return NewPipe()
 
 			case 1:
-				n, ok := Unwrap(args[0]).(Integer)
+				n, ok := args[0].(Integer)
 				if !ok {
 					return NewError("pipe: first argument must be an int, got %s instead", args[0].Type())
 				}
@@ -375,7 +293,6 @@ var Builtins = []BuiltinImpl{
 				return NewError("send: wrong number of arguments, expected 2, got %d", l)
 			}
 
-			args = UnwrapAll(args)
 			p, ok := args[0].(Pipe)
 			if !ok {
 				return NewError("send: first argument must be a pipe, got %s instead", args[0].Type())
@@ -392,12 +309,12 @@ var Builtins = []BuiltinImpl{
 				return NewError("recv: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			p, ok := Unwrap(args[0]).(Pipe)
+			p, ok := args[0].(Pipe)
 			if !ok {
 				return NewError("recv: first argument must be a pipe, got %s instead", args[0].Type())
 			}
 
-			if ret := Unwrap(<-p); ret != nil {
+			if ret := <-p; ret != nil {
 				return ret
 			}
 			return NullObj
@@ -410,7 +327,7 @@ var Builtins = []BuiltinImpl{
 				return NewError("close: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			p, ok := Unwrap(args[0]).(Pipe)
+			p, ok := args[0].(Pipe)
 			if !ok {
 				return NewError("close: first argument must be a pipe, got %s instead", args[0].Type())
 			}
@@ -426,7 +343,7 @@ var Builtins = []BuiltinImpl{
 				return NewError("hex: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			i, ok := Unwrap(args[0]).(Integer)
+			i, ok := args[0].(Integer)
 			if !ok {
 				return NewError("hex: first argument must be an int, got %s instead", args[0].Type())
 			}
@@ -441,7 +358,7 @@ var Builtins = []BuiltinImpl{
 				return NewError("oct: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			i, ok := Unwrap(args[0]).(Integer)
+			i, ok := args[0].(Integer)
 			if !ok {
 				return NewError("oct: first argument must be an int, got %s instead", args[0].Type())
 			}
@@ -456,7 +373,7 @@ var Builtins = []BuiltinImpl{
 				return NewError("bin: wrong number of arguments, expected 1, got %d", l)
 			}
 
-			i, ok := Unwrap(args[0]).(Integer)
+			i, ok := args[0].(Integer)
 			if !ok {
 				return NewError("bin: first argument must be an int, got %s instead", args[0].Type())
 			}
@@ -471,7 +388,6 @@ var Builtins = []BuiltinImpl{
 				return NewError("slice: wrong number of arguments, expected 3, got %d", l)
 			}
 
-			args = UnwrapAll(args)
 			s, ok := args[1].(Integer)
 			if !ok {
 				return NewError("slice: second argument must be an int, got %s instead", args[1].Type())
@@ -515,38 +431,38 @@ var Builtins = []BuiltinImpl{
 		},
 	},
 	{
-		Name: "open",
+		Name: "keys",
 		Builtin: func(args ...Object) Object {
-			var l = len(args)
-
-			if l != 1 && l != 2 {
-				return NewError("open: wrong number of arguments, expected 1 or 2, got %d", l)
+			if len(args) != 1 {
+				return NewError("keys: wrong number of arguments, expected 1 got %d", len(args))
 			}
 
-			args = UnwrapAll(args)
-			path, ok := args[0].(String)
-			if !ok {
-				return NewError("open: first argument must be a string, got %s instead", args[0].Type())
-			}
+			if m, ok := args[0].(Map); ok {
+				ret := []Object{}
 
-			var flag = os.O_RDONLY
-			if l == 2 {
-				mode, ok := args[1].(String)
-				if !ok {
-					return NewError("open: second argument must be a string, got %s instead", args[1].Type())
+				for _, v := range m {
+					ret = append(ret, v.Key)
 				}
-				parsed, err := parseFlag(string(mode))
-				if err != nil {
-					return NewError("open: %v", err)
-				}
-				flag = parsed
+				return List(ret)
+			}
+			return NewError("keys: argument must be a map, got %v instead", args[0].Type())
+		},
+	},
+	{
+		Name: "delete",
+		Builtin: func(args ...Object) Object {
+			if len(args) != 2 {
+				return NewError("delete: wrong number of arguments, expected 2 got %d", len(args))
 			}
 
-			ret, err := NewFile(string(path), flag)
-			if err != nil {
-				return NewError("open: %v", err)
+			if m, ok := args[0].(Map); ok {
+				if h, ok := args[1].(Hashable); ok {
+					delete(m, h.KeyHash())
+					return NullObj
+				}
+				return NewError("delete: second argument must be one of boolean integer float string error, got %s instead", args[1].Type())
 			}
-			return ret
+			return NewError("delete: first argument must be a map, got %v instead", args[0].Type())
 		},
 	},
 	{
@@ -556,7 +472,6 @@ var Builtins = []BuiltinImpl{
 				return NewError("bytes: expected 1 argument but got %d", len(args))
 			}
 
-			args = UnwrapAll(args)
 			switch a := args[0].(type) {
 			case String:
 				return Bytes(a)
@@ -579,43 +494,10 @@ var Builtins = []BuiltinImpl{
 	},
 }
 
-func UnwrapAll(a []Object) []Object {
-	for i, o := range a {
-		a[i] = Unwrap(o)
-	}
-	return a
-}
-
-func listify(start, stop, step int) List {
-	var l List
-
-	for i := start; i < stop; i += step {
-		l = append(l, NewInteger(int64(i)))
-	}
-	return l
-}
-
 func toAnySlice(args []Object) []any {
 	var ret = make([]any, len(args))
 	for i, a := range args {
 		ret[i] = a
 	}
 	return ret
-}
-
-func parseFlag(f string) (int, error) {
-	switch f {
-	case "r":
-		return os.O_RDONLY, nil
-	case "w":
-		return os.O_WRONLY | os.O_TRUNC | os.O_CREATE, nil
-	case "a":
-		return os.O_RDWR | os.O_APPEND | os.O_CREATE, nil
-	case "x":
-		return os.O_RDWR | os.O_CREATE | os.O_EXCL, nil
-	case "rw":
-		return os.O_RDWR | os.O_CREATE | os.O_TRUNC, nil
-	default:
-		return 0, fmt.Errorf("invalid file flag %q", f)
-	}
 }

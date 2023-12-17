@@ -19,7 +19,7 @@ fib = fn(n) {
 	fib(n-1) + fib(n-2)
 }
 
-fib(35)`
+println(fib(40))`
 
 func check(err error) {
 	if err != nil {
@@ -45,17 +45,18 @@ func main() {
 	cpuf, err := os.Create("cpu.prof")
 	check(err)
 
-	tree, errs := parser.Parse(fileOrDefault())
+	tauCode := fileOrDefault()
+	tree, errs := parser.Parse("<profiler>", tauCode)
 	if len(errs) > 0 {
 		panic("parser errors")
 	}
 
 	c := compiler.New()
+	c.SetFileInfo("<profiler>", tauCode)
 	check(c.Compile(tree))
 
 	check(pprof.StartCPUProfile(cpuf))
 	defer pprof.StopCPUProfile()
-
 	tvm := vm.New("<profiler>", c.Bytecode())
-	check(tvm.Run())
+	tvm.Run()
 }

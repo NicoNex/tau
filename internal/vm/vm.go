@@ -47,6 +47,10 @@ type VM struct {
 	frameIndex int
 }
 
+type getter interface {
+	Get(string) (obj.Object, bool)
+}
+
 const (
 	StackSize  = 2048
 	GlobalSize = 65536
@@ -261,13 +265,14 @@ func (vm *VM) execDot() error {
 		left  = vm.pop()
 	)
 
-	switch l := left.(type) {
-	case obj.Class:
-		o, _ := l.Get(string(right.(obj.String)))
-		return vm.push(o)
+	if !obj.AssertTypes(left, obj.ObjectType) {
+		return vm.errorf("%v object has no attribute %s", left.Type(), right)
+	}
 
-	case obj.NativePlugin, obj.NativeStruct:
-		return vm.errorf("native unimplemented")
+	switch l := left.(type) {
+	case getter:
+		o, _ := l.Get(right.String())
+		return vm.push(o)
 
 	default:
 		return vm.errorf("%v object has no attribute %s", left.Type(), right)
@@ -282,7 +287,7 @@ func (vm *VM) execDefine() error {
 	)
 
 	switch t := target.(type) {
-	case obj.Class:
+	case obj.TauObject:
 		t.Set(string(field.(obj.String)), val)
 		vm.push(val)
 

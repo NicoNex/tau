@@ -238,7 +238,7 @@ var Builtins = []BuiltinImpl{
 			if l := len(args); l != 0 {
 				return NewError("new: wrong number of arguments, expected 0, got %d", l)
 			}
-			return NewClass()
+			return NewTauObject()
 		},
 	},
 	{

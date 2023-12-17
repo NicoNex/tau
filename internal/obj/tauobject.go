@@ -5,19 +5,19 @@ import (
 	"strings"
 )
 
-type Class struct {
+type TauObject struct {
 	Store
 }
 
-func NewClass() Object {
-	return Class{NewStore()}
+func NewTauObject() Object {
+	return TauObject{NewStore()}
 }
 
-func (c Class) Type() Type {
+func (c TauObject) Type() Type {
 	return ObjectType
 }
 
-func (c Class) String() string {
+func (c TauObject) String() string {
 	var buf strings.Builder
 	buf.WriteString("{")
 

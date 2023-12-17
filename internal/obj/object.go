@@ -42,6 +42,7 @@ const (
 	ContinueType             // continue
 	BreakType                // break
 	PipeType                 // pipe
+	NativeType               // native
 )
 
 var (

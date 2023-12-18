@@ -26,22 +26,19 @@ type Type int
 
 const (
 	NullType     Type = iota // null
-	ErrorType                // error
+	BoolType                 // bool
 	IntType                  // int
 	FloatType                // float
-	BoolType                 // bool
-	StringType               // string
-	BytesType                // bytes
-	ObjectType               // object
-	ReturnType               // return
-	FunctionType             // function
-	ClosureType              // closure
 	BuiltinType              // builtin
+	StringType               // string
+	ErrorType                // error
 	ListType                 // list
 	MapType                  // map
-	ContinueType             // continue
-	BreakType                // break
+	FunctionType             // function
+	ClosureType              // closure
+	ObjectType               // object
 	PipeType                 // pipe
+	BytesType                // bytes
 	NativeType               // native
 )
 

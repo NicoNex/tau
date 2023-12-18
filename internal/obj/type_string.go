@@ -9,27 +9,25 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[NullType-0]
-	_ = x[ErrorType-1]
+	_ = x[BoolType-1]
 	_ = x[IntType-2]
 	_ = x[FloatType-3]
-	_ = x[BoolType-4]
+	_ = x[BuiltinType-4]
 	_ = x[StringType-5]
-	_ = x[BytesType-6]
-	_ = x[ObjectType-7]
-	_ = x[ReturnType-8]
+	_ = x[ErrorType-6]
+	_ = x[ListType-7]
+	_ = x[MapType-8]
 	_ = x[FunctionType-9]
 	_ = x[ClosureType-10]
-	_ = x[BuiltinType-11]
-	_ = x[ListType-12]
-	_ = x[MapType-13]
-	_ = x[ContinueType-14]
-	_ = x[BreakType-15]
-	_ = x[PipeType-16]
+	_ = x[ObjectType-11]
+	_ = x[PipeType-12]
+	_ = x[BytesType-13]
+	_ = x[NativeType-14]
 }
 
-const _Type_name = "nullerrorintfloatboolstringbytesobjectreturnfunctionclosurebuiltinlistmapcontinuebreakpipe"
+const _Type_name = "nullboolintfloatbuiltinstringerrorlistmapfunctionclosureobjectpipebytesnative"
 
-var _Type_index = [...]uint8{0, 4, 9, 12, 17, 21, 27, 32, 38, 44, 52, 59, 66, 70, 73, 81, 86, 90}
+var _Type_index = [...]uint8{0, 4, 8, 11, 16, 23, 29, 34, 38, 41, 49, 56, 62, 66, 71, 77}
 
 func (i Type) String() string {
 	if i < 0 || i >= Type(len(_Type_index)-1) {

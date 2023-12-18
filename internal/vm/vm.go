@@ -206,7 +206,7 @@ func (vm *VM) execLoadModule() error {
 		return parserError(p, errs)
 	}
 
-	c := compiler.NewWithState(vm.Symbols, &vm.Consts)
+	c := compiler.NewImport(vm.Symbols.NumDefs, &vm.Consts)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
 		return err

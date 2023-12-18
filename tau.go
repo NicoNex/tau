@@ -48,7 +48,7 @@ func decode(r io.Reader) (*compiler.Bytecode, error) {
 	gob.Register(obj.NewInteger(0))
 	gob.Register(obj.NewBoolean(false))
 	gob.Register(obj.NewNull())
-	gob.Register(obj.NewClass())
+	gob.Register(obj.NewTauObject())
 	gob.Register(obj.NewReturn(nil))
 	gob.Register(obj.NewFloat(0))
 	gob.Register(obj.NewList())

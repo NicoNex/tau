@@ -171,11 +171,11 @@ func (d *decoder) Bookmarks(len int) (b []tauerr.Bookmark) {
 	return
 }
 
-func Decode(b []byte) Bytecode {
+func Decode(b []byte) *Bytecode {
 	var d = decoder{b: b}
 
 	// The order of the fields has to reflect the data layout in the encoded bytecode.
-	return Bytecode{
+	return &Bytecode{
 		NumDefs:      d.Int(),
 		Instructions: d.Bytes(d.Int()),
 		Constants:    d.Objects(d.Int()),

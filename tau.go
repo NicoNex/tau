@@ -1,9 +1,6 @@
 package tau
 
 import (
-	"bufio"
-	"bytes"
-	"encoding/gob"
 	"errors"
 	"fmt"
 	"io"
@@ -14,7 +11,6 @@ import (
 
 	"github.com/NicoNex/tau/internal/ast"
 	"github.com/NicoNex/tau/internal/compiler"
-	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
 )
@@ -23,50 +19,10 @@ const TauVersion = "v1.6.0"
 
 var ErrParseError = errors.New("error: parse error")
 
-func encode(bcode *compiler.Bytecode) ([]byte, error) {
-	var (
-		buf bytes.Buffer
-		enc = gob.NewEncoder(&buf)
-	)
-
-	for _, c := range bcode.Constants {
-		gob.Register(c)
-	}
-
-	if err := enc.Encode(bcode); err != nil {
-		return []byte{}, err
-	}
-	return buf.Bytes(), nil
-}
-
-func decode(r io.Reader) (*compiler.Bytecode, error) {
-	var (
-		b   *compiler.Bytecode
-		dec = gob.NewDecoder(r)
-	)
-
-	gob.Register(obj.NewInteger(0))
-	gob.Register(obj.NewBoolean(false))
-	gob.Register(obj.NewNull())
-	gob.Register(obj.NewTauObject())
-	gob.Register(obj.NewReturn(nil))
-	gob.Register(obj.NewFloat(0))
-	gob.Register(obj.NewList())
-	gob.Register(obj.NewMap())
-	gob.Register(obj.NewString(""))
-	gob.Register(obj.NewError(""))
-	gob.Register(obj.NewClosure(nil, []obj.Object{}))
-	gob.Register(obj.Builtin(func(arg ...obj.Object) obj.Object { return nil }))
-	gob.Register(obj.NewFunction([]string{}, obj.NewEnv(""), nil))
-
-	return b, dec.Decode(&b)
-}
-
-func readFile(fname string) []byte {
+func mustReadFile(fname string) []byte {
 	b, err := os.ReadFile(fname)
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		panic(err)
 	}
 	return b
 }
@@ -78,18 +34,16 @@ func writeFile(fname string, cont []byte) {
 	}
 }
 
-func precompiledBytecode(path string) (*compiler.Bytecode, error) {
-	file, err := os.Open(path)
+func decode(path string) (*compiler.Bytecode, error) {
+	b, err := os.ReadFile(path)
 	if err != nil {
-		fmt.Println(err)
-		return nil, fmt.Errorf("error opening file %q: %w", path, err)
+		return nil, err
 	}
-	defer file.Close()
-	return decode(bufio.NewReader(file))
+	return compiler.Decode(b), nil
 }
 
 func compile(path string) (bc *compiler.Bytecode, err error) {
-	input := string(readFile(path))
+	input := string(mustReadFile(path))
 	res, errs := parser.Parse(path, input)
 	if len(errs) > 0 {
 		var buf strings.Builder
@@ -114,7 +68,7 @@ func ExecFileVM(f string) (err error) {
 	var bytecode *compiler.Bytecode
 
 	if filepath.Ext(f) == ".tauc" {
-		bytecode, err = precompiledBytecode(f)
+		bytecode, err = decode(f)
 	} else {
 		bytecode, err = compile(f)
 	}
@@ -135,7 +89,7 @@ func ExecFileVM(f string) (err error) {
 
 func CompileFiles(files []string) error {
 	for _, f := range files {
-		b := readFile(f)
+		b := mustReadFile(f)
 
 		res, errs := parser.Parse(f, string(b))
 		if len(errs) != 0 {
@@ -151,7 +105,7 @@ func CompileFiles(files []string) error {
 			continue
 		}
 
-		cnt, err := encode(c.Bytecode())
+		cnt, err := c.Bytecode().Encode()
 		if err != nil {
 			fmt.Println(err)
 			continue

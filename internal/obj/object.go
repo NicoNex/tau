@@ -43,11 +43,9 @@ const (
 )
 
 var (
-	NullObj     = NewNull()
-	True        = NewBoolean(true)
-	False       = NewBoolean(false)
-	ContinueObj = NewContinue()
-	BreakObj    = NewBreak()
+	NullObj = NewNull()
+	True    = NewBoolean(true)
+	False   = NewBoolean(false)
 )
 
 func ParseBool(b bool) Object {

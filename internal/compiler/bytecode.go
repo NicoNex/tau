@@ -63,7 +63,7 @@ func (e *encoder) WriteObjects(objs ...obj.Object) (err error) {
 			err = errors.Join(err, e.WriteValue(o.Val()))
 		case obj.String:
 			err = errors.Join(err, e.WriteValue(o.Val()))
-		case obj.CompiledFunction:
+		case obj.Function:
 			err = errors.Join(err, e.WriteValue(o.NumParams))
 			err = errors.Join(err, e.WriteValue(o.NumLocals))
 			err = errors.Join(err, e.WriteValue(len(o.Instructions)))
@@ -146,7 +146,7 @@ func (d *decoder) Objects(len int) (o []obj.Object) {
 			o = append(o, obj.NewString(d.String(d.Int())))
 		case obj.FunctionType:
 			// The order of the fields has to reflect the data layout in the encoded bytecode.
-			o = append(o, &obj.CompiledFunction{
+			o = append(o, &obj.Function{
 				NumParams:    d.Int(),
 				NumLocals:    d.Int(),
 				Instructions: d.Bytes(d.Int()),

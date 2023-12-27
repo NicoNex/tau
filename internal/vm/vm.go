@@ -42,7 +42,6 @@ type VM struct {
 	file       string
 	stack      []obj.Object
 	frames     []*Frame
-	localTable []bool
 	sp         int
 	frameIndex int
 }
@@ -57,16 +56,13 @@ const (
 	MaxFrames  = 1024
 )
 
+var importTab = make(map[string]obj.TauObject)
+
 var (
 	True  = obj.True
 	False = obj.False
 	Null  = obj.NullObj
 )
-
-func isExported(n string) bool {
-	r, _ := utf8.DecodeRuneInString(n)
-	return unicode.IsUpper(r)
-}
 
 func parserError(prefix string, errs []error) error {
 	var buf strings.Builder
@@ -95,13 +91,12 @@ func New(file string, bytecode *compiler.Bytecode) *VM {
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
-		localTable: make([]bool, GlobalSize),
 		State:      NewState(),
 	}
 
 	vm.dir, vm.file = filepath.Split(file)
 	vm.Consts = bytecode.Constants
-	fn := &obj.CompiledFunction{
+	fn := &obj.Function{
 		Instructions: bytecode.Instructions,
 		Bookmarks:    bytecode.Bookmarks,
 	}
@@ -114,21 +109,16 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
-		localTable: make([]bool, GlobalSize),
 		State:      state,
 	}
 
 	vm.dir, vm.file = filepath.Split(file)
-	fn := &obj.CompiledFunction{
+	fn := &obj.Function{
 		Instructions: bytecode.Instructions,
 		Bookmarks:    bytecode.Bookmarks,
 	}
 	vm.frames[0] = NewFrame(&obj.Closure{Fn: fn}, 0)
 	return vm
-}
-
-func (vm *VM) isLocal(i int) bool {
-	return vm.localTable[i]
 }
 
 func (vm *VM) currentFrame() *Frame {
@@ -190,9 +180,13 @@ func (vm *VM) execLoadModule() error {
 		return vm.errorf("import: expected string, got %v", taupath.Type())
 	}
 
-	path, err := obj.ImportLookup(filepath.Join(vm.dir, string(pathObj)))
+	path, err := lookup(filepath.Join(vm.dir, string(pathObj)))
 	if err != nil {
 		return vm.errorf("import: %w", err)
+	}
+
+	if mod, ok := importTab[path]; ok {
+		return vm.push(mod)
 	}
 
 	b, err := os.ReadFile(path)
@@ -206,33 +200,38 @@ func (vm *VM) execLoadModule() error {
 		return parserError(p, errs)
 	}
 
-	c := compiler.NewImport(vm.Symbols.NumDefs, &vm.Consts)
+	fmt.Fprintln(obj.Stdout, len(vm.Consts))
+	c := compiler.NewImport(vm.Symbols, &vm.Consts)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
 		return err
 	}
+	fmt.Fprintln(obj.Stdout, len(vm.Consts))
 
 	tvm := NewWithState(path, c.Bytecode(), vm.State)
 	if err := tvm.Run(); err != nil {
 		return err
 	}
 
-	mod := obj.NewModule()
+	mod := make(obj.TauObject)
 	for name, symbol := range vm.Symbols.Store {
-		if symbol.Scope == compiler.GlobalScope && tvm.isLocal(symbol.Index) {
+
+		fmt.Fprintln(obj.Stdout, name)
+
+		if symbol.Scope == compiler.GlobalScope {
 			o := vm.Globals[symbol.Index]
-			if m, ok := o.(obj.Moduler); ok {
-				o = m.Module()
-			}
 
 			if isExported(name) {
-				mod.Exported[name] = o
-			} else {
-				mod.Unexported[name] = o
+				if to, ok := o.(obj.TauObject); ok {
+					mod[name] = to.Module()
+				} else {
+					mod[name] = o
+				}
 			}
 		}
 	}
 
+	importTab[path] = mod
 	return vm.push(mod)
 }
 
@@ -754,7 +753,6 @@ func (vm *VM) execConcurrentCall(numArgs int) error {
 		stack:      make([]obj.Object, StackSize),
 		frames:     make([]*Frame, MaxFrames),
 		frameIndex: 1,
-		localTable: make([]bool, GlobalSize),
 		dir:        vm.dir,
 		file:       vm.file,
 		sp:         vm.sp,
@@ -767,7 +765,6 @@ func (vm *VM) execConcurrentCall(numArgs int) error {
 
 	wait(
 		func() { copy(tvm.stack, vm.stack) },
-		func() { copy(tvm.localTable, vm.localTable) },
 		func() { copy(tvm.Globals, vm.Globals) },
 	)
 
@@ -829,7 +826,7 @@ func (vm *VM) callBuiltin(fn obj.Builtin, nargs int) error {
 
 func (vm *VM) pushClosure(constIdx, numFree int) error {
 	constant := vm.Consts[constIdx]
-	fn, ok := constant.(*obj.CompiledFunction)
+	fn, ok := constant.(*obj.Function)
 	if !ok {
 		return vm.errorf("not a function: %+v", constant)
 	}
@@ -883,7 +880,6 @@ func (vm *VM) Run() (err error) {
 		case code.OpSetGlobal:
 			globalIndex := code.ReadUint16(ins[ip+1:])
 			vm.currentFrame().ip += 2
-			vm.localTable[globalIndex] = true
 			vm.Globals[globalIndex] = vm.peek()
 
 		case code.OpGetGlobal:
@@ -1072,4 +1068,9 @@ func (vm *VM) pop() obj.Object {
 
 func (vm *VM) peek() obj.Object {
 	return vm.stack[vm.sp-1]
+}
+
+func isExported(n string) bool {
+	r, _ := utf8.DecodeRuneInString(n)
+	return unicode.IsUpper(r)
 }

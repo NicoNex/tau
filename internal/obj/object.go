@@ -1,12 +1,5 @@
 package obj
 
-import (
-	"errors"
-	"fmt"
-	"os"
-	"path/filepath"
-)
-
 type Object interface {
 	Type() Type
 	String() string
@@ -91,31 +84,4 @@ func IsTruthy(o Object) bool {
 	default:
 		return true
 	}
-}
-
-var (
-	ErrFileNotFound   = errors.New("file not found")
-	ErrNoFileProvided = errors.New("no file provided")
-)
-
-func ImportLookup(taupath string) (string, error) {
-	dir, file := filepath.Split(taupath)
-
-	if file == "" {
-		return "", ErrNoFileProvided
-	}
-
-	if filepath.Ext(file) == "" {
-		file += ".tau"
-	}
-
-	path := filepath.Join(dir, file)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		path = filepath.Join("/lib", "tau", dir, file)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			return "", fmt.Errorf("%s: %w", path, err)
-		}
-	}
-
-	return path, nil
 }

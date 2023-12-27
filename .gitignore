@@ -3,9 +3,11 @@
 *.exe
 *.tau
 *.tauc
+*.prof
 *.py
 *.so
 
+/.vscode
 **/.DS_store
 
 /tau

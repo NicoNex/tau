@@ -3,14 +3,16 @@
 *.exe
 *.tau
 *.tauc
+*.prof
 *.py
 *.so
 *.prof
+
+/.vscode
+**/.DS_store
 
 /tau
 /cmd/tau/tau
 !/examples/*.tau
 internal/obj/libffi
 profile
-
-**/.DS_store

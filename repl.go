@@ -6,6 +6,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 
 	"golang.org/x/term"
 
@@ -14,6 +15,43 @@ import (
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
 )
+
+var (
+	exitHandlers []func()
+	once         sync.Once
+)
+
+// Exit runs all the exit handlers and then terminates the program using
+// os.Exit(code)
+func Exit(code int) {
+	runExitHandlers()
+	os.Exit(code)
+}
+
+// RegisterExit adds an exit handler
+func RegisterExit(handler func()) {
+	exitHandlers = append(exitHandlers, handler)
+}
+
+func runExitHandler(handler func()) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Fprintln(os.Stderr, "error: exit handler error:", err)
+		}
+	}()
+
+	handler()
+}
+
+func executeExitHandlers() {
+	for _, handler := range exitHandlers {
+		runExitHandler(handler)
+	}
+}
+
+func runExitHandlers() {
+	once.Do(executeExitHandlers)
+}
 
 func VmREPL() error {
 	var state = vm.NewState()
@@ -24,10 +62,14 @@ func VmREPL() error {
 		return fmt.Errorf("error opening terminal: %w", err)
 	}
 	defer term.Restore(0, initState)
+	RegisterExit(func() {
+		term.Restore(0, initState)
+	})
 
 	t := term.NewTerminal(os.Stdin, ">>> ")
 	t.AutoCompleteCallback = autoComplete
 	obj.Stdout = t
+	obj.Exit = Exit
 
 	PrintVersionInfo(t)
 	for {

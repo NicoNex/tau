@@ -8,8 +8,9 @@ import (
 )
 
 var (
-	Stdout io.Writer = os.Stdout
-	Stdin  io.Reader = os.Stdin
+	Stdout io.Writer      = os.Stdout
+	Stdin  io.Reader      = os.Stdin
+	Exit   func(code int) = os.Exit
 )
 
 func Println(a ...any) {
@@ -180,16 +181,16 @@ var Builtins = []BuiltinImpl{
 		Builtin: func(args ...Object) Object {
 			switch l := len(args); l {
 			case 0:
-				os.Exit(0)
+				Exit(0)
 
 			case 1:
 				switch o := args[0].(type) {
 				case Integer:
-					os.Exit(int(o))
+					Exit(int(o))
 
 				case String, Error:
 					fmt.Fprintln(Stdout, o)
-					os.Exit(0)
+					Exit(0)
 
 				default:
 					return NewError("exit: argument must be an integer, string or error")

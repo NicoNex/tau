@@ -267,16 +267,74 @@ pow = fn(base, exponent) {
 }
 ```
 
+#### Builtin Functions
+
+Tau has an assortment of useful builtin functions that operate on many data types:
+
+- `len(x)` -- Returns the length of the given object `x` which could be a String, List, Map or Bytes.
+- `println(s)` -- Prints the String `s` to the terminal (standard out) along with a new-line.
+- `print(s)` -- Same as `print()` without a new-line.
+- `input(prompt)` -- Asks for input from the user by reading from the terminal (standard in) with an optional prompt.
+- `string(x)` -- Converts the object `x` to a String.
+- `error(s)` -- Constructs a new error with the contents of the String `s`.
+- `type(x)` -- Returns the type of the object `x`.
+- `int(x)` -- Converts the object `x` to an Integer.
+- `float(x)` -- Converts the object `x` to a Float.
+- `exit([code | message, code]) -- Terminates the program with the optional exit code and/or message.
+- `append(xs, x)` -- Appends the object `x` to the List `xs` and returns the new List.
+- `new` -- Constructs a new empty object.
+- `failed(f)` -- Calls the Function `f` and returns true if an error occurred.
+- `plugin(path)` -- Loads the Plugin at the given path.
+- `pipe` -- Creates a new pipe for sending/receiving messages to/from coroutines.
+- `send(p, x)` -- Sends the object `x` to the pipe `p`.
+- `recv(p)` -- Reads from the pipe `p` and returns the next object sent to it.
+- `close(p)` -- Closes the pipe `p`.
+- `hex(x)` -- Returns a hexadecimal representation of `x`.
+- `oct(x)` -- Returns an octal representation of `x`.
+- `bin(x)` -- Returns a binary representation of `x`.
+- `slice(x, start, end)` -- Returns a slice of `x` from `start` to `end` which could be a String, List or Bytes.
+- `keys(x)` -- Returns a List of keys of the Map `x`.
+- `delete(xs, x)` -- Deletes the key `x` or the `x`th item from the Map `xs` or List `xs`.
+- `bytes(x)` -- Converts the String `x` to Bytes.
+
 #### List
 ```js
 empty = []
 stuff = ["Hello World", 1, 2, 3, true]
 ```
 
+You can append to a list with the `append()` builtin:
+
+```js
+xs =[]
+xs = append(xs, 1)
+```
+
+Lists can be indexed using the indexing operator `[n]`:
+
+```js
+xs = [1, 2, 3]
+xs[1]
+```
+
 #### Map
 ```js
 empty = {}
 stuff = {"Hello": "World", 123: true}
+```
+
+Keys can be added using the set operator `[key] = value`:
+
+```js
+kv = {}
+k["foo"] = "bar"
+```
+
+Keys can be accessed using the get operator `[key]`:
+
+```js
+kv = ["foo": "bar"}
+kv["foo"]
 ```
 
 #### Loop

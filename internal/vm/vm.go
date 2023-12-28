@@ -200,13 +200,11 @@ func (vm *VM) execLoadModule() error {
 		return parserError(p, errs)
 	}
 
-	fmt.Fprintln(obj.Stdout, len(vm.Consts))
-	c := compiler.NewImport(vm.Symbols, &vm.Consts)
+	c := compiler.NewImport(vm.Symbols.NumDefs, &vm.Consts)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
 		return err
 	}
-	fmt.Fprintln(obj.Stdout, len(vm.Consts))
 
 	tvm := NewWithState(path, c.Bytecode(), vm.State)
 	if err := tvm.Run(); err != nil {
@@ -214,10 +212,7 @@ func (vm *VM) execLoadModule() error {
 	}
 
 	mod := make(obj.TauObject)
-	for name, symbol := range vm.Symbols.Store {
-
-		fmt.Fprintln(obj.Stdout, name)
-
+	for name, symbol := range c.SymbolTable.Store {
 		if symbol.Scope == compiler.GlobalScope {
 			o := vm.Globals[symbol.Index]
 
@@ -230,7 +225,6 @@ func (vm *VM) execLoadModule() error {
 			}
 		}
 	}
-
 	importTab[path] = mod
 	return vm.push(mod)
 }

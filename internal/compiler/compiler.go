@@ -63,13 +63,13 @@ func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
 	}
 }
 
-func NewImport(st *SymbolTable, constants *[]obj.Object) *Compiler {
-	// var st = NewSymbolTable()
+func NewImport(numDefs int, constants *[]obj.Object) *Compiler {
+	var st = NewSymbolTable()
 
-	// st.NumDefs = numDefs
-	// for i, b := range obj.Builtins {
-	// 	st.DefineBuiltin(i, b.Name)
-	// }
+	st.NumDefs = numDefs
+	for i, b := range obj.Builtins {
+		st.DefineBuiltin(i, b.Name)
+	}
 
 	return &Compiler{
 		SymbolTable: st,

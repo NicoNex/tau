@@ -18,21 +18,15 @@ import (
 )
 
 type State struct {
-	Symbols *compiler.SymbolTable
+	NumDefs int
 	Consts  []obj.Object
 	Globals []obj.Object
 }
 
 func NewState() *State {
-	st := compiler.NewSymbolTable()
-	for i, builtin := range obj.Builtins {
-		st.DefineBuiltin(i, builtin.Name)
-	}
-
 	return &State{
 		Consts:  []obj.Object{},
 		Globals: make([]obj.Object, GlobalSize),
-		Symbols: st,
 	}
 }
 
@@ -200,11 +194,12 @@ func (vm *VM) execLoadModule() error {
 		return parserError(p, errs)
 	}
 
-	c := compiler.NewImport(vm.Symbols.NumDefs, &vm.Consts)
+	c := compiler.NewImport(vm.NumDefs, &vm.Consts)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
 		return err
 	}
+	vm.NumDefs = c.NumDefs
 
 	tvm := NewWithState(path, c.Bytecode(), vm.State)
 	if err := tvm.Run(); err != nil {
@@ -214,9 +209,9 @@ func (vm *VM) execLoadModule() error {
 	mod := make(obj.TauObject)
 	for name, symbol := range c.SymbolTable.Store {
 		if symbol.Scope == compiler.GlobalScope {
-			o := vm.Globals[symbol.Index]
-
 			if isExported(name) {
+				o := vm.Globals[symbol.Index]
+
 				if to, ok := o.(obj.TauObject); ok {
 					mod[name] = to.Module()
 				} else {
@@ -753,7 +748,7 @@ func (vm *VM) execConcurrentCall(numArgs int) error {
 		State: &State{
 			Consts:  vm.Consts,
 			Globals: make([]obj.Object, GlobalSize),
-			Symbols: vm.Symbols,
+			NumDefs: vm.NumDefs,
 		},
 	}
 

@@ -16,7 +16,10 @@ import (
 )
 
 func VmREPL() error {
-	var state = vm.NewState()
+	var (
+		state   = vm.NewState()
+		symbols = loadBuiltins(compiler.NewSymbolTable())
+	)
 
 	initState, err := term.MakeRaw(0)
 	if err != nil {
@@ -48,7 +51,7 @@ func VmREPL() error {
 			continue
 		}
 
-		c := compiler.NewWithState(state.Symbols, &state.Consts)
+		c := compiler.NewWithState(symbols, &state.Consts)
 		if err := c.Compile(res); err != nil {
 			fmt.Fprintln(t, err)
 			continue
@@ -113,8 +116,9 @@ func acceptUntil(t *term.Terminal, start, end string) (string, error) {
 
 func SimpleVmREPL() {
 	var (
-		state  = vm.NewState()
-		reader = bufio.NewReader(os.Stdin)
+		state   = vm.NewState()
+		symbols = loadBuiltins(compiler.NewSymbolTable())
+		reader  = bufio.NewReader(os.Stdin)
 	)
 
 	PrintVersionInfo(os.Stdout)
@@ -137,7 +141,7 @@ func SimpleVmREPL() {
 			continue
 		}
 
-		c := compiler.NewWithState(state.Symbols, &state.Consts)
+		c := compiler.NewWithState(symbols, &state.Consts)
 		c.SetFileInfo("<stdin>", input)
 		if err := c.Compile(res); err != nil {
 			fmt.Println(err)
@@ -185,4 +189,11 @@ func simpleAcceptUntil(r *bufio.Reader, start, end string) (string, error) {
 	}
 
 	return buf.String(), nil
+}
+
+func loadBuiltins(st *compiler.SymbolTable) *compiler.SymbolTable {
+	for i, b := range obj.Builtins {
+		st.DefineBuiltin(i, b.Name)
+	}
+	return st
 }

@@ -81,6 +81,7 @@ const (
 	ObjectType        = C.obj_object   // object
 	PipeType          = C.obj_pipe     // pipe
 	BytesType         = C.obj_bytes    // bytes
+	NativeType        = C.obj_native   // native
 )
 
 var (

@@ -2,7 +2,6 @@ package obj
 
 import (
 	"fmt"
-	"strings"
 	"unicode"
 	"unicode/utf8"
 )
@@ -18,20 +17,7 @@ func (o TauObject) Type() Type {
 }
 
 func (o TauObject) String() string {
-	var buf strings.Builder
-	buf.WriteString("{")
-
-	i := 0
-	for k, v := range o {
-		if i < len(o)-1 {
-			buf.WriteString(fmt.Sprintf("%s: %s, ", k, v))
-		} else {
-			buf.WriteString(fmt.Sprintf("%s: %s", k, v))
-		}
-		i++
-	}
-	buf.WriteString("}")
-	return buf.String()
+	return fmt.Sprintf("object[%p]", o)
 }
 
 func (to TauObject) Get(n string) (Object, bool) {

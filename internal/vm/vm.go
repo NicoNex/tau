@@ -106,6 +106,7 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 		State:      state,
 	}
 
+	vm.State.NumDefs = bytecode.NumDefs
 	vm.dir, vm.file = filepath.Split(file)
 	fn := &obj.Function{
 		Instructions: bytecode.Instructions,

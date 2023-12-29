@@ -130,7 +130,7 @@ func (vm *VM) popFrame() *Frame {
 	return vm.frames[vm.frameIndex]
 }
 
-func (vm *VM) LastPoppedStackElem() obj.Object {
+func (vm *VM) LastPoppedStackObj() obj.Object {
 	return vm.stack[vm.sp]
 }
 

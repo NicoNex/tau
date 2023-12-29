@@ -63,7 +63,7 @@ func VmREPL() error {
 			continue
 		}
 
-		if val := tvm.LastPoppedStackElem(); val != nil && obj.IsPrimitive(val) {
+		if val := tvm.LastPoppedStackObj(); val != nil && obj.IsPrimitive(val) {
 			fmt.Fprintln(t, val)
 		}
 	}
@@ -154,7 +154,7 @@ func SimpleVmREPL() {
 			continue
 		}
 
-		if val := tvm.LastPoppedStackElem(); val != nil && obj.IsPrimitive(val) {
+		if val := tvm.LastPoppedStackObj(); val != nil && obj.IsPrimitive(val) {
 			fmt.Println(val)
 		}
 	}

@@ -996,6 +996,9 @@ func (vm *VM) Run() (err error) {
 		case code.OpBwOr:
 			err = vm.execBwOr()
 
+		case code.OpBwNot:
+			err = vm.execBwNot()
+
 		case code.OpBwXor:
 			err = vm.execBwXor()
 

@@ -86,6 +86,7 @@ jobs:
               unzip
               texinfo
               autoreconf
+              go
 
       - run: make && mv tau tau-windows-${{ matrix.MSYS2_ARCH }}.exe
       - name: Archive artifact

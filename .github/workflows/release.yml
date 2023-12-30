@@ -85,8 +85,6 @@ jobs:
               mingw-w64-${{ matrix.MSYS2_ARCH }}-gcc-libs
               unzip
               texinfo
-              autoreconf
-              go
 
       - run: make && mv tau tau-windows-${{ matrix.MSYS2_ARCH }}.exe
       - name: Archive artifact

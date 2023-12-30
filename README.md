@@ -258,7 +258,7 @@ Tau has an assortment of useful builtin functions that operate on many data type
 
 - `len(x)` -- Returns the length of the given object `x` which could be a String, List, Map or Bytes.
 - `println(s)` -- Prints the String `s` to the terminal (standard out) along with a new-line.
-- `print(s)` -- Same as `print()` without a new-line.
+- `print(s)` -- Same as `println()` but without a new-line.
 - `input(prompt)` -- Asks for input from the user by reading from the terminal (standard in) with an optional prompt.
 - `string(x)` -- Converts the object `x` to a String.
 - `error(s)` -- Constructs a new error with the contents of the String `s`.
@@ -279,7 +279,7 @@ Tau has an assortment of useful builtin functions that operate on many data type
 - `bin(x)` -- Returns a binary representation of `x`.
 - `slice(x, start, end)` -- Returns a slice of `x` from `start` to `end` which could be a String, List or Bytes.
 - `keys(x)` -- Returns a List of keys of the Map `x`.
-- `delete(xs, x)` -- Deletes the key `x` or the `x`th item from the Map `xs` or List `xs`.
+- `delete(xs, x)` -- Deletes the key `x` from the Map `xs`.
 - `bytes(x)` -- Converts the String `x` to Bytes.
 
 #### List

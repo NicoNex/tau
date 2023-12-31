@@ -5,6 +5,8 @@ DEFAULT_CC = $(CC)
 CFLAGS = -g -Ofast -I$(DIR)/internal/obj/libffi/include
 LDFLAGS = -L$(DIR)/internal/obj/libffi/lib $(DIR)/internal/obj/libffi/lib/libffi.a -lm
 
+LIBFFI_CONFIGURE_FLAGS = --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory --disable-docs
+
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
     ACLOCAL_PATH := /usr/share/aclocal
@@ -14,6 +16,9 @@ ifeq ($(UNAME_S),Darwin)
     ACLOCAL_PATH := /usr/local/share/aclocal
     INSTALL_PATH := /usr/local/bin
     GCC := $(shell which gcc-13)
+endif
+ifeq ($(UNAME_S),Windows_NT)
+	LIBFFI_CONFIGURE_FLAGS += CC="$(DIR)/libffi/msvcc.sh -m64" CXX="$(DIR)/libffi/msvcc.sh -m64"
 endif
 
 ifneq ($(origin CC), undefined)
@@ -42,7 +47,8 @@ libffi:
 
 	CC=$(CC) cd libffi && \
 	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
-	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory --disable-dependency-tracking && \
+# 	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory --disable-docs && \
+	./configure $(LIBFFI_CONFIGURE_FLAGS) && \
 	make install CC=$(CC)
 
 debug:

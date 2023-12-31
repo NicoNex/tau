@@ -42,7 +42,7 @@ libffi:
 
 	CC=$(CC) cd libffi && \
 	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
-	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
+	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory --disable-dependency-tracking && \
 	make install CC=$(CC)
 
 debug:

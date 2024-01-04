@@ -35,7 +35,7 @@ type VM struct {
 	dir        string
 	file       string
 	stack      []obj.Object
-	frames     []*Frame
+	frames     []Frame
 	sp         int
 	frameIndex int
 }
@@ -83,7 +83,7 @@ func wait(fns ...func()) {
 func New(file string, bytecode *compiler.Bytecode) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
-		frames:     make([]*Frame, MaxFrames),
+		frames:     make([]Frame, MaxFrames),
 		frameIndex: 1,
 		State:      NewState(),
 	}
@@ -101,7 +101,7 @@ func New(file string, bytecode *compiler.Bytecode) *VM {
 func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 	vm := &VM{
 		stack:      make([]obj.Object, StackSize),
-		frames:     make([]*Frame, MaxFrames),
+		frames:     make([]Frame, MaxFrames),
 		frameIndex: 1,
 		State:      state,
 	}
@@ -117,17 +117,17 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 }
 
 func (vm *VM) currentFrame() *Frame {
-	return vm.frames[vm.frameIndex-1]
+	return &vm.frames[vm.frameIndex-1]
 }
 
-func (vm *VM) pushFrame(f *Frame) {
+func (vm *VM) pushFrame(f Frame) {
 	vm.frames[vm.frameIndex] = f
 	vm.frameIndex++
 }
 
 func (vm *VM) popFrame() *Frame {
 	vm.frameIndex--
-	return vm.frames[vm.frameIndex]
+	return &vm.frames[vm.frameIndex]
 }
 
 func (vm *VM) LastPoppedStackObj() obj.Object {
@@ -741,7 +741,7 @@ func (vm *VM) execCall(numArgs int) error {
 func (vm *VM) execConcurrentCall(numArgs int) error {
 	tvm := &VM{
 		stack:      make([]obj.Object, StackSize),
-		frames:     make([]*Frame, MaxFrames),
+		frames:     make([]Frame, MaxFrames),
 		frameIndex: 1,
 		dir:        vm.dir,
 		file:       vm.file,

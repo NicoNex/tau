@@ -13,7 +13,7 @@ type Function struct {
 }
 
 func NewFunction(i code.Instructions, nLocals, nParams int, bookmarks []tauerr.Bookmark) Object {
-	return &Function{
+	return Function{
 		Instructions: i,
 		NumLocals:    nLocals,
 		NumParams:    nParams,

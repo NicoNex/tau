@@ -90,7 +90,7 @@ func New(file string, bytecode *compiler.Bytecode) *VM {
 
 	vm.dir, vm.file = filepath.Split(file)
 	vm.Consts = bytecode.Constants
-	fn := &obj.Function{
+	fn := obj.Function{
 		Instructions: bytecode.Instructions,
 		Bookmarks:    bytecode.Bookmarks,
 	}
@@ -108,7 +108,7 @@ func NewWithState(file string, bytecode *compiler.Bytecode, state *State) *VM {
 
 	vm.State.NumDefs = bytecode.NumDefs
 	vm.dir, vm.file = filepath.Split(file)
-	fn := &obj.Function{
+	fn := obj.Function{
 		Instructions: bytecode.Instructions,
 		Bookmarks:    bytecode.Bookmarks,
 	}
@@ -816,7 +816,7 @@ func (vm *VM) callBuiltin(fn obj.Builtin, nargs int) error {
 
 func (vm *VM) pushClosure(constIdx, numFree int) error {
 	constant := vm.Consts[constIdx]
-	fn, ok := constant.(*obj.Function)
+	fn, ok := constant.(obj.Function)
 	if !ok {
 		return vm.errorf("not a function: %+v", constant)
 	}

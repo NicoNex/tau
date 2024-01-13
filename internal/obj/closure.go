@@ -3,11 +3,11 @@ package obj
 import "fmt"
 
 type Closure struct {
-	Fn   *Function
+	Fn   Function
 	Free []Object
 }
 
-func NewClosure(fn *Function, free []Object) *Closure {
+func NewClosure(fn Function, free []Object) *Closure {
 	return &Closure{Fn: fn, Free: free}
 }
 

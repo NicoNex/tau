@@ -11,6 +11,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/ast"
 	"github.com/NicoNex/tau/internal/compiler"
+	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
 )
@@ -137,4 +138,33 @@ func Parse(src string) (ast.Node, error) {
 	}
 
 	return tree, nil
+}
+
+func Run(input string) (string, error) {
+	tree, errs := parser.Parse("<playground>", input)
+	if len(errs) > 0 {
+		var buf strings.Builder
+
+		for _, e := range errs {
+			buf.WriteString(e.Error())
+			buf.WriteByte('\n')
+		}
+		return "", errors.New(buf.String())
+	}
+
+	c := compiler.New()
+	c.SetFileInfo("<playground>", input)
+	if err := c.Compile(tree); err != nil {
+		return "", err
+	}
+
+	buf := new(strings.Builder)
+	obj.Stdout = buf
+
+	tvm := vm.New("<playground>", c.Bytecode())
+	if err := tvm.Run(); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }

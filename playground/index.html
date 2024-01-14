@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wasm Playground</title>
+    <style>
+        :root {
+            --global-line-height: 1rem;
+            --global-font-size: 1rem;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            background-color: #282c34;
+            color: #abb2bf;
+            font-size: 16px;
+        }
+
+        #container {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex: 1;
+        }
+
+        #editorContainer {
+            display: flex;
+            align-items: stretch;
+            height: 100%;
+            width: 100%;
+        }
+
+        #lineNumbers {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            padding: 1em;
+            box-sizing: border-box;
+            background-color: #1e2127;
+            color: #5c6370;
+            user-select: none;
+            border-right: 1px solid #444c56;
+            white-space: pre-wrap;
+            font-size: var(--global-font-size);
+            line-height: var(--global-line-height);
+        }
+
+        #inputText {
+            flex: 1;
+            width: 100%;
+            padding: 1em;
+            box-sizing: border-box;
+            border: none;
+            font-size: calc(var(--global-font-size) - 1.5px);
+            line-height: var(--global-line-height);
+            outline: none;
+            resize: none;
+            background-color: #1e2127;
+            color: #abb2bf;
+            margin: 0;
+            text-size-adjust: none;
+        }
+
+        button {
+            padding: 10px;
+            background-color: #61afef;
+            color: #282c34;
+            font-size: 16px;
+            border: none;
+            cursor: pointer;
+            outline: none;
+        }
+
+        button:hover {
+            background-color: #528bff;
+        }
+
+        #output {
+            padding: 20px;
+            white-space: pre-wrap;
+            font-size: 16px;
+            background-color: #1e2127;
+            color: #abb2bf;
+            border-top: 1px solid #444c56;
+        }
+    </style>
+</head>
+<body>
+    <div id="container">
+        <div id="editorContainer">
+            <div id="lineNumbers">1</div>
+            <textarea id="inputText" placeholder="Enter your code here" autofocus oninput="updateLineNumbers()"></textarea>
+        </div>
+        <hr style="width: 100%; margin: 0; border: 1px solid #444c56;">
+        <button onclick="runCode()">Run</button>
+    </div>
+    <div id="output"></div>
+
+    <script>
+        function useDisplay(elemID) {
+            const elem = document.getElementById(elemID);
+            return (text) => elem.textContent = text
+        }
+
+        const displayOutput = useDisplay("output");
+        const displayLineNumbers = useDisplay("lineNumbers");
+
+        // Mock Wasm module for demonstration purposes
+        const mockWasmModule = {
+            run: (code) => {
+                // Simulate Wasm execution
+                return `Output: ${code.toUpperCase()}`;
+            }
+        };
+
+        updateLineNumbers()
+
+        // Function to run the code
+        function runCode() {
+            const inputText = document.getElementById('inputText').value;
+
+            // Mock Wasm execution
+            displayOutput(mockWasmModule.run(inputText));
+        }
+
+        // Function to update line numbers
+        function updateLineNumbers() {
+            const inputText = document.getElementById('inputText');
+            const lineCount = inputText.value.split('\n').length;
+            displayLineNumbers(Array.from({ length: lineCount }, (_, index) => index + 1).join('\n'))
+        }
+    </script>
+</body>
+</html>

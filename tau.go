@@ -1,6 +1,7 @@
 package tau
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -11,11 +12,12 @@ import (
 
 	"github.com/NicoNex/tau/internal/ast"
 	"github.com/NicoNex/tau/internal/compiler"
+	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-const TauVersion = "v1.6.0"
+const TauVersion = "v1.6.4"
 
 var ErrParseError = errors.New("error: parse error")
 
@@ -137,4 +139,33 @@ func Parse(src string) (ast.Node, error) {
 	}
 
 	return tree, nil
+}
+
+func Run(filename, input string) (string, error) {
+	tree, errs := parser.Parse(filename, input)
+	if len(errs) > 0 {
+		var buf strings.Builder
+
+		for _, e := range errs {
+			buf.WriteString(e.Error())
+			buf.WriteByte('\n')
+		}
+		return "", errors.New(buf.String())
+	}
+
+	c := compiler.New()
+	c.SetFileInfo(filename, input)
+	if err := c.Compile(tree); err != nil {
+		return "", err
+	}
+
+	buf := new(bytes.Buffer)
+	obj.Stdout = buf
+
+	tvm := vm.New(filename, c.Bytecode())
+	if err := tvm.Run(); err != nil {
+		return "", err
+	}
+
+	return buf.String(), nil
 }

@@ -2,7 +2,7 @@ DIR := $(shell pwd)
 GCC := $(shell which gcc)
 DEFAULT_CC = $(CC)
 
-CFLAGS = -g -Ofast -I$(DIR)/internal/obj/libffi/include
+CFLAGS = -g -Ofast -I$(DIR)/internal/obj/libffi/include -mtune=native -march=native -ftree-vectorize
 LDFLAGS = -L$(DIR)/internal/obj/libffi/lib $(DIR)/internal/obj/libffi/lib/libffi.a -lm
 
 LIBFFI_CONFIGURE_FLAGS = --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory --disable-docs
@@ -47,7 +47,6 @@ libffi:
 
 	CC=$(CC) cd libffi && \
 	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
-# 	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory --disable-docs && \
 	./configure $(LIBFFI_CONFIGURE_FLAGS) && \
 	make install CC=$(CC)
 

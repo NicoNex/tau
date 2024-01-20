@@ -17,7 +17,7 @@ jobs:
         arch: [x86_64, aarch64]
 
     steps:
-      - name: Build
+      - name: Build GNU/Linux
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
@@ -40,7 +40,7 @@ jobs:
         arch: [x86_64, aarch64]
 
     steps:
-      - name: Build
+      - name: Build MacOS
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}

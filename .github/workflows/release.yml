@@ -12,15 +12,36 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          files: |
+          tag_name: ${{ basename(github.ref) }}
+          release_name: Release ${{ basename(github.ref) }}
+          draft: false
+          prerelease: false
+
+      - name: Upload Release Assets
+        id: upload-release-assets
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: |
             ./tau-linux-aarch64
             ./tau-linux-x86_64
             ./tau-macos-aarch64
             ./tau-macos-x86_64
-#           ./tau-windows-x86_64
-          repo_token: ${{ secrets.GITHUB_TOKEN }}
+            # Add more artifacts as needed
+          asset_name: |
+            tau-linux-aarch64
+            tau-linux-x86_64
+            tau-macos-aarch64
+            tau-macos-x86_64
+            # Specify corresponding names for the added artifacts
+          asset_content_type: application/octet-stream

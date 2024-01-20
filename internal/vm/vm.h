@@ -17,8 +17,6 @@ struct frame {
 	uint32_t base_ptr;
 };
 
-// [1] -> [2] -> [3] -> [null]
-
 struct heap_node {
 	struct object obj;
 	struct heap_node* next;

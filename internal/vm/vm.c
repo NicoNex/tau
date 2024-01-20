@@ -25,9 +25,9 @@
 #define vm_stack_peek(vm) (vm->stack[vm->sp-1])
 
 #ifndef GC_DEBUG
-	#define vm_heap_add(vm, o) pool_append(vm->state.heap, o)
+	#define vm_heap_add(vm, o) heap_add(&vm->state.heap, o)
 #else
-	#define vm_heap_add(vm, o) printf("adding type %s to heap\n", otype_str(o.type)); pool_append(vm->state.heap, o)
+	#define vm_heap_add(vm, o) printf("adding type %s to heap\n", otype_str(o.type)); heap_add(&vm->state.heap, o)
 #endif
 
 #ifndef DEBUG
@@ -55,7 +55,7 @@ static inline struct frame new_frame(struct object cl, uint32_t base_ptr) {
 
 inline struct state new_state() {
 	return (struct state) {
-		.heap = new_pool(65536),
+		.heap = new_heap(HEAP_TRESHOLD),
 		.globals = new_pool(1000),
 		.consts.list = NULL,
 		.ndefs = 0
@@ -64,7 +64,7 @@ inline struct state new_state() {
 
 inline void state_dispose(struct state s) {
 	free(s.consts.list);
-	pool_dispose(s.heap);
+	heap_dispose(&s.heap);
 	pool_dispose(s.globals);
 }
 
@@ -809,10 +809,12 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 
 int vm_run(struct vm * restrict vm);
 
-static int run_and_cleanup(void *vm) {
-	int ret = vm_run(vm);
+static int run_and_cleanup(void *vmptr) {
+	struct vm *vm = (struct vm *) vm;
+	int ret = vm_run(vmptr);
 	fflush(stdout);
-	vm_dispose(vm);
+	heap_dispose(&vm->state.heap);
+	vm_dispose(vmptr);
 	return ret;
 }
 
@@ -841,7 +843,7 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 		tvm->file = strdup(vm->file);
 		tvm->state.consts = vm->state.consts;
 		tvm->state.globals = vm->state.globals;
-		tvm->state.heap = new_pool(1000);
+		tvm->state.heap = new_heap(HEAP_TRESHOLD);
 		tvm->sp = vm->sp;
 		memcpy(tvm->stack, vm->stack, STACK_SIZE * sizeof(struct object));
 
@@ -918,10 +920,10 @@ static void vm_mark_globals(struct vm * restrict vm) {
 }
 
 static inline void gc(struct vm * restrict vm) {
-	struct pool *heap = vm->state.heap;
+	struct heap *heap = &vm->state.heap;
 
 #ifndef GC_DEBUG
-	if (heap->len < (heap->cap / 100) * 90) {
+	if (heap->len < heap->treshold) {
 		return;
 	}
 #else
@@ -945,18 +947,20 @@ static inline void gc(struct vm * restrict vm) {
 	}
 
 	// Traverse all heap objects and free the unmarked ones.
-	for (int32_t i = heap->len - 1; i >= 0; i--) {
-		struct object o = heap->list[i];
+	register struct heap_node **prev = &heap->root;
+	for (register struct heap_node *n = heap->root; n != NULL; n = n->next) {
+		struct object o = n->obj;
 
 		if (*o.marked) {
 			*o.marked = 0;
+			prev = &(*prev)->next;
 			continue;
 		}
 
-		#pragma omp task shared(o)
-		free_obj(o);
-		// Remove it from heap by swapping it with the last marked object.
-		heap->list[i] = heap->list[--heap->len];
+		*prev = n->next;
+		heap->len--;
+		#pragma omp task shared(n)
+		free(n);
 	}
 
 #ifdef GC_DEBUG

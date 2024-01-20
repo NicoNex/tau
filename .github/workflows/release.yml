@@ -55,40 +55,40 @@ jobs:
           path: ./tau-macos-${{ matrix.arch }}
 
   # Build for Windows MSYS2
-  build-msys2:
-    runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        go-version: [1.21.x]
-        MSYS2_ARCH: [x86_64]
+  # build-msys2:
+  #   runs-on: windows-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       go-version: [1.21.x]
+  #       MSYS2_ARCH: [x86_64]
 
-    steps:
-      - uses: actions/setup-go@v3
-        with:
-          go-version: ${{ matrix.go-version }}
-      - run: git config --global core.autocrlf input
-      - uses: actions/checkout@v4
-      - uses: msys2/setup-msys2@v2
-        with:
-          msystem: MINGW64
-          update: true
-          install: >-
-              base-devel
-              autoconf-wrapper
-              autoconf
-              automake
-              libtool
-              autotools
-              make
-              mingw-w64-${{ matrix.MSYS2_ARCH }}-gcc
-              mingw-w64-${{ matrix.MSYS2_ARCH }}-gcc-libs
-              unzip
-              texinfo
+  #   steps:
+  #     - uses: actions/setup-go@v3
+  #       with:
+  #         go-version: ${{ matrix.go-version }}
+  #     - run: git config --global core.autocrlf input
+  #     - uses: actions/checkout@v4
+  #     - uses: msys2/setup-msys2@v2
+  #       with:
+  #         msystem: MINGW64
+  #         update: true
+  #         install: >-
+  #             base-devel
+  #             autoconf-wrapper
+  #             autoconf
+  #             automake
+  #             libtool
+  #             autotools
+  #             make
+  #             mingw-w64-${{ matrix.MSYS2_ARCH }}-gcc
+  #             mingw-w64-${{ matrix.MSYS2_ARCH }}-gcc-libs
+  #             unzip
+  #             texinfo
 
-      - run: make && mv tau tau-windows-${{ matrix.MSYS2_ARCH }}.exe
-      - name: Archive artifact
-        uses: actions/upload-artifact@v3
-        with:
-          name: tau-windows-${{ matrix.MSYS2_ARCH }}.exe
-          path: ./tau-windows-${{ matrix.MSYS2_ARCH }}.exe
+  #     - run: make && mv tau tau-windows-${{ matrix.MSYS2_ARCH }}.exe
+  #     - name: Archive artifact
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: tau-windows-${{ matrix.MSYS2_ARCH }}.exe
+  #         path: ./tau-windows-${{ matrix.MSYS2_ARCH }}.exe

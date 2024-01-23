@@ -1,0 +1,305 @@
+spaces = "\t\n\v\f\r "
+
+Contains = fn(str, sub) {
+	maxAttempts = len(str) - len(sub)
+	for i = 0; i <= maxAttempts; ++i {
+		if sub == slice(str, i, i + len(sub)) {
+			return true
+		}
+	}
+
+	return false
+}
+
+ContainsAny = fn(str, chars) {
+	for i = 0; i < len(chars); ++i {
+		if Contains(str, chars[i]) {
+			return true
+		}
+	}
+
+	return false
+}
+
+Count = fn(str, sub) {
+	total = 0
+
+	maxAttempts = len(str) - len(sub)
+	for i = 0; i < maxAttempts; ++i {
+		if sub == slice(str, i, i + len(sub)) {
+			++total
+		}
+	}
+
+	return total
+}
+
+cutResult = fn(before, after, found) {
+	res = new()
+	res.Before = before
+	res.After = after
+	res.Found = found
+
+	return res
+}
+
+Cut = fn(str, sub) {
+	maxAttempts = len(str) - len(sub)
+	for i = 0; i < maxAttempts; ++i {
+		if sub == slice(str, i, i + len(sub)) {
+			return cutResult(
+				slice(str, 0, i),
+				slice(str, i + len(sub), len(str)),
+				true
+			)
+		}
+	}
+
+	return cutResult(str, "", false)
+}
+
+HasPrefix = fn(str, pre) {
+	if len(pre) > len(str) {
+		return false
+	}
+
+	return slice(str, 0, len(pre)) == pre
+}
+
+HasSuffix = fn(str, sub) {
+	if len(sub) > len(str) {
+		return false
+	}
+
+	return slice(str, len(str) - len(sub), len(str)) == sub
+}
+
+Index = fn(str, sub) {
+	maxAttempts = len(str) - len(sub)
+	for i = 0; i <= maxAttempts; ++i {
+		if sub == slice(str, i, i + len(sub)) {
+			return i
+		}
+	}
+
+	return -1
+}
+
+IndexAny = fn(str, chars) {
+	index = -1
+	for i = 0; i < len(chars); ++i {
+		tmp = Index(str, chars[i])
+		if tmp != -1 && index > tmp || index == -1 {
+			index = tmp
+		}
+	}
+
+	return index
+}
+
+Join = fn(arr, sep) {
+	str = ""
+	for i = 0; i < len(arr); ++i {
+		if type(arr[i]) != "string" {
+			return error("array element at index {i} is not a string")
+		}
+
+		str += if i < len(arr) - 1 { arr[i] + sep } else { arr[i] }
+	}
+
+	return str
+}
+
+LastIndex = fn(str, sub) {
+	for i = len(str); i >= 0; --i {
+		if sub == slice(str, i - len(sub), i) {
+			return i - len(sub)
+		}
+	}
+
+	return -1
+}
+
+LastIndexAny = fn(str, chars) {
+	index = -1
+	for i = 0; i < len(chars); ++i {
+		tmp = LastIndex(str, chars[i])
+		if tmp != -1 && tmp > index || index == -1 {
+			index = tmp
+		}
+	}
+
+	return index
+}
+
+Repeat = fn(str, n) {
+	ret = ""
+	for i = 0; i < n; ++i {
+		ret += str
+	}
+
+	return ret
+}
+
+Reverse = fn(str) {
+	ret = ""
+	for i = len(str) - 1; i >= 0; --i {
+		ret += str[i]
+	}
+
+	return ret
+}
+
+SplitAfterN = fn(str, sep, n) {
+	if sep == "" {
+		return error("splitAfter: empty separator")
+	}
+
+	ret = []
+	for (idx = Index(str, sep)) != -1 && n != 0 {
+		ret = append(ret, slice(str, 0, idx + len(sep)))
+		str = slice(str, idx + len(sep), len(str))
+		--n
+	}
+
+	return append(ret, str)
+}
+
+SplitAfter = fn(str, sep) { SplitAfterN(str, sep, -1) }
+
+SplitN = fn(str, sep, n) {
+	if sep == "" {
+		return error("split: empty separator")
+	}
+
+	ret = []
+	for (idx = Index(str, sep)) != -1 && n != 0 {
+		if idx > 0 {
+			ret = append(ret, slice(str, 0, idx))
+		}
+		str = slice(str, idx + len(sep), len(str))
+		--n
+	}
+
+	return append(ret, str)
+}
+
+Split = fn(str, sep) { SplitN(str, sep, -1) }
+
+Fields = fn(str) {
+	ret = []
+	for (i = IndexAny(str, spaces)) != -1 {
+		ret = append(ret, slice(str, 0, i))
+		str = slice(str, i + 1, len(str))
+	}
+
+	return append(ret, str)
+}
+
+TrimPrefix = fn(str, pre) {
+	return if len(pre) > len(str) || pre != slice(str, 0, len(pre)) {
+		str
+	} else {
+		slice(str, len(pre), len(str))
+	}
+}
+
+TrimSuffix = fn(str, sub) {
+	return if len(sub) > len(str) || sub != slice(str, len(str)-len(sub), len(str)) {
+		str
+	} else {
+		slice(str, 0, len(str)-len(sub))
+	}
+}
+
+ReplaceAll = fn(str, old, new) { Join(Split(str, old), new) }
+
+Replace = fn(str, old, new, n) {
+	if n < 0 {
+		return ReplaceAll(str, old, new)
+	}
+
+	ret = ""
+	for i = 0; i < n; ++i {
+		if (idx = Index(str, old)) == -1 {
+			break
+		}
+		ret += slice(str, 0, idx) + new
+		str = slice(str, idx+len(old), len(str))
+	}
+
+	return ret + str
+}
+
+isalpha = fn(char) { char >= 97 && char <= 122 || char >= 65 && char <= 90 }
+islower = fn(char) { char >= 97 && char <= 122 }
+isupper = fn(char) { char >= 65 && char <= 90 }
+toupper = fn(char) { char - 32 }
+tolower = fn(char) { char + 32 }
+
+ToUpper = fn(str) {
+	b = bytes(str)
+	ret = []
+
+	for i = 0; i < len(b); ++i {
+		char = b[i]
+		ret = append(ret, if islower(char) { toupper(char) } else { char })
+	}
+
+	return string(bytes(ret))
+}
+
+ToLower = fn(str) {
+	b = bytes(str)
+	ret = []
+
+	for i = 0; i < len(b); ++i {
+		char = b[i]
+		ret = append(ret, if isupper(char) { tolower(char) } else { char })
+	}
+
+	return string(bytes(ret))
+}
+
+ToTitle = fn(str) {
+	toks = Split(str, " ")
+	ret = []
+
+	for i = 0; i < len(toks); ++i {
+		b = bytes(toks[i])
+		tmp = []
+
+		tmp = append(tmp, if islower(b[0]) { toupper(b[0]) } else { b[0] })
+		for j = 1; j < len(b); ++j {
+			tmp = append(tmp, b[j])
+		}
+
+		ret = append(ret, string(bytes(tmp)))
+	}
+
+	return Join(ret, " ")
+}
+
+TrimLeft = fn(str, cutset) {
+	for start = 0; start < len(str); ++start {
+		if !Contains(cutset, str[start]) {
+			break
+		}
+	}
+
+	return slice(str, start, len(str))
+}
+
+TrimRight = fn(str, cutset) {
+	for stop = len(str); stop > 0; --stop {
+		if !Contains(cutset, str[stop-1]) {
+			break
+		}
+	}
+
+	return slice(str, 0, stop)
+}
+
+Trim = fn(str, cutset) { TrimRight(TrimLeft(str, cutset), cutset) }
+
+TrimSpace = fn(str) { Trim(str, spaces) }

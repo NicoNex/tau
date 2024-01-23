@@ -16,7 +16,7 @@ add = fn(x, y) {
 };
 
 result = add(five, ten);
-! - / * 5 += -= *= /= ** ;
+! - / * 5 += -= *= /= ;
 5 < 10 > 5;
 
 if 5 < 10 {
@@ -37,7 +37,7 @@ fn mul(x, y) {
 
 10.5 == 10.45;
 n = null
-
+{"foo": "bar"}
 `
 
 	tests := []struct {
@@ -89,7 +89,6 @@ n = null
 		{item.MinusAssign, "-="},
 		{item.AsteriskAssign, "*="},
 		{item.SlashAssign, "/="},
-		{item.Power, "**"},
 		{item.Semicolon, ";"},
 
 		{item.Int, "5"},
@@ -163,11 +162,12 @@ n = null
 		{item.Null, "null"},
 		{item.Semicolon, "\n"},
 
-		// {item.LBrace, "{"},
-		// {item.String, "foo"},
-		// {item.Colon, ":"},
-		// {item.String, "bar"},
-		// {item.RBrace, "}"},
+		{item.LBrace, "{"},
+		{item.String, "foo"},
+		{item.Colon, ":"},
+		{item.String, "bar"},
+		{item.RBrace, "}"},
+		{item.Semicolon, "\n"},
 
 		{item.EOF, ""},
 	}

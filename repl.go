@@ -6,7 +6,6 @@ import (
 	"io"
 	"os"
 	"strings"
-	"syscall"
 
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
@@ -15,18 +14,19 @@ import (
 	"golang.org/x/term"
 )
 
-// TODO: somehow redirect stdout to the terminal.
 func REPL() error {
 	var (
 		state   = vm.NewState()
 		symbols = loadBuiltins(compiler.NewSymbolTable())
 	)
 
+	defer state.Free()
 	initState, err := term.MakeRaw(int(os.Stdin.Fd()))
 	if err != nil {
 		fmt.Println(err)
 		return fmt.Errorf("error opening terminal: %w", err)
 	}
+	vm.TermState = initState
 	defer term.Restore(int(os.Stdin.Fd()), initState)
 
 	t := term.NewTerminal(os.Stdin, ">>> ")
@@ -65,38 +65,6 @@ func REPL() error {
 		tvm.Run()
 		state = tvm.State()
 	}
-}
-
-func redirectStdout(w io.Writer) {
-	pr, pw, err := os.Pipe()
-	if err != nil {
-		fmt.Println("Error creating pipe:", err)
-		return
-	}
-	// Set the pipe writer as the stdout
-	syscall.Dup2(int(pw.Fd()), syscall.Stdout)
-
-	go func() {
-		var buf = make([]byte, 4096)
-
-		for {
-			n, err := pr.Read(buf)
-			if err != nil {
-				if err != io.EOF {
-					fmt.Println("error reading from pipe:", err)
-				}
-				break
-			}
-
-			// Write the captured output to the provided writer
-			_, err = w.Write(buf[:n])
-			if err != nil {
-				fmt.Println("error writing to writer:", err)
-				break
-			}
-		}
-		pr.Close()
-	}()
 }
 
 func autoComplete(line string, pos int, key rune) (newLine string, newPos int, ok bool) {
@@ -151,6 +119,7 @@ func SimpleREPL() {
 		reader  = bufio.NewReader(os.Stdin)
 	)
 
+	defer state.Free()
 	PrintVersionInfo(os.Stdout)
 	for {
 		fmt.Print(">>> ")

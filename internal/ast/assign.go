@@ -15,6 +15,10 @@ type Assign struct {
 	pos int
 }
 
+type Definable interface {
+	CompileDefine(c *compiler.Compiler) (position int, err error)
+}
+
 func NewAssign(l, r Node, pos int) Node {
 	return Assign{
 		l:   l,
@@ -51,8 +55,8 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 			return
 		}
 
-	case Dot, Index:
-		if position, err = a.l.Compile(c); err != nil {
+	case Definable:
+		if position, err = left.CompileDefine(c); err != nil {
 			return
 		}
 		if position, err = a.r.Compile(c); err != nil {

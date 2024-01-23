@@ -1,5 +1,6 @@
-#include <threads.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include "../vm/thrd.h"
 #include "object.h"
 #include "../vm/gc.h"
 

@@ -64,7 +64,6 @@ var precedences = map[item.Type]int{
 	item.And:            LogicalAnd,
 	item.Equals:         Equality,
 	item.NotEquals:      Equality,
-	item.In:             Relational,
 	item.LT:             Relational,
 	item.GT:             Relational,
 	item.LTEQ:           Relational,
@@ -217,17 +216,21 @@ func (p *Parser) parseReturn() ast.Node {
 	return ret
 }
 
+func (p Parser) hasSemicolon() bool {
+	return p.cur.Is(item.Semicolon) || p.peek.Is(item.Semicolon)
+}
+
 func (p *Parser) parseExpr(precedence int) ast.Node {
 	if prefixFn, ok := p.prefixParsers[p.cur.Typ]; ok {
 		leftExp := prefixFn()
 
-		for !p.peek.Is(item.Semicolon) && precedence < p.peekPrecedence() {
-			if infixFn, ok := p.infixParsers[p.peek.Typ]; ok {
-				p.next()
-				leftExp = infixFn(leftExp)
-			} else {
+		for !p.hasSemicolon() && precedence < p.peekPrecedence() {
+			infixFn, ok := p.infixParsers[p.peek.Typ]
+			if !ok {
 				break
 			}
+			p.next()
+			leftExp = infixFn(leftExp)
 		}
 
 		if p.peek.Is(item.Semicolon) {

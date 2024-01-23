@@ -3,15 +3,16 @@
 Tau is a dynamically-typed open-source concurrent programming language designed to be minimal, fast and efficient.
 
 ## Installation
-In order to install Tau, you'll need [Go](https://golang.org/).
-
-Once done, running the following command will successfully install the tau interpreter:
+In order to install Tau, you'll need [Go](https://golang.org/) and [GCC](https://gcc.gnu.org/).  
+Clone the repo with 
 ```bash
-go install github.com/NicoNex/tau/cmd/tau@latest
+git clone --recurse-submodules https://github.com/NicoNex/tau
+cd tau
+sudo make install
 ```
 
-You can try it out in the terminal by simply running `$ tau`.
-For additional info run `$ tau --help`.
+You can try it out in the terminal by simply running `tau`.
+For additional info run `tau --help`.
 
 ## Syntax
 
@@ -38,16 +39,7 @@ hello world
 ```
 
 #### if-else blocks
-
-```python
-if 1 > 0 {
-	println("yes")
-} else {
-	println("no")
-}
-```
-
-```python
+```py
 myVar = 10
 
 if myVar > 10 {
@@ -60,22 +52,23 @@ if myVar > 10 {
 ```
 
 #### Declaring a function
-```python
-loop = fn(times, function) {
-	if times > 0 {
-		function()
-		loop(times-1, function)
+```py
+fib = fn(n) {
+	if n < 2 {
+		return n
 	}
+	fib(n-1) + fib(n-2)
 }
 
-loop(5, fn() { println("Hello World") })
+println(fib(40))
 ```
 
 #### Noteworthy features
 The return value can be implicit:
-```python
+```js
 add = fn(x, y) { x + y }
 sum = add(9, 1)
+
 println(sum)
 ```
 ```
@@ -91,18 +84,13 @@ minimum = if a < b { a } else { b }
 ```
 
 The semicolon character `;` is implicit on a newline but can be used to separate multiple expressions on a single line.
-```python
+```js
 printData = fn(a, b, c) { println(a); println(b); println(c) }
 ```
 
 Functions are first-class and treated as any other data type.
-```python
-min = fn(a, b) {
-	if a < b {
-		return a
-	}
-	b
-}
+```py
+min = fn(a, b) { if a < b { a } else { b } }
 
 var1 = 1
 var2 = 2
@@ -115,7 +103,7 @@ println(m)
 ```
 
 ##### Error handling
-```python
+```py
 # errtest.tau
 
 div = fn(n, d) {
@@ -128,12 +116,12 @@ div = fn(n, d) {
 if failed(result1 = div(16, 2)) {
 	exit(result1)
 }
-println("the result of 16 / 2 is", result1)
+println("the result of 16 / 2 is {result1}")
 
 if failed(result2 = div(32, 0)) {
 	exit(result2)
 }
-println("the result of 32 / 0 is", result2)
+println("the result of 32 / 0 is {result2}")
 ```
 ```
 $ tau errtest.tau
@@ -143,7 +131,7 @@ $
 ```
 
 ##### Beautiful error messages
-```python
+```py
 # errtest.tau
 
 increment = fn(n) {
@@ -173,9 +161,7 @@ Once `recv` is called on an empty pipe it will cause the tau-routine to sleep un
 `close` closes the pipe thus allowing it to be garbage collected. 
 Calling `recv` on a closed pipe will return `null`.
 
-```python
-# concurrency_example.tau
-
+```py
 listen = fn(p) {
 	for val = recv(p) {
 		println(val)
@@ -194,37 +180,37 @@ close(p)
 ```
 
 ##### REPL
-Tau also supports REPL:
+Tau also comes with a multiline REPL:
 ```
->>> add = fn(a, b) { a + b }
->>> string(add)
-fn(a, b) { (a + b) }
->>> string(21)
-21
->>> recursiveLoop = fn(n, func) { if n != 0 { func(n); recursiveLoop(n-1, func) } }
->>> recursiveLoop(10, fn(n) { println("hello", n) })
-hello 10
-hello 9
-hello 8
-hello 7
-hello 6
-hello 5
-hello 4
-hello 3
-hello 2
-hello 1
+Tau v2.0.0 on Linux
+>>> repeat = fn(n, func) {
+...     for i = 0; i < n; ++i {
+...         func(i)
+...     }
+... }
+... 
+>>> repeat(5, fn(i) {
+...     println("Hello #{i}")
+... })
+... 
+Hello #0
+Hello #1
+Hello #2
+Hello #3
+Hello #4
+>>>
 ```
 
 ### Data types
 Tau is a dynamically-typed programming language and it supports the following primitive types:
 
 #### Integer
-```python
+```py
 myVar = 10
 ```
 
 #### Float
-```python
+```py
 myVar = 2.5
 ```
 
@@ -233,7 +219,7 @@ myVar = 2.5
 myString = "My string here"
 ```
 Tau also supports strings interpolation.
-```python
+```py
 temp = 25
 myString = "The temperature is { if temp > 20 { \"hot\" } else { \"cold\" } }"
 println(myString)
@@ -242,7 +228,7 @@ println(myString)
 >>> The temperature is hot
 ```
 For raw strings use the backtick instead of double quotes.
-```python
+```py
 s = `this is a raw string\n {}`
 println(s)
 ```
@@ -257,7 +243,7 @@ f = false
 ```
 
 #### Function
-```python
+```py
 pow = fn(base, exponent) {
 	if exponent > 0 {
 		return base * pow(base, exponent-1)
@@ -266,16 +252,74 @@ pow = fn(base, exponent) {
 }
 ```
 
+#### Builtin Functions
+
+Tau has an assortment of useful builtin functions that operate on many data types:
+
+- `len(x)` -- Returns the length of the given object `x` which could be a String, List, Map or Bytes.
+- `println(s)` -- Prints the String `s` to the terminal (standard out) along with a new-line.
+- `print(s)` -- Same as `println()` but without a new-line.
+- `input(prompt)` -- Asks for input from the user by reading from the terminal (standard in) with an optional prompt.
+- `string(x)` -- Converts the object `x` to a String.
+- `error(s)` -- Constructs a new error with the contents of the String `s`.
+- `type(x)` -- Returns the type of the object `x`.
+- `int(x)` -- Converts the object `x` to an Integer.
+- `float(x)` -- Converts the object `x` to a Float.
+- `exit([code | message, code]) -- Terminates the program with the optional exit code and/or message.
+- `append(xs, x)` -- Appends the object `x` to the List `xs` and returns the new List.
+- `new` -- Constructs a new empty object.
+- `failed(f)` -- Calls the Function `f` and returns true if an error occurred.
+- `plugin(path)` -- Loads the Plugin at the given path.
+- `pipe` -- Creates a new pipe for sending/receiving messages to/from coroutines.
+- `send(p, x)` -- Sends the object `x` to the pipe `p`.
+- `recv(p)` -- Reads from the pipe `p` and returns the next object sent to it.
+- `close(p)` -- Closes the pipe `p`.
+- `hex(x)` -- Returns a hexadecimal representation of `x`.
+- `oct(x)` -- Returns an octal representation of `x`.
+- `bin(x)` -- Returns a binary representation of `x`.
+- `slice(x, start, end)` -- Returns a slice of `x` from `start` to `end` which could be a String, List or Bytes.
+- `keys(x)` -- Returns a List of keys of the Map `x`.
+- `delete(xs, x)` -- Deletes the key `x` from the Map `xs`.
+- `bytes(x)` -- Converts the String `x` to Bytes.
+
 #### List
 ```js
 empty = []
 stuff = ["Hello World", 1, 2, 3, true]
 ```
 
+You can append to a list with the `append()` builtin:
+
+```js
+xs =[]
+xs = append(xs, 1)
+```
+
+Lists can be indexed using the indexing operator `[n]`:
+
+```js
+xs = [1, 2, 3]
+xs[1]
+```
+
 #### Map
 ```js
 empty = {}
 stuff = {"Hello": "World", 123: true}
+```
+
+Keys can be added using the set operator `[key] = value`:
+
+```js
+kv = {}
+k["foo"] = "bar"
+```
+
+Keys can be accessed using the get operator `[key]`:
+
+```js
+kv = ["foo": "bar"}
+kv["foo"]
 ```
 
 #### Loop
@@ -288,25 +332,13 @@ lst = [0, 1, 2, 3, 4]
 
 println(lst)
 for len(lst) > 0 {
-	println(lst = tail(lst))
+	println(lst = slice(lst, 1, len(lst)))
 }
 ```
 
 #### Objects
-```python
-obj = new()
-obj.value1 = 123
-obj.value2 = 456
-
-obj.sumValues = fn() {
-	obj.value1 + obj.value2
-}
-
-obj.child = new()
-obj.child.value = obj.sumValues()
-```
-
-##### Recommended usage
+When you invoke the `new()` builtin function, it creates a fresh, empty object. You can then add properties to this object using the dot notation.  
+The constructor is essentially a standard function that fills up this empty object with properties and values before it is returned.
 ```python
 Dog = fn(name, age) {
 	dog = new()
@@ -326,34 +358,6 @@ println(snuffles.humanage())
 ```
 ```
 >>> 56
-```
-
-#### Files
-It's possible to open files with the `open` builtin. 
-The aforementioned builtin supports the following file modes:
-- `r` opens a file read-only and it's the default mode when no mode is specified.
-- `w` opens a file write-only truncating it to zero length. If the file doesn't exist it creates it.
-- `a` opens a file in append mode for reading and writing and it creates it if doesn't exist.
-- `x` opens a file in exclusive mode for reading and writing, if the file doesn't exist it creates it and fails otherwise.
-- `rw` opens a file for reading and writing truncating it to zero length first.
-
-```python
-# file_example.tau
-
-f = open("myfile.txt")
-content = f.Read()
-f.Close()
-```
-
-```python
-# file_example.tau
-
-f = open("myfile.txt", "a")
-content = f.Read()
-f.Write("Hello World")
-f.Close()
-
-println("previous content: {content}")
 ```
 
 #### Modules

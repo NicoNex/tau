@@ -1,7 +1,7 @@
 package obj
 
-// #cgo CFLAGS: -Ofast -mtune=native -Ilibffi/include
-// #cgo LDFLAGS: -Llibffi/lib -lffi -lm
+// #cgo CFLAGS: -Ofast -Ilibffi/include
+// #cgo LDFLAGS: -Llibffi/lib ${SRCDIR}/libffi/lib/libffi.a -lm
 // #include <stdio.h>
 // #include <stdlib.h>
 // #include <stdint.h>
@@ -43,7 +43,9 @@ package obj
 // }
 //
 // static void set_stdout(int fd, const char *name) {
+// #if !defined(_WIN32) && !defined(WIN32)
 //	stdout = fdopen(fd, name);
+// #endif
 // }
 import "C"
 
@@ -52,7 +54,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"path/filepath"
 	"unsafe"
 
 	"github.com/NicoNex/tau/internal/code"
@@ -66,21 +67,21 @@ type (
 )
 
 const (
-	NullType      Type = C.obj_null      // null
-	BoolType           = C.obj_boolean   // bool
-	IntType            = C.obj_integer   // int
-	FloatType          = C.obj_float     // float
-	BuiltinType        = C.obj_builtin   // builtin
-	StringType         = C.obj_string    // string
-	ErrorType          = C.obj_error     // error
-	ListType           = C.obj_list      // list
-	MapType            = C.obj_map       // map
-	FunctionType       = C.obj_function  // function
-	ClosureType        = C.obj_closure   // closure
-	ObjectType         = C.obj_object    // object
-	PipeType           = C.obj_pipe      // pipe
-	BytesType          = C.obj_bytes     // bytes
-	GetsetterType      = C.obj_getsetter // getsetter
+	NullType     Type = C.obj_null     // null
+	BoolType          = C.obj_boolean  // bool
+	IntType           = C.obj_integer  // int
+	FloatType         = C.obj_float    // float
+	BuiltinType       = C.obj_builtin  // builtin
+	StringType        = C.obj_string   // string
+	ErrorType         = C.obj_error    // error
+	ListType          = C.obj_list     // list
+	MapType           = C.obj_map      // map
+	FunctionType      = C.obj_function // function
+	ClosureType       = C.obj_closure  // closure
+	ObjectType        = C.obj_object   // object
+	PipeType          = C.obj_pipe     // pipe
+	BytesType         = C.obj_bytes    // bytes
+	NativeType        = C.obj_native   // native
 )
 
 var (
@@ -110,19 +111,22 @@ var (
 		"oct",
 		"bin",
 		"slice",
-		"open",
+		"keys",
+		"delete",
 		"bytes",
 	}
 
 	NullObj  = C.null_obj
 	TrueObj  = C.true_obj
 	FalseObj = C.false_obj
-
-	ErrNoFileProvided = errors.New("no file provided")
 )
 
 func (o Object) Type() Type {
 	return o._type
+}
+
+func (o Object) TypeString() string {
+	return C.GoString(C.otype_str(o._type))
 }
 
 func (o Object) String() string {
@@ -185,6 +189,14 @@ func GoError(o Object) error {
 	return nil
 }
 
+func NewBool(b bool) Object {
+	if b {
+		return C.true_obj
+	} else {
+		return C.false_obj
+	}
+}
+
 func NewInteger(i int64) Object {
 	return C.new_integer_obj(C.int64_t(i))
 }
@@ -242,28 +254,6 @@ func Println(a ...any) {
 
 func Printf(s string, a ...any) {
 	fmt.Fprintf(Stdout, s, a...)
-}
-
-func ImportLookup(taupath string) (string, error) {
-	dir, file := filepath.Split(taupath)
-
-	if file == "" {
-		return "", ErrNoFileProvided
-	}
-
-	if filepath.Ext(file) == "" {
-		file += ".tau"
-	}
-
-	path := filepath.Join(dir, file)
-	if _, err := os.Stat(path); os.IsNotExist(err) {
-		path = filepath.Join("/lib", "tau", dir, file)
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			return "", fmt.Errorf("%s: %w", path, err)
-		}
-	}
-
-	return path, nil
 }
 
 func SetStdout(fd int, name string) {

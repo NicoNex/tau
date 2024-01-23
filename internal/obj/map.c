@@ -10,8 +10,12 @@ inline uint64_t fnv64a(char *s) {
 
 	while (*s) {
 		hash ^= (uint64_t)*s++;
+	#if defined(NO_FNV_GCC_OPTIMIZATION)
+		hash *= FNV_64_PRIME;
+	#else
 		hash += (hash << 1) + (hash << 4) + (hash << 5) +
 				(hash << 7) + (hash << 8) + (hash << 40);
+	#endif
 	}
 	return hash;
 }
@@ -54,7 +58,7 @@ static inline struct map_pair _map_get(struct map_node * restrict n, struct key_
 		};
 	}
 
-	int32_t cmp = memcmp(&k, &n->key, sizeof(struct key_hash));
+	int cmp = memcmp(&k, &n->key, sizeof(struct key_hash));
 	if (cmp == 0) {
 		return n->val;
 	} else if (cmp < 0) {
@@ -75,7 +79,7 @@ static inline void _map_set(struct map_node **n, struct key_hash k, struct map_p
 		return;
 	}
 
-	int32_t cmp = memcmp(&k, &(*n)->key, sizeof(struct key_hash));
+	int cmp = memcmp(&k, &(*n)->key, sizeof(struct key_hash));
 	if (cmp == 0) {
 		(*n)->key = k;
 		(*n)->val = v;
@@ -84,6 +88,69 @@ static inline void _map_set(struct map_node **n, struct key_hash k, struct map_p
 	} else {
 		_map_set(&(*n)->r, k, v);
 	}
+}
+
+static inline void map_set_node(struct map_node **root, struct map_node **cur, struct map_node *n) {
+	if (*cur == NULL) {
+		*cur = n;
+		return;
+	}
+
+	int cmp = memcmp(&(*cur)->key, &n->key, sizeof(struct key_hash));
+	if (cmp == 0) {
+		struct map_node *l = (*cur)->l;
+		struct map_node *r = (*cur)->r;
+
+		free(*cur);
+		*cur = n;
+		if (l != NULL) map_set_node(root, root, l);
+		if (r != NULL) map_set_node(root, root, r);
+	} else if (cmp < 0) {
+		map_set_node(root, &(*cur)->l, n);
+	} else {
+		map_set_node(root, &(*cur)->r, n);
+	}
+}
+
+static inline void _map_delete(struct map_node **root, struct map_node **n, struct key_hash k) {
+	if (*n != NULL) {
+		struct map_node *node = *n;
+		int cmp = memcmp(&k, &node->key, sizeof(struct key_hash));
+
+		if (cmp == 0) {
+			*n = NULL;
+			if (node->l) map_set_node(root, root, node->l);
+			if (node->r) map_set_node(root, root, node->r);
+			free(node);
+		} else if (cmp < 0) {
+			_map_delete(root, &(*n)->l, k);
+		} else {
+			_map_delete(root, &(*n)->r, k);
+		}
+	}
+}
+
+static inline void _map_dispose(struct map_node * restrict n) {
+	if (n != NULL) {
+		if (n->l != NULL) _map_dispose(n->l);
+		if (n->r != NULL) _map_dispose(n->r);
+		free(n);
+	}
+}
+
+static inline void _map_keys(struct map_node * restrict n, struct list *list) {
+	if (n != NULL) {
+		list->list[list->len++] = n->val.key;
+		_map_keys(n->l, list);
+		_map_keys(n->r, list);
+	}
+}
+
+struct object map_keys(struct object map) {
+	struct object list = make_list(map.data.map->len);
+
+	_map_keys(map.data.map->root, list.data.list);
+	return list;
 }
 
 struct map_pair map_get(struct object map, struct object o) {
@@ -96,6 +163,11 @@ struct map_pair map_set(struct object map, struct object k, struct object v) {
 	_map_set(&map.data.map->root, hash(k), p);
 	map.data.map->len++;
 	return p;
+}
+
+void map_delete(struct object map, struct object key) {
+	_map_delete(&map.data.map->root, &map.data.map->root, hash(key));
+	map.data.map->len--;
 }
 
 // TODO: actually return map content as string.
@@ -112,14 +184,4 @@ struct object new_map() {
 		.data.map = calloc(1, sizeof(struct map_node)),
 		.type = obj_map,
 	};
-}
-
-struct object map_getsetter_get(struct getsetter *gs) {
-	struct map_pair mp = map_get(gs->l, gs->r);
-	return mp.val;
-}
-
-struct object map_getsetter_set(struct getsetter *gs, struct object val) {
-	struct map_pair mp = map_set(gs->l, gs->r, val);
-	return mp.val;
 }

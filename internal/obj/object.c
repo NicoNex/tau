@@ -88,10 +88,3 @@ struct object object_to_module(struct object o) {
 	return mod;
 }
 
-struct object object_getsetter_get(struct getsetter *gs) {
-	return object_get(gs->l, gs->r.data.str->str);
-}
-
-struct object object_getsetter_set(struct getsetter *gs, struct object val) {
-	return object_set(gs->l, gs->r.data.str->str, val);
-}

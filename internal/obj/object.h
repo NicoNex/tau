@@ -2,7 +2,7 @@
 
 #include <stdint.h>
 #include <stddef.h>
-#include <threads.h>
+#include "../vm/thrd.h"
 #include "../tauerr/bookmark.h"
 
 #define NUM_BUILTINS 26
@@ -22,7 +22,6 @@ enum obj_type {
 	obj_object,
 	obj_pipe,
 	obj_bytes,
-	obj_getsetter,
 	obj_native
 };
 
@@ -57,6 +56,11 @@ struct string {
 	size_t len;
 };
 
+struct bytes {
+	uint8_t *bytes;
+	size_t len;
+};
+
 struct pipe {
 	struct object *buf;
 	size_t cap;
@@ -77,11 +81,11 @@ union data {
 	struct function *fn;
 	struct closure *cl;
 	struct string *str;
+	struct bytes *bytes;
 	struct list *list;
 	struct map *map;
 	struct object_node **obj;
 	struct pipe *pipe;
-	struct getsetter *gs;
 	struct object (*builtin)(struct object *args, size_t len);
 };
 
@@ -90,20 +94,10 @@ struct object {
 	enum obj_type type;
 };
 
-struct getsetter {
-	struct object l;
-	struct object r;
-	struct object (*get)(struct getsetter *gs);
-	struct object (*set)(struct getsetter *gs, struct object o);
-};
-
-typedef struct object (*getfn)(struct getsetter *gs);
-typedef struct object (*setfn)(struct getsetter *gs, struct object o);
-
 struct key_hash {
-	enum obj_type type;
+	uint64_t type;
 	uint64_t val;
-};
+} __attribute__((packed));
 
 struct map_pair {
 	struct object key;
@@ -146,21 +140,24 @@ char *float_str(struct object o);
 // String object.
 struct object new_string_obj(char *str, size_t len);
 char *string_str(struct object o);
-void mark_string_obj(struct object s);
+
+// Bytes object.
+struct object new_bytes_obj(uint8_t *bytes, size_t len);
+struct object new_bytes_slice(uint8_t *bytes, size_t len);
+char *bytes_str(struct object o);
 
 // Error object.
 struct object new_error_obj(char *msg, size_t len);
+struct object errorf(char *fmt, ...);
 char *error_str(struct object o);
 
 // List object.
-struct list new_list(size_t cap);
-void list_insert(struct list *l, struct object o, size_t idx);
-struct list list_copy(struct list l);
+struct object make_list(size_t cap);
 struct object new_list_obj(struct object *list, size_t len);
-struct object list_getsetter_get(struct getsetter *gs);
-struct object list_getsetter_set(struct getsetter *gs, struct object val);
+struct object new_list_obj_data(struct object *list, size_t len, size_t cap);
+struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent);
 char *list_str(struct object o);
-void mark_list_obj(struct object l);
+struct list list_copy(struct list l);
 
 // Pipe object.
 struct object new_pipe();
@@ -168,48 +165,35 @@ struct object new_buffered_pipe(size_t size);
 int pipe_send(struct object pipe, struct object o);
 struct object pipe_recv(struct object pipe);
 int pipe_close(struct object pipe);
-void mark_pipe_obj(struct object pipe);
 
 // Map object.
 struct object new_map();
 struct map_pair map_get(struct object map, struct object k);
 struct map_pair map_set(struct object map, struct object k, struct object v);
-struct object map_getsetter_get(struct getsetter *gs);
-struct object map_getsetter_set(struct getsetter *gs, struct object val);
-void mark_map_obj(struct object m);
 char *map_str(struct object map);
+void map_delete(struct object map, struct object key);
+struct object map_keys(struct object map);
 
 // Object object.
 struct object new_object();
 struct object object_get(struct object obj, char *name);
 struct object object_set(struct object obj, char *name, struct object val);
-struct object object_getsetter_get(struct getsetter *gs);
-struct object object_getsetter_set(struct getsetter *gs, struct object val);
 struct object object_to_module(struct object o);
-void mark_object_obj(struct object o);
 char *object_obj_str(struct object obj);
 
 // Function object.
+struct function *new_function(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t num_bookmarks);
 struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t num_bookmarks);
 char *function_str(struct object o);
 
 // Closure object.
 struct object new_closure_obj(struct function *fn, struct object *free, size_t num_free);
 char *closure_str(struct object o);
-void mark_closure_obj(struct object c);
 
 // Builtin object.
 typedef struct object (*builtin)(struct object *args, size_t len);
 extern const builtin builtins[NUM_BUILTINS];
 struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len));
-
-// Getsetter object.
-struct object new_getsetter_obj(struct object l, struct object r, getfn get, setfn set);
-char *getsetter_str(struct object o);
-
-// Native object.
-struct object native_getsetter_get(struct getsetter *gs);
-struct object native_getsetter_set(struct getsetter *gs, struct object val);
 
 // Util functions.
 char *otype_str(enum obj_type t);

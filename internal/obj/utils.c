@@ -20,11 +20,9 @@ char *otype_str(enum obj_type t) {
 		"object",
 		"pipe",
 		"bytes",
-		"getsetter",
 		"native"
 	};
-
-	return strings[t];
+	return t <= obj_native ? strings[t] : "corrupted";
 }
 
 char *object_str(struct object o) {
@@ -56,9 +54,7 @@ char *object_str(struct object o) {
 	case obj_pipe:
 		return strdup("<pipe>");
 	case obj_bytes:
-		return strdup("<unimplemented bytes>");
-	case obj_getsetter:
-		return getsetter_str(o);
+		return bytes_str(o);
 	case obj_native:
 		return strdup("<native>");
 	default:
@@ -67,17 +63,7 @@ char *object_str(struct object o) {
 }
 
 void print_obj(struct object o) {
-	puts(object_str(o));
-}
-
-inline struct object errorf(char *fmt, ...) {
-	char *msg = malloc(sizeof(char) * 256);
-	msg[255] = '\n';
-
-	va_list ap;
-	va_start(ap, fmt);
-	vsnprintf(msg, 256, fmt, ap);
-	va_end(ap);
-
-	return new_error_obj(msg, strlen(msg));
+	char *str = object_str(o);
+	puts(str);
+	free(str);
 }

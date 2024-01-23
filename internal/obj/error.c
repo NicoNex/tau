@@ -1,3 +1,7 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <stdarg.h>
 #include "object.h"
 #include "../vm/gc.h"
 
@@ -14,4 +18,16 @@ struct object new_error_obj(char *str, size_t len) {
 		.data.str = s,
 		.type = obj_error,
 	};
+}
+
+inline struct object errorf(char *fmt, ...) {
+	char *msg = malloc(sizeof(char) * 256);
+	msg[255] = '\0';
+
+	va_list ap;
+	va_start(ap, fmt);
+	vsnprintf(msg, 256, fmt, ap);
+	va_end(ap);
+
+	return new_error_obj(msg, strlen(msg));
 }

@@ -26,7 +26,7 @@ func NewFunction(params []Identifier, body Node, pos int) Node {
 }
 
 func (f Function) Eval() (obj.Object, error) {
-	return obj.NullObj, errors.New("ast.For: not a constant expression")
+	return obj.NullObj, errors.New("ast.Function: not a constant expression")
 }
 
 func (f Function) String() string {

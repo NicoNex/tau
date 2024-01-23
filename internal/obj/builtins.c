@@ -3,22 +3,9 @@
 #include <stdint.h>
 #include <string.h>
 #include <errno.h>
-#include <dlfcn.h>
+#include <math.h>
 #include "object.h"
-#include "../vm/gc.h"
-
-#define BUILTIN(name) static struct object name(struct object *_args, size_t len)
-
-#define UNWRAP_ARGS()                                    \
-	struct object args[len];                             \
-	for (uint32_t i = 0; i < len; i++) {                 \
-		if (_args[i].type == obj_getsetter) {            \
-			struct getsetter *gs = _args[i].data.gs;     \
-			args[i] = gs->get(gs);                       \
-			continue;                                    \
-		}                                                \
-		args[i] = _args[i];                              \
-	}
+#include "plugin.h"
 
 struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len)) {
 	return (struct object) {
@@ -27,11 +14,10 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 	};
 }
 
-BUILTIN(_len_b) {
+static struct object len_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("len: wrong number of arguments, expected 1, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	struct object arg = args[0];
 
@@ -41,15 +27,14 @@ BUILTIN(_len_b) {
 	case obj_error:
 	case obj_string:
 		return new_integer_obj(arg.data.str->len);
-	// case obj_bytes:
-	// 	return new_integer_obj(arg.data.bytes->len);
+	case obj_bytes:
+		return new_integer_obj(arg.data.bytes->len);
 	default:
 		return errorf("len: object of type \"%s\" has no length", otype_str(arg.type));
 	}
 }
 
-BUILTIN(_println_b) {
-	UNWRAP_ARGS();
+static struct object println_b(struct object *args, size_t len) {
 
 	for (uint32_t i = 0; i < len; i++) {
 		char *s = object_str(args[i]);
@@ -60,8 +45,7 @@ BUILTIN(_println_b) {
 	return null_obj;
 }
 
-BUILTIN(_print_b) {
-	UNWRAP_ARGS();
+static struct object print_b(struct object *args, size_t len) {
 
 	for (uint32_t i = 0; i < len; i++) {
 		char *s = object_str(args[i]);
@@ -71,20 +55,44 @@ BUILTIN(_print_b) {
 	return null_obj;
 }
 
-BUILTIN(_input_b) {
-	return errorf("input: unimplemented");
+static struct object input_b(struct object *args, size_t len) {
+	if (len == 1) {
+		if (args[0].type != obj_string) {
+			return errorf("input: argument must be a string, got %s", otype_str(args[0].type));
+		}
+		fputs(args[0].data.str->str, stdout);
+	}
+
+	char tmp;
+	char *input = NULL;
+	size_t ilen = 0;
+
+	do {
+		tmp = getchar();
+		char *reinput = realloc(input, ilen + 1);
+		if (reinput == NULL) {
+			free(input);
+			return errorf("input: error allocating memory");
+		}
+		input = reinput;
+		input[ilen++] = tmp;
+
+	} while (tmp != '\n' && tmp != '\0');
+	input[ilen - 1] = '\0';
+
+	return new_string_obj(input, ilen);
 }
 
-BUILTIN(_string_b) {
+static struct object string_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("string: wrong number of arguments, expected 1, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	switch (args[0].type) {
-	case obj_native:
+	case obj_native: {
 		char *s = (char *) args[0].data.handle;
 		return new_string_obj(s, strlen(s));
+	}
 
 	default: {
 		char *s = object_str(args[0]);
@@ -93,8 +101,7 @@ BUILTIN(_string_b) {
 	}
 }
 
-BUILTIN(_error_b) {
-	UNWRAP_ARGS();
+static struct object error_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("error: wrong number of arguments, expected 1, got %lu", len);
 	} else if (args[0].type != obj_string) {
@@ -103,21 +110,19 @@ BUILTIN(_error_b) {
 	return new_error_obj(strdup(args[0].data.str->str), args[0].data.str->len);
 }
 
-BUILTIN(_type_b) {
+static struct object type_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("type: wrong number of arguments, expected 1, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	char *s = otype_str(args[0].type);
 	return new_string_obj(strdup(s), strlen(s));
 }
 
-BUILTIN(_int_b) {
-	if (len != 1) {
-		return errorf("int: wrong number of arguments, expected 1, got %lu", len);
+static struct object int_b(struct object *args, size_t len) {
+	if (len != 1 && len != 2) {
+		return errorf("int: wrong number of arguments, expected 1 or 2, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	switch (args[0].type) {
 	case obj_integer:
@@ -137,7 +142,20 @@ BUILTIN(_int_b) {
 	}
 
 	case obj_native:
-		return new_integer_obj(*(int64_t*)args[0].data.handle);
+		if (len == 1) {
+			return new_integer_obj(*(int32_t*)args[0].data.handle);
+		} else if (args[1].type != obj_integer) {
+			return errorf("int: second argument must be an integer");
+		}
+
+		switch (args[1].data.i) {
+		case 0:  return new_integer_obj(*(int32_t*)args[0].data.handle);
+		case 8:  return new_integer_obj(*(int8_t*)args[0].data.handle);
+		case 16: return new_integer_obj(*(int16_t*)args[0].data.handle);
+		case 32: return new_integer_obj(*(int32_t*)args[0].data.handle);
+		case 64: return new_integer_obj(*(int64_t*)args[0].data.handle);
+		default: return errorf("int: invalid bit size, must be a power of 2 and not exceed 64, got %lld", args[1].data.i);
+		}
 
 	default: {
 		char *s = object_str(args[0]);
@@ -147,11 +165,10 @@ BUILTIN(_int_b) {
 	}
 }
 
-BUILTIN(_float_b) {
-	if (len != 1) {
-		return errorf("int: wrong number of arguments, expected 1, got %lu", len);
+static struct object float_b(struct object *args, size_t len) {
+	if (len != 1 && len != 2) {
+		return errorf("float: wrong number of arguments, expected 1 or 2, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	switch (args[0].type) {
 	case obj_integer:
@@ -171,15 +188,25 @@ BUILTIN(_float_b) {
 	}
 
 	case obj_native:
-		return new_float_obj(*(double*)args[0].data.handle);
+		if (len == 1) {
+			return new_float_obj(*(double*)args[0].data.handle);
+		} else if (args[1].type != obj_integer) {
+			return errorf("float: second argument must be an integer");
+		}
+
+		switch (args[1].data.i) {
+		case 0:  return new_float_obj(*(float*)args[0].data.handle);
+		case 32: return new_float_obj(*(float*)args[0].data.handle);
+		case 64: return new_float_obj(*(double*)args[0].data.handle);
+		default: return errorf("float: invalid bit size, must be either 0, 32 or 64, got %lld", args[1].data.i);
+		}
 
 	default:
 		return errorf("float: %s is not a number", object_str(args[0]));
 	}
 }
 
-BUILTIN(_exit_b) {
-	UNWRAP_ARGS();
+static struct object exit_b(struct object *args, size_t len) {
 
 	switch (len) {
 	case 0:
@@ -213,52 +240,66 @@ BUILTIN(_exit_b) {
 	}
 }
 
-BUILTIN(_append_b) {
+static struct object append_b(struct object *args, size_t len) {
 	if (len < 2) {
 		return errorf("append: wrong number of arguments, expected at least 2");
 	}
-	UNWRAP_ARGS();
 
 	if (args[0].type != obj_list) {
 		return errorf("append: first argument must be a list");
 	}
 
-	struct list *l = args[0].data.list;
-	if (l->cap == 0) {
-		l->list = realloc(l->list, ++l->cap * sizeof(struct object));
-	}
-	for (uint32_t i = 1; i < len; i++) {
-		if (l->len == l->cap) {
-			l->cap *= 2;
-			l->list = realloc(l->list, l->cap * sizeof(struct object));
+	struct list *old = args[0].data.list;
+
+	// If there's enough space in the old list set the old one as slice and
+	// return a new list poiting to the old one.
+	if (old->cap - old->len >= len - 1) {
+		struct object ret = new_list_obj_data(old->list, old->len, old->cap);
+		struct list *new = ret.data.list;
+
+		for (size_t i = 1; i < len; i++) {
+			new->list[new->len++] = args[i];
 		}
-		l->list[l->len++] = args[i];
+		return ret;
 	}
 
-	return args[0];
+	// If there's not enough space in the old list we create a new bigger list
+	// and we copy all the old objects to the new list.
+	size_t llen = 0;
+	size_t cap = pow(2, ceil(log2(old->cap + (len - 1))));
+	struct object *l = malloc(sizeof(struct object) * cap);
+
+	// Copy the objects in the old list to the new one.
+	for (size_t i = 0; i < old->len; i++) {
+		l[llen++] = old->list[i];
+	}
+	// Append the new objects to the new list.
+	for (size_t i = 1; i < len; i++) {
+		l[llen++] = args[i];
+	}
+
+	return new_list_obj_data(l, llen, cap);
 }
 
-BUILTIN(_new_b) {
+static struct object new_b(struct object *args, size_t len) {
 	if (len != 0) {
 		return errorf("new: wrong number of arguments, expected 0, got %lu", len);
 	}
 	return new_object();
 }
 
-BUILTIN(_failed_b) {
+static struct object failed_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("failed: wrong number of arguments, expected 1, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	return parse_bool(args[0].type == obj_error);
 }
 
-BUILTIN(_plugin_b) {
+static struct object plugin_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("plugin: wrong number of arguments, expected 1, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	if (args[0].type != obj_string) {
 		return errorf("plugin: first argument must be string, got %s instead", otype_str(args[0].type));
@@ -275,8 +316,7 @@ BUILTIN(_plugin_b) {
 	};
 }
 
-BUILTIN(_pipe_b) {
-	UNWRAP_ARGS();
+static struct object pipe_b(struct object *args, size_t len) {
 	switch (len) {
 	case 0:
 		return new_pipe();
@@ -293,11 +333,10 @@ BUILTIN(_pipe_b) {
 	}
 }
 
-BUILTIN(_send_b) {
+static struct object send_b(struct object *args, size_t len) {
 	if (len != 2) {
 		return errorf("send: wrong number of arguments, expected 2, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	struct object pipe = args[0];
 	struct object o = args[1];
@@ -311,11 +350,10 @@ BUILTIN(_send_b) {
 	return o;
 }
 
-BUILTIN(_recv_b) {
+static struct object recv_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("recv: wrong number of arguments, expected 1, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	if (args[0].type != obj_pipe) {
 		return errorf("recv: first argument must be a pipe, got %s instead", otype_str(args[0].type));
@@ -323,11 +361,10 @@ BUILTIN(_recv_b) {
 	return pipe_recv(args[0]);
 }
 
-BUILTIN(_close_b) {
+static struct object close_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("close: wrong number of arguments, expected 1, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	if (args[0].type != obj_pipe) {
 		return errorf("close: first argument must be a pipe, got %s instead", otype_str(args[0].type));
@@ -338,11 +375,10 @@ BUILTIN(_close_b) {
 	return null_obj;
 }
 
-BUILTIN(_hex_b) {
+static struct object hex_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("hex: wrong number of arguments, expected 1, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	if (args[0].type != obj_integer) {
 		return errorf("hex: first argument must be int, got %s instead", otype_str(args[0].type));
@@ -357,11 +393,10 @@ BUILTIN(_hex_b) {
 	return new_string_obj(s, strlen(s));
 }
 
-BUILTIN(_oct_b) {
+static struct object oct_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("oct: wrong number of arguments, expected 1, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	if (args[0].type != obj_integer) {
 		return errorf("oct: first argument must be int, got %s instead", otype_str(args[0].type));
@@ -376,11 +411,10 @@ BUILTIN(_oct_b) {
 	return new_string_obj(s, strlen(s));
 }
 
-BUILTIN(_bin_b) {
+static struct object bin_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("bin: wrong number of arguments, expected 1, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	if (args[0].type != obj_integer) {
 		return errorf("bin: first argument must be int, got %s instead", otype_str(args[0].type));
@@ -397,11 +431,10 @@ BUILTIN(_bin_b) {
 	return new_string_obj(s, strlen(s));
 }
 
-BUILTIN(_slice_b) {
+static struct object slice_b(struct object *args, size_t len) {
 	if (len != 3) {
 		return errorf("slice: wrong number of arguments, expected 3, got %lu", len);
 	}
-	UNWRAP_ARGS();
 
 	if (args[1].type != obj_integer) {
 		return errorf("slice: second argument must be an int, got %s instead", otype_str(args[1].type));
@@ -435,35 +468,101 @@ BUILTIN(_slice_b) {
 		}
 		return new_string_obj(&args[0].data.str->str[start], end-start);
 	}
-	// case obj_bytes:
+	case obj_bytes: {
+		if (end > args[0].data.bytes->len) {
+			return errorf("slice: bytes bounds out of range %d with capacity %lu", end, args[0].data.list->len);
+		} else if (start == end) {
+			return new_bytes_obj(NULL, 0);
+		}
+		return new_bytes_slice(&args[0].data.bytes->bytes[start], end-start);
+	}
 	default:
 		return errorf("slice: first argument must be a list or string, got %s instead", otype_str(args[0].type));
 	}
 }
 
+static struct object keys_b(struct object *args, size_t len) {
+	if (len != 1) {
+		return errorf("keys: wrong number of arguments, expected 1, got %lu", len);
+	} else if (args[0].type != obj_map) {
+		return errorf("keys: argument must be a map, got %s instead", otype_str(args[0].type));
+	}
+	return map_keys(args[0]);
+}
+
+static struct object delete_b(struct object *args, size_t len) {
+	if (len != 2) {
+		return errorf("delete: wrong number of arguments, expected 2, got %lu", len);
+	} else if (args[0].type != obj_map) {
+		return errorf("delete: first argument must be a map, got %s instead", otype_str(args[0].type));
+	}
+
+	switch (args[1].type) {
+	case obj_boolean:
+	case obj_integer:
+	case obj_float:
+	case obj_string:
+	case obj_error:
+		map_delete(args[0], args[1]);
+		return null_obj;
+	default:
+		return errorf("delete: second argument must be one of boolean integer float string error, got %s instead", otype_str(args[1].type));
+	}
+}
+
+// TODO: eventually add the obj_integer case like in Python.
+static struct object bytes_b(struct object *args, size_t len) {
+	if (len != 1) {
+		return errorf("bytes: wrong number of arguments, expected 1, got %lu", len);
+	}
+
+	struct object arg = args[0];
+	switch (arg.type) {
+	case obj_string:
+		return new_bytes_slice(arg.data.str->str, arg.data.str->len);
+	case obj_list: {
+		size_t len = arg.data.list->len;
+		struct object *list = arg.data.list->list;
+		uint8_t *b = malloc(sizeof(uint8_t) * len);
+
+		for (uint32_t i = 0; i < len; i++) {
+			if (list[i].type != obj_integer) {
+				free(b);
+				return errorf("bytes: list cannot be converted to bytes");
+			}
+			b[i] = list[i].data.i;
+		}
+		return new_bytes_obj(b, len);
+	}
+	default:
+		return errorf("bytes: %s cannot be converted to bytes", otype_str(arg.type));
+	}
+}
+
 const builtin builtins[NUM_BUILTINS] = {
-	_len_b,
-	_println_b,
-	_print_b,
-	_input_b,
-	_string_b,
-	_error_b,
-	_type_b,
-	_int_b,
-	_float_b,
-	_exit_b,
-	_append_b,
-	_new_b,
-	_failed_b,
-	_plugin_b,
-	_pipe_b,
-	_send_b,
-	_recv_b,
-	_close_b,
-	_hex_b,
-	_oct_b,
-	_bin_b,
-	_slice_b,
-	NULL, // open
-	NULL // bytes
+	len_b,
+	println_b,
+	print_b,
+	input_b,
+	string_b,
+	error_b,
+	type_b,
+	int_b,
+	float_b,
+	exit_b,
+	append_b,
+	new_b,
+	failed_b,
+	plugin_b,
+	pipe_b,
+	send_b,
+	recv_b,
+	close_b,
+	hex_b,
+	oct_b,
+	bin_b,
+	slice_b,
+	keys_b,
+	delete_b,
+	bytes_b
 };

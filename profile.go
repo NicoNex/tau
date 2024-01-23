@@ -47,18 +47,14 @@ func main() {
 	check(err)
 	defer cpuf.Close()
 
-	memf, err := os.Create("mem.prof")
-	check(err)
-	defer memf.Close()
-
-	code := fileOrDefault()
-	tree, errs := parser.Parse("<profiler>", code)
+	tauCode := fileOrDefault()
+	tree, errs := parser.Parse("<profiler>", tauCode)
 	if len(errs) > 0 {
 		panic("parser errors")
 	}
 
 	c := compiler.New()
-	c.SetFileInfo("<profiler>", code)
+	c.SetFileInfo("<profiler>", tauCode)
 	check(c.Compile(tree))
 
 	check(pprof.StartCPUProfile(cpuf))

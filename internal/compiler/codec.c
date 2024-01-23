@@ -81,7 +81,7 @@ static inline void encode_objects(struct buffer *buf, struct object *objs, size_
 			write_uint32(buf, o.data.str->len);
 			write_string(buf, o.data.str->str);
 			break;
-		case obj_function:
+		case obj_function: {
 			struct function *fn = o.data.fn;
 			write_uint32(buf, fn->num_params);
 			write_uint32(buf, fn->num_locals);
@@ -90,6 +90,7 @@ static inline void encode_objects(struct buffer *buf, struct object *objs, size_
 			write_uint32(buf, fn->bklen);
 			encode_bookmarks(buf, fn->bookmarks, fn->bklen);
 			break;
+		}
 		default:
 			fatalf("encoder: unsupported encoding for type %s\n", otype_str(o.type));
 		}

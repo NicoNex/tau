@@ -26,7 +26,31 @@ char *list_str(struct object o) {
 	return str;
 }
 
-struct object new_list_obj(struct object *list, size_t len) {
+inline struct object new_list_obj(struct object *list, size_t len) {
+	struct list *l = malloc(sizeof(struct list));
+	l->list = list;
+	l->len = len;
+	l->cap = len;
+
+	return (struct object) {
+		.data.list = l,
+		.type = obj_list
+	};
+}
+
+struct object new_list_obj_data(struct object *list, size_t len, size_t cap) {
+	struct list *l = malloc(sizeof(struct list));
+	l->list = list;
+	l->len = len;
+	l->cap = cap;
+
+	return (struct object) {
+		.data.list = l,
+		.type = obj_list,
+	};
+}
+
+struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent) {
 	struct list *l = malloc(sizeof(struct list));
 	l->list = list;
 	l->len = len;
@@ -38,27 +62,15 @@ struct object new_list_obj(struct object *list, size_t len) {
 	};
 }
 
-struct object list_getsetter_get(struct getsetter *gs) {
-	struct object *list = gs->l.data.list->list;
-	size_t listlen = gs->l.data.list->len;
-	int64_t idx = gs->r.data.i;
+inline struct list list_copy(struct list l) {
+	struct list ret = {
+		.list = malloc(sizeof(struct object) * l.cap),
+		.cap = l.cap,
+		.len = l.len
+	};
+	memcpy(ret.list, l.list, l.cap);
 
-	if (idx < 0 || idx >= listlen) {
-		return new_error_obj(strdup("index out of range"), 18);
-	}
-	return list[idx];
-}
-
-struct object list_getsetter_set(struct getsetter *gs, struct object val) {
-	struct object *list = gs->l.data.list->list;
-	size_t listlen = gs->l.data.list->len;
-	int64_t idx = gs->r.data.i;
-
-	if (idx < 0 || idx >= listlen) {
-		return new_error_obj(strdup("index out of range"), 18);
-	}
-	list[idx] = val;
-	return val;
+	return ret;
 }
 
 inline struct list new_list(size_t cap) {
@@ -77,15 +89,4 @@ inline void list_insert(struct list *l, struct object o, size_t idx) {
 	}
 	l->list[idx] = o;
 	l->len++;
-}
-
-inline struct list list_copy(struct list l) {
-	struct list ret = {
-		.list = malloc(sizeof(struct object) * l.cap),
-		.cap = l.cap,
-		.len = l.len
-	};
-	memcpy(ret.list, l.list, l.cap);
-
-	return ret;
 }

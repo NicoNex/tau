@@ -6,8 +6,8 @@
 #include "../compiler/bytecode.h"
 
 #define STACK_SIZE  2048
-#define MAX_FRAMES  1024
-#define HEAP_SIZE   1024
+#define GLOBAL_SIZE 65536
+#define MAX_FRAMES  16384
 
 struct frame {
 	struct object cl;
@@ -16,10 +16,15 @@ struct frame {
 	uint32_t base_ptr;
 };
 
+struct pool {
+	struct object *list;
+	size_t cap;
+	size_t len;
+};
+
 struct state {
-	struct list globals;
-	struct object *consts;
-	uint32_t nconsts;
+	struct pool *globals;
+	struct pool consts;
 	uint32_t ndefs;
 };
 
@@ -33,6 +38,14 @@ struct vm {
 	jmp_buf env;
 };
 
+// Pool object.
+struct pool *new_pool(size_t cap);
+struct pool *poolcpy(struct pool *p);
+void pool_append(struct pool *p, struct object o);
+void pool_insert(struct pool *p, size_t idx, struct object o);
+void pool_dispose(struct pool *p);
+
+// VM object.
 struct state new_state();
 struct vm *new_vm(char *file, struct bytecode bytecode);
 struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state);
@@ -41,3 +54,6 @@ void vm_errorf(struct vm * restrict vm, const char *fmt, ...);
 void go_vm_errorf(struct vm * restrict vm, const char *fmt);
 struct object vm_last_popped_stack_elem(struct vm * restrict vm);
 void gc_init(void);
+void vm_dispose(struct vm *vm);
+void state_dispose(struct state s);
+void set_exit();

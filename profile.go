@@ -47,6 +47,10 @@ func main() {
 	check(err)
 	defer cpuf.Close()
 
+	memf, err := os.Create("heap.prof")
+	check(err)
+	defer memf.Close()
+
 	tauCode := fileOrDefault()
 	tree, errs := parser.Parse("<profiler>", tauCode)
 	if len(errs) > 0 {

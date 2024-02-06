@@ -1179,7 +1179,12 @@ int vm_run(struct vm * restrict vm) {
 		return 0;
 }
 
-void gc_init(void) { GC_INIT(); }
+void gc_init(void) {
+	GC_INIT();
+#ifdef GC_DETECT_LEAK
+	GC_set_find_leak(1);
+#endif
+}
 
 void set_exit() {
 	atexit(restore_term);

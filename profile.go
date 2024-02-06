@@ -63,8 +63,6 @@ func main() {
 
 	check(pprof.StartCPUProfile(cpuf))
 	defer pprof.StopCPUProfile()
-
 	vm.New("<profiler>", c.Bytecode()).Run()
-
 	pprof.WriteHeapProfile(memf)
 }

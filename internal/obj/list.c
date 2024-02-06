@@ -90,3 +90,15 @@ inline void list_insert(struct list *l, struct object o, size_t idx) {
 	l->list[idx] = o;
 	l->len++;
 }
+
+struct object make_list(size_t cap) {
+	struct list *l = malloc(sizeof(struct list));
+	l->list = calloc(cap, sizeof(struct object));
+	l->len = 0;
+	l->cap = cap;
+
+	return (struct object) {
+		.data.list = l,
+		.type = obj_list,
+	};
+}

@@ -75,10 +75,10 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 	struct object cl = new_closure_obj(fn, NULL, 0);
 	vm->frames[0] = new_frame(cl, 0);
 
-	GC_add_roots(&(vm->stack), &(vm->stack) + STACK_SIZE);
-	GC_add_roots(&vm->state.globals->list, &vm->state.globals->list + vm->state.globals->len);
-	GC_add_roots(&(vm->state.consts.list), &(vm->state.consts.list) + vm->state.consts.len);
-	GC_add_roots(&(vm->frames), &(vm->frames) + MAX_FRAMES);
+	GC_add_roots(vm->stack, vm->stack + STACK_SIZE);
+	GC_add_roots(vm->frames, vm->frames + MAX_FRAMES);
+	GC_add_roots(vm->state.globals->list, vm->state.globals->list + vm->state.globals->len);
+	GC_add_roots(vm->state.consts.list, vm->state.consts.list + vm->state.consts.len);
 
 	return vm;
 }
@@ -93,10 +93,10 @@ struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state)
 	struct object cl = new_closure_obj(fn, NULL, 0);
 	vm->frames[0] = new_frame(cl, 0);
 
-	GC_add_roots(&(vm->stack), &(vm->stack) + STACK_SIZE);
-	GC_add_roots(&(vm->state.consts.list), &(vm->state.consts.list) + vm->state.consts.len);
-	GC_add_roots(&vm->state.globals->list, &vm->state.globals->list + vm->state.globals->len);
-	GC_add_roots(&(vm->frames), &(vm->frames) + MAX_FRAMES);
+	GC_add_roots(vm->stack, vm->stack + STACK_SIZE);
+	GC_add_roots(vm->frames, vm->frames + MAX_FRAMES);
+	GC_add_roots(vm->state.globals->list, vm->state.globals->list + vm->state.globals->len);
+	GC_add_roots(vm->state.consts.list, vm->state.consts.list + vm->state.consts.len);
 
 	return vm;
 }

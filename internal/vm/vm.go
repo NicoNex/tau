@@ -45,10 +45,6 @@ func NewState() State {
 	return C.new_state()
 }
 
-func (s State) Free() {
-	C.state_dispose(s)
-}
-
 func (s *State) SetConsts(consts []obj.Object) {
 	s.consts.list = (*C.struct_object)(C.realloc(
 		unsafe.Pointer(s.consts.list),
@@ -82,10 +78,6 @@ func (vm VM) Run() {
 
 func (vm VM) State() State {
 	return vm.state
-}
-
-func (vm VM) Free() {
-	C.vm_dispose(vm)
 }
 
 func (vm VM) LastPoppedStackObj() obj.Object {

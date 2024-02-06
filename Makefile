@@ -3,7 +3,7 @@ GCC := $(shell which gcc)
 DEFAULT_CC = $(CC)
 
 CFLAGS = -g -Ofast -I$(DIR)/internal/obj/libffi/include -mtune=native -march=native -ftree-vectorize
-LDFLAGS = -L$(DIR)/internal/obj/libffi/lib $(DIR)/internal/obj/libffi/lib/libffi.a -lm
+LDFLAGS = -L$(DIR)/internal/obj/libffi/lib $(DIR)/internal/obj/libffi/lib/libffi.a -lm -L$(DIR)/internal/vm/bdwgc/lib $(DIR)/internal/vm/bdwgc/lib/libgc.a
 
 LIBFFI_CONFIGURE_FLAGS = --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory --disable-docs
 
@@ -33,7 +33,7 @@ endif
 
 .PHONY: all tau libffi install profile run bdwgc
 
-all: libffi tau
+all: libffi bdwgc tau
 
 tau:
 	cd cmd/tau && \
@@ -45,10 +45,15 @@ libffi:
 	    git submodule update --recursive; \
 	fi
 
+	CC=$(CC) cd libffi && \
+	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
+	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
+	make install CC=$(CC)
+
 bdwgc:
 	cd bdwgc && \
 	./autogen.sh && \
-	./configure --prefix=$(DIR)/internal/vm/bdwgc --disable-shared --enable-static && \
+	./configure --prefix=$(DIR)/internal/vm/bdwgc --disable-shared --enable-static --disable-docs && \
 	make install
 
 debug:

@@ -1,7 +1,7 @@
 package obj
 
 // #cgo CFLAGS: -Ofast -Ilibffi/include
-// #cgo LDFLAGS: -Llibffi/lib ${SRCDIR}/libffi/lib/libffi.a -lm
+// #cgo LDFLAGS: -Llibffi/lib ${SRCDIR}/libffi/lib/libffi.a -lm -L${SRCDIR}/../vm/bdwgc/lib ${SRCDIR}/../vm/bdwgc/lib/libgc.a
 // #include <stdio.h>
 // #include <stdlib.h>
 // #include <stdint.h>
@@ -130,9 +130,7 @@ func (o Object) TypeString() string {
 }
 
 func (o Object) String() string {
-	cstr := C.object_str(o)
-	defer C.free(unsafe.Pointer(cstr))
-	return C.GoString(cstr)
+	return C.GoString(C.object_str(o))
 }
 
 func (o Object) Int() int64 {

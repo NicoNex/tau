@@ -1,7 +1,7 @@
 #pragma once
 
 #define GC_THREADS
-#include "bdwgc/include/gc.h"
+#include "bdwgc/include/gc/gc.h"
 
 #define malloc(n) GC_MALLOC(n)
 #define calloc(m, n) GC_MALLOC((m)*(n))

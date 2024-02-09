@@ -130,14 +130,6 @@ static inline void _map_delete(struct map_node **root, struct map_node **n, stru
 	}
 }
 
-static inline void _map_dispose(struct map_node * restrict n) {
-	if (n != NULL) {
-		if (n->l != NULL) _map_dispose(n->l);
-		if (n->r != NULL) _map_dispose(n->r);
-		free(n);
-	}
-}
-
 static inline void _map_keys(struct map_node * restrict n, struct list *list) {
 	if (n != NULL) {
 		list->list[list->len++] = n->val.key;

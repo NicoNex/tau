@@ -73,7 +73,6 @@ func (tt TauTest) run(t *testing.T) {
 		if err := fn(tvm.LastPoppedStackObj()); err != nil {
 			t.Fatal(err)
 		}
-		tvm.Free()
 	}
 }
 

@@ -65,5 +65,4 @@ char *object_str(struct object o) {
 void print_obj(struct object o) {
 	char *str = object_str(o);
 	puts(str);
-	free(str);
 }

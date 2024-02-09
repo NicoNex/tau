@@ -72,7 +72,6 @@ static struct object input_b(struct object *args, size_t len) {
 		tmp = getchar();
 		char *reinput = realloc(input, ilen + 1);
 		if (reinput == NULL) {
-			free(input);
 			return errorf("input: error allocating memory");
 		}
 		input = reinput;
@@ -528,7 +527,6 @@ static struct object bytes_b(struct object *args, size_t len) {
 
 		for (uint32_t i = 0; i < len; i++) {
 			if (list[i].type != obj_integer) {
-				free(b);
 				return errorf("bytes: list cannot be converted to bytes");
 			}
 			b[i] = list[i].data.i;

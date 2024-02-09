@@ -9,13 +9,13 @@ LIBFFI_CONFIGURE_FLAGS = --prefix=$(DIR)/internal/obj/libffi --disable-shared --
 
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
-    ACLOCAL_PATH := /usr/share/aclocal
-    INSTALL_PATH := /usr/bin
+	ACLOCAL_PATH := /usr/share/aclocal
+	INSTALL_PATH := /usr/bin
 endif
 ifeq ($(UNAME_S),Darwin)
-    ACLOCAL_PATH := /usr/local/share/aclocal
-    INSTALL_PATH := /usr/local/bin
-    GCC := $(shell which gcc-13)
+	ACLOCAL_PATH := /usr/local/share/aclocal
+	INSTALL_PATH := /usr/local/bin
+	GCC := $(shell which gcc-13)
 endif
 ifeq ($(UNAME_S),Windows_NT)
 	LIBFFI_CONFIGURE_FLAGS += CC="$(DIR)/libffi/msvcc.sh -m64" CXX="$(DIR)/libffi/msvcc.sh -m64"
@@ -41,8 +41,8 @@ tau:
 
 libffi:
 	if [ ! -d libffi ] || [ $$(ls -1q libffi | wc -l) -eq 0 ]; then \
-	    git submodule init; \
-	    git submodule update --recursive; \
+		git submodule init; \
+		git submodule update --recursive; \
 	fi
 
 	CC=$(CC) cd libffi && \
@@ -51,6 +51,11 @@ libffi:
 	make install CC=$(CC)
 
 bdwgc:
+	if [ ! -d bdwgc ] || [ $$(ls -1q bdwgc | wc -l) -eq 0 ]; then \
+		git submodule init; \
+		git submodule update --recursive; \
+	fi
+
 	cd bdwgc && \
 	./autogen.sh && \
 	./configure --prefix=$(DIR)/internal/vm/bdwgc --disable-shared --enable-static --disable-docs && \

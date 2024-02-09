@@ -4,8 +4,9 @@
 #include <string.h>
 #include <errno.h>
 #include <math.h>
-#include "object.h"
 #include "plugin.h"
+#include "object.h"
+#include "../vm/gc.h"
 
 struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len)) {
 	return (struct object) {

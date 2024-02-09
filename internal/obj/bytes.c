@@ -1,7 +1,7 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include "object.h"
+#include "../vm/gc.h"
 
 char *bytes_str(struct object o) {
 	size_t slen = o.data.bytes->len * 5 + 3;

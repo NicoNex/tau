@@ -5,11 +5,11 @@
 #include "../vm/gc.h"
 
 char *error_str(struct object o) {
-	return strdup(o.data.str->str);
+	return GC_STRDUP(o.data.str->str);
 }
 
 struct object new_error_obj(char *str, size_t len) {
-	struct string *s = malloc(sizeof(struct string));
+	struct string *s = GC_MALLOC(sizeof(struct string));
 	s->str = str;
 	s->len = len;
 
@@ -20,7 +20,7 @@ struct object new_error_obj(char *str, size_t len) {
 }
 
 inline struct object errorf(char *fmt, ...) {
-	char *msg = malloc(sizeof(char) * 256);
+	char *msg = GC_MALLOC(sizeof(char) * 256);
 	msg[255] = '\0';
 
 	va_list ap;

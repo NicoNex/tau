@@ -4,7 +4,7 @@
 #include "../vm/gc.h"
 
 char *integer_str(struct object o) {
-	char *str = calloc(64, sizeof(char));
+	char *str = GC_CALLOC(64, sizeof(char));
 	sprintf(str, "%" PRId64, o.data.i);
 
 	return str;

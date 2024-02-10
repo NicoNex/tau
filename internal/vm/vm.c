@@ -24,12 +24,6 @@
 #define vm_stack_pop_ignore(vm) vm->sp--
 #define vm_stack_peek(vm) (vm->stack[vm->sp-1])
 
-#ifndef GC_DEBUG
-	#define vm_heap_add(vm, o) pool_append(vm->state.heap, o)
-#else
-	#define vm_heap_add(vm, o) printf("adding type %s to heap\n", otype_str(o.type)); pool_append(vm->state.heap, o)
-#endif
-
 #ifndef DEBUG
 	#define DISPATCH() goto *jump_table[*frame->ip++]
 #else
@@ -258,7 +252,7 @@ static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, 
 		vm_errorf(vm, "not a function %s", object_str(fn));
 	}
 	
-	struct object *free = malloc(sizeof(struct object) * num_free);
+	struct object *free = GC_MALLOC(sizeof(struct object) * num_free);
 	for (uint32_t i = 0; i < num_free; i++) {
 		free[i] = vm->stack[vm->sp-num_free+i];
 	}
@@ -270,7 +264,7 @@ static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, 
 
 static inline void vm_push_list(struct vm * restrict vm, uint32_t start, uint32_t end) {
 	uint32_t len = end - start;
-	struct object *list = malloc(sizeof(struct object) * len);
+	struct object *list = GC_MALLOC(sizeof(struct object) * len);
 
 	for (uint32_t i = start; i < end; i++) {
 		list[i-start] = vm->stack[i];
@@ -321,7 +315,7 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 	}
 
 	uint32_t len = fmt_len + sub_len - num_args + 1;
-	char *ret = malloc(sizeof(char) * len);
+	char *ret = GC_MALLOC(sizeof(char) * len);
 	ret[len-1] = '\0';
 	uint32_t retidx = 0;
 	uint32_t subidx = 0;
@@ -330,7 +324,6 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 		if (*s == 0xff) {
 			strncpy(&ret[retidx], subs[subidx], len_table[subidx]);
 			retidx += len_table[subidx];
-			free(subs[subidx]);
 			subidx++;
 			continue;
 		}
@@ -393,7 +386,7 @@ static inline void vm_exec_add(struct vm * restrict vm) {
 		left->type = obj_float;
 	} else if (M_ASSERT(left, right, obj_string)) {
 		size_t slen = left->data.str->len + right->data.str->len;
-		char *str = malloc(sizeof(char) * (slen + 1));
+		char *str = GC_MALLOC(sizeof(char) * (slen + 1));
 		char *p = stpcpy(stpcpy(str, left->data.str->str), right->data.str->str);
 		*p = '\0';
 		vm_stack_pop_ignore(vm);
@@ -676,7 +669,7 @@ static inline void vm_exec_index(struct vm * restrict vm) {
 		if (idx < 0 || idx >= len) {
 			vm_errorf(vm, "index out of range");
 		}
-		char *new_str = malloc(sizeof(char) * 2);
+		char *new_str = GC_MALLOC(sizeof(char) * 2);
 		new_str[0] = str[idx];
 		new_str[1] = '\0';
 		vm_stack_push(vm, new_string_obj(new_str, 2));
@@ -758,7 +751,7 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 		return;
 	}
 
-	void *return_value = malloc(sizeof(&ffi_type_pointer));
+	void *return_value = GC_MALLOC(sizeof(&ffi_type_pointer));
 	ffi_call(&cif, n->data.handle, return_value, arg_values);
 
 	struct object res = (struct object) {
@@ -810,8 +803,8 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 
 	switch (o->type) {
 	case obj_closure: {
-		struct vm *tvm = calloc(1, sizeof(struct vm));
-		tvm->file = strdup(vm->file);
+		struct vm *tvm = GC_CALLOC(1, sizeof(struct vm));
+		tvm->file = GC_STRDUP(vm->file);
 		tvm->state.consts = vm->state.consts;
 		tvm->state.globals = vm->state.globals;
 		tvm->sp = vm->sp;
@@ -825,9 +818,9 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 	}
 
 	case obj_builtin: {
-		struct builtin_call_data *d = malloc(sizeof(struct builtin_call_data));
+		struct builtin_call_data *d = GC_MALLOC(sizeof(struct builtin_call_data));
 		d->fn = o->data.builtin;
-		d->args = malloc(sizeof(struct object) * num_args);
+		d->args = GC_MALLOC(sizeof(struct object) * num_args);
 		d->numargs = num_args;
 		memcpy(d->args, &vm->stack[vm->sp-num_args], num_args * sizeof(struct object));
 

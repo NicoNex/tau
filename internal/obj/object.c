@@ -37,8 +37,8 @@ static void _object_to_module(struct object mod, struct object_node * restrict n
 
 static inline void _object_set(struct object_node **n, uint64_t key, char *name, struct object val) {
 	if (*n == NULL) {
-		*n = malloc(sizeof(struct object_node));
-		(*n)->name = strdup(name);
+		*n = GC_MALLOC(sizeof(struct object_node));
+		(*n)->name = GC_STRDUP(name);
 		(*n)->key = key;
 		(*n)->val = val;
 		(*n)->l = NULL;
@@ -67,7 +67,7 @@ struct object object_set(struct object obj, char *name, struct object val) {
 
 // TODO: actually return object content as string.
 char *object_obj_str(struct object obj) {
-	char *str = malloc(sizeof(char) * 64);
+	char *str = GC_MALLOC(sizeof(char) * 64);
 	str[63] = '\0';
 	sprintf(str, "object[%p]", *obj.data.obj);
 
@@ -76,7 +76,7 @@ char *object_obj_str(struct object obj) {
 
 struct object new_object() {
 	return (struct object) {
-		.data.obj = calloc(1, sizeof(struct object_node)),
+		.data.obj = GC_CALLOC(1, sizeof(struct object_node)),
 		.type = obj_object,
 	};
 }

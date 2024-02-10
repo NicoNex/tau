@@ -5,7 +5,7 @@
 
 char *bytes_str(struct object o) {
 	size_t slen = o.data.bytes->len * 5 + 3;
-	char *s = calloc(slen, sizeof(char));
+	char *s = GC_CALLOC(slen, sizeof(char));
 	s[0] = '[';
 
 	char tmp[4] = {'\0'};
@@ -21,7 +21,7 @@ char *bytes_str(struct object o) {
 }
 
 struct object new_bytes_obj(uint8_t *bytes, size_t len) {
-	struct bytes *b = malloc(sizeof(struct bytes));
+	struct bytes *b = GC_MALLOC(sizeof(struct bytes));
 	b->bytes = bytes;
 	b->len = len;
 
@@ -32,7 +32,7 @@ struct object new_bytes_obj(uint8_t *bytes, size_t len) {
 }
 
 struct object new_bytes_slice(uint8_t *bytes, size_t len) {
-	struct bytes *b = malloc(sizeof(struct bytes));
+	struct bytes *b = GC_MALLOC(sizeof(struct bytes));
 	b->bytes = bytes;
 	b->len = len;
 

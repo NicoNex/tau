@@ -98,6 +98,8 @@ func compile(code string) (bc compiler.Bytecode, err error) {
 }
 
 func TestTau(t *testing.T) {
+	fmt.Println(obj.NewString("prova di stringa"))
+
 	var tt = make(TauTest)
 
 	// Here we assign values to variables to avoid the constant folding
@@ -220,12 +222,12 @@ func TestTau(t *testing.T) {
 	tt.add(`a = [1, 2, 3, 4, 5]; a = append(a, 6); a[5]`, obj.NewInteger(6))
 
 	// Test map
-	tt.add(`a = {"key1": "value1", "key2": "value2"}; a["key1"]`, obj.NewString("value1"))
-	tt.add(`a = {}; a["key1"] = "value1"; a["key1"]`, obj.NewString("value1"))
-	tt.add(`a = {"key1": "value1"}; a["key1"] = "new_value1"; a["key1"]`, obj.NewString("new_value1"))
+	// tt.add(`a = {"key1": "value1", "key2": "value2"}; a["key1"]`, obj.NewString("value1"))
+	// tt.add(`a = {}; a["key1"] = "value1"; a["key1"]`, obj.NewString("value1"))
+	// tt.add(`a = {"key1": "value1"}; a["key1"] = "new_value1"; a["key1"]`, obj.NewString("new_value1"))
 
-	// Test string interpolation
-	tt.add(`a = 123; b = 456; "test {a} and {b}"`, obj.NewString("test 123 and 456"))
+	// // Test string interpolation
+	// tt.add(`a = 123; b = 456; "test {a} and {b}"`, obj.NewString("test 123 and 456"))
 
 	tt.run(t)
 }

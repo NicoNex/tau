@@ -18,5 +18,5 @@ struct object parse_bool(uint32_t b) {
 }
 
 char *boolean_str(struct object o) {
-	return o.data.i ? strdup("true") : strdup("false");
+	return o.data.i ? GC_STRDUP("true") : GC_STRDUP("false");
 }

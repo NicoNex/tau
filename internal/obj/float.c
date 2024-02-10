@@ -3,7 +3,7 @@
 #include "../vm/gc.h"
 
 char *float_str(struct object o) {
-	char *str = calloc(35, sizeof(char));
+	char *str = GC_CALLOC(35, sizeof(char));
 	sprintf(str, "%f", o.data.f);
 	return str;
 }

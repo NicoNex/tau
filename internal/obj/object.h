@@ -198,6 +198,7 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 // Util functions.
 char *otype_str(enum obj_type t);
 char *object_str(struct object o);
+char *go_object_str(struct object o);
 void print_obj(struct object o);
 struct object errorf(char *fmt, ...);
 uint64_t fnv64a(char *s);

@@ -70,7 +70,7 @@ static inline struct map_pair _map_get(struct map_node * restrict n, struct key_
 
 static inline void _map_set(struct map_node **n, struct key_hash k, struct map_pair v) {
 	if (*n == NULL) {
-		struct map_node *tmp = malloc(sizeof(struct map_node));
+		struct map_node *tmp = GC_MALLOC(sizeof(struct map_node));
 		tmp->key = k;
 		tmp->val = v;
 		tmp->l = NULL;
@@ -101,7 +101,6 @@ static inline void map_set_node(struct map_node **root, struct map_node **cur, s
 		struct map_node *l = (*cur)->l;
 		struct map_node *r = (*cur)->r;
 
-		free(*cur);
 		*cur = n;
 		if (l != NULL) map_set_node(root, root, l);
 		if (r != NULL) map_set_node(root, root, r);
@@ -121,7 +120,6 @@ static inline void _map_delete(struct map_node **root, struct map_node **n, stru
 			*n = NULL;
 			if (node->l) map_set_node(root, root, node->l);
 			if (node->r) map_set_node(root, root, node->r);
-			free(node);
 		} else if (cmp < 0) {
 			_map_delete(root, &(*n)->l, k);
 		} else {
@@ -164,7 +162,7 @@ void map_delete(struct object map, struct object key) {
 
 // TODO: actually return map content as string.
 char *map_str(struct object map) {
-	char *str = malloc(sizeof(char) * 64);
+	char *str = GC_MALLOC(sizeof(char) * 64);
 	str[63] = '\0';
 	sprintf(str, "map[%p]", map.data.map->root);
 
@@ -173,7 +171,7 @@ char *map_str(struct object map) {
 
 struct object new_map() {
 	return (struct object) {
-		.data.map = calloc(1, sizeof(struct map_node)),
+		.data.map = GC_CALLOC(1, sizeof(struct map_node)),
 		.type = obj_map,
 	};
 }

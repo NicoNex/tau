@@ -15,7 +15,7 @@ char *list_str(struct object o) {
 		string_len += i < len-1 ? strlen(s) + 2 : strlen(s);
 	}
 
-	char *str = calloc(string_len, sizeof(char));
+	char *str = GC_CALLOC(string_len, sizeof(char));
 	str[0] = '[';
 
 	for (int i = 0; i < len; i++) {
@@ -27,7 +27,7 @@ char *list_str(struct object o) {
 }
 
 inline struct object new_list_obj(struct object *list, size_t len) {
-	struct list *l = malloc(sizeof(struct list));
+	struct list *l = GC_MALLOC(sizeof(struct list));
 	l->list = list;
 	l->len = len;
 	l->cap = len;
@@ -39,7 +39,7 @@ inline struct object new_list_obj(struct object *list, size_t len) {
 }
 
 struct object new_list_obj_data(struct object *list, size_t len, size_t cap) {
-	struct list *l = malloc(sizeof(struct list));
+	struct list *l = GC_MALLOC(sizeof(struct list));
 	l->list = list;
 	l->len = len;
 	l->cap = cap;
@@ -51,7 +51,7 @@ struct object new_list_obj_data(struct object *list, size_t len, size_t cap) {
 }
 
 struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent) {
-	struct list *l = malloc(sizeof(struct list));
+	struct list *l = GC_MALLOC(sizeof(struct list));
 	l->list = list;
 	l->len = len;
 	l->cap = len;
@@ -64,7 +64,7 @@ struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent
 
 inline struct list list_copy(struct list l) {
 	struct list ret = {
-		.list = malloc(sizeof(struct object) * l.cap),
+		.list = GC_MALLOC(sizeof(struct object) * l.cap),
 		.cap = l.cap,
 		.len = l.len
 	};
@@ -75,7 +75,7 @@ inline struct list list_copy(struct list l) {
 
 inline struct list new_list(size_t cap) {
 	return (struct list) {
-		.list = malloc(sizeof(struct object) * cap),
+		.list = GC_MALLOC(sizeof(struct object) * cap),
 		.cap = cap,
 		.len = 0
 	};
@@ -85,15 +85,15 @@ inline void list_insert(struct list *l, struct object o, size_t idx) {
 	if (idx >= l->cap) {
 		if (l->cap == 0) l->cap = 1;
 		while (l->cap <= idx) l->cap *= 2;
-		l->list = realloc(l->list, sizeof(struct object) * l->cap);
+		l->list = GC_REALLOC(l->list, sizeof(struct object) * l->cap);
 	}
 	l->list[idx] = o;
 	l->len++;
 }
 
 struct object make_list(size_t cap) {
-	struct list *l = malloc(sizeof(struct list));
-	l->list = calloc(cap, sizeof(struct object));
+	struct list *l = GC_MALLOC(sizeof(struct list));
+	l->list = GC_CALLOC(cap, sizeof(struct object));
 	l->len = 0;
 	l->cap = cap;
 

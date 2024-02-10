@@ -35,7 +35,7 @@ int pipe_send(struct object pipe, struct object o) {
 	} else {
 		if (p->len == p->cap) {
 			p->cap *= 2;
-			p->buf = realloc(p->buf, p->cap * sizeof(struct object));
+			p->buf = GC_REALLOC(p->buf, p->cap * sizeof(struct object));
 		}
 	}
 	p->buf[p->tail] = o;
@@ -69,8 +69,8 @@ struct object pipe_recv(struct object pipe) {
 }
 
 struct object new_pipe() {
-	struct pipe *pipe = malloc(sizeof(struct pipe));
-	pipe->buf = calloc(1, sizeof(struct object));
+	struct pipe *pipe = GC_MALLOC(sizeof(struct pipe));
+	pipe->buf = GC_CALLOC(1, sizeof(struct object));
 	pipe->cap = 1;
 	pipe->len = 0;
 	pipe->head = 0;
@@ -87,8 +87,8 @@ struct object new_pipe() {
 }
 
 struct object new_buffered_pipe(size_t size) {
-	struct pipe *pipe = malloc(sizeof(struct pipe));
-	pipe->buf = calloc(size, sizeof(struct object));
+	struct pipe *pipe = GC_MALLOC(sizeof(struct pipe));
+	pipe->buf = GC_CALLOC(size, sizeof(struct object));
 	pipe->cap = size;
 	pipe->len = 0;
 	pipe->head = 0;

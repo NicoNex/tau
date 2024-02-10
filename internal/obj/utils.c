@@ -28,7 +28,7 @@ char *otype_str(enum obj_type t) {
 char *object_str(struct object o) {
 	switch (o.type) {
 	case obj_null:
-		return strdup("null");
+		return GC_STRDUP("null");
 	case obj_boolean:
 		return boolean_str(o);
 	case obj_integer:
@@ -36,7 +36,7 @@ char *object_str(struct object o) {
 	case obj_float:
 		return float_str(o);
 	case obj_builtin:
-		return strdup("<builtin function>");
+		return GC_STRDUP("<builtin function>");
 	case obj_string:
 		return string_str(o);
 	case obj_error:
@@ -52,14 +52,19 @@ char *object_str(struct object o) {
 	case obj_object:
 		return object_obj_str(o);
 	case obj_pipe:
-		return strdup("<pipe>");
+		return GC_STRDUP("<pipe>");
 	case obj_bytes:
 		return bytes_str(o);
 	case obj_native:
-		return strdup("<native>");
+		return GC_STRDUP("<native>");
 	default:
-		return strdup("<unimplemented>");
+		return GC_STRDUP("<unimplemented>");
 	}
+}
+
+// Used by go code, cannot be garbage collected.
+char *go_object_str(struct object o) {
+	return strdup(object_str(o));
 }
 
 void print_obj(struct object o) {

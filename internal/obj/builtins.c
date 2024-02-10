@@ -70,7 +70,7 @@ static struct object input_b(struct object *args, size_t len) {
 
 	do {
 		tmp = getchar();
-		char *reinput = realloc(input, ilen + 1);
+		char *reinput = GC_REALLOC(input, ilen + 1);
 		if (reinput == NULL) {
 			return errorf("input: error allocating memory");
 		}
@@ -107,7 +107,7 @@ static struct object error_b(struct object *args, size_t len) {
 	} else if (args[0].type != obj_string) {
 		return errorf("error: argument must be a string, got %s", otype_str(args[0].type));
 	}
-	return new_error_obj(strdup(args[0].data.str->str), args[0].data.str->len);
+	return new_error_obj(GC_STRDUP(args[0].data.str->str), args[0].data.str->len);
 }
 
 static struct object type_b(struct object *args, size_t len) {
@@ -116,7 +116,7 @@ static struct object type_b(struct object *args, size_t len) {
 	}
 
 	char *s = otype_str(args[0].type);
-	return new_string_obj(strdup(s), strlen(s));
+	return new_string_obj(GC_STRDUP(s), strlen(s));
 }
 
 static struct object int_b(struct object *args, size_t len) {
@@ -267,7 +267,7 @@ static struct object append_b(struct object *args, size_t len) {
 	// and we copy all the old objects to the new list.
 	size_t llen = 0;
 	size_t cap = pow(2, ceil(log2(old->cap + (len - 1))));
-	struct object *l = malloc(sizeof(struct object) * cap);
+	struct object *l = GC_MALLOC(sizeof(struct object) * cap);
 
 	// Copy the objects in the old list to the new one.
 	for (size_t i = 0; i < old->len; i++) {
@@ -384,7 +384,7 @@ static struct object hex_b(struct object *args, size_t len) {
 		return errorf("hex: first argument must be int, got %s instead", otype_str(args[0].type));
 	}
 
-	char *s = calloc(30, sizeof(char));
+	char *s = GC_CALLOC(30, sizeof(char));
 #ifdef __unix__
 	sprintf(s, "0x%lx", args[0].data.i);
 #else
@@ -402,7 +402,7 @@ static struct object oct_b(struct object *args, size_t len) {
 		return errorf("oct: first argument must be int, got %s instead", otype_str(args[0].type));
 	}
 
-	char *s = calloc(30, sizeof(char));
+	char *s = GC_CALLOC(30, sizeof(char));
 #ifdef __unix__
 	sprintf(s, "0o%lo", args[0].data.i);
 #else
@@ -420,7 +420,7 @@ static struct object bin_b(struct object *args, size_t len) {
 		return errorf("bin: first argument must be int, got %s instead", otype_str(args[0].type));
 	}
 
-	char *s = calloc(67, sizeof(char));
+	char *s = GC_CALLOC(67, sizeof(char));
 	s[0] = '0';
 	s[1] = 'b';
 	int idx = 2;
@@ -464,7 +464,7 @@ static struct object slice_b(struct object *args, size_t len) {
 		if (end > args[0].data.str->len) {
 			return errorf("slice: string bounds out of range %d with capacity %lu", end, args[0].data.list->len);
 		} else if (start == end) {
-			return new_string_obj(strdup(""), 0);
+			return new_string_obj(GC_STRDUP(""), 0);
 		}
 		return new_string_obj(&args[0].data.str->str[start], end-start);
 	}
@@ -523,7 +523,7 @@ static struct object bytes_b(struct object *args, size_t len) {
 	case obj_list: {
 		size_t len = arg.data.list->len;
 		struct object *list = arg.data.list->list;
-		uint8_t *b = malloc(sizeof(uint8_t) * len);
+		uint8_t *b = GC_MALLOC(sizeof(uint8_t) * len);
 
 		for (uint32_t i = 0; i < len; i++) {
 			if (list[i].type != obj_integer) {

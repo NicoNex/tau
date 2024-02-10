@@ -130,7 +130,9 @@ func (o Object) TypeString() string {
 }
 
 func (o Object) String() string {
-	return C.GoString(C.object_str(o))
+	cs := C.go_object_str(o)
+	defer C.free(unsafe.Pointer(cs))
+	return C.GoString(cs)
 }
 
 func (o Object) Int() int64 {

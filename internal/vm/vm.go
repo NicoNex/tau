@@ -1,7 +1,7 @@
 package vm
 
-// #cgo CFLAGS: -g -Ofast -fopenmp
-// #cgo LDFLAGS: -fopenmp -L${SRCDIR}/bdwgc/lib ${SRCDIR}/bdwgc/lib/libgc.a
+// #cgo CFLAGS: -g -Ofast -fopenmp -Ilibffi/include
+// #cgo LDFLAGS: -fopenmp -L${SRCDIR}/bdwgc/lib ${SRCDIR}/bdwgc/lib/libgc.a -Llibffi/lib ${SRCDIR}/../obj/libffi/lib/libffi.a
 // #include <stdlib.h>
 // #include <stdio.h>
 // #include "vm.h"

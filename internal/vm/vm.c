@@ -54,7 +54,7 @@ inline struct state new_state() {
 }
 
 struct vm *new_vm(char *file, struct bytecode bc) {
-	struct vm *vm = calloc(1, sizeof(struct vm));
+	struct vm *vm = GC_CALLOC(1, sizeof(struct vm));
 	vm->file = file;
 	vm->state = new_state();
 	vm->state.consts = (struct pool) {
@@ -67,6 +67,8 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 	struct object cl = new_closure_obj(fn, NULL, 0);
 	vm->frames[0] = new_frame(cl, 0);
 
+
+	GC_add_roots(vm, vm + sizeof(vm));
 	GC_add_roots(vm->stack, vm->stack + STACK_SIZE);
 	GC_add_roots(vm->frames, vm->frames + MAX_FRAMES);
 	GC_add_roots(vm->state.globals->list, vm->state.globals->list + vm->state.globals->len);
@@ -76,7 +78,7 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 }
 
 struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state) {
-	struct vm *vm = calloc(1, sizeof(struct vm));
+	struct vm *vm = GC_CALLOC(1, sizeof(struct vm));
 	vm->file = file;
 	vm->state = state;
 	vm->state.ndefs = bc.ndefs;
@@ -85,12 +87,24 @@ struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state)
 	struct object cl = new_closure_obj(fn, NULL, 0);
 	vm->frames[0] = new_frame(cl, 0);
 
+	GC_add_roots(vm, vm + sizeof(vm));
 	GC_add_roots(vm->stack, vm->stack + STACK_SIZE);
 	GC_add_roots(vm->frames, vm->frames + MAX_FRAMES);
 	GC_add_roots(vm->state.globals->list, vm->state.globals->list + vm->state.globals->len);
 	GC_add_roots(vm->state.consts.list, vm->state.consts.list + vm->state.consts.len);
 
 	return vm;
+}
+
+void vm_free(struct vm * restrict vm) {
+	GC_remove_roots(vm, vm + sizeof(vm));
+	GC_remove_roots(vm->stack, vm->stack + STACK_SIZE);
+	GC_remove_roots(vm->frames, vm->frames + MAX_FRAMES);
+}
+
+void state_free(struct state s) {
+	GC_remove_roots(s.globals->list, s.globals->list + s.globals->len);
+	GC_remove_roots(s.consts.list, s.consts.list + s.consts.len);
 }
 
 static struct bookmark *vm_get_bookmark(struct vm * restrict vm) {

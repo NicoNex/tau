@@ -41,10 +41,12 @@ var (
 	TermState *term.State
 )
 
+// NewState returns a new empty VM state.
 func NewState() State {
 	return C.new_state()
 }
 
+// SetConsts copies the constants in input in the VM.
 func (s *State) SetConsts(consts []obj.Object) {
 	s.consts.list = (*C.struct_object)(C.realloc(
 		unsafe.Pointer(s.consts.list),
@@ -58,12 +60,17 @@ func (s *State) SetConsts(consts []obj.Object) {
 	}
 }
 
+// Free sets the state as collectable for the GC.
+func (s State) Free() {
+	C.state_free(s)
+}
+
+// New returns a new Tau VM instance.
 func New(file string, bc compiler.Bytecode) VM {
 	return C.new_vm(C.CString(file), cbytecode(bc))
 }
 
-func setConsts(state State)
-
+// NewWithState returns a new Tau VM instance with the provided state.
 func NewWithState(file string, bc compiler.Bytecode, state State) VM {
 	if len(Consts) > 0 {
 		state.SetConsts(Consts)
@@ -71,15 +78,29 @@ func NewWithState(file string, bc compiler.Bytecode, state State) VM {
 	return C.new_vm_with_state(C.CString(file), cbytecode(bc), state)
 }
 
+// Run makes the vm run.
 func (vm VM) Run() {
 	C.vm_run(vm)
 	C.fflush(C.stdout)
 }
 
+// Free sets the VM as collectable for the GC.
+func (vm VM) Free() {
+	C.vm_free(vm)
+}
+
+// FreeAll is like Free but includes the VM state as well.
+func (vm VM) FreeAll() {
+	vm.State().Free()
+	vm.Free()
+}
+
+// State returns the VM state.
 func (vm VM) State() State {
 	return vm.state
 }
 
+// LastPoppedStackObj returns the object that was popped last from the VM stack.
 func (vm VM) LastPoppedStackObj() obj.Object {
 	o := C.vm_last_popped_stack_elem(vm)
 	return *(*obj.Object)(unsafe.Pointer(&o))
@@ -130,6 +151,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 		return
 	}
 
+	// Look for the module location in the predefined ones.
 	p, err := lookup(path)
 	if err != nil {
 		msg := fmt.Sprintf("import: %v", err)
@@ -137,12 +159,14 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 		return
 	}
 
+	// Check whether the module has already been imported and is in the import table.
 	if mod, ok := importTab[p]; ok {
 		vm.stack[vm.sp] = mod
 		vm.sp++
 		return
 	}
 
+	// Read the module file.
 	b, err := os.ReadFile(p)
 	if err != nil {
 		msg := fmt.Sprintf("import: %v", err)
@@ -150,6 +174,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 		return
 	}
 
+	// Parse the module and get its AST.
 	tree, errs := parser.Parse(path, string(b))
 	if len(errs) > 0 {
 		m := fmt.Sprintf("import: multiple errors in module %s", path)
@@ -157,6 +182,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 		return
 	}
 
+	// Compile the AST.
 	c := compiler.NewImport(int(vm.state.ndefs), &Consts)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
@@ -164,6 +190,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 		return
 	}
 
+	// Run the bytecode of the module in a new VM instance.
 	bc := c.Bytecode()
 	(&vm.state).SetConsts(Consts)
 	vm.state.ndefs = C.uint32_t(bc.NDefs())
@@ -174,6 +201,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	}
 	vm.state = tvm.state
 
+	// Create a new object for the module exported symbols.
 	mod := C.new_object()
 	for name, sym := range c.Store {
 		if sym.Scope == compiler.GlobalScope {
@@ -189,6 +217,8 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 		}
 	}
 
+	// Set the newly created object in the import table and in the VM stack at
+	// the current stack pointer position.
 	importTab[p] = mod
 	vm.stack[vm.sp] = mod
 	vm.sp++

@@ -45,15 +45,19 @@ void pool_append(struct pool *p, struct object o);
 void pool_insert(struct pool *p, size_t idx, struct object o);
 void pool_dispose(struct pool *p);
 
-// VM object.
+// State object.
 struct state new_state();
+void state_free(struct state s);
+void state_dispose(struct state s);
+
+// VM object.
 struct vm *new_vm(char *file, struct bytecode bytecode);
 struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state);
 int vm_run(struct vm * restrict vm);
+void vm_free(struct vm * restrict vm);
 void vm_errorf(struct vm * restrict vm, const char *fmt, ...);
 void go_vm_errorf(struct vm * restrict vm, const char *fmt);
 struct object vm_last_popped_stack_elem(struct vm * restrict vm);
+
 void gc_init(void);
-void vm_dispose(struct vm *vm);
-void state_dispose(struct state s);
 void set_exit();

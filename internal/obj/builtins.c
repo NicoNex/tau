@@ -249,36 +249,21 @@ static struct object append_b(struct object *args, size_t len) {
 		return errorf("append: first argument must be a list");
 	}
 
-	struct list *old = args[0].data.list;
+	struct list *l = args[0].data.list;
 
-	// If there's enough space in the old list set the old one as slice and
-	// return a new list poiting to the old one.
-	if (old->cap - old->len >= len - 1) {
-		struct object ret = new_list_obj_data(old->list, old->len, old->cap);
-		struct list *new = ret.data.list;
-
-		for (size_t i = 1; i < len; i++) {
-			new->list[new->len++] = args[i];
-		}
-		return ret;
+	// If there isn't enough space in the list allocate the closest power of two
+	// able to contain both the previous objects and the new ones.
+	if (l->cap - l->len < len - 1) {
+		l->cap = pow(2, ceil(log2(l->cap + (len - 1))));
+		l->list = GC_REALLOC(l->list, l->cap * sizeof(struct object));
 	}
 
-	// If there's not enough space in the old list we create a new bigger list
-	// and we copy all the old objects to the new list.
-	size_t llen = 0;
-	size_t cap = pow(2, ceil(log2(old->cap + (len - 1))));
-	struct object *l = GC_MALLOC(sizeof(struct object) * cap);
-
-	// Copy the objects in the old list to the new one.
-	for (size_t i = 0; i < old->len; i++) {
-		l[llen++] = old->list[i];
-	}
-	// Append the new objects to the new list.
+	// Copy the objects in the argument to the list.
 	for (size_t i = 1; i < len; i++) {
-		l[llen++] = args[i];
+		l->list[l->len++] = args[i];
 	}
 
-	return new_list_obj_data(l, llen, cap);
+	return args[0];
 }
 
 static struct object new_b(struct object *args, size_t len) {

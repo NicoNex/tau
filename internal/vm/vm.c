@@ -262,7 +262,7 @@ static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, 
 	if (fn.type != obj_function) {
 		vm_errorf(vm, "not a function %s", object_str(fn));
 	}
-	
+
 	struct object *free = malloc(sizeof(struct object) * num_free);
 	for (uint32_t i = 0; i < num_free; i++) {
 		free[i] = vm->stack[vm->sp-num_free+i];
@@ -271,7 +271,7 @@ static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, 
 	struct object cl = new_closure_obj(fn.data.fn, free, num_free);
 	vm->sp -= num_free;
 	vm_stack_push(vm, cl);
-	
+
 	vm_heap_add(vm, cl);
 	gc(vm);
 }
@@ -761,6 +761,11 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 		case obj_string:
 			arg_types[i] = &ffi_type_pointer;
 			arg_values[i] = o->data.str->str;
+			break;
+
+		case obj_native:
+			arg_types[i] = &ffi_type_pointer;
+			arg_values[i] = o->data.handle;
 			break;
 
 		case obj_null:

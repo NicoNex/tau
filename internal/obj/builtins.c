@@ -44,6 +44,7 @@ static struct object println_b(struct object *args, size_t len) {
 		if (i < len-1) putc(' ', stdout);
 	}
 	putc('\n', stdout);
+	fflush(stdout);
 	return null_obj;
 }
 
@@ -55,6 +56,7 @@ static struct object print_b(struct object *args, size_t len) {
 		free(s);
 		if (i < len-1) putc(' ', stdout);
 	}
+	fflush(stdout);
 	return null_obj;
 }
 
@@ -71,17 +73,21 @@ static struct object input_b(struct object *args, size_t len) {
 	size_t ilen = 0;
 
 	do {
-		tmp = getchar();
-		char *reinput = realloc(input, ilen + 1);
-		if (reinput == NULL) {
-			free(input);
-			return errorf("input: error allocating memory");
-		}
-		input = reinput;
-		input[ilen++] = tmp;
+        tmp = getchar();
+        char *reinput = realloc(input, ilen + 1);
+        if (reinput == NULL) {
+        	free(input);
+            return errorf("input: error allocating memory");
+        }
+        input = reinput;
+        if (tmp != '\n' && tmp != '\r') {
+            input[ilen++] = tmp;
+        }
+    } while (tmp != '\n' && tmp != '\0');
 
-	} while (tmp != '\n' && tmp != '\0');
-	input[ilen - 1] = '\0';
+    if (input != NULL) {
+        input[ilen] = '\0';
+    }
 
 	return new_string_obj(input, ilen);
 }

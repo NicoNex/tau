@@ -57,7 +57,7 @@ char *object_str(struct object o) {
 	case obj_native:
 		return strdup("<native>");
 	default:
-		return strdup("<unimplemented>");
+		return strdup("<corrupted>");
 	}
 }
 

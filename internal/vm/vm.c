@@ -57,7 +57,7 @@ inline struct state new_state() {
 	return (struct state) {
 		.heap = new_heap(HEAP_TRESHOLD),
 		.globals = new_pool(1000),
-		.consts.list = NULL,
+		.consts = {0},
 		.ndefs = 0
 	};
 }
@@ -815,11 +815,11 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 int vm_run(struct vm * restrict vm);
 
 static int run_and_cleanup(void *vmptr) {
-	struct vm *vm = (struct vm *) vm;
-	int ret = vm_run(vmptr);
+	struct vm *vm = vmptr;
+	int ret = vm_run(vm);
 	fflush(stdout);
 	heap_dispose(&vm->state.heap);
-	vm_dispose(vmptr);
+	vm_dispose(vm);
 	return ret;
 }
 

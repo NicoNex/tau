@@ -172,7 +172,22 @@ contexts:
           pop: true
         - match: \%%
           scope: constant.character.escape.tau
+        - include: match-interpolation  # Include interpolation context
         - include: match-fmt
+
+  match-interpolation:
+    - match: '{{'
+      scope: constant.character.escape.tau
+    - match: '}}'
+      scope: constant.character.escape.tau
+    - match: \{
+      scope: punctuation.section.embedded.begin.tau
+      push:
+        - meta_scope: source.embedded.tau
+        - match: \}
+          scope: punctuation.section.embedded.end.tau
+          pop: true
+        - include: match-tokens
 
   match-single-quoted-strings:
     - match: "`"

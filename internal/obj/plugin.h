@@ -7,6 +7,7 @@
 
 	#define RTLD_LAZY NULL
 	#define dlopen(path, mode) LoadLibrary((path))
+	#define dlclose(handle) FreeLibrary((HMODULE)(handle))
 	#define dlsym(handle, name) GetProcAddress((handle), (name))
 
 	inline char *dlerror() {

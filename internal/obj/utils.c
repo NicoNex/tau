@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include "object.h"
+#include "plugin.h"
 
 char *otype_str(enum obj_type t) {
 	static char *strings[] = {
@@ -129,7 +130,7 @@ void free_obj(struct object o) {
 		return;
 	case obj_native:
 		free(o.marked);
-		free(o.data.handle);
+		dlclose(o.data.handle);
 		return;
 	default:
 		return;

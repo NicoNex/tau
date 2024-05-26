@@ -210,7 +210,6 @@ static inline void vm_exec_dot(struct vm * restrict vm) {
 		struct object o = (struct object) {
 			.data.handle = ptr,
 			.type = obj_native,
-			.marked = MARKPTR()
 		};
 		vm_stack_push(vm, o);
 		return;
@@ -964,8 +963,11 @@ static inline void gc(struct vm * restrict vm) {
 
 		*prev = n->next;
 		heap->len--;
-		#pragma omp task shared(n)
-		free(n);
+		#pragma omp task shared(n, o)
+		{
+			free(n);
+			free_obj(o);
+		}
 	}
 
 #ifdef GC_DEBUG

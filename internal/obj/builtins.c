@@ -97,14 +97,18 @@ static struct object string_b(struct object *args, size_t len) {
 		return errorf("string: wrong number of arguments, expected 1, got %lu", len);
 	}
 
-	switch (args[0].type) {
+	struct object o = args[0];
+	switch (o.type) {
 	case obj_native: {
-		char *s = (char *) args[0].data.handle;
+		char *s = (char *) o.data.handle;
 		return new_string_obj(s, strlen(s));
 	}
 
+	case obj_bytes:
+		o.type = obj_string;
+
 	default: {
-		char *s = object_str(args[0]);
+		char *s = object_str(o);
 		return new_string_obj(s, strlen(s));
 	}
 	}

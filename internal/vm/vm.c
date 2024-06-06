@@ -759,7 +759,7 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 
 		case obj_string:
 			arg_types[i] = &ffi_type_pointer;
-			arg_values[i] = o->data.str->str;
+			arg_values[i] = &o->data.str->str;
 			break;
 
 		case obj_native:

@@ -2,31 +2,7 @@
 
 #if __has_include(<threads.h>)
 	#include <threads.h>
-#elif defined(_WIN32) || defined(WIN32)
-	#include <windows.h>
-	#include <process.h>
-
-	// Thread
-	#define thrd_t HANDLE
-	#define thrd_success 0
-	#define thrd_create(thrd, fn, arg) ((*(thrd) = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)(fn), (arg), 0, NULL)) == NULL)
-
-	// Mutex
-	#define mtx_t CRITICAL_SECTION
-	#define mtx_plain NULL
-	#define mtx_init(cs, mode) InitializeCriticalSection((cs))
-	#define mtx_lock EnterCriticalSection
-	#define mtx_unlock LeaveCriticalSection
-	#define mtx_destroy DeleteCriticalSection
-
-	// Condition
-	#define cnd_t CONDITION_VARIABLE
-	#define cnd_init(arg) InitializeConditionVariable(arg)
-	#define cnd_broadcast WakeAllConditionVariable
-	#define cnd_signal WakeConditionVariable
-	#define cnd_wait(cond, mtx) while (!SleepConditionVariableCS(cond, mtx, INFINITE)) {}
-	#define cnd_destroy(cnd)
-#else
+#elif __has_include(<pthread.h>)
 	#include <pthread.h>
 
 	#ifdef __clang__
@@ -72,4 +48,30 @@
 	#define cnd_signal pthread_cond_signal
 	#define cnd_wait pthread_cond_wait
 	#define cnd_destroy pthread_cond_destroy
+#elif defined(_WIN32) || defined(WIN32)
+	#include <windows.h>
+	#include <process.h>
+
+	// Thread
+	#define thrd_t HANDLE
+	#define thrd_success 0
+	#define thrd_create(thrd, fn, arg) ((*(thrd) = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)(fn), (arg), 0, NULL)) == NULL)
+
+	// Mutex
+	#define mtx_t CRITICAL_SECTION
+	#define mtx_plain NULL
+	#define mtx_init(cs, mode) InitializeCriticalSection((cs))
+	#define mtx_lock EnterCriticalSection
+	#define mtx_unlock LeaveCriticalSection
+	#define mtx_destroy DeleteCriticalSection
+
+	// Condition
+	#define cnd_t CONDITION_VARIABLE
+	#define cnd_init(arg) InitializeConditionVariable(arg)
+	#define cnd_broadcast WakeAllConditionVariable
+	#define cnd_signal WakeConditionVariable
+	#define cnd_wait(cond, mtx) while (!SleepConditionVariableCS(cond, mtx, INFINITE)) {}
+	#define cnd_destroy(cnd)
+#else
+	#error "unsupported threading library"
 #endif

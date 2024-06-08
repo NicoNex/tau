@@ -155,18 +155,9 @@ inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 }
 
 void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
-	static uint8_t halt_code[1] = {op_halt};
-	struct frame halt_frame = (struct frame) {
-		.cl = null_obj,
-		.ip = halt_code,
-		.start = halt_code,
-		.base_ptr = 0
-	};
-
 	struct bookmark *b = vm_get_bookmark(vm);
 	if (b == NULL) {
 		puts(fmt);
-		vm_push_frame(vm, halt_frame);
 		return;
 	}
 
@@ -183,8 +174,6 @@ void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
 		arrow,
 		fmt
 	);
-
-	vm_push_frame(vm, halt_frame);
 }
 
 static inline void vm_exec_dot(struct vm * restrict vm) {
@@ -1277,7 +1266,9 @@ int vm_run(struct vm * restrict vm) {
 		if (path.type != obj_string) {
 			vm_errorf(vm, "import: expected string, got %s", otype_str(path.type));
 		}
-		vm_exec_load_module(vm, path.data.str->str);
+		if (vm_exec_load_module(vm, path.data.str->str)) {
+			return 1;
+		}
 		DISPATCH();
 	}
 

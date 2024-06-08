@@ -66,8 +66,6 @@ func New(file string, bc compiler.Bytecode) VM {
 	return C.new_vm(C.CString(file), cbytecode(bc))
 }
 
-func setConsts(state State)
-
 func NewWithState(file string, bc compiler.Bytecode, state State) VM {
 	if len(Consts) > 0 {
 		state.SetConsts(Consts)
@@ -130,46 +128,46 @@ func lookup(taupath string) (string, error) {
 }
 
 //export vm_exec_load_module
-func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
+func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	path := C.GoString(cpath)
 
 	if path == "" {
 		C.go_vm_errorf(vm, C.CString("import: no file provided"))
-		return
+		return 1
 	}
 
 	p, err := lookup(path)
 	if err != nil {
 		msg := fmt.Sprintf("import: %v", err)
 		C.go_vm_errorf(vm, C.CString(msg))
-		return
+		return 1
 	}
 
 	if mod, ok := importTab[p]; ok {
 		vm.stack[vm.sp] = mod
 		vm.sp++
-		return
+		return 1
 	}
 
 	b, err := os.ReadFile(p)
 	if err != nil {
 		msg := fmt.Sprintf("import: %v", err)
 		C.go_vm_errorf(vm, C.CString(msg))
-		return
+		return 1
 	}
 
 	tree, errs := parser.Parse(path, string(b))
 	if len(errs) > 0 {
 		m := fmt.Sprintf("import: multiple errors in module %s", path)
 		C.go_vm_errorf(vm, C.CString(m))
-		return
+		return 1
 	}
 
 	c := compiler.NewImport(int(vm.state.ndefs), &Consts)
 	c.SetFileInfo(path, string(b))
 	if err := c.Compile(tree); err != nil {
 		C.go_vm_errorf(vm, C.CString(err.Error()))
-		return
+		return 1
 	}
 
 	bc := c.Bytecode()
@@ -179,7 +177,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	defer C.vm_dispose(tvm)
 	if i := C.vm_run(tvm); i != 0 {
 		C.go_vm_errorf(vm, C.CString("import error"))
-		return
+		return 1
 	}
 	vm.state = tvm.state
 
@@ -201,6 +199,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) {
 	importTab[p] = mod
 	vm.stack[vm.sp] = mod
 	vm.sp++
+	return 0
 }
 
 //export restore_term

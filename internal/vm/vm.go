@@ -62,6 +62,10 @@ func (s *State) SetConsts(consts []obj.Object) {
 	}
 }
 
+func (s State) NumDefs() int {
+	return int(s.ndefs)
+}
+
 func New(file string, bc compiler.Bytecode) VM {
 	return C.new_vm(C.CString(file), cbytecode(bc))
 }

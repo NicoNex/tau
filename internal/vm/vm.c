@@ -796,7 +796,7 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 	case obj_native:
 		return vm_call_native(vm, o, numargs);
 	default:
-		vm_errorf(vm, "calling non-function");
+		vm_errorf(vm, "calling non-function: got type %s", otype_str(o->type));
 	}
 }
 
@@ -861,7 +861,7 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 	}
 
 	default:
-		vm_errorf(vm, "calling non-function");
+		vm_errorf(vm, "calling non-function: got type %s", otype_str(o->type));
 	}
 }
 

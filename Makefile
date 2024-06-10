@@ -53,8 +53,11 @@ gc-debug:
 	cd cmd/tau && \
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DGC_DEBUG" CGO_LDFLAGS="$(LDFLAGS)" go build -o $(DIR)/tau
 
-install: all
-	mv tau /usr/bin
+install:
+	mkdir -p ~/.local/bin
+	mkdir -p ~/.local/lib/tau
+	cp tau ~/.local/bin/tau
+	cp -r stdlib/* ~/.local/lib/tau
 
 profile:
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go build profile.go

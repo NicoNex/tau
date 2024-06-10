@@ -108,22 +108,48 @@ func isExported(n string) bool {
 	return unicode.IsUpper(r)
 }
 
-func lookup(taupath string) (string, error) {
-	var paths []string
+func lookupPaths(taupath string) []string {
+	home, err := os.UserHomeDir()
 	taupath = filepath.Clean(taupath)
 
-	if ext := filepath.Ext(taupath); ext != "" {
-		paths = []string{taupath, filepath.Join("/", "lib", "tau", taupath)}
-	} else {
-		paths = []string{
-			taupath + ".tau",
-			taupath + ".tauc",
-			filepath.Join("/", "lib", "tau", taupath+".tau"),
-			filepath.Join("/", "lib", "tau", taupath+".tauc"),
+	if filepath.Ext(taupath) != "" {
+		paths := []string{taupath}
+
+		if err == nil {
+			paths = append(
+				paths,
+				filepath.Join(home, ".local", "lib", "tau", taupath),
+			)
 		}
+
+		paths = append(paths, filepath.Join("/", "lib", "tau", taupath))
+		return paths
 	}
 
-	for _, p := range paths {
+	paths := []string{
+		taupath + ".tau",
+		taupath + ".tauc",
+	}
+
+	if err == nil {
+		paths = append(
+			paths,
+			filepath.Join(home, ".local", "lib", "tau", taupath+".tau"),
+			filepath.Join(home, ".local", "lib", "tau", taupath+".tauc"),
+		)
+	}
+
+	paths = append(
+		paths,
+		filepath.Join("/", "lib", "tau", taupath+".tau"),
+		filepath.Join("/", "lib", "tau", taupath+".tauc"),
+	)
+
+	return paths
+}
+
+func lookup(taupath string) (string, error) {
+	for _, p := range lookupPaths(taupath) {
 		if _, err := os.Stat(p); err == nil {
 			return p, nil
 		}

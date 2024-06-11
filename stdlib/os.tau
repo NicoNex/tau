@@ -1,0 +1,75 @@
+libc = plugin("/usr/lib/libc.so.6")
+
+eof = -1
+
+EOF = fn() { eof }
+
+Mkdir = fn(path, perm) { int(libc.mkdir(path, perm)) }
+
+Open = fn(path, perm) {
+	file = new()
+
+	if failed(file.f = libc.fopen(path, perm)) {
+		return file.f
+	}
+
+	file.Close = fn() { libc.fclose(file.f) }
+
+	file.Read = fn() {
+		buf = []
+
+		for c = int(libc.fgetc(file.f)); c != eof; c = int(libc.fgetc(file.f)) {
+			buf = append(buf, c)
+		}
+		return bytes(buf)
+	}
+
+	file.ReadString = fn() { string(file.Read()) }
+
+	file.Write = fn(a) {
+		if type(a) != "bytes" {
+			if failed(a = bytes(a)) {
+				return a
+			}
+		}
+
+		for i = 0; i < len(a); ++i {
+			libc.fputc(a[i], file.f)
+		}
+		return i
+	}
+
+	return file
+}
+
+ReadFile = fn(path) {
+	if failed(f = Open(path, "r")) {
+		return f
+	}
+	if failed(b = f.Read()) {
+		return b
+	}
+	if failed(err = f.Close()) {
+		return err
+	}
+	return b
+}
+
+ReadFileString = fn(path) { string(ReadFile(path)) }
+
+# TODO: handle perm
+WriteFile = fn(path, data, perm) {
+	if type(data) != "bytes" {
+		if failed(data = bytes(data)) {
+			return data
+		}
+	}
+
+	if failed(f = Open(path, "w")) {
+		return f
+	}
+	if failed(err = f.Write(data)) {
+		return err
+	}
+	f.Close()
+}

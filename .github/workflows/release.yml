@@ -34,7 +34,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential autoconf automake libtool pkg-config gettext mingw-w64 mingw-w64-tools mingw-w64-x86_64-{gcc,binutils,headers}
+          sudo apt-get install -y build-essential autoconf automake libtool pkg-config gettext mingw-w64 mingw-w64-tools
 
       - name: Build for Linux
         run: |

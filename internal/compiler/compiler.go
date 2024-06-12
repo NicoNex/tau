@@ -315,7 +315,7 @@ func (b Bytecode) Encode() []byte {
 	return C.GoBytes(unsafe.Pointer(buf.buf), C.int(buf.len))
 }
 
-func (b Bytecode) Insts() []byte {
+func (b Bytecode) Insts() code.Instructions {
 	return C.GoBytes(unsafe.Pointer(b.insts), C.int(b.len))
 }
 

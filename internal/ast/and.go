@@ -54,11 +54,22 @@ func (a And) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = a.l.Compile(c); err != nil {
 		return
 	}
-	if position, err = a.r.Compile(c); err != nil {
+
+	jntPos := c.Emit(code.OpJumpNotTruthy, compiler.GenericPlaceholder)
+	// Emit OpTrue because the value will be popped from the stack.
+	position = c.Emit(code.OpTrue)
+	position, err = a.r.Compile(c)
+	if err != nil {
 		return
 	}
 	position = c.Emit(code.OpAnd)
+	jmpPos := c.Emit(code.OpJump, compiler.GenericPlaceholder)
+	// Emit OpFalse because the expression needs to return false if jumped here.
+	position = c.Emit(code.OpFalse)
+	c.ReplaceOperand(jntPos, position)
+	c.ReplaceOperand(jmpPos, c.Pos())
 	c.Bookmark(a.pos)
+
 	return
 }
 

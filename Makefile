@@ -32,7 +32,10 @@ all: libffi tau
 
 tau:
 	cd cmd/tau && \
-	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go build -o $(DIR)/tau
+	CC=$(CC) \
+	CGO_CFLAGS="$(CFLAGS)" \
+	CGO_LDFLAGS="$(LDFLAGS)" \
+	go build -o $(DIR)/tau
 
 libffi:
 	if [ ! -d libffi ] || [ $$(ls -1q libffi | wc -l) -eq 0 ]; then \
@@ -44,6 +47,30 @@ libffi:
 	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
 	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
 	make install CC=$(CC)
+
+libffi-windows:
+	if [ ! -d libffi ] || [ $$(ls -1q libffi | wc -l) -eq 0 ]; then \
+	    git submodule init; \
+	    git submodule update --recursive; \
+	fi
+
+	CC=$(CC) cd libffi && \
+	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
+	./configure --host=x86_64-w64-mingw32 --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
+	make install CC=x86_64-w64-mingw32-gcc AR=x86_64-w64-mingw32-ar RANLIB=x86_64-w64-mingw32-ranlib
+
+tau-windows:
+	cd cmd/tau && \
+	CC=x86_64-w64-mingw32-gcc \
+	CGO_ENABLED=1 \
+	RANLIB=x86_64-w64-mingw32-ranlib \
+	CGO_CFLAGS="$(CFLAGS)" \
+	CGO_LDFLAGS="$(LDFLAGS)" \
+	GOOS=windows \
+	GOARCH=amd64 \
+	go build -o $(DIR)/tau.exe
+
+windows: libffi-windows tau-windows
 
 debug:
 	cd cmd/tau && \

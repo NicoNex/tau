@@ -7,21 +7,6 @@ package obj
 // #include <stdint.h>
 // #include "object.h"
 //
-// static inline uint32_t is_truthy(struct object o) {
-// 	switch (o.type) {
-// 	case obj_boolean:
-// 		return o.data.i == 1;
-// 	case obj_integer:
-// 		return o.data.i != 0;
-// 	case obj_float:
-// 		return o.data.f != 0;
-// 	case obj_null:
-// 		return 0;
-// 	default:
-// 		return 1;
-// 	}
-// }
-//
 // static inline uint32_t is_error(struct object o) {
 // 	return o.type == obj_error;
 // }
@@ -147,6 +132,10 @@ func (o Object) CompiledFunction() *CompiledFunction {
 	return C.function_val(o)
 }
 
+func (o Object) IsTruthy() bool {
+	return C.is_truthy(&o) == 1
+}
+
 func (cf CompiledFunction) Instructions() []byte {
 	return C.GoBytes(unsafe.Pointer(cf.instructions), C.int(cf.len))
 }
@@ -172,10 +161,6 @@ func ParseBool(b bool) Object {
 		return TrueObj
 	}
 	return FalseObj
-}
-
-func IsTruthy(o Object) bool {
-	return C.is_truthy(o) == 1
 }
 
 func IsError(o Object) bool {

@@ -226,3 +226,4 @@ void print_obj(struct object o);
 void mark_obj(struct object o);
 void free_obj(struct object o);
 uint64_t fnv64a(char *s);
+uint32_t is_truthy(struct object * restrict o);

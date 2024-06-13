@@ -25,15 +25,7 @@ func (b Bang) Eval() (obj.Object, error) {
 	if err != nil {
 		return obj.NullObj, err
 	}
-
-	switch value.Type() {
-	case obj.BoolType:
-		return obj.ParseBool(!obj.IsTruthy(value)), nil
-	case obj.NullType:
-		return obj.TrueObj, nil
-	default:
-		return obj.FalseObj, nil
-	}
+	return obj.ParseBool(!value.IsTruthy()), nil
 }
 
 func (b Bang) String() string {

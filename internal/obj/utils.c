@@ -136,3 +136,20 @@ void free_obj(struct object o) {
 		return;
 	}
 }
+
+inline uint32_t is_truthy(struct object * o) {
+	switch (o->type) {
+	case obj_boolean:
+		return o->data.i == 1;
+	case obj_integer:
+		return o->data.i != 0;
+	case obj_float:
+		return o->data.f != 0;
+	case obj_string:
+		return o->data.str->len != 0;
+	case obj_null:
+		return 0;
+	default:
+		return 1;
+	}
+}

@@ -33,7 +33,7 @@ func (o Or) Eval() (obj.Object, error) {
 		return obj.NullObj, err
 	}
 
-	return obj.ParseBool(obj.IsTruthy(left) || obj.IsTruthy(right)), nil
+	return obj.ParseBool(left.IsTruthy() || right.IsTruthy()), nil
 }
 
 func (o Or) String() string {
@@ -57,7 +57,7 @@ func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
 
 	position = c.Emit(code.OpBang)
 	jntPos := c.Emit(code.OpJumpNotTruthy, compiler.GenericPlaceholder)
-	position = c.Emit(code.OpTrue)
+	position = c.Emit(code.OpFalse)
 
 	if position, err = o.r.Compile(c); err != nil {
 		return

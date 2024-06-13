@@ -33,7 +33,7 @@ func (a And) Eval() (obj.Object, error) {
 		return obj.NullObj, err
 	}
 
-	return obj.ParseBool(obj.IsTruthy(left) && obj.IsTruthy(right)), nil
+	return obj.ParseBool(left.IsTruthy() && right.IsTruthy()), nil
 }
 
 func (a And) String() string {

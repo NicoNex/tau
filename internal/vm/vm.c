@@ -350,21 +350,6 @@ static inline double to_double(struct object * restrict o) {
 	return o->data.f;
 }
 
-static inline uint32_t is_truthy(struct object * restrict o) {
-	switch (o->type) {
-	case obj_boolean:
-		return o->data.i == 1;
-	case obj_integer:
-		return o->data.i != 0;
-	case obj_float:
-		return o->data.f != 0;
-	case obj_null:
-		return 0;
-	default:
-		return 1;
-	}
-}
-
 static inline void unsupported_operator_error(struct vm * restrict vm, char *op, struct object *l, struct object *r) {
 	vm_errorf(vm, "unsupported operator '%s' for types %s and %s", op, otype_str(l->type), otype_str(r->type));
 }
@@ -645,18 +630,7 @@ static inline void vm_exec_minus(struct vm * restrict vm) {
 
 static inline void vm_exec_bang(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);
-
-	switch (right->type) {
-	case obj_boolean:
-		vm_stack_push(vm, parse_bool(!right->data.i));
-		break;
-	case obj_null:
-		vm_stack_push(vm, true_obj);
-		break;
-	default:
-		vm_stack_push(vm, false_obj);
-		break;
-	}
+	vm_stack_push(vm, parse_bool(!is_truthy(right)));
 }
 
 // TODO: improve type assertion.

@@ -1,0 +1,119 @@
+---
+# on:
+#   push:
+#     tags:
+#       - "v*"
+
+on: [push]
+
+name: Build
+
+jobs:
+  # Build for Linux (both x86_64 and aarch64)
+  build-linux:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: [1.22.x]
+        arch: [x86_64, aarch64]
+
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Initialize and update submodules
+        run: git submodule init && git submodule update
+
+      - name: Build for Linux
+        run: make && mv tau tau-linux-${{ matrix.arch }}
+
+      - name: Archive Linux artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: tau-linux-${{ matrix.arch }}
+          path: ./tau-linux-${{ matrix.arch }}
+
+  # Build for Windows (only x86_64)
+  build-windows:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+
+    steps:
+      - name: Setup Go
+        uses: actions/setup-go@v3
+        with:
+          go-version: 1.22.x
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install MinGW
+        run: sudo apt install mingw-w64 -y
+
+      - name: Initialize and update submodules
+        run: git submodule init && git submodule update
+
+      - name: Build for Windows x86_64
+        run: make windows && mv tau.exe tau-windows-x86_64.exe
+
+      - name: Archive Windows artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: tau-windows-x86_64
+          path: ./tau-windows-x86_64.exe
+
+  # Build for MacOS
+  build-macos:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        go-version: [1.21.x]
+        arch: [x86_64, aarch64]
+
+    steps:
+      - name: Build MacOS
+        uses: actions/setup-go@v3
+        with:
+          go-version: ${{ matrix.go-version }}
+      - uses: actions/checkout@v4
+      - run: git submodule init && git submodule update
+      - run: brew install make automake libtool texinfo autoconf
+      - run: make && mv tau tau-macos-${{ matrix.arch }}
+      - name: Archive artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: tau-macos-${{ matrix.arch }}
+          path: ./tau-macos-${{ matrix.arch }}
+
+  # Build for Linux
+  # build-ubuntu:
+  #   runs-on: ubuntu-latest
+  #   strategy:
+  #     fail-fast: false
+  #     matrix:
+  #       go-version: [1.22.x]
+  #       arch: [x86_64, aarch64]
+
+  #   steps:
+  #     - name: Build GNU/Linux
+  #       uses: actions/setup-go@v3
+  #       with:
+  #         go-version: ${{ matrix.go-version }}
+  #     - uses: actions/checkout@v4
+  #     - run: apt install mingw-w64
+  #     - run: git submodule init && git submodule update
+  #     - run: make && mv tau tau-linux-${{ matrix.arch }}
+  #     - run: make windows && mv tau.exe tau-windows-${{ matrix.arch }}.exe
+  #     - name: Archive artifacts
+  #       uses: actions/upload-artifact@v3
+  #       with:
+  #         name: tau-linux-${{ matrix.arch }}
+  #         path: ./tau-linux-${{ matrix.arch }}

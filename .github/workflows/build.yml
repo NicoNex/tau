@@ -4,7 +4,10 @@ on:
     tags:
       - "v*"
 
-name: Build
+permissions:
+  contents: write
+
+name: Build and release
 
 jobs:
   create_release:
@@ -53,6 +56,8 @@ jobs:
 
       - name: Upload Linux artifact to release
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ./tau-linux-${{ matrix.arch }}
@@ -86,6 +91,8 @@ jobs:
 
       - name: Upload Windows artifact to release
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ./tau-windows-x86_64.exe
@@ -114,6 +121,8 @@ jobs:
 
       - name: Upload MacOS artifact to release
         uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
           asset_path: ./tau-macos-${{ matrix.arch }}

@@ -15,7 +15,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: 1.22.x
+        go-version: [1.22.x]
         arch: [x86_64, aarch64]
 
     steps:
@@ -91,7 +91,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: 1.22.x
+        go-version: [1.22.x]
         arch: [x86_64, aarch64]
 
     steps:

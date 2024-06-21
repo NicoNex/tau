@@ -16,26 +16,27 @@ ifeq ($(UNAME_S),Darwin)
     GCC := $(shell which gcc-13)
 endif
 
+# Check if CC is defined
 ifneq ($(origin CC), undefined)
-	ifneq ($(CC),clang)
-		ifneq ($(GCC),)
-			CFLAGS += -fopenmp
-			LDFLAGS += -fopenmp
-			CC = $(GCC)
-		endif
-	endif
+    # Check if CC is not clang
+    ifneq ($(CC), clang)
+        # Check if the compiler is actually GCC by looking for "GCC" in the version output
+        GCC_CHECK := $(shell $(CC) --version 2>/dev/null | head -n 1 | grep -i "gcc")
+        ifneq ($(GCC_CHECK),)
+            CFLAGS += -fopenmp
+            LDFLAGS += -fopenmp
+        endif
+    endif
+endif
+
+# Default compiler fallback to GCC if GCC environment variable is set
+ifneq ($(GCC),)
+    CC = $(GCC)
 endif
 
 .PHONY: all tau libffi install profile run
 
 all: libffi tau
-
-tau:
-	cd cmd/tau && \
-	CC=$(CC) \
-	CGO_CFLAGS="$(CFLAGS)" \
-	CGO_LDFLAGS="$(LDFLAGS)" \
-	go build -o $(DIR)/tau
 
 libffi:
 	if [ ! -d libffi ] || [ $$(ls -1q libffi | wc -l) -eq 0 ]; then \
@@ -58,6 +59,13 @@ libffi-windows:
 	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
 	./configure --host=x86_64-w64-mingw32 --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
 	make install CC=x86_64-w64-mingw32-gcc AR=x86_64-w64-mingw32-ar RANLIB=x86_64-w64-mingw32-ranlib
+
+tau:
+	cd cmd/tau && \
+	CC=$(CC) \
+	CGO_CFLAGS="$(CFLAGS)" \
+	CGO_LDFLAGS="$(LDFLAGS)" \
+	go build -o $(DIR)/tau
 
 tau-windows:
 	cd cmd/tau && \

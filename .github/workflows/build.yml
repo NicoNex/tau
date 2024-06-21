@@ -116,8 +116,8 @@ jobs:
           go-version: ${{ matrix.go-version }}
       - uses: actions/checkout@v4
       - run: git submodule init && git submodule update
-      - run: brew install make automake libtool texinfo autoconf
-      - run: make && mv tau tau-macos-${{ matrix.arch }}
+      - run: brew install gcc@14 make automake libtool texinfo autoconf
+      - run: make CC=gcc-14 && mv tau tau-macos-${{ matrix.arch }}
 
       - name: Upload MacOS artifact to release
         uses: actions/upload-release-asset@v1

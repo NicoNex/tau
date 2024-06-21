@@ -70,8 +70,8 @@ tau:
 tau-windows:
 	cd cmd/tau && \
 	CC=x86_64-w64-mingw32-gcc \
-	CGO_ENABLED=1 \
 	RANLIB=x86_64-w64-mingw32-ranlib \
+	CGO_ENABLED=1 \
 	CGO_CFLAGS="$(CFLAGS)" \
 	CGO_LDFLAGS="$(LDFLAGS)" \
 	GOOS=windows \

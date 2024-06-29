@@ -57,6 +57,7 @@ func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
 
 	position = c.Emit(code.OpBang)
 	jntPos := c.Emit(code.OpJumpNotTruthy, compiler.GenericPlaceholder)
+	// Emit OpFalse because the value will be popped from the stack.
 	position = c.Emit(code.OpFalse)
 
 	if position, err = o.r.Compile(c); err != nil {
@@ -64,6 +65,7 @@ func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
 	}
 	position = c.Emit(code.OpOr)
 	jmpPos := c.Emit(code.OpJump, compiler.GenericPlaceholder)
+	// Emit OpTrue because the expression needs to return false if jumped here.
 	position = c.Emit(code.OpTrue)
 	c.ReplaceOperand(jntPos, position)
 	c.ReplaceOperand(jmpPos, c.Pos())

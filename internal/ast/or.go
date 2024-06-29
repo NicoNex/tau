@@ -54,11 +54,21 @@ func (o Or) Compile(c *compiler.Compiler) (position int, err error) {
 	if position, err = o.l.Compile(c); err != nil {
 		return
 	}
+
+	position = c.Emit(code.OpBang)
+	jntPos := c.Emit(code.OpJumpNotTruthy, compiler.GenericPlaceholder)
+	position = c.Emit(code.OpFalse)
+
 	if position, err = o.r.Compile(c); err != nil {
 		return
 	}
 	position = c.Emit(code.OpOr)
+	jmpPos := c.Emit(code.OpJump, compiler.GenericPlaceholder)
+	position = c.Emit(code.OpTrue)
+	c.ReplaceOperand(jntPos, position)
+	c.ReplaceOperand(jmpPos, c.Pos())
 	c.Bookmark(o.pos)
+
 	return
 }
 

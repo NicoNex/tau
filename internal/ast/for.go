@@ -63,7 +63,7 @@ func (f For) Compile(c *compiler.Compiler) (position int, err error) {
 	}
 
 	c.Emit(code.OpJump, startPos)
-	endPos := c.Pos()
+	endPos := c.Emit(code.OpNull)
 	c.ReplaceOperand(jumpNotTruthyPos, endPos)
 
 	err = c.ReplaceContinueOperands(startBody, endBody, endBody)

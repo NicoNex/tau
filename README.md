@@ -265,7 +265,7 @@ Tau has an assortment of useful builtin functions that operate on many data type
 - `type(x)` -- Returns the type of the object `x`.
 - `int(x)` -- Converts the object `x` to an Integer.
 - `float(x)` -- Converts the object `x` to a Float.
-- `exit([code | message, code]) -- Terminates the program with the optional exit code and/or message.
+- `exit([code | message, code])` -- Terminates the program with the optional exit code and/or message.
 - `append(xs, x)` -- Appends the object `x` to the List `xs` and returns the new List.
 - `new` -- Constructs a new empty object.
 - `failed(f)` -- Calls the Function `f` and returns true if an error occurred.

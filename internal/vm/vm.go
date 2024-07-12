@@ -1,19 +1,22 @@
 package vm
 
-// #cgo CFLAGS: -g -Ofast -fopenmp -I../obj/libffi/include
-// #cgo LDFLAGS: -fopenmp -L../obj/libffi/lib -lm
-// #include <stdlib.h>
-// #include <stdio.h>
-// #include "vm.h"
-// #include "../obj/object.h"
-//
-// static inline struct object get_global(struct pool *globals, size_t idx) {
-// 	return globals->list[idx];
-// }
-//
-// static inline void set_const(struct object *list, size_t idx, struct object o) {
-// 	list[idx] = o;
-// }
+/*
+#cgo CFLAGS: -g -Ofast -fopenmp -I../obj/libffi/include
+#cgo LDFLAGS: -fopenmp -L../obj/libffi/lib -lm
+#include <stdlib.h>
+#include <stdio.h>
+#include "vm.h"
+#include "../obj/object.h"
+#include "../compiler/bytecode.h"
+
+static inline struct object get_global(struct pool *globals, size_t idx) {
+	return globals->list[idx];
+}
+
+static inline void set_const(struct object *list, size_t idx, struct object o) {
+	list[idx] = o;
+}
+*/
 import "C"
 import (
 	"fmt"
@@ -50,16 +53,9 @@ func (s State) Free() {
 }
 
 func (s *State) SetConsts(consts []obj.Object) {
-	s.consts.list = (*C.struct_object)(C.realloc(
-		unsafe.Pointer(s.consts.list),
-		C.size_t(unsafe.Sizeof(consts[0]))*C.size_t(len(consts)),
-	))
+	s.consts.list = (*C.struct_object)(unsafe.Pointer(&consts[0]))
 	s.consts.len = C.size_t(len(consts))
 	s.consts.cap = C.size_t(len(consts))
-
-	for i, c := range consts {
-		C.set_const(s.consts.list, C.size_t(i), cobj(c))
-	}
 }
 
 func (s State) NumDefs() int {
@@ -67,10 +63,12 @@ func (s State) NumDefs() int {
 }
 
 func New(file string, bc compiler.Bytecode) VM {
+	Consts = bc.Consts()
 	return C.new_vm(C.CString(file), cbytecode(bc))
 }
 
 func NewWithState(file string, bc compiler.Bytecode, state State) VM {
+	Consts = bc.Consts()
 	if len(Consts) > 0 {
 		state.SetConsts(Consts)
 	}

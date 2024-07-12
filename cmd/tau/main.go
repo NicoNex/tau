@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"os"
+	"runtime"
 
 	"github.com/NicoNex/tau"
 )
@@ -26,7 +27,7 @@ func main() {
 		tau.PrintVersionInfo(os.Stdout)
 	case flag.NArg() > 0:
 		tau.ExecFileVM(flag.Arg(0))
-	case simple:
+	case simple || runtime.GOOS == "windows":
 		tau.SimpleREPL()
 	default:
 		tau.REPL()

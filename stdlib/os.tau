@@ -75,4 +75,4 @@ WriteFile = fn(path, data) {
 
 Chmod = fn(path, mode) { int(libc.chmod(path, mode)) == 0 }
 Remove = fn(path) { int(libc.remove(path)) == 0 }
-Unlink = fn(path) { int(libc.unlink(paht)) == 0 }
+Unlink = fn(path) { int(libc.unlink(path)) == 0 }

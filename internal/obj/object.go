@@ -1,37 +1,39 @@
 package obj
 
-// #cgo CFLAGS: -Ofast -Ilibffi/include
-// #cgo LDFLAGS: -Llibffi/lib ${SRCDIR}/libffi/lib/libffi.a -lm
-// #include <stdio.h>
-// #include <stdlib.h>
-// #include <stdint.h>
-// #include "object.h"
-//
-// static inline uint32_t is_error(struct object o) {
-// 	return o.type == obj_error;
-// }
-//
-// static inline char *error_msg(struct object err) {
-// 	return err.data.str->str;
-// }
-//
-// static inline int64_t int_val(struct object i) {
-// 	return i.data.i;
-// }
-//
-// static inline double float_val(struct object f) {
-// 	return f.data.f;
-// }
-//
-// static inline struct function *function_val(struct object fn) {
-// 	return fn.data.fn;
-// }
-//
-// static void set_stdout(int fd, const char *name) {
-// #if !defined(_WIN32) && !defined(WIN32)
-//	stdout = fdopen(fd, name);
-// #endif
-// }
+/*
+#cgo CFLAGS: -Ofast -Ilibffi/include
+#cgo LDFLAGS: -Llibffi/lib ${SRCDIR}/libffi/lib/libffi.a -lm
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdint.h>
+#include "object.h"
+
+static inline uint32_t is_error(struct object o) {
+	return o.type == obj_error;
+}
+
+static inline char *error_msg(struct object err) {
+	return err.data.str->str;
+}
+
+static inline int64_t int_val(struct object i) {
+	return i.data.i;
+}
+
+static inline double float_val(struct object f) {
+	return f.data.f;
+}
+
+static inline struct function *function_val(struct object fn) {
+	return fn.data.fn;
+}
+
+static void set_stdout(int fd, const char *name) {
+#if !defined(_WIN32) && !defined(WIN32)
+	stdout = fdopen(fd, name);
+#endif
+}
+*/
 import "C"
 
 import (

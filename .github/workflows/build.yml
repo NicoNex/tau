@@ -1,4 +1,3 @@
----
 on:
   push:
     tags:
@@ -29,7 +28,6 @@ jobs:
           draft: false
           prerelease: false
 
-  # Build for Linux (both x86_64 and aarch64)
   build-linux:
     runs-on: ubuntu-latest
     needs: create_release
@@ -37,7 +35,7 @@ jobs:
       fail-fast: false
       matrix:
         go-version: [1.23.x]
-        arch: [x86_64, arm64]
+        arch: [amd64, arm64]
 
     steps:
       - name: Setup Go
@@ -52,7 +50,10 @@ jobs:
         run: git submodule init && git submodule update
 
       - name: Build for Linux
-        run: make && mv tau tau-linux-${{ matrix.arch }}
+        run: |
+          export GOOS=linux
+          export GOARCH=${{ matrix.arch }}
+          make && mv tau tau-linux-${{ matrix.arch }}
 
       - name: Upload Linux artifact to release
         uses: actions/upload-release-asset@v1
@@ -64,7 +65,6 @@ jobs:
           asset_name: tau-linux-${{ matrix.arch }}
           asset_content_type: application/octet-stream
 
-  # Build for Windows (only x86_64)
   build-windows:
     runs-on: ubuntu-latest
     needs: create_release
@@ -72,25 +72,38 @@ jobs:
       fail-fast: false
       matrix:
         go-version: [1.23.x]
-        arch: [x86_64, arm64]
+        arch: [amd64, arm64]
 
     steps:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.22.x
+          go-version: ${{ matrix.go-version }}
 
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Install MinGW
-        run: sudo apt install mingw-w64 -y
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y g++-mingw-w64
 
       - name: Initialize and update submodules
         run: git submodule init && git submodule update
 
-      - name: Build for Windows x86_64
-        run: make windows && mv tau.exe tau-windows-x86_64.exe
+      - name: Build for Windows
+        run: |
+          if [ "${{ matrix.arch }}" == "amd64" ]; then
+            export CC=x86_64-w64-mingw32-gcc
+          elif [ "${{ matrix.arch }}" == "arm64" ]; then
+            export CC=aarch64-w64-mingw32-gcc
+          else
+            echo "Unsupported architecture"
+            exit 1
+          fi
+          export GOOS=windows
+          export GOARCH=${{ matrix.arch }}
+          make windows && mv tau.exe tau-windows-${{ matrix.arch }}.exe
 
       - name: Upload Windows artifact to release
         uses: actions/upload-release-asset@v1
@@ -98,11 +111,10 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ needs.create_release.outputs.upload_url }}
-          asset_path: ./tau-windows-x86_64.exe
-          asset_name: tau-windows-x86_64.exe
+          asset_path: ./tau-windows-${{ matrix.arch }}.exe
+          asset_name: tau-windows-${{ matrix.arch }}.exe
           asset_content_type: application/octet-stream
 
-  # Build for MacOS
   build-macos:
     runs-on: macos-latest
     needs: create_release
@@ -110,17 +122,24 @@ jobs:
       fail-fast: false
       matrix:
         go-version: [1.23.x]
-        arch: [x86_64, arm64]
+        arch: [amd64, arm64]
 
     steps:
-      - name: Build MacOS
+      - name: Setup Go
         uses: actions/setup-go@v3
         with:
           go-version: ${{ matrix.go-version }}
-      - uses: actions/checkout@v4
-      - run: git submodule init && git submodule update
-      - run: brew install gcc@14 make automake libtool texinfo autoconf
-      - run: make CC=gcc-14 && mv tau tau-macos-${{ matrix.arch }}
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Initialize and update submodules
+        run: git submodule init && git submodule update
+      - name: Install Dependencies
+        run: brew install gcc@14 make automake libtool texinfo autoconf
+      - name: Build for MacOS
+        run: |
+          export GOOS=darwin
+          export GOARCH=${{ matrix.arch }}
+          make CC=gcc-14 && mv tau tau-macos-${{ matrix.arch }}
 
       - name: Upload MacOS artifact to release
         uses: actions/upload-release-asset@v1

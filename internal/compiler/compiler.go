@@ -324,8 +324,11 @@ func (b Bytecode) CConsts() *obj.Object {
 }
 
 func (b Bytecode) Consts() []obj.Object {
-	var ret = make([]obj.Object, b.NConsts())
+	if b.NConsts() == 0 {
+		return []obj.Object{}
+	}
 
+	var ret = make([]obj.Object, b.NConsts())
 	cconsts := (*[1 << 28]obj.Object)(unsafe.Pointer(b.consts))[:b.NConsts():b.NConsts()]
 
 	for i := 0; i < int(b.NConsts()); i++ {

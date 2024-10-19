@@ -398,6 +398,7 @@ func lexExpression(l *lexer) stateFn {
 		if l.next() == '=' {
 			l.emit(item.BwXorAssign)
 		} else {
+			l.backup()
 			l.emit(item.BwXor)
 		}
 

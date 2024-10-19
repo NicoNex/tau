@@ -106,12 +106,13 @@ func isExported(n string) bool {
 	return unicode.IsUpper(r)
 }
 
-func lookupPaths(taupath string) []string {
+func lookupPaths(vmpath, taupath string) []string {
 	home, err := os.UserHomeDir()
 	taupath = filepath.Clean(taupath)
 
+	// If the module name has no extension.
 	if filepath.Ext(taupath) != "" {
-		paths := []string{taupath}
+		paths := []string{taupath, filepath.Join(vmpath, taupath)}
 
 		if err == nil {
 			paths = append(
@@ -127,6 +128,8 @@ func lookupPaths(taupath string) []string {
 	paths := []string{
 		taupath + ".tau",
 		taupath + ".tauc",
+		filepath.Join(vmpath, taupath) + ".tau",
+		filepath.Join(vmpath, taupath) + ".tauc",
 	}
 
 	if err == nil {
@@ -146,8 +149,8 @@ func lookupPaths(taupath string) []string {
 	return paths
 }
 
-func lookup(taupath string) (string, error) {
-	for _, p := range lookupPaths(taupath) {
+func lookup(vmfile, taupath string) (string, error) {
+	for _, p := range lookupPaths(filepath.Base(vmfile), taupath) {
 		if _, err := os.Stat(p); err == nil {
 			return p, nil
 		}
@@ -164,7 +167,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 		return 1
 	}
 
-	p, err := lookup(path)
+	p, err := lookup(C.GoString(vm.file), path)
 	if err != nil {
 		msg := fmt.Sprintf("import: %v", err)
 		C.go_vm_errorf(vm, C.CString(msg))

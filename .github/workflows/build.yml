@@ -37,7 +37,7 @@ jobs:
       fail-fast: false
       matrix:
         go-version: [1.23.x]
-        arch: [x86_64, arm64]
+        arch: [amd64, arm64]
 
     steps:
       - name: Setup Go
@@ -72,13 +72,13 @@ jobs:
       fail-fast: false
       matrix:
         go-version: [1.23.x]
-        arch: [x86_64, arm64]
+        arch: [amd64, arm64]
 
     steps:
       - name: Setup Go
         uses: actions/setup-go@v3
         with:
-          go-version: 1.22.x
+          go-version: 1.23.x
 
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -110,7 +110,7 @@ jobs:
       fail-fast: false
       matrix:
         go-version: [1.23.x]
-        arch: [x86_64, arm64]
+        arch: [amd64, arm64]
 
     steps:
       - name: Build MacOS

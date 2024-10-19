@@ -36,8 +36,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.22.x]
-        arch: [x86_64, aarch64]
+        go-version: [1.23.x]
+        arch: [x86_64, arm64]
 
     steps:
       - name: Setup Go
@@ -70,6 +70,9 @@ jobs:
     needs: create_release
     strategy:
       fail-fast: false
+      matrix:
+        go-version: [1.23.x]
+        arch: [x86_64, arm64]
 
     steps:
       - name: Setup Go
@@ -106,8 +109,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        go-version: [1.22.x]
-        arch: [x86_64, aarch64]
+        go-version: [1.23.x]
+        arch: [x86_64, arm64]
 
     steps:
       - name: Build MacOS

@@ -445,8 +445,8 @@ static struct object bin_b(struct object *args, size_t len) {
 	s[1] = 'b';
 	int idx = 2;
 
-	for (int64_t n = args[0].data.i; n; n >>= 1) {
-		s[idx++] = n & 1 ? '1' : '0';
+	for (uint64_t n = args[0].data.i; n; n >>= 1) {
+		s[idx++] = (n & 1) + '0';
 	}
 	return new_string_obj(s, strlen(s));
 }

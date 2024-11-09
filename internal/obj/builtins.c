@@ -431,6 +431,7 @@ static struct object oct_b(struct object *args, size_t len) {
 	return new_string_obj(s, strlen(s));
 }
 
+#if __BYTE_ORDER__ == __BIG_ENDIAN__
 static struct object bin_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("bin: wrong number of arguments, expected 1, got %lu", len);
@@ -443,13 +444,46 @@ static struct object bin_b(struct object *args, size_t len) {
 	char *s = calloc(67, sizeof(char));
 	s[0] = '0';
 	s[1] = 'b';
-	int idx = 2;
 
-	for (uint64_t n = args[0].data.i; n; n >>= 1) {
+	uint64_t n = args[0].data.i;
+	if (n == 0) {
+		s[2] = '0';
+		return new_string_obj(s, strlen(s));
+	}
+
+	for (int idx = 2; n; n >>= 1) {
 		s[idx++] = (n & 1) + '0';
 	}
 	return new_string_obj(s, strlen(s));
 }
+#else
+static struct object bin_b(struct object *args, size_t len) {
+	if (len != 1) {
+		return errorf("bin: wrong number of arguments, expected 1, got %lu", len);
+	}
+
+	if (args[0].type != obj_integer) {
+		return errorf("bin: first argument must be int, got %s instead", otype_str(args[0].type));
+	}
+
+	char *s = calloc(67, sizeof(char));
+	s[0] = '0';
+	s[1] = 'b';
+
+	uint64_t n = args[0].data.i;
+	if (n == 0) {
+		s[2] = '0';
+		return new_string_obj(s, strlen(s));
+	}
+
+	// We add "2" to the index instead of the conventional "1" because we keep
+	// track of the leading "0b".
+	for (int idx = log2(n) + 2; n; n >>= 1) {
+		s[idx--] = (n & 1) + '0';
+	}
+	return new_string_obj(s, strlen(s));
+}
+#endif
 
 static struct object slice_b(struct object *args, size_t len) {
 	if (len != 3) {

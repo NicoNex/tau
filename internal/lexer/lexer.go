@@ -120,14 +120,19 @@ func lexIdentifier(l *lexer) stateFn {
 
 func lexNumber(l *lexer) stateFn {
 	var typ = item.Int
-	var digits = "0123456789"
+	var digits = "0123456789_"
 
 	// Optional leading sign
 	l.accept("+-")
 
-	// Is it hex?
-	if l.accept("0") && l.accept("xX") {
-		digits = "0123456789abcdefABCDEF"
+	if l.accept("0") {
+		if l.accept("xX") {
+			digits = "0123456789abcdefABCDEF_"
+		} else if l.accept("bB") {
+			digits = "01_"
+		} else if l.accept("oO") {
+			digits = "01234567_"
+		}
 	}
 
 	l.acceptRun(digits)
@@ -410,11 +415,11 @@ func lexExpression(l *lexer) stateFn {
 		l.emit(item.EOF)
 		return nil
 
+	case isNumber(r):
+		l.backup()
+		return lexNumber
+
 	default:
-		if isNumber(r) {
-			l.backup()
-			return lexNumber
-		}
 		l.errorf("lexer: invalid item %q", r)
 	}
 	return lexExpression
@@ -432,7 +437,7 @@ func isNumber(r rune) bool {
 	return r == '+' || r == '-' || unicode.IsNumber(r)
 }
 
-func Lex(in string) chan item.Item {
+func Lex(in string) <-chan item.Item {
 	l := &lexer{
 		input: in,
 		items: make(chan item.Item),

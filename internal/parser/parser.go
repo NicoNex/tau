@@ -11,7 +11,7 @@ import (
 )
 
 type Parser struct {
-	items         chan item.Item
+	items         <-chan item.Item
 	file          string
 	input         string
 	prefixParsers map[item.Type]parsePrefixFn
@@ -85,7 +85,7 @@ var precedences = map[item.Type]int{
 	item.Dot:            Dot,
 }
 
-func newParser(file, input string, items chan item.Item) *Parser {
+func newParser(file, input string, items <-chan item.Item) *Parser {
 	p := &Parser{
 		cur:           <-items,
 		peek:          <-items,

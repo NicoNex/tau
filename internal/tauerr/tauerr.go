@@ -7,20 +7,36 @@ import (
 	"strings"
 )
 
+type TauErr struct {
+	Line    int
+	Column  int
+	File    string
+	Message string
+}
+
+func (e TauErr) Error() string {
+	return e.Message
+}
+
 func New(file, input string, pos int, s string, a ...any) error {
 	if file == "" {
 		file = "<stdin>"
 	}
 
 	line, lineno, rel := line(input, pos)
-	return fmt.Errorf(
-		"error in file %s at line %d:\n    %s\n    %s\n%s",
-		file,
-		lineno,
-		line,
-		arrow(rel),
-		fmt.Sprintf(s, a...),
-	)
+	return TauErr{
+		File:   file,
+		Line:   lineno,
+		Column: rel,
+		Message: fmt.Sprintf(
+			"error in file %s at line %d:\n    %s\n    %s\n%s",
+			file,
+			lineno,
+			line,
+			arrow(rel),
+			fmt.Sprintf(s, a...),
+		),
+	}
 }
 
 func NewFromBookmark(file string, b Bookmark, s string, a ...any) error {
@@ -28,14 +44,19 @@ func NewFromBookmark(file string, b Bookmark, s string, a ...any) error {
 		return fmt.Errorf(s, a...)
 	}
 
-	return fmt.Errorf(
-		"error in file %s at line %d:\n    %s\n    %s\n%s",
-		file,
-		int(b.lineno),
-		C.GoString(b.line),
-		arrow(int(b.pos)),
-		fmt.Sprintf(s, a...),
-	)
+	return TauErr{
+		Line:   int(b.lineno),
+		Column: int(b.pos),
+		File:   file,
+		Message: fmt.Sprintf(
+			"error in file %s at line %d:\n    %s\n    %s\n%s",
+			file,
+			int(b.lineno),
+			C.GoString(b.line),
+			arrow(int(b.pos)),
+			fmt.Sprintf(s, a...),
+		),
+	}
 }
 
 func line(input string, pos int) (line string, lineno, relative int) {

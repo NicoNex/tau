@@ -437,8 +437,8 @@ static struct object bin_b(struct object *args, size_t len) {
 		return errorf("bin: wrong number of arguments, expected 1, got %lu", len);
 	}
 
-	if (args[0].type != obj_integer) {
-		return errorf("bin: first argument must be int, got %s instead", otype_str(args[0].type));
+	if (args[0].type != obj_integer && args[0].type != obj_float) {
+		return errorf("bin: first argument must be int or float, got %s instead", otype_str(args[0].type));
 	}
 
 	char *s = calloc(67, sizeof(char));
@@ -462,8 +462,8 @@ static struct object bin_b(struct object *args, size_t len) {
 		return errorf("bin: wrong number of arguments, expected 1, got %lu", len);
 	}
 
-	if (args[0].type != obj_integer) {
-		return errorf("bin: first argument must be int, got %s instead", otype_str(args[0].type));
+	if (args[0].type != obj_integer && args[0].type != obj_float) {
+		return errorf("bin: first argument must be int or float, got %s instead", otype_str(args[0].type));
 	}
 
 	char *s = calloc(67, sizeof(char));

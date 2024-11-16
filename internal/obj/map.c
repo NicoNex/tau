@@ -197,11 +197,11 @@ struct object new_map() {
 	return (struct object) {
 		.data.map = calloc(1, sizeof(struct map_node)),
 		.type = obj_map,
-		.marked = MARKPTR()
+		.gcdata = new_gcdata()
 	};
 }
 
 void mark_map_obj(struct object m) {
-	*m.marked = 1;
+	m.gcdata->marked = 1;
 	mark_map_children(m.data.map->root);
 }

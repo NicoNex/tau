@@ -14,6 +14,6 @@ struct object new_integer_obj(int64_t val) {
 	return (struct object) {
 		.data.i = val,
 		.type = obj_integer,
-		.marked = NULL,
+		.gcdata = NULL,
 	};
 }

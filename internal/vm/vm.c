@@ -752,7 +752,7 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 	struct object res = (struct object) {
 		.data.handle = return_value,
 		.type = obj_native,
-		.marked = MARKPTR()
+		.gcdata = new_gcdata()
 	};
 	vm_stack_push(vm, res);
 	vm_heap_add(vm, res);
@@ -811,8 +811,24 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 		tvm->state.consts = vm->state.consts;
 		tvm->state.globals = vm->state.globals;
 		tvm->state.heap = new_heap(HEAP_TRESHOLD);
-		tvm->sp = vm->sp;
-		memcpy(tvm->stack, vm->stack, STACK_SIZE * sizeof(struct object));
+		// tvm->sp = vm->sp;
+		// memcpy(tvm->stack, vm->stack, STACK_SIZE * sizeof(struct object));
+
+		// TODO: test this.
+		// Instead of copying the entire stack we just copy the portion that's
+		// useful to the current closure.
+		tvm->sp = num_args - 1;
+		memcpy(tvm->stack, &vm->stack[vm->sp-num_args], num_args);
+
+		// Add all heap objects to the new VM heap and increment the reference count.
+		for (uint32_t i = tvm->sp; i < num_args; i++) {
+			struct object obj = tvm->stack[i];
+
+			if (obj.type > obj_builtin) {
+				inc_refcnt(obj.gcdata);
+				vm_heap_add(tvm, obj);
+			}
+		}
 
 		vm_call_closure(tvm, o, num_args);
 		if (thrd_create(&thread, run_and_cleanup, tvm) != thrd_success) {
@@ -886,6 +902,8 @@ static void vm_mark_globals(struct vm * restrict vm) {
 	}
 }
 
+// TODO: fix early collection when an object is no longer used in the father
+// thread but is still used in the child thread.
 static inline void gc(struct vm * restrict vm) {
 	struct heap *heap = &vm->state.heap;
 
@@ -913,13 +931,15 @@ static inline void gc(struct vm * restrict vm) {
 		#pragma omp taskwait
 	}
 
+	// TODO: handle the reference count.
+
 	// Traverse all heap objects and free the unmarked ones.
 	register struct heap_node **prev = &heap->root;
 	for (register struct heap_node *n = heap->root; n != NULL; n = n->next) {
 		struct object o = n->obj;
 
-		if (*o.marked) {
-			*o.marked = 0;
+		if (o.gcdata->marked) {
+			o.gcdata->marked = 0;
 			prev = &(*prev)->next;
 			continue;
 		}

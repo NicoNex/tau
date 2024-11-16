@@ -93,7 +93,7 @@ inline void mark_obj(struct object o) {
 			mark_pipe_obj(o);
 			break;
 		default:
-			*o.marked = 1;
+			o.gcdata->marked = 1;
 			break;
 		}
 	}
@@ -129,7 +129,7 @@ void free_obj(struct object o) {
 		dispose_bytes_obj(o);
 		return;
 	case obj_native:
-		free(o.marked);
+		free(o.gcdata);
 		dlclose(o.data.handle);
 		return;
 	default:
@@ -152,4 +152,22 @@ inline uint32_t is_truthy(struct object * o) {
 	default:
 		return 1;
 	}
+}
+
+inline struct gcdata *new_gcdata() {
+	struct gcdata *gd = malloc(sizeof(struct gcdata));
+	gd->marked = 0;
+	gd->refcnt = 1;
+
+	return gd;
+}
+
+// TODO: use atomic operations.
+inline uint32_t inc_refcnt(struct gcdata *gd) {
+	return ++gd->refcnt;
+}
+
+// TODO: use atomic operations.
+inline uint32_t dec_refcnt(struct gcdata *gd) {
+	return --gd->refcnt;
 }

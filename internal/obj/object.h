@@ -7,7 +7,6 @@
 #include "../tauerr/bookmark.h"
 
 #define NUM_BUILTINS 26
-#define MARKPTR() calloc(1, sizeof(uint32_t))
 
 enum obj_type {
 	obj_null,
@@ -48,22 +47,22 @@ struct map {
 };
 
 struct list {
+	struct object *parent;
 	struct object *list;
 	size_t len;
 	size_t cap;
-	uint32_t *m_parent;
 };
 
 struct string {
+	struct object *parent;
 	char *str;
 	size_t len;
-	uint32_t *m_parent;
 };
 
 struct bytes {
+	struct object *parent;
 	uint8_t *bytes;
 	size_t len;
-	uint32_t *m_parent;
 };
 
 struct pipe {
@@ -94,10 +93,16 @@ union data {
 	struct object (*builtin)(struct object *args, size_t len);
 };
 
+// gcdata holds the data for the garbage collector.
+struct gcdata {
+	uint32_t marked;
+	uint32_t refcnt;
+};
+
 struct object {
 	union data data;
 	enum obj_type type;
-	uint32_t *marked;
+	struct gcdata *gcdata;
 };
 
 struct key_hash {
@@ -145,14 +150,14 @@ char *float_str(struct object o);
 
 // String object.
 struct object new_string_obj(char *str, size_t len);
-struct object new_string_slice(char *str, size_t len, uint32_t *m_parent);
+struct object new_string_slice(char *str, size_t len, struct object *parent);
 char *string_str(struct object o);
 void mark_string_obj(struct object s);
 void dispose_string_obj(struct object o);
 
 // Bytes object.
 struct object new_bytes_obj(uint8_t *bytes, size_t len);
-struct object new_bytes_slice(uint8_t *bytes, size_t len, uint32_t *m_parent);
+struct object new_bytes_slice(uint8_t *bytes, size_t len, struct object *parent);
 char *bytes_str(struct object o);
 void mark_bytes_obj(struct object o);
 void dispose_bytes_obj(struct object o);
@@ -167,7 +172,7 @@ void dispose_error_obj(struct object o);
 struct object make_list(size_t cap);
 struct object new_list_obj(struct object *list, size_t len);
 struct object new_list_obj_data(struct object *list, size_t len, size_t cap);
-struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent);
+struct object new_list_slice(struct object *list, size_t len, struct object *parent);
 char *list_str(struct object o);
 void mark_list_obj(struct object l);
 void dispose_list_obj(struct object o);
@@ -227,3 +232,7 @@ void mark_obj(struct object o);
 void free_obj(struct object o);
 uint64_t fnv64a(char *s);
 uint32_t is_truthy(struct object * restrict o);
+
+struct gcdata *new_gcdata();
+uint32_t inc_refcnt(struct gcdata *gd);
+uint32_t dec_refcnt(struct gcdata *gd);

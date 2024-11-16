@@ -84,7 +84,7 @@ struct object object_set(struct object obj, char *name, struct object val) {
 
 void dispose_object_obj(struct object obj) {
 	_object_dispose(*obj.data.obj);
-	free(obj.marked);
+	free(obj.gcdata);
 	free(obj.data.obj);
 }
 
@@ -101,7 +101,7 @@ struct object new_object() {
 	return (struct object) {
 		.data.obj = calloc(1, sizeof(struct object_node *)),
 		.type = obj_object,
-		.marked = MARKPTR(),
+		.gcdata = new_gcdata(),
 	};
 }
 
@@ -113,6 +113,6 @@ struct object object_to_module(struct object o) {
 }
 
 void mark_object_obj(struct object o) {
-	*o.marked = 1;
+	o.gcdata->marked = 1;
 	mark_object_children(*o.data.obj);
 }

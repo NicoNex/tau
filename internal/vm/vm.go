@@ -204,6 +204,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	bc := c.Bytecode()
 	(&vm.state).SetConsts(Consts)
 	vm.state.ndefs = C.uint32_t(bc.NDefs())
+	// TODO: fix the path being the same as the calling VM.
 	tvm := C.new_vm_with_state(C.CString(path), cbytecode(bc), vm.state)
 	defer C.vm_dispose(tvm)
 	if i := C.vm_run(tvm); i != 0 {

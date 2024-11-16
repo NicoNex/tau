@@ -4,11 +4,11 @@
 
 void dispose_list_obj(struct object o) {
 	// Free everything if it's not a slice (marked parent bit is set to NULL).
-	if (o.data.list->m_parent == NULL) {
+	if (o.data.list->parent == NULL) {
 		free(o.data.list->list);
 	}
 	free(o.data.list);
-	free(o.marked);
+	free(o.gcdata);
 }
 
 // TODO: optimise this.
@@ -38,9 +38,12 @@ char *list_str(struct object o) {
 }
 
 void mark_list_obj(struct object l) {
-	*l.marked = 1;
-	if (l.data.list->m_parent != NULL) {
-		*l.data.list->m_parent = 1;
+	l.gcdata->marked = 1;
+	if (l.data.list->parent != NULL) {
+		mark_list_obj(*l.data.list->parent);
+		// We return early so that the marking of the elements happen only for
+		// the parent object.
+		return;
 	}
 	#pragma omp parallel for
 	for (uint32_t i = 0; i < l.data.list->len; i++) {
@@ -53,12 +56,12 @@ struct object make_list(size_t cap) {
 	l->list = calloc(cap, sizeof(struct object));
 	l->len = 0;
 	l->cap = cap;
-	l->m_parent = NULL;
+	l->parent = NULL;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = MARKPTR()
+		.gcdata = new_gcdata()
 	};
 }
 
@@ -67,12 +70,12 @@ struct object new_list_obj(struct object *list, size_t len) {
 	l->list = list;
 	l->len = len;
 	l->cap = len;
-	l->m_parent = NULL;
+	l->parent = NULL;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = MARKPTR()
+		.gcdata = new_gcdata()
 	};
 }
 
@@ -81,26 +84,26 @@ struct object new_list_obj_data(struct object *list, size_t len, size_t cap) {
 	l->list = list;
 	l->len = len;
 	l->cap = cap;
-	l->m_parent = NULL;
+	l->parent = NULL;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = MARKPTR()
+		.gcdata = new_gcdata()
 	};
 }
 
-struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent) {
+struct object new_list_slice(struct object *list, size_t len, struct object *parent) {
 	struct list *l = malloc(sizeof(struct list));
 	l->list = list;
 	l->len = len;
 	l->cap = len;
-	l->m_parent = m_parent;
+	l->parent = parent;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = MARKPTR(),
+		.gcdata = new_gcdata(),
 	};
 }
 

@@ -5,7 +5,7 @@
 #include "object.h"
 
 void dispose_error_obj(struct object o) {
-	free(o.marked);
+	free(o.gcdata);
 	free(o.data.str->str);
 	free(o.data.str);
 }
@@ -22,7 +22,7 @@ struct object new_error_obj(char *str, size_t len) {
 	return (struct object) {
 		.data.str = s,
 		.type = obj_error,
-		.marked = MARKPTR(),
+		.gcdata = new_gcdata(),
 	};
 }
 

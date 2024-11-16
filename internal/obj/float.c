@@ -13,6 +13,6 @@ struct object new_float_obj(double val) {
 	return (struct object) {
 		.data.f = val,
 		.type = obj_float,
-		.marked = NULL,
+		.gcdata = NULL,
 	};
 }

@@ -4,7 +4,7 @@
 
 void dispose_closure_obj(struct object o) {
 	dispose_function_data(o.data.cl->fn);
-	free(o.marked);
+	free(o.gcdata);
 	free(o.data.cl->free);
 	free(o.data.cl);
 }
@@ -17,7 +17,7 @@ char *closure_str(struct object o) {
 }
 
 void mark_closure_obj(struct object c) {
-	*c.marked = 1;
+	c.gcdata->marked = 1;
 	for (uint32_t i = 0; i < c.data.cl->num_free; i++) {
 		mark_obj(c.data.cl->free[i]);
 	}
@@ -32,6 +32,6 @@ struct object new_closure_obj(struct function *fn, struct object *free, size_t n
 	return (struct object) {
 		.data.cl = cl,
 		.type = obj_closure,
-		.marked = MARKPTR(),
+		.gcdata = new_gcdata(),
 	};
 }

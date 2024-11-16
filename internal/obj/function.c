@@ -13,7 +13,7 @@ inline void dispose_function_data(struct function *fn) {
 
 void dispose_function_obj(struct object o) {
 	dispose_function_data(o.data.fn);
-	free(o.marked);
+	free(o.gcdata);
 }
 
 char *function_str(struct object o) {
@@ -39,6 +39,6 @@ inline struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_l
 	return (struct object) {
 		.data.fn = new_function(insts, len, num_locals, num_params, bmarks, bklen),
 		.type = obj_function,
-		.marked = MARKPTR(),
+		.gcdata = new_gcdata(),
 	};
 }

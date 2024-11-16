@@ -4,13 +4,13 @@
 struct object true_obj = (struct object) {
 	.data.i = 1,
 	.type = obj_boolean,
-	.marked = NULL,
+	.gcdata = NULL,
 };
 
 struct object false_obj = (struct object) {
 	.data.i = 0,
 	.type = obj_boolean,
-	.marked = NULL,
+	.gcdata = NULL,
 };
 
 inline __attribute__((always_inline))

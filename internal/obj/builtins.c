@@ -11,7 +11,7 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 	return (struct object) {
 		.data.builtin = builtin,
 		.type = obj_builtin,
-		.marked = NULL,
+		.gcdata = NULL,
 	};
 }
 
@@ -274,7 +274,10 @@ static struct object append_b(struct object *args, size_t len) {
 	if (old->cap - old->len >= len - 1) {
 		struct object ret = new_list_obj_data(old->list, old->len, old->cap);
 		struct list *new = ret.data.list;
-		old->m_parent = ret.marked;
+
+		// TODO: improve this.
+		// We predict where the VM will place the returned object.
+		old->parent = args - (sizeof(struct object) * len + 1);
 
 		for (size_t i = 1; i < len; i++) {
 			new->list[new->len++] = args[i];
@@ -332,7 +335,7 @@ static struct object plugin_b(struct object *args, size_t len) {
 	return (struct object) {
 		.data.handle = handle,
 		.type = obj_native,
-		.marked = MARKPTR()
+		.gcdata = new_gcdata()
 	};
 }
 
@@ -511,10 +514,14 @@ static struct object slice_b(struct object *args, size_t len) {
 		} else if (start == end) {
 			return new_list_obj(NULL, 0);
 		}
-		// If the parent is a slice, propagate its marked parent flag for the gc,
-		// otherwise use the default marked flag.
-		uint32_t *m_parent = args[0].data.list->m_parent != NULL ? args[0].data.list->m_parent : args[0].marked;
-		return new_list_slice(&args[0].data.list->list[start], end-start, m_parent);
+
+		struct object *parent = &args[0];
+		// If the parent is a slice, propagate its parent pointer for the gc,
+		// otherwise use the default parent pointer.
+		if (args[0].data.list->parent != NULL) {
+			parent = args[0].data.list->parent;
+		}
+		return new_list_slice(&args[0].data.list->list[start], end-start, parent);
 	}
 
 	case obj_string: {
@@ -523,10 +530,14 @@ static struct object slice_b(struct object *args, size_t len) {
 		} else if (start == end) {
 			return new_string_obj(strdup(""), 0);
 		}
-		// If the parent is a slice, propagate its marked parent flag for the gc,
-		// otherwise use the default marked flag.
-		uint32_t *m_parent = args[0].data.str->m_parent != NULL ? args[0].data.str->m_parent : args[0].marked;
-		return new_string_slice(&args[0].data.str->str[start], end-start, m_parent);
+
+		struct object *parent = &args[0];
+		// If the parent is a slice, propagate its parent pointer for the gc,
+		// otherwise use the default parent pointer.
+		if (args[0].data.str->parent != NULL) {
+			parent = args[0].data.str->parent;
+		}
+		return new_string_slice(&args[0].data.str->str[start], end-start, parent);
 	}
 	case obj_bytes: {
 		if (end > args[0].data.bytes->len) {
@@ -534,10 +545,14 @@ static struct object slice_b(struct object *args, size_t len) {
 		} else if (start == end) {
 			return new_bytes_obj(NULL, 0);
 		}
-		// If the parent is a slice, propagate its marked parent flag for the gc,
-		// otherwise use the default marked flag.
-		uint32_t *m_parent = args[0].data.bytes->m_parent != NULL ? args[0].data.bytes->m_parent : args[0].marked;
-		return new_bytes_slice(&args[0].data.bytes->bytes[start], end-start, m_parent);
+
+		struct object *parent = &args[0];
+		// If the parent is a slice, propagate its parent pointer for the gc,
+		// otherwise use the default parent pointer.
+		if (args[0].data.bytes->parent != NULL) {
+			parent = args[0].data.bytes->parent;
+		}
+		return new_bytes_slice(&args[0].data.bytes->bytes[start], end-start, parent);
 	}
 	default:
 		return errorf("slice: first argument must be a list or string, got %s instead", otype_str(args[0].type));
@@ -582,7 +597,7 @@ static struct object bytes_b(struct object *args, size_t len) {
 	struct object arg = args[0];
 	switch (arg.type) {
 	case obj_string:
-		return new_bytes_slice(arg.data.str->str, arg.data.str->len, arg.marked);
+		return new_bytes_slice(arg.data.str->str, arg.data.str->len, &args[0]);
 	case obj_list: {
 		size_t len = arg.data.list->len;
 		struct object *list = arg.data.list->list;

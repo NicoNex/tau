@@ -20,11 +20,16 @@ inline void heap_add(struct heap *h, struct object obj) {
 inline void heap_dispose(struct heap *h) {
     for (struct heap_node *n = h->root; n != NULL;) {
         struct heap_node *tmp = n->next;
-        free_obj(n->obj);
+        struct object obj = n->obj;
+
+        // We delete the object only if there are no more references to it.
+        if (dec_refcnt(obj.gcdata) == 0) {
+            free_obj(obj);
+        }
         free(n);
         n = tmp;
     }
     h->root = NULL;
-    h->len = 0; 
+    h->len = 0;
     h->treshold = 1024;
 }

@@ -13,7 +13,7 @@ endif
 ifeq ($(UNAME_S),Darwin)
     ACLOCAL_PATH := /usr/local/share/aclocal
     INSTALL_PATH := /usr/local/bin
-    GCC := $(shell which gcc-13)
+    GCC := $(shell which gcc-14)
 endif
 
 # Check if CC is defined

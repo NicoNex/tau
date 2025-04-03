@@ -13,7 +13,7 @@ import (
 	"github.com/NicoNex/tau/internal/tauerr"
 )
 
-type Bytecode = C.struct_bytecode
+type Bytecode C.struct_bytecode
 
 type Compilable interface {
 	Compile(c *Compiler) (int, error)
@@ -306,11 +306,11 @@ func NewBytecode(insts []byte, consts []obj.Object, bookmarks []tauerr.Bookmark,
 }
 
 func DecodeBytecode(b []byte) Bytecode {
-	return C.tau_decode((*C.uint8_t)(unsafe.Pointer(&b[0])), C.size_t(len(b)))
+	return Bytecode(C.tau_decode((*C.uint8_t)(unsafe.Pointer(&b[0])), C.size_t(len(b))))
 }
 
 func (b Bytecode) Encode() []byte {
-	buf := C.tau_encode(b)
+	buf := C.tau_encode(C.struct_bytecode(b))
 	defer C.free_buffer(buf)
 	return C.GoBytes(unsafe.Pointer(buf.buf), C.int(buf.len))
 }

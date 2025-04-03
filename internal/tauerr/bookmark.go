@@ -3,7 +3,7 @@ package tauerr
 // #include "bookmark.h"
 import "C"
 
-type Bookmark = C.struct_bookmark
+type Bookmark C.struct_bookmark
 
 func NewBookmark(fileCnt string, filePos, offset int) Bookmark {
 	line, lineNo, relative := line(fileCnt, filePos)

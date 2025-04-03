@@ -48,9 +48,9 @@ import (
 )
 
 type (
-	Object           = C.struct_object
+	Object           C.struct_object
+	CompiledFunction C.struct_function
 	Type             = C.enum_obj_type
-	CompiledFunction = C.struct_function
 )
 
 const (
@@ -103,9 +103,9 @@ var (
 		"bytes",
 	}
 
-	NullObj  = C.null_obj
-	TrueObj  = C.true_obj
-	FalseObj = C.false_obj
+	NullObj  = Object(C.null_obj)
+	TrueObj  = Object(C.true_obj)
+	FalseObj = Object(C.false_obj)
 )
 
 func (o Object) Type() Type {
@@ -117,25 +117,25 @@ func (o Object) TypeString() string {
 }
 
 func (o Object) String() string {
-	cstr := C.object_str(o)
+	cstr := C.object_str(C.struct_object(o))
 	defer C.free(unsafe.Pointer(cstr))
 	return C.GoString(cstr)
 }
 
 func (o Object) Int() int64 {
-	return int64(C.int_val(o))
+	return int64(C.int_val(C.struct_object(o)))
 }
 
 func (o Object) Float() float64 {
-	return float64(C.float_val(o))
+	return float64(C.float_val(C.struct_object(o)))
 }
 
 func (o Object) CompiledFunction() *CompiledFunction {
-	return C.function_val(o)
+	return (*CompiledFunction)(C.function_val(C.struct_object(o)))
 }
 
 func (o Object) IsTruthy() bool {
-	return C.is_truthy(&o) == 1
+	return C.is_truthy((*C.struct_object)(&o)) == 1
 }
 
 func (cf CompiledFunction) Instructions() []byte {
@@ -160,40 +160,40 @@ func (cf CompiledFunction) BKLen() int {
 
 func ParseBool(b bool) Object {
 	if b {
-		return TrueObj
+		return Object(TrueObj)
 	}
-	return FalseObj
+	return Object(FalseObj)
 }
 
 func IsError(o Object) bool {
-	return C.is_error(o) == 1
+	return C.is_error(C.struct_object(o)) == 1
 }
 
 func GoError(o Object) error {
 	if IsError(o) {
-		return errors.New(C.GoString(C.error_msg(o)))
+		return errors.New(C.GoString(C.error_msg(C.struct_object(o))))
 	}
 	return nil
 }
 
 func NewBool(b bool) Object {
 	if b {
-		return C.true_obj
+		return Object(C.true_obj)
 	} else {
-		return C.false_obj
+		return Object(C.false_obj)
 	}
 }
 
 func NewInteger(i int64) Object {
-	return C.new_integer_obj(C.int64_t(i))
+	return Object(C.new_integer_obj(C.int64_t(i)))
 }
 
 func NewFloat(f float64) Object {
-	return C.new_float_obj(C.double(f))
+	return Object(C.new_float_obj(C.double(f)))
 }
 
 func NewString(s string) Object {
-	return C.new_string_obj(C.CString(s), C.size_t(len(s)))
+	return Object(C.new_string_obj(C.CString(s), C.size_t(len(s))))
 }
 
 func CArray[CT, GoT any](s []GoT) *CT {
@@ -204,14 +204,14 @@ func CArray[CT, GoT any](s []GoT) *CT {
 }
 
 func NewFunctionCompiled(ins code.Instructions, nlocals, nparams int, bmarks []tauerr.Bookmark) Object {
-	return C.new_function_obj(
+	return Object(C.new_function_obj(
 		(*C.uchar)(unsafe.Pointer(&ins[0])),
 		C.size_t(len(ins)),
 		C.uint(nlocals),
 		C.uint(nparams),
 		CArray[C.struct_bookmark, tauerr.Bookmark](bmarks),
 		C.uint(len(bmarks)),
-	)
+	))
 }
 
 func AssertTypes(o Object, types ...Type) bool {

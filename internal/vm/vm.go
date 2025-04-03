@@ -32,10 +32,13 @@ import (
 	"golang.org/x/term"
 )
 
+type VM struct {
+	vm *C.struct_vm
+}
+
 type (
-	VM       = *C.struct_vm
-	State    = C.struct_state
-	Bookmark = C.struct_bookmark
+	State    C.struct_state
+	Bookmark C.struct_bookmark
 )
 
 var (
@@ -45,11 +48,11 @@ var (
 )
 
 func NewState() State {
-	return C.new_state()
+	return State(C.new_state())
 }
 
 func (s State) Free() {
-	C.state_dispose(s)
+	C.state_dispose(C.struct_state(s))
 }
 
 func (s *State) SetConsts(consts []obj.Object) {
@@ -64,7 +67,7 @@ func (s State) NumDefs() int {
 
 func New(file string, bc compiler.Bytecode) VM {
 	Consts = bc.Consts()
-	return C.new_vm(C.CString(file), cbytecode(bc))
+	return VM{vm: C.new_vm(C.CString(file), cbytecode(bc))}
 }
 
 func NewWithState(file string, bc compiler.Bytecode, state State) VM {
@@ -72,24 +75,24 @@ func NewWithState(file string, bc compiler.Bytecode, state State) VM {
 	if len(Consts) > 0 {
 		state.SetConsts(Consts)
 	}
-	return C.new_vm_with_state(C.CString(file), cbytecode(bc), state)
+	return VM{vm: C.new_vm_with_state(C.CString(file), cbytecode(bc), C.struct_state(state))}
 }
 
 func (vm VM) Run() {
-	C.vm_run(vm)
+	C.vm_run(vm.vm)
 	C.fflush(C.stdout)
 }
 
 func (vm VM) State() State {
-	return vm.state
+	return State(vm.vm.state)
 }
 
 func (vm VM) Free() {
-	C.vm_dispose(vm)
+	C.vm_dispose(vm.vm)
 }
 
 func (vm VM) LastPoppedStackObj() obj.Object {
-	o := C.vm_last_popped_stack_elem(vm)
+	o := C.vm_last_popped_stack_elem(vm.vm)
 	return *(*obj.Object)(unsafe.Pointer(&o))
 }
 
@@ -202,7 +205,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	}
 
 	bc := c.Bytecode()
-	(&vm.state).SetConsts(Consts)
+	(*State)(&vm.state).SetConsts(Consts)
 	vm.state.ndefs = C.uint32_t(bc.NDefs())
 	tvm := C.new_vm_with_state(C.CString(path), cbytecode(bc), vm.state)
 	defer C.vm_dispose(tvm)

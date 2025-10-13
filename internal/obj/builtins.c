@@ -602,7 +602,7 @@ static struct object bytes_b(struct object *args, size_t len) {
 	}
 }
 
-const builtin builtins[NUM_BUILTINS] = {
+const builtin builtins[] = {
 	len_b,
 	println_b,
 	print_b,

@@ -658,7 +658,7 @@ static inline void vm_exec_index(struct vm * restrict vm) {
 		char *new_str = malloc(sizeof(char) * 2);
 		new_str[0] = str[idx];
 		new_str[1] = '\0';
-		vm_stack_push(vm, new_string_obj(new_str, 2));
+		vm_stack_push(vm, new_string_obj(new_str, 1));
 	} else if (ASSERT(left, obj_bytes) && ASSERT(right, obj_integer)) {
 		uint8_t *b = left->data.bytes->bytes;
 		size_t len = left->data.bytes->len;

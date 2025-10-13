@@ -6,7 +6,6 @@
 #include "../vm/thrd.h"
 #include "../tauerr/bookmark.h"
 
-#define NUM_BUILTINS 26
 #define MARKPTR() calloc(1, sizeof(uint32_t))
 
 enum obj_type {
@@ -202,8 +201,22 @@ char *object_obj_str(struct object obj);
 void dispose_object_obj(struct object obj);
 
 // Function object.
-struct function *new_function(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t num_bookmarks);
-struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_locals, uint32_t num_params, struct bookmark *bmarks, uint32_t num_bookmarks);
+struct function *new_function(
+	uint8_t *insts,
+	size_t len,
+	uint32_t num_locals,
+	uint32_t num_params,
+	struct bookmark *bmarks,
+	uint32_t num_bookmarks
+);
+struct object new_function_obj(
+	uint8_t *insts,
+	size_t len,
+	uint32_t num_locals,
+	uint32_t num_params,
+	struct bookmark *bmarks,
+	uint32_t num_bookmarks
+);
 char *function_str(struct object o);
 void dispose_function_obj(struct object o);
 void dispose_function_data(struct function *fn);
@@ -216,7 +229,7 @@ void mark_closure_obj(struct object c);
 
 // Builtin object.
 typedef struct object (*builtin)(struct object *args, size_t len);
-extern const builtin builtins[NUM_BUILTINS];
+extern const builtin builtins[];
 struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len));
 
 // Util functions.

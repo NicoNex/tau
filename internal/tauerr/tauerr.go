@@ -29,11 +29,11 @@ func New(file, input string, pos int, s string, a ...any) error {
 		Line:   lineno,
 		Column: rel,
 		Message: fmt.Sprintf(
-			"error in file %s at line %d:\n    %s\n    %s\n%s",
+			"error in file %s at line %d:\n    %s\n    %*s^\n%s",
 			file,
 			lineno,
 			line,
-			arrow(rel),
+			rel, "",
 			fmt.Sprintf(s, a...),
 		),
 	}
@@ -49,11 +49,11 @@ func NewFromBookmark(file string, b Bookmark, s string, a ...any) error {
 		Column: int(b.pos),
 		File:   file,
 		Message: fmt.Sprintf(
-			"error in file %s at line %d:\n    %s\n    %s\n%s",
+			"error in file %s at line %d:\n    %s\n    %*s^\n%s",
 			file,
 			int(b.lineno),
 			C.GoString(b.line),
-			arrow(int(b.pos)),
+			int(b.pos), "",
 			fmt.Sprintf(s, a...),
 		),
 	}

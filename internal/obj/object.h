@@ -95,8 +95,8 @@ union data {
 
 struct object {
 	union data data;
-	enum obj_type type;
 	uint32_t *marked;
+	enum obj_type type;
 };
 
 struct key_hash {
@@ -238,5 +238,7 @@ char *object_str(struct object o);
 void print_obj(struct object o);
 void mark_obj(struct object o);
 void free_obj(struct object o);
+void retain_obj(struct object o);  // Increment refcount for shared objects
+void release_obj(struct object o); // Decrement refcount for shared objects
 uint64_t fnv64a(char *s);
 uint32_t is_truthy(struct object * restrict o);

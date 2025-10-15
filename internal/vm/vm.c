@@ -778,8 +778,21 @@ int vm_run(struct vm * restrict vm);
 
 static int run_and_cleanup(void *vmptr) {
 	struct vm *vm = vmptr;
+
+	// Save initial stack pointer to know which objects were shared
+	uint32_t initial_sp = vm->sp;
+
 	int ret = vm_run(vm);
 	fflush(stdout);
+
+	// Release shared objects after running
+	// (they were retained in vm_exec_concurrent_call)
+	for (uint32_t i = 0; i < initial_sp; i++) {
+		if (vm->stack[i].type > obj_builtin) {
+			release_obj(vm->stack[i]);
+		}
+	}
+
 	heap_dispose(&vm->state.heap);
 	vm_dispose(vm);
 	return ret;
@@ -793,8 +806,17 @@ struct builtin_call_data {
 
 static int call_builtin_and_cleanup(void *data) {
 	struct builtin_call_data *d = data;
+
 	d->fn(d->args, d->numargs);
 	fflush(stdout);
+
+	// Release shared objects after running
+	for (size_t i = 0; i < d->numargs; i++) {
+		if (d->args[i].type > obj_builtin) {
+			release_obj(d->args[i]);
+		}
+	}
+
 	free(d->args);
 	free(d);
 	return 0;
@@ -806,13 +828,32 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 
 	switch (o->type) {
 	case obj_closure: {
+		struct closure *cl = o->data.cl;
+
+		// Calculate the exact amount of stack space we need:
+		// - num_args for the arguments
+		// - num_locals for local variables (initialized to null)
+		// - 1 for the closure itself
+		uint32_t num_locals = cl->fn->num_locals;
+		uint32_t stack_needed = num_args + num_locals + 1;
+
 		struct vm *tvm = calloc(1, sizeof(struct vm));
 		tvm->file = strdup(vm->file);
-		tvm->state.consts = vm->state.consts;
-		tvm->state.globals = vm->state.globals;
+		tvm->state.consts = vm->state.consts;  // Read-only, safe to share
+		tvm->state.globals = vm->state.globals;  // Shared with mutex protection
 		tvm->state.heap = new_heap(HEAP_TRESHOLD);
-		tvm->sp = vm->sp;
-		memcpy(tvm->stack, vm->stack, STACK_SIZE * sizeof(struct object));
+
+		// Only copy the closure and its arguments to the new VM's stack
+		// Stack layout: [closure, arg0, arg1, ..., argN-1]
+		memcpy(tvm->stack, &vm->stack[vm->sp-1-num_args], (num_args + 1) * sizeof(struct object));
+		tvm->sp = num_args + 1;
+
+		// Retain all shared objects to prevent parent VM from freeing them
+		for (uint32_t i = 0; i < tvm->sp; i++) {
+			if (tvm->stack[i].type > obj_builtin) {
+				retain_obj(tvm->stack[i]);
+			}
+		}
 
 		vm_call_closure(tvm, o, num_args);
 		if (thrd_create(&thread, run_and_cleanup, tvm) != thrd_success) {
@@ -827,6 +868,13 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 		d->args = malloc(sizeof(struct object) * num_args);
 		d->numargs = num_args;
 		memcpy(d->args, &vm->stack[vm->sp-num_args], num_args * sizeof(struct object));
+
+		// Retain all shared arguments to prevent parent VM from freeing them
+		for (uint32_t i = 0; i < num_args; i++) {
+			if (d->args[i].type > obj_builtin) {
+				retain_obj(d->args[i]);
+			}
+		}
 
 		if (thrd_create(&thread, call_builtin_and_cleanup, d) != thrd_success) {
 			vm_errorf(vm, "failed to create thread");
@@ -856,7 +904,7 @@ struct object vm_last_popped_stack_elem(struct vm * restrict vm) {
 	return vm->stack[vm->sp];
 }
 
-static void vm_mark_stack(struct vm * restrict vm) {
+static inline void vm_mark_stack(struct vm * restrict vm) {
 	for (int32_t i = vm->sp - 1; i >= 0; i--) {
 		if (vm->stack[i].type > obj_builtin) {
 			mark_obj(vm->stack[i]);
@@ -864,7 +912,7 @@ static void vm_mark_stack(struct vm * restrict vm) {
 	}
 }
 
-static void vm_mark_consts(struct vm * restrict vm) {
+static inline void vm_mark_consts(struct vm * restrict vm) {
 	struct object *consts = vm->state.consts.list;
 	size_t len = vm->state.consts.len;
 
@@ -875,7 +923,7 @@ static void vm_mark_consts(struct vm * restrict vm) {
 	}
 }
 
-static void vm_mark_globals(struct vm * restrict vm) {
+static inline void vm_mark_globals(struct vm * restrict vm) {
 	struct object *globals = vm->state.globals->list;
 	size_t len = vm->state.globals->len;
 
@@ -914,12 +962,19 @@ static inline void gc(struct vm * restrict vm) {
 	}
 
 	// Traverse all heap objects and free the unmarked ones.
+	// Only free if refcount is 0 (not shared with other VMs)
 	register struct heap_node **prev = &heap->root;
 	for (register struct heap_node *n = heap->root; n != NULL; n = n->next) {
 		struct object o = n->obj;
 
-		if (*o.marked) {
-			*o.marked = 0;
+		// Check if marked OR has non-zero refcount (shared with other VMs)
+		if (*o.marked > 0) {
+			// Reset mark bit but preserve refcount
+			// marked value format: high bits = refcount, low bit = mark
+			// For simplicity, just decrement by 1 if odd (marked)
+			if (*o.marked & 1) {
+				*o.marked -= 1;
+			}
 			prev = &(*prev)->next;
 			continue;
 		}

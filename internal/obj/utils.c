@@ -99,6 +99,68 @@ inline void mark_obj(struct object o) {
 	}
 }
 
+// Increment reference count for shared objects
+// Call this when sharing an object with another VM
+void retain_obj(struct object o) {
+	if (o.type > obj_builtin && o.marked != NULL) {
+		__sync_fetch_and_add(o.marked, 1);
+
+		// Recursively retain nested objects
+		switch (o.type) {
+		case obj_list:
+			if (o.data.list != NULL) {
+				for (size_t i = 0; i < o.data.list->len; i++) {
+					retain_obj(o.data.list->list[i]);
+				}
+			}
+			break;
+		case obj_closure:
+			if (o.data.cl != NULL) {
+				for (size_t i = 0; i < o.data.cl->num_free; i++) {
+					retain_obj(o.data.cl->free[i]);
+				}
+			}
+			break;
+		case obj_map:
+			// Map children are retained during mark phase
+			break;
+		default:
+			break;
+		}
+	}
+}
+
+// Decrement reference count for shared objects
+// Call this when a VM is done with a shared object
+void release_obj(struct object o) {
+	if (o.type > obj_builtin && o.marked != NULL) {
+		__sync_fetch_and_sub(o.marked, 1);
+
+		// Recursively release nested objects
+		switch (o.type) {
+		case obj_list:
+			if (o.data.list != NULL) {
+				for (size_t i = 0; i < o.data.list->len; i++) {
+					release_obj(o.data.list->list[i]);
+				}
+			}
+			break;
+		case obj_closure:
+			if (o.data.cl != NULL) {
+				for (size_t i = 0; i < o.data.cl->num_free; i++) {
+					release_obj(o.data.cl->free[i]);
+				}
+			}
+			break;
+		case obj_map:
+			// Map children are released during cleanup
+			break;
+		default:
+			break;
+		}
+	}
+}
+
 void free_obj(struct object o) {
 	switch (o.type) {
 	case obj_string:

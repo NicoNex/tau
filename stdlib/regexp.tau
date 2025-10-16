@@ -1,0 +1,976 @@
+# regexp.tau - Regular expression library for Tau (inspired by Go's regexp)
+# Implements Thompson's NFA algorithm with full Go regexp feature support
+
+strings = import("stdlib/strings.tau")
+
+# NFA state types (internal)
+stateMatch = 0        # Match state
+stateChar = 1         # Character match
+stateSplit = 2        # Split (for alternation and repetition)
+stateAny = 3          # Match any character (.)
+stateCharClass = 4    # Character class [abc]
+stateNegClass = 5     # Negated character class [^abc]
+stateAnchorStart = 6  # Start anchor ^
+stateAnchorEnd = 7    # End anchor $
+stateWordBoundary = 8 # Word boundary \b
+stateNonWordBound = 9 # Non-word boundary \B
+
+# Create an NFA state (unexported)
+makeState = fn(typ) {
+	s = new()
+	s.type = typ
+	s.ch = null          # Character to match (for stateChar)
+	s.chars = null       # Character set (for stateCharClass/stateNegClass)
+	s.out = null         # Next state
+	s.out1 = null        # Alternative next state (for stateSplit)
+	s.greedy = true      # Greedy vs non-greedy
+	s.min = 0            # Min repetitions (for quantifiers)
+	s.max = -1           # Max repetitions (-1 = unlimited)
+	return s
+}
+
+# Fragment of NFA with dangling outputs (internal)
+makeFrag = fn(start, outs) {
+	f = new()
+	f.start = start   # Start state
+	f.outs = outs     # List of dangling pointers to patch
+	return f
+}
+
+# Append two lists of dangling outputs
+appendOuts = fn(l1, l2) {
+	if l1 == null {
+		return l2
+	}
+	if l2 == null {
+		return l1
+	}
+
+	result = []
+	for i = 0; i < len(l1); ++i {
+		result = append(result, l1[i])
+	}
+	for i = 0; i < len(l2); ++i {
+		result = append(result, l2[i])
+	}
+	return result
+}
+
+# Patch list of dangling outputs to point to state
+patchOuts = fn(outs, s) {
+	if outs == null {
+		return
+	}
+
+	for i = 0; i < len(outs); ++i {
+		ptr = outs[i]
+		if ptr.field == "out" {
+			ptr.state.out = s
+		} else if ptr.field == "out1" {
+			ptr.state.out1 = s
+		}
+	}
+}
+
+# Create a dangling output pointer
+makeDanglingOut = fn(state, field) {
+	d = new()
+	d.state = state
+	d.field = field
+	return [d]
+}
+
+# Check if character is in range
+inRange = fn(ch, start, end) {
+	chCode = bytes(ch)[0]
+	startCode = bytes(start)[0]
+	endCode = bytes(end)[0]
+	return chCode >= startCode && chCode <= endCode
+}
+
+# Parse character class [abc] or [^abc] or [a-z]
+parseCharClass = fn(pattern, start) {
+	i = start
+	negated = false
+	chars = []
+
+	if i < len(pattern) && pattern[i] == "^" {
+		negated = true
+		++i
+	}
+
+	for i < len(pattern) && pattern[i] != "]" {
+		ch = pattern[i]
+
+		# Check for range a-z
+		if i + 2 < len(pattern) && pattern[i + 1] == "-" && pattern[i + 2] != "]" {
+			startCh = ch
+			endCh = pattern[i + 2]
+
+			# Add all characters in range
+			startCode = bytes(startCh)[0]
+			endCode = bytes(endCh)[0]
+
+			for code = startCode; code <= endCode; ++code {
+				chars = append(chars, string(bytes([code])))
+			}
+
+			i += 3
+		} else if ch == "\\" && i + 1 < len(pattern) {
+			# Escaped character in class
+			++i
+			ch = pattern[i]
+
+			# Handle special escape sequences
+			if ch == "d" {
+				# Digit
+				for code = 48; code <= 57; ++code {
+					chars = append(chars, string(bytes([code])))
+				}
+			} else if ch == "w" {
+				# Word character [a-zA-Z0-9_]
+				for code = 97; code <= 122; ++code {
+					chars = append(chars, string(bytes([code])))
+				}
+				for code = 65; code <= 90; ++code {
+					chars = append(chars, string(bytes([code])))
+				}
+				for code = 48; code <= 57; ++code {
+					chars = append(chars, string(bytes([code])))
+				}
+				chars = append(chars, "_")
+			} else if ch == "s" {
+				# Whitespace
+				chars = append(chars, " ")
+				chars = append(chars, "\t")
+				chars = append(chars, "\n")
+				chars = append(chars, "\r")
+			} else {
+				# Literal escaped character
+				chars = append(chars, ch)
+			}
+			++i
+		} else {
+			chars = append(chars, ch)
+			++i
+		}
+	}
+
+	result = new()
+	result.chars = chars
+	result.negated = negated
+	result.end = i
+
+	return result
+}
+
+# Parse quantifier {n}, {n,}, {n,m}
+parseQuantifier = fn(pattern, start) {
+	i = start
+	numStr = ""
+
+	# Parse first number
+	for i < len(pattern) && pattern[i] >= "0" && pattern[i] <= "9" {
+		numStr += pattern[i]
+		++i
+	}
+
+	if len(numStr) == 0 {
+		return error("invalid quantifier")
+	}
+
+	min = int(numStr)
+	max = min
+
+	if i < len(pattern) && pattern[i] == "," {
+		++i
+
+		if i < len(pattern) && pattern[i] == "}" {
+			# {n,} - n or more
+			max = -1
+		} else {
+			# {n,m}
+			numStr = ""
+			for i < len(pattern) && pattern[i] >= "0" && pattern[i] <= "9" {
+				numStr += pattern[i]
+				++i
+			}
+
+			if len(numStr) > 0 {
+				max = int(numStr)
+			} else {
+				return error("invalid quantifier")
+			}
+		}
+	}
+
+	if i >= len(pattern) || pattern[i] != "}" {
+		return error("invalid quantifier: missing }")
+	}
+
+	result = new()
+	result.min = min
+	result.max = max
+	result.end = i
+
+	return result
+}
+
+# Compile regex to NFA using Thompson's construction
+compileToNFA = fn(pattern) {
+	stack = []
+
+	i = 0
+	for i < len(pattern) {
+		ch = pattern[i]
+
+		if ch == "^" {
+			# Start anchor
+			s = makeState(stateAnchorStart)
+			outs = makeDanglingOut(s, "out")
+			stack = append(stack, makeFrag(s, outs))
+			++i
+		} else if ch == "$" {
+			# End anchor
+			s = makeState(stateAnchorEnd)
+			outs = makeDanglingOut(s, "out")
+			stack = append(stack, makeFrag(s, outs))
+			++i
+		} else if ch == "(" {
+			# Grouping marker
+			stack = append(stack, new(type="paren"))
+			++i
+		} else if ch == ")" {
+			# Pop until opening paren
+			groups = []
+
+			for len(stack) > 0 && stack[len(stack)-1].type != "paren" {
+				e = stack[len(stack) - 1]
+				stack = slice(stack, 0, len(stack) - 1)
+				groups = append([e], groups)
+			}
+
+			# Remove opening paren
+			if len(stack) > 0 {
+				stack = slice(stack, 0, len(stack) - 1)
+			}
+
+			# Concatenate all groups
+			if len(groups) > 0 {
+				result = groups[0]
+				for j = 1; j < len(groups); ++j {
+					patchOuts(result.outs, groups[j].start)
+					result = makeFrag(result.start, groups[j].outs)
+				}
+				stack = append(stack, result)
+			}
+
+			++i
+		} else if ch == "[" {
+			# Character class
+			classInfo = parseCharClass(pattern, i + 1)
+			if failed(classInfo) {
+				return classInfo
+			}
+
+			s = if classInfo.negated { makeState(stateNegClass) } else { makeState(stateCharClass) }
+			s.chars = classInfo.chars
+
+			outs = makeDanglingOut(s, "out")
+			stack = append(stack, makeFrag(s, outs))
+
+			i = classInfo.end + 1
+		} else if ch == "|" {
+			# Alternation
+			if len(stack) < 2 {
+				return error("invalid alternation")
+			}
+
+			e2 = stack[len(stack) - 1]
+			stack = slice(stack, 0, len(stack) - 1)
+			e1 = stack[len(stack) - 1]
+			stack = slice(stack, 0, len(stack) - 1)
+
+			s = makeState(stateSplit)
+			s.out = e1.start
+			s.out1 = e2.start
+
+			outs = appendOuts(e1.outs, e2.outs)
+			stack = append(stack, makeFrag(s, outs))
+			++i
+		} else if ch == "*" {
+			# Zero or more
+			if len(stack) == 0 {
+				return error("invalid * operator")
+			}
+
+			e = stack[len(stack) - 1]
+			stack = slice(stack, 0, len(stack) - 1)
+
+			s = makeState(stateSplit)
+
+			# Check for non-greedy *?
+			greedy = true
+			if i + 1 < len(pattern) && pattern[i + 1] == "?" {
+				greedy = false
+				++i
+			}
+
+			if greedy {
+				s.out = e.start
+				patchOuts(e.outs, s)
+				outs = makeDanglingOut(s, "out1")
+			} else {
+				s.out1 = e.start
+				patchOuts(e.outs, s)
+				outs = makeDanglingOut(s, "out")
+			}
+
+			stack = append(stack, makeFrag(s, outs))
+			++i
+		} else if ch == "+" {
+			# One or more
+			if len(stack) == 0 {
+				return error("invalid + operator")
+			}
+
+			e = stack[len(stack) - 1]
+			stack = slice(stack, 0, len(stack) - 1)
+
+			s = makeState(stateSplit)
+
+			# Check for non-greedy +?
+			greedy = true
+			if i + 1 < len(pattern) && pattern[i + 1] == "?" {
+				greedy = false
+				++i
+			}
+
+			if greedy {
+				s.out = e.start
+				patchOuts(e.outs, s)
+				outs = makeDanglingOut(s, "out1")
+			} else {
+				s.out1 = e.start
+				patchOuts(e.outs, s)
+				outs = makeDanglingOut(s, "out")
+			}
+
+			stack = append(stack, makeFrag(e.start, outs))
+			++i
+		} else if ch == "?" {
+			# Zero or one
+			if len(stack) == 0 {
+				return error("invalid ? operator")
+			}
+
+			e = stack[len(stack) - 1]
+			stack = slice(stack, 0, len(stack) - 1)
+
+			s = makeState(stateSplit)
+
+			# Check for non-greedy ??
+			greedy = true
+			if i + 1 < len(pattern) && pattern[i + 1] == "?" {
+				greedy = false
+				++i
+			}
+
+			if greedy {
+				s.out = e.start
+				outs = appendOuts(makeDanglingOut(s, "out1"), e.outs)
+			} else {
+				s.out1 = e.start
+				outs = appendOuts(makeDanglingOut(s, "out"), e.outs)
+			}
+
+			stack = append(stack, makeFrag(s, outs))
+			++i
+		} else if ch == "{" {
+			# Quantifier {n}, {n,}, {n,m}
+			if len(stack) == 0 {
+				return error("invalid quantifier")
+			}
+
+			quantInfo = parseQuantifier(pattern, i + 1)
+			if failed(quantInfo) {
+				return quantInfo
+			}
+
+			e = stack[len(stack) - 1]
+			stack = slice(stack, 0, len(stack) - 1)
+
+			# Build repetition using min and max
+			min = quantInfo.min
+			max = quantInfo.max
+
+			if min == 0 && max == 0 {
+				# {0} - match nothing, just skip
+				s = makeState(stateSplit)
+				outs = makeDanglingOut(s, "out")
+				stack = append(stack, makeFrag(s, outs))
+			} else if min == max {
+				# {n} - exactly n times
+				current = e
+				for j = 1; j < min; ++j {
+					# Clone the fragment
+					nextFrag = makeFrag(e.start, e.outs)
+					patchOuts(current.outs, nextFrag.start)
+					current = nextFrag
+				}
+				stack = append(stack, current)
+			} else if max == -1 {
+				# {n,} - n or more
+				# First n required copies
+				current = e
+				for j = 1; j < min; ++j {
+					nextFrag = makeFrag(e.start, e.outs)
+					patchOuts(current.outs, nextFrag.start)
+					current = nextFrag
+				}
+
+				# Then add * for remaining
+				s = makeState(stateSplit)
+				patchOuts(current.outs, s)
+				s.out = e.start
+				outs = makeDanglingOut(s, "out1")
+
+				stack = append(stack, makeFrag(current.start, outs))
+			} else {
+				# {n,m} - between n and m times
+				current = e
+
+				# Required min copies
+				for j = 1; j < min; ++j {
+					nextFrag = makeFrag(e.start, e.outs)
+					patchOuts(current.outs, nextFrag.start)
+					current = nextFrag
+				}
+
+				# Optional copies up to max
+				allOuts = current.outs
+				for j = min; j < max; ++j {
+					s = makeState(stateSplit)
+					patchOuts(current.outs, s)
+					s.out = e.start
+
+					allOuts = appendOuts(allOuts, makeDanglingOut(s, "out1"))
+					nextFrag = makeFrag(e.start, e.outs)
+					current = makeFrag(s, allOuts)
+				}
+
+				stack = append(stack, current)
+			}
+
+			i = quantInfo.end + 1
+		} else if ch == "." {
+			# Match any character
+			s = makeState(stateAny)
+			outs = makeDanglingOut(s, "out")
+			stack = append(stack, makeFrag(s, outs))
+			++i
+		} else if ch == "\\" && i + 1 < len(pattern) {
+			# Escaped character or special sequence
+			++i
+			ch = pattern[i]
+
+			if ch == "d" {
+				# Digit [0-9]
+				s = makeState(stateCharClass)
+				s.chars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+				outs = makeDanglingOut(s, "out")
+				stack = append(stack, makeFrag(s, outs))
+			} else if ch == "D" {
+				# Non-digit [^0-9]
+				s = makeState(stateNegClass)
+				s.chars = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9"]
+				outs = makeDanglingOut(s, "out")
+				stack = append(stack, makeFrag(s, outs))
+			} else if ch == "w" {
+				# Word character [a-zA-Z0-9_]
+				s = makeState(stateCharClass)
+				chars = ["_"]
+				for code = 97; code <= 122; ++code {
+					chars = append(chars, string(bytes([code])))
+				}
+				for code = 65; code <= 90; ++code {
+					chars = append(chars, string(bytes([code])))
+				}
+				for code = 48; code <= 57; ++code {
+					chars = append(chars, string(bytes([code])))
+				}
+				s.chars = chars
+				outs = makeDanglingOut(s, "out")
+				stack = append(stack, makeFrag(s, outs))
+			} else if ch == "W" {
+				# Non-word character [^a-zA-Z0-9_]
+				s = makeState(stateNegClass)
+				chars = ["_"]
+				for code = 97; code <= 122; ++code {
+					chars = append(chars, string(bytes([code])))
+				}
+				for code = 65; code <= 90; ++code {
+					chars = append(chars, string(bytes([code])))
+				}
+				for code = 48; code <= 57; ++code {
+					chars = append(chars, string(bytes([code])))
+				}
+				s.chars = chars
+				outs = makeDanglingOut(s, "out")
+				stack = append(stack, makeFrag(s, outs))
+			} else if ch == "s" {
+				# Whitespace [ \t\n\r]
+				s = makeState(stateCharClass)
+				s.chars = [" ", "\t", "\n", "\r"]
+				outs = makeDanglingOut(s, "out")
+				stack = append(stack, makeFrag(s, outs))
+			} else if ch == "S" {
+				# Non-whitespace [^ \t\n\r]
+				s = makeState(stateNegClass)
+				s.chars = [" ", "\t", "\n", "\r"]
+				outs = makeDanglingOut(s, "out")
+				stack = append(stack, makeFrag(s, outs))
+			} else if ch == "b" {
+				# Word boundary
+				s = makeState(stateWordBoundary)
+				outs = makeDanglingOut(s, "out")
+				stack = append(stack, makeFrag(s, outs))
+			} else if ch == "B" {
+				# Non-word boundary
+				s = makeState(stateNonWordBound)
+				outs = makeDanglingOut(s, "out")
+				stack = append(stack, makeFrag(s, outs))
+			} else {
+				# Literal escaped character
+				s = makeState(stateChar)
+				s.ch = ch
+				outs = makeDanglingOut(s, "out")
+				stack = append(stack, makeFrag(s, outs))
+			}
+
+			++i
+		} else {
+			# Literal character
+			s = makeState(stateChar)
+			s.ch = ch
+			outs = makeDanglingOut(s, "out")
+			stack = append(stack, makeFrag(s, outs))
+			++i
+		}
+
+		# Implicit concatenation
+		for len(stack) >= 2 {
+			top = stack[len(stack) - 1]
+			if top.type == "paren" {
+				break
+			}
+
+			second = stack[len(stack) - 2]
+			if second.type == "paren" {
+				break
+			}
+
+			# Check if next character prevents concatenation
+			if i < len(pattern) {
+				nextCh = pattern[i]
+				if nextCh == "*" || nextCh == "+" || nextCh == "?" || nextCh == "|" || nextCh == ")" || nextCh == "{" {
+					break
+				}
+			}
+
+			# Concatenate top two fragments
+			stack = slice(stack, 0, len(stack) - 1)
+			e2 = top
+			stack = slice(stack, 0, len(stack) - 1)
+			e1 = second
+
+			patchOuts(e1.outs, e2.start)
+			stack = append(stack, makeFrag(e1.start, e2.outs))
+		}
+	}
+
+	# Final concatenation of remaining fragments
+	for len(stack) > 1 {
+		e2 = stack[len(stack) - 1]
+		stack = slice(stack, 0, len(stack) - 1)
+		e1 = stack[len(stack) - 1]
+		stack = slice(stack, 0, len(stack) - 1)
+
+		if e1.type == "paren" {
+			stack = append(stack, e2)
+			break
+		}
+
+		patchOuts(e1.outs, e2.start)
+		stack = append(stack, makeFrag(e1.start, e2.outs))
+	}
+
+	if len(stack) == 0 {
+		return error("invalid regex pattern")
+	}
+
+	e = stack[0]
+
+	# Add final match state
+	matchState = makeState(stateMatch)
+	patchOuts(e.outs, matchState)
+
+	return e.start
+}
+
+# Check if character is a word character
+isWordChar = fn(ch) {
+	if ch == "_" {
+		return true
+	}
+
+	chCode = bytes(ch)[0]
+	return (chCode >= 97 && chCode <= 122) || (chCode >= 65 && chCode <= 90) || (chCode >= 48 && chCode <= 57)
+}
+
+# Run NFA simulation to check if string matches
+runNFA = fn(start, text, anchorStart, anchorEnd) {
+	# Current set of states
+	clist = []
+	# Next set of states
+	nlist = []
+
+	# Add state to list with epsilon closure
+	addState = fn(list, s, pos) {
+		if s == null {
+			return list
+		}
+
+		# Check if already in list (compare by reference)
+		for i = 0; i < len(list); ++i {
+			if list[i].state == s {
+				return list
+			}
+		}
+
+		entry = new()
+		entry.state = s
+		entry.pos = pos
+
+		list = append(list, entry)
+
+		# Follow epsilon transitions (split states and anchors)
+		# stateSplit = 2, stateAnchorStart = 6, stateAnchorEnd = 7,
+		# stateWordBoundary = 8, stateNonWordBound = 9
+		if s.type == 2 {  # stateSplit
+			list = addState(list, s.out, pos)
+			list = addState(list, s.out1, pos)
+		} else if s.type == 6 {  # stateAnchorStart
+			# Start anchor only matches at position 0
+			if anchorStart && pos == 0 {
+				list = addState(list, s.out, pos)
+			}
+		} else if s.type == 7 {  # stateAnchorEnd
+			# End anchor only matches at end of text
+			if pos == len(text) {
+				list = addState(list, s.out, pos)
+			}
+		} else if s.type == 8 {  # stateWordBoundary
+			# Word boundary: transition between word and non-word char
+			prevIsWord = pos > 0 && isWordChar(text[pos - 1])
+			nextIsWord = pos < len(text) && isWordChar(text[pos])
+
+			if prevIsWord != nextIsWord {
+				list = addState(list, s.out, pos)
+			}
+		} else if s.type == 9 {  # stateNonWordBound
+			# Non-word boundary
+			prevIsWord = pos > 0 && isWordChar(text[pos - 1])
+			nextIsWord = pos < len(text) && isWordChar(text[pos])
+
+			if prevIsWord == nextIsWord {
+				list = addState(list, s.out, pos)
+			}
+		}
+
+		return list
+	}
+
+	# Check character against character class
+	matchCharClass = fn(chars, ch) {
+		for i = 0; i < len(chars); ++i {
+			if chars[i] == ch {
+				return true
+			}
+		}
+		return false
+	}
+
+	# Initialize with start state
+	clist = addState(clist, start, 0)
+
+	# Check if any state in the list is a match state
+	isMatch = fn(list) {
+		for i = 0; i < len(list); ++i {
+			# Compare directly to 0 (stateMatch value) instead of the constant
+			if list[i].state.type == 0 {
+				return true
+			}
+		}
+		return false
+	}
+
+	# Check if current state list contains a match
+	if isMatch(clist) {
+		return true
+	}
+
+	# Process each character
+	for i = 0; i < len(text); ++i {
+		ch = text[i]
+
+		# Check each current state
+		for j = 0; j < len(clist); ++j {
+			entry = clist[j]
+			s = entry.state
+
+			if s.type == 1 && s.ch == ch {  # stateChar = 1
+				nlist = addState(nlist, s.out, i + 1)
+			} else if s.type == 3 {  # stateAny = 3
+				nlist = addState(nlist, s.out, i + 1)
+			} else if s.type == 4 && matchCharClass(s.chars, ch) {  # stateCharClass = 4
+				nlist = addState(nlist, s.out, i + 1)
+			} else if s.type == 5 && !matchCharClass(s.chars, ch) {  # stateNegClass = 5
+				nlist = addState(nlist, s.out, i + 1)
+			}
+		}
+
+		# Swap lists
+		clist = nlist
+		nlist = []
+
+		# If no states, matching failed
+		if len(clist) == 0 {
+			return false
+		}
+
+		# Check if we've reached a match state
+		if isMatch(clist) {
+			return true
+		}
+	}
+
+	# Final check: did we end in a match state?
+	return isMatch(clist)
+}
+
+# Regexp represents a compiled regular expression (like Go's regexp.Regexp)
+makeRegexp = fn(pattern) {
+	re = new()
+	re.pattern = pattern
+
+	# Compile pattern to NFA
+	nfa = compileToNFA(pattern)
+	if failed(nfa) {
+		return nfa
+	}
+
+	re.nfa = nfa
+
+	# MatchString reports whether the string s contains any match of re (Go: func (re *Regexp) MatchString(s string) bool)
+	re.MatchString = fn(s) {
+		# Try matching starting from each position in the string
+		for i = 0; i <= len(s); ++i {
+			substr = slice(s, i, len(s))
+			if runNFA(re.nfa, substr, i == 0, false) {
+				return true
+			}
+		}
+		return false
+	}
+
+	# Match reports whether the byte slice b contains any match of re (Go: func (re *Regexp) Match(b []byte) bool)
+	re.Match = fn(b) {
+		return re.MatchString(string(b))
+	}
+
+	# FindString returns the leftmost match in s (Go: func (re *Regexp) FindString(s string) string)
+	re.FindString = fn(s) {
+		for i = 0; i < len(s); ++i {
+			for j = i + 1; j <= len(s); ++j {
+				substr = slice(s, i, j)
+				if runNFA(re.nfa, substr, i == 0, j == len(s)) {
+					return substr
+				}
+			}
+		}
+		return ""
+	}
+
+	# FindAllString returns all matches (Go: func (re *Regexp) FindAllString(s string, n int) []string)
+	re.FindAllString = fn(s, n) {
+		matches = []
+		i = 0
+
+		for i < len(s) {
+			if n != -1 && len(matches) >= n {
+				break
+			}
+
+			found = false
+			longestMatch = ""
+			longestEnd = i
+
+			# Find longest match starting at i
+			for j = i + 1; j <= len(s); ++j {
+				substr = slice(s, i, j)
+				if runNFA(re.nfa, substr, i == 0, j == len(s)) {
+					longestMatch = substr
+					longestEnd = j
+					found = true
+				}
+			}
+
+			if found {
+				matches = append(matches, longestMatch)
+				i = longestEnd
+			} else {
+				++i
+			}
+		}
+
+		return matches
+	}
+
+	# ReplaceAllString replaces all matches (Go: func (re *Regexp) ReplaceAllString(src, repl string) string)
+	re.ReplaceAllString = fn(src, repl) {
+		result = ""
+		i = 0
+
+		for i < len(src) {
+			found = false
+			longestEnd = i
+
+			# Find longest match starting at i
+			for j = i + 1; j <= len(src); ++j {
+				substr = slice(src, i, j)
+				if runNFA(re.nfa, substr, i == 0, j == len(src)) {
+					longestEnd = j
+					found = true
+				}
+			}
+
+			if found {
+				result += repl
+				i = longestEnd
+			} else {
+				result += src[i]
+				++i
+			}
+		}
+
+		return result
+	}
+
+	# Split slices s into substrings separated by regex matches (Go: func (re *Regexp) Split(s string, n int) []string)
+	re.Split = fn(s, n) {
+		parts = []
+		lastEnd = 0
+		count = 0
+
+		i = 0
+		for i < len(s) {
+			if n > 0 && count >= n - 1 {
+				break
+			}
+
+			found = false
+			matchStart = i
+			matchEnd = i
+
+			# Find match starting at or after i
+			for j = i + 1; j <= len(s); ++j {
+				substr = slice(s, i, j)
+				if runNFA(re.nfa, substr, i == 0, j == len(s)) {
+					matchEnd = j
+					found = true
+					break
+				}
+			}
+
+			if found {
+				# Add text before match
+				if matchStart > lastEnd {
+					parts = append(parts, slice(s, lastEnd, matchStart))
+				}
+
+				lastEnd = matchEnd
+				i = matchEnd
+				++count
+			} else {
+				++i
+			}
+		}
+
+		# Add remaining text
+		if lastEnd < len(s) {
+			parts = append(parts, slice(s, lastEnd, len(s)))
+		}
+
+		return parts
+	}
+
+	# String returns the pattern (Go: func (re *Regexp) String() string)
+	re.String = fn() {
+		return re.pattern
+	}
+
+	return re
+}
+
+# Compile parses a regular expression and returns a Regexp object (Go: func Compile(expr string) (*Regexp, error))
+Compile = fn(expr) {
+	return makeRegexp(expr)
+}
+
+# MustCompile is like Compile but panics on error (Go: func MustCompile(str string) *Regexp)
+MustCompile = fn(expr) {
+	re = Compile(expr)
+	if failed(re) {
+		exit(re)
+	}
+	return re
+}
+
+# MatchString reports whether the string s contains any match of the pattern (Go: func MatchString(pattern string, s string) (matched bool, err error))
+MatchString = fn(pattern, s) {
+	re = Compile(pattern)
+	if failed(re) {
+		return re
+	}
+	return re.MatchString(s)
+}
+
+# Match reports whether the byte slice b contains any match of the pattern (Go: func Match(pattern string, b []byte) (matched bool, err error))
+Match = fn(pattern, b) {
+	return MatchString(pattern, string(b))
+}
+
+# QuoteMeta returns a string that escapes all regex metacharacters (Go: func QuoteMeta(s string) string)
+QuoteMeta = fn(s) {
+	meta = "\\^$.|?*+()[]{}\\-"
+	result = ""
+
+	for i = 0; i < len(s); ++i {
+		ch = s[i]
+		# Check if character is a metacharacter
+		isMeta = false
+		for j = 0; j < len(meta); ++j {
+			if meta[j] == ch {
+				isMeta = true
+				break
+			}
+		}
+		if isMeta {
+			result += "\\"
+		}
+		result += ch
+	}
+
+	return result
+}

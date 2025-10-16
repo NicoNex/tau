@@ -1,0 +1,636 @@
+# net.tau - Network library for Tau (inspired by Go's net package)
+# Provides high-level networking primitives matching Go's net library API
+
+libc = plugin("/usr/lib/libc.so.6")
+
+# Internal constants (unexported, matching Go's internal syscall package)
+afInet = 2       # IPv4
+afInet6 = 10     # IPv6
+afUnix = 1       # Unix domain sockets
+
+sockStream = 1   # TCP
+sockDgram = 2    # UDP
+
+ipprotoTcp = 6
+ipprotoUdp = 17
+
+solSocket = 1
+soReuseaddr = 2
+soReuseport = 15
+soKeepalive = 9
+soBroadcast = 6
+
+shutRd = 0
+shutWr = 1
+shutRdwr = 2
+
+somaxconn = 128
+
+# Internal helper functions (unexported)
+htons = fn(port) { int(libc.htons(port)) }
+ntohs = fn(port) { int(libc.ntohs(port)) }
+inetAddr = fn(ip) { int(libc.inet_addr(ip)) }
+
+makeSockaddrIn = fn(port, ip) {
+	# Create a 16-byte array representing struct sockaddr_in
+	# Layout: sin_family (2 bytes), sin_port (2 bytes), sin_addr (4 bytes), padding (8 bytes)
+
+	family = afInet
+	portNum = htons(port)
+	addrNum = if ip == null || ip == "" { 0 } else { inetAddr(ip) }
+
+	# Build byte array (little-endian for x86-64)
+	buf = []
+
+	# sin_family (2 bytes)
+	buf = append(buf, family & 255)
+	buf = append(buf, (family >> 8) & 255)
+
+	# sin_port (2 bytes, big-endian from htons)
+	buf = append(buf, (portNum >> 8) & 255)
+	buf = append(buf, portNum & 255)
+
+	# sin_addr (4 bytes, already in network byte order from inet_addr)
+	buf = append(buf, addrNum & 255)
+	buf = append(buf, (addrNum >> 8) & 255)
+	buf = append(buf, (addrNum >> 16) & 255)
+	buf = append(buf, (addrNum >> 24) & 255)
+
+	# Padding (8 bytes of zeros)
+	for i = 0; i < 8; ++i {
+		buf = append(buf, 0)
+	}
+
+	return bytes(buf)
+}
+
+# Conn interface - represents a network connection (like Go's net.Conn)
+makeConn = fn(fd, network, laddr, raddr) {
+	conn = new()
+	conn.fd = fd
+
+	# Read - read data into buffer (Go: Read(b []byte) (n int, err error))
+	conn.Read = fn(bufsize) {
+		if bufsize == null {
+			bufsize = 4096
+		}
+
+		buf = []
+		for i = 0; i < bufsize; ++i {
+			buf = append(buf, 0)
+		}
+
+		n = int(libc.recv(conn.fd, buf, bufsize, 0))
+
+		if n < 0 {
+			return error("read error")
+		}
+
+		if n == 0 {
+			return bytes([])  # EOF
+		}
+
+		result = []
+		for i = 0; i < n; ++i {
+			result = append(result, buf[i])
+		}
+
+		return bytes(result)
+	}
+
+	# Write - write data to connection (Go: Write(b []byte) (n int, err error))
+	conn.Write = fn(data) {
+		if type(data) == "string" {
+			data = bytes(data)
+		}
+
+		n = int(libc.send(conn.fd, data, len(data), 0))
+
+		if n < 0 {
+			return error("write error")
+		}
+
+		return n
+	}
+
+	# Close - close the connection (Go: Close() error)
+	conn.Close = fn() {
+		result = int(libc.close(conn.fd))
+		if result < 0 {
+			return error("close error")
+		}
+		return null
+	}
+
+	# LocalAddr - return local network address (Go: LocalAddr() Addr)
+	conn.LocalAddr = fn() {
+		return laddr
+	}
+
+	# RemoteAddr - return remote network address (Go: RemoteAddr() Addr)
+	conn.RemoteAddr = fn() {
+		return raddr
+	}
+
+	return conn
+}
+
+# Listener interface - represents a network listener (like Go's net.Listener)
+makeListener = fn(fd, network, addr) {
+	listener = new()
+	listener.fd = fd
+
+	# Accept - accept next connection (Go: Accept() (Conn, error))
+	listener.Accept = fn() {
+		clientFd = int(libc.accept(listener.fd, null, null))
+
+		if clientFd < 0 {
+			return error("accept error")
+		}
+
+		# Create connection object
+		return makeConn(clientFd, network, null, null)
+	}
+
+	# Close - close the listener (Go: Close() error)
+	listener.Close = fn() {
+		result = int(libc.close(listener.fd))
+		if result < 0 {
+			return error("close error")
+		}
+		return null
+	}
+
+	# Addr - return listener's network address (Go: Addr() Addr)
+	listener.Addr = fn() {
+		return addr
+	}
+
+	return listener
+}
+
+# PacketConn interface - represents a packet-oriented connection (like Go's net.PacketConn)
+makePacketConn = fn(fd, network, laddr) {
+	conn = new()
+	conn.fd = fd
+
+	# ReadFrom - read packet with source address (Go: ReadFrom(b []byte) (n int, addr Addr, err error))
+	conn.ReadFrom = fn(bufsize) {
+		if bufsize == null {
+			bufsize = 4096
+		}
+
+		buf = []
+		for i = 0; i < bufsize; ++i {
+			buf = append(buf, 0)
+		}
+
+		n = int(libc.recvfrom(conn.fd, buf, bufsize, 0, null, null))
+
+		if n < 0 {
+			return error("read error")
+		}
+
+		result = []
+		for i = 0; i < n; ++i {
+			result = append(result, buf[i])
+		}
+
+		return bytes(result)
+	}
+
+	# WriteTo - write packet to address (Go: WriteTo(b []byte, addr Addr) (n int, err error))
+	conn.WriteTo = fn(data, ip, port) {
+		if type(data) == "string" {
+			data = bytes(data)
+		}
+
+		addr = makeSockaddrIn(port, ip)
+		n = int(libc.sendto(conn.fd, data, len(data), 0, addr, 16))
+
+		if n < 0 {
+			return error("write error")
+		}
+
+		return n
+	}
+
+	# Close - close the connection (Go: Close() error)
+	conn.Close = fn() {
+		result = int(libc.close(conn.fd))
+		if result < 0 {
+			return error("close error")
+		}
+		return null
+	}
+
+	# LocalAddr - return local address (Go: LocalAddr() Addr)
+	conn.LocalAddr = fn() {
+		return laddr
+	}
+
+	return conn
+}
+
+SplitHostPort = fn(hostport) {}
+
+# Dial - connect to network address (Go: func Dial(network, address string) (Conn, error))
+# network: "tcp", "tcp4", "tcp6", "udp", "udp4", "udp6"
+# address: "host:port" or "ip:port"
+Dial = fn(network, address) {
+	# Parse address
+	hp = SplitHostPort(address)
+	if failed(hp) {
+		return hp
+	}
+
+	host = hp.Host
+	port = int(hp.Port)
+
+	# Determine socket type
+	if network == "tcp" || network == "tcp4" {
+		sockType = sockStream
+		proto = ipprotoTcp
+	} else if network == "udp" || network == "udp4" {
+		sockType = sockDgram
+		proto = ipprotoUdp
+	} else {
+		return error("unknown network: {network}")
+	}
+
+	# Create socket
+	fd = int(libc.socket(afInet, sockType, proto))
+	if fd < 0 {
+		return error("socket creation failed")
+	}
+
+	# Connect
+	addr = makeSockaddrIn(port, host)
+	result = int(libc.connect(fd, addr, 16))
+
+	if result < 0 {
+		libc.close(fd)
+		return error("connection failed")
+	}
+
+	# Return appropriate connection type
+	if sockType == sockStream {
+		return makeConn(fd, network, null, address)
+	} else {
+		return makePacketConn(fd, network, null)
+	}
+}
+
+# DialTCP - connect to TCP address (Go: func DialTCP(network string, laddr, raddr *TCPAddr) (*TCPConn, error))
+DialTCP = fn(network, address) {
+	if network == null {
+		network = "tcp"
+	}
+	return Dial(network, address)
+}
+
+# DialUDP - connect to UDP address (Go: func DialUDP(network string, laddr, raddr *UDPAddr) (*UDPConn, error))
+DialUDP = fn(network, address) {
+	if network == null {
+		network = "udp"
+	}
+	return Dial(network, address)
+}
+
+# Listen - create network listener (Go: func Listen(network, address string) (Listener, error))
+# network: "tcp", "tcp4", "tcp6", "unix"
+# address: "host:port" or ":port" for all interfaces
+Listen = fn(network, address) {
+	# Parse address
+	if failed(hp = SplitHostPort(address)) {
+		return hp
+	}
+
+	host = hp.Host
+	port = int(hp.Port)
+
+	# Only TCP supported for Listen
+	if network != "tcp" && network != "tcp4" && network != "tcp6" {
+		return error("unsupported network: {network}")
+	}
+
+	# Create socket
+	fd = int(libc.socket(afInet, sockStream, ipprotoTcp))
+	if fd < 0 {
+		return error("socket creation failed")
+	}
+
+	# Set SO_REUSEADDR
+	libc.setsockopt(fd, solSocket, soReuseaddr, 1, 4)
+
+	# Bind
+	addr = makeSockaddrIn(port, if host == "" { null } else { host })
+	result = int(libc.bind(fd, addr, 16))
+
+	if result < 0 {
+		libc.close(fd)
+		return error("bind failed")
+	}
+
+	# Listen
+	result = int(libc.listen(fd, somaxconn))
+
+	if result < 0 {
+		libc.close(fd)
+		return error("listen failed")
+	}
+
+	return makeListener(fd, network, address)
+}
+
+# ListenTCP - create TCP listener (Go: func ListenTCP(network string, laddr *TCPAddr) (*TCPListener, error))
+ListenTCP = fn(network, address) {
+	if network == null {
+		network = "tcp"
+	}
+	return Listen(network, address)
+}
+
+# ListenPacket - create packet listener (Go: func ListenPacket(network, address string) (PacketConn, error))
+# network: "udp", "udp4", "udp6"
+# address: "host:port" or ":port"
+ListenPacket = fn(network, address) {
+	# Parse address
+	if failed(hp = SplitHostPort(address)) {
+		return hp
+	}
+
+	host = hp.Host
+	port = int(hp.Port)
+
+	# Only UDP supported
+	if network != "udp" && network != "udp4" && network != "udp6" {
+		return error("unsupported network: {network}")
+	}
+
+	# Create socket
+	fd = int(libc.socket(afInet, sockDgram, ipprotoUdp))
+	if fd < 0 {
+		return error("socket creation failed")
+	}
+
+	# Bind
+	addr = makeSockaddrIn(port, if host == "" { null } else { host })
+	result = int(libc.bind(fd, addr, 16))
+
+	if result < 0 {
+		libc.close(fd)
+		return error("bind failed")
+	}
+
+	return makePacketConn(fd, network, address)
+}
+
+# ListenUDP - create UDP listener (Go: func ListenUDP(network string, laddr *UDPAddr) (*UDPConn, error))
+ListenUDP = fn(network, address) {
+	if network == null {
+		network = "udp"
+	}
+	return ListenPacket(network, address)
+}
+
+# Network address utility functions (matching Go's net package)
+
+# JoinHostPort - combine host and port (Go: func JoinHostPort(host, port string) string)
+JoinHostPort = fn(host, port) {
+	# Handle IPv6 addresses with brackets if needed
+	if type(port) == "int" || type(port) == "float" {
+		port = string(port)
+	}
+	return "{host}:{port}"
+}
+
+# SplitHostPort - split host:port (Go: func SplitHostPort(hostport string) (host, port string, err error))
+SplitHostPort = fn(hostport) {
+	# Find last colon for IPv6 compatibility
+	colonIdx = -1
+	for i = len(hostport) - 1; i >= 0; --i {
+		if hostport[i] == ":" {
+			colonIdx = i
+			break
+		}
+	}
+
+	if colonIdx == -1 {
+		return error("missing port in address")
+	}
+
+	result = new()
+	result.Host = slice(hostport, 0, colonIdx)
+	result.Port = slice(hostport, colonIdx + 1, len(hostport))
+
+	return result
+}
+
+# ParseIP - parse IP address string (Go: func ParseIP(s string) IP)
+ParseIP = fn(s) {
+	addr = inetAddr(s)
+	if addr == -1 {
+		return error("invalid IP address")
+	}
+
+	# Return IP object
+	ip = new()
+	ip.String = fn() { s }
+	ip.addr = addr
+
+	return ip
+}
+
+# LookupHost - lookup host (Go: func LookupHost(host string) (addrs []string, err error))
+LookupHost = fn(host) {
+	hints = new()
+	hints.aiFamily = afInet
+	hints.aiSocktype = sockStream
+
+	if failed(result = libc.getaddrinfo(host, null, hints, null)) {
+		return error("lookup failed: {host}")
+	}
+
+	return result
+}
+
+# LookupPort - lookup port (Go: func LookupPort(network, service string) (port int, err error))
+LookupPort = fn(network, service) {
+	# Common port mappings
+	if service == "http" { return 80 }
+	if service == "https" { return 443 }
+	if service == "ftp" { return 21 }
+	if service == "ssh" { return 22 }
+	if service == "telnet" { return 23 }
+	if service == "smtp" { return 25 }
+	if service == "dns" { return 53 }
+
+	# Try to parse as number
+	if !failed(port = int(service)) {
+		return port
+	}
+
+	return error("unknown service: {service}")
+}
+
+# InterfaceAddrs - get network interface addresses (Go: func InterfaceAddrs() ([]Addr, error))
+InterfaceAddrs = fn() {
+	# Simplified - would need to parse /proc/net or use getifaddrs
+	return error("not implemented")
+}
+
+# Additional helper functions
+
+# ResolveTCPAddr - resolve TCP address (Go: func ResolveTCPAddr(network, address string) (*TCPAddr, error))
+ResolveTCPAddr = fn(network, address) {
+	if failed(hp = SplitHostPort(address)) {
+		return hp
+	}
+
+	addr = new()
+	addr.IP = hp.Host
+	addr.Port = int(hp.Port)
+	addr.String = fn() { JoinHostPort(addr.IP, addr.Port) }
+
+	return addr
+}
+
+# ResolveUDPAddr - resolve UDP address (Go: func ResolveUDPAddr(network, address string) (*UDPAddr, error))
+ResolveUDPAddr = fn(network, address) {
+	return ResolveTCPAddr(network, address)
+}
+
+# HTTP helpers (inspired by Go's net/http but simplified)
+
+# HTTPGet - simple HTTP GET request
+HTTPGet = fn(url) {
+	# Parse URL
+	if slice(url, 0, 7) != "http://" {
+		return error("only http:// URLs supported")
+	}
+
+	rest = slice(url, 7, len(url))
+
+	# Find path
+	pathIdx = -1
+	for i = 0; i < len(rest); ++i {
+		if rest[i] == "/" {
+			pathIdx = i
+			break
+		}
+	}
+
+	if pathIdx == -1 {
+		hostport = rest
+		path = "/"
+	} else {
+		hostport = slice(rest, 0, pathIdx)
+		path = slice(rest, pathIdx, len(rest))
+	}
+
+	# Add default port if missing
+	if failed(hp = SplitHostPort(hostport)) {
+		hostport = JoinHostPort(hostport, 80)
+	}
+
+	# Connect
+	if failed(conn = Dial("tcp", hostport)) {
+		return conn
+	}
+
+	# Parse host for header
+	hp2 = SplitHostPort(hostport)
+	host = if failed(hp2) { hostport } else { hp2.Host }
+
+	# Send request
+	request = "GET {path} HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"
+
+	if failed(n = conn.Write(request)) {
+		conn.Close()
+		return n
+	}
+
+	# Read response
+	response = ""
+	for {
+		if failed(chunk = conn.Read(4096)) {
+			break
+		}
+
+		if len(chunk) == 0 {
+			break
+		}
+
+		response += string(chunk)
+	}
+
+	conn.Close()
+	return response
+}
+
+# HTTPServe - simple HTTP request handler
+HTTPServe = fn(conn, handler) {
+	# Read request
+	if failed(data = conn.Read(4096)) {
+		conn.Close()
+		return data
+	}
+
+	request = string(data)
+
+	# Parse request line
+	lines = []
+	line = ""
+	for i = 0; i < len(request); ++i {
+		if request[i] == "\n" {
+			lines = append(lines, line)
+			line = ""
+		} else if request[i] != "\r" {
+			line += request[i]
+		}
+	}
+
+	if len(lines) == 0 {
+		conn.Close()
+		return error("empty request")
+	}
+
+	# Parse first line
+	parts = []
+	part = ""
+	for i = 0; i < len(lines[0]); ++i {
+		if lines[0][i] == " " {
+			if len(part) > 0 {
+				parts = append(parts, part)
+				part = ""
+			}
+		} else {
+			part += lines[0][i]
+		}
+	}
+	if len(part) > 0 {
+		parts = append(parts, part)
+	}
+
+	if len(parts) < 2 {
+		conn.Close()
+		return error("invalid request")
+	}
+
+	# Create request object
+	req = new()
+	req.Method = parts[0]
+	req.Path = parts[1]
+	req.Proto = if len(parts) >= 3 { parts[2] } else { "HTTP/1.0" }
+
+	# Call handler
+	if failed(response = handler(req)) {
+		response = "HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n"
+	}
+
+	conn.Write(response)
+	conn.Close()
+
+	return null
+}

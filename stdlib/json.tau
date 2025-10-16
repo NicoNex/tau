@@ -1,0 +1,410 @@
+# ===== JSON parser (OO style) for Tau =====
+# - Objects -> Tau maps, Arrays -> Tau lists
+# - Strings with escapes; \uXXXX preserved verbatim
+# - Numbers (int/float with exponent)
+# - Literals: true, false, null
+# - Strict JSON (no trailing commas)
+# - Pretty errors with line/col via error()
+
+spaces = "\t\n\v\f\r "
+
+# --- tiny char helpers (avoid external deps) ---
+containsChar = fn(set, ch) {
+	for i = 0; i < len(set); ++i {
+		if slice(set, i, i+1) == ch {
+			return true
+		}
+	}
+	false
+}
+
+isHex = fn(c) {
+	(c >= "0" && c <= "9") || (c >= "a" && c <= "f") || (c >= "A" && c <= "F")
+}
+
+# --- number helpers ---
+Pow10 = fn(exp) {
+	p = 1.0
+	for k = 0; k < exp; ++k { p = p * 10.0 }
+	p
+}
+
+# --- Parser constructor ---
+Parser = fn(src) {
+	p = new()
+	p.s = src
+	p.i = 0
+	p.n = len(src)
+	p.line = 1
+	p.col = 1
+
+	p.inBounds = fn() { p.i >= 0 && p.i < p.n }
+	p.peek = fn() { if p.inBounds() { p.s[p.i] } else { "" } }
+
+	p.advance = fn(n) {
+		for k = 0; k < n && p.inBounds(); ++k {
+			if p.peek() == "\n" {
+				p.line += 1
+				p.col = 1
+			} else {
+				p.col += 1
+			}
+			p.i += 1
+		}
+	}
+
+	p.errorf = fn(msg) { error("json parse error at {p.line}:{p.col} -> {msg}") }
+
+	p.skipSpace = fn() {
+		for p.inBounds() && containsChar(spaces, p.peek()) { p.advance(1) }
+	}
+
+	p.expectChar = fn(ch) {
+		p.skipSpace()
+		if !p.inBounds() || p.peek() != ch {
+			return p.errorf("expected '" + ch + "'")
+		}
+		p.advance(1)
+		true
+	}
+
+	p.parseString = fn() {
+		p.skipSpace()
+		if !p.inBounds() || p.peek() != "\"" {
+			return p.errorf(`expected '"' to start string`)
+		}
+		p.advance(1)
+
+		buf = ""
+		for p.inBounds() {
+			c = p.peek()
+			p.advance(1)
+
+			if c == "\"" {
+				return buf
+			}
+
+			if c == "\\" {
+				if !p.inBounds() {
+					return p.errorf("unterminated escape")
+				}
+
+				esc = p.peek()
+				p.advance(1)
+
+				if esc == "\"" {
+					buf += "\""
+				} else if esc == "\\" {
+					buf += "\\"
+				} else if esc == "/"  {
+					buf += "/"
+				} else if esc == "b"  {
+					buf += "\b"
+				} else if esc == "f"  {
+					buf += "\f"
+				} else if esc == "n"  {
+					buf += "\n"
+				} else if esc == "r"  {
+					buf += "\r"
+				} else if esc == "t"  {
+					buf += "\t"
+				} else if esc == "u" {
+					# keep \uXXXX verbatim
+					if !(p.i+3 < p.n) {
+						return p.errorf("invalid \\u escape")
+					}
+
+					h0 = p.s[p.i]; h1 = p.s[p.i+1]
+					h2 = p.s[p.i+2]; h3 = p.s[p.i+3]
+
+					if !isHex(h0) || !isHex(h1) || !isHex(h2) || !isHex(h3) {
+						return p.errorf("invalid hex in \\u escape")
+					}
+					buf += "\\u" + h0 + h1 + h2 + h3
+					p.advance(4)
+				} else {
+					return p.errorf("unknown escape sequence '\\" + esc + "'")
+				}
+			} else {
+				buf += c
+			}
+		}
+
+		p.errorf("unterminated string")
+	}
+
+	p.parseDigitsInt = fn() {
+		if !p.inBounds() || p.peek() < "0" || p.peek() > "9" {
+			return p.errorf("expected digit")
+		}
+		val = 0
+		for p.inBounds() && p.peek() >= "0" && p.peek() <= "9" {
+			val = val * 10 + (bytes(p.s[p.i])[0] - bytes("0")[0])
+			p.advance(1)
+		}
+		val
+	}
+
+	p.parseNumber = fn() {
+		p.skipSpace()
+
+		sign = 1.0
+		if p.inBounds() && p.peek() == "-" { sign = -1.0; p.advance(1) }
+
+		if failed(intPart = p.parseDigitsInt()) { return intPart }
+
+		fracPart = 0.0
+		fracDiv  = 1.0
+		if p.inBounds() && p.peek() == "." {
+			p.advance(1)
+			if !p.inBounds() || p.peek() < "0" || p.peek() > "9" {
+				return p.errorf("expected digit after '.'")
+			}
+			for p.inBounds() && p.peek() >= "0" && p.peek() <= "9" {
+				d = (bytes(p.peek())[0] - bytes("0")[0])
+				fracDiv = fracDiv * 10.0
+				fracPart = fracPart * 10.0 + d
+				p.advance(1)
+			}
+		}
+
+		expVal = 0
+		expSign = 1
+		if p.inBounds() && (p.peek() == "e" || p.peek() == "E") {
+			p.advance(1)
+			if p.inBounds() && (p.peek() == "+" || p.peek() == "-") {
+				expSign = if p.peek() == "-" { -1 } else { 1 }
+				p.advance(1)
+			}
+			if failed(e = p.parseDigitsInt()) { return e }
+			expVal = e * expSign
+		}
+
+		n = sign * (intPart + (if fracDiv != 1.0 { fracPart / fracDiv } else { 0.0 }))
+		if expVal > 0 {
+			n = n * Pow10(expVal)
+		} else if expVal < 0 {
+			n = n / Pow10(-expVal)
+		}
+		n
+	}
+
+	p.matchWord = fn(w) {
+		for k = 0; k < len(w); ++k {
+			if !(p.i + k < p.n) || p.s[p.i+k] != w[k] {
+				return false
+			}
+		}
+		p.i = p.i + len(w)
+		p.col = p.col + len(w)   # approximate (ignores newlines; literals don't have)
+		true
+	}
+
+	p.parseLiteral = fn() {
+		p.skipSpace()
+		if p.inBounds() && p.peek() == "t" && p.matchWord("true") { return true }
+		if p.inBounds() && p.peek() == "f" && p.matchWord("false") { return false }
+		if p.inBounds() && p.peek() == "n" && p.matchWord("null") { return null }
+		p.errorf("expected literal true/false/null")
+	}
+
+	p.parseArray = fn() {
+		if failed(_ = p.expectChar("[")) { return _ }
+
+		arr = []
+
+		p.skipSpace()
+		if p.inBounds() && p.peek() == "]" { p.advance(1); return arr }
+
+		for true {
+			if failed(v = p.parseValue()) { return v }
+			arr = append(arr, v)
+
+			p.skipSpace()
+			if !p.inBounds() { return p.errorf("unterminated array") }
+
+			if p.peek() == "," {
+				p.advance(1)
+				p.skipSpace()
+				if !p.inBounds() { return p.errorf("value expected after ','") }
+				continue
+			}
+
+			if p.peek() == "]" { p.advance(1); return arr }
+
+			return p.errorf("expected ',' or ']'")
+		}
+	}
+
+	p.parseObject = fn() {
+		if failed(_ = p.expectChar(`{`)) { return _ }
+
+		obj = {}  # Tau map
+
+		p.skipSpace()
+		if p.inBounds() && p.peek() == "}" { p.advance(1); return obj }
+
+		for {
+			if failed(k = p.parseString()) { return k }
+			if failed(_ = p.expectChar(":")) { return _ }
+			if failed(v = p.parseValue()) { return v }
+			obj[k] = v
+
+			p.skipSpace()
+			if !p.inBounds() { return p.errorf("unterminated object") }
+
+			if p.peek() == "," {
+				p.advance(1)
+				p.skipSpace()
+				if p.inBounds() && p.peek() == `}` {
+					return p.errorf("trailing comma in object")
+				}
+				continue
+			}
+
+			if p.peek() == `}` {
+				p.advance(1)
+				return obj
+			}
+
+			return p.errorf("expected ',' or '}}'")
+		}
+	}
+
+	p.parseValue = fn() {
+		p.skipSpace()
+		if !p.inBounds() {
+			return p.errorf("unexpected end while expecting value")
+		}
+
+		c = p.peek()
+		if c == `{` {
+			return p.parseObject()
+		}
+		if c == `[` {
+			return p.parseArray()
+		}
+		if c == `"` {
+			return p.parseString()
+		}
+		if c == "-" || (c >= "0" && c <= "9") {
+			return p.parseNumber()
+		}
+		p.parseLiteral()
+	}
+
+	p.parse = fn() {
+		val = p.parseValue()
+		if failed(val) {
+			return val
+		}
+		p.skipSpace()
+		if p.i != p.n {
+			return p.errorf("extra data after valid JSON value")
+		}
+		val
+	}
+
+	p
+}
+
+# Public API
+Unmarshal = fn(s) {
+	# should never fail, but be consistent
+	if failed(p = Parser(s)) {
+		return p
+	}
+	p.parse()
+}
+
+encodeJSON = fn(x) {}
+
+escapeJSONString = fn(s) {
+	buf = "\""
+	for i = 0; i < len(s); ++i {
+		ch = s[i]
+
+		# fast path
+		if ch != "\"" && ch != "\\" && ch != "\b" && ch != "\f" && ch != "\n" && ch != "\r" && ch != "\t" && bytes(ch)[0] >= 32 {
+			buf += ch
+			continue
+		}
+
+		# escapes / control chars
+		if ch == "\""      {
+			buf += "\\\""
+		} else if ch == "\\" {
+			buf += "\\\\"
+		} else if ch == "\b" {
+			buf += "\\b"
+		} else if ch == "\f" {
+			buf += "\\f"
+		} else if ch == "\n" {
+			buf += "\\n"
+		} else if ch == "\r" {
+			buf += "\\r"
+		} else if ch == "\t" {
+			buf += "\\t"
+		} else {
+			# control char < 0x20 -> \u00XX
+			n = bytes(ch)[0]
+			digits = "0123456789abcdef"
+			hi = n / 16
+			lo = n - hi*16
+			buf += "\\u00" + digits[hi] + digits[lo]
+		}
+	}
+	buf + "\""
+}
+
+encodeListJSON = fn(xs) {
+	buf = "["
+	for i = 0; i < len(xs); ++i {
+		if i > 0 { buf += "," }
+		if failed(v = encodeJSON(xs[i])) { return v }
+		buf += v
+	}
+	buf + "]"
+}
+
+encodeMapJSON = fn(m) {
+	# JSON requires string keys
+	ks = keys(m)
+	buf = `{`
+	for i = 0; i < len(ks); ++i {
+		k = ks[i]
+		if type(k) != "string" {
+			return error("json encode error: object key is not a string")
+		}
+		if i > 0 { buf += "," }
+		buf += escapeJSONString(k) + ":"
+		if failed(v = encodeJSON(m[k])) {
+			return v
+		}
+		buf += v
+	}
+	buf + `}`
+}
+
+encodeJSON = fn(x) {
+	t = type(x)
+
+	return if t == "null" {
+		"null"
+	} else if t == "string" {
+		escapeJSONString(x)
+	} else if t == "int" || t == "float" || t == "bool" {
+		string(x)
+	} else if t == "list" {
+		encodeListJSON(x)
+	} else if t == "map" {
+		println("dio cane")
+		encodeMapJSON(x)
+	} else {
+		error("json encode error: unsupported type " + t)
+	}
+}
+
+
+# Encode ANY Tau value (map/list/primitive) as JSON string
+Marshal = fn(v) { encodeJSON(v) }

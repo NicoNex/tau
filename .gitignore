@@ -1,19 +1,21 @@
 *~
 *.bak
 *.exe
-*.tau
 *.tauc
 *.prof
 *.py
 *.so
 *.prof
+*.tau
 
 /.vscode
 **/.DS_store
 
 /tau
 /cmd/tau/tau
-!/examples/*.tau
+#!/examples/*.tau
+!/stdlib/*.tau
 internal/obj/libffi
 internal/vm/bdwgc
 profile
+/bins

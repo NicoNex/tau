@@ -53,8 +53,8 @@ func (p Plus) Eval() (obj.Object, error) {
 
 	default:
 		return obj.NullObj, fmt.Errorf(
-			"invalid operation %v + %v (wrong types %v and %v)",
-			left, right, left.Type(), right.Type(),
+			"unsupported operator '+' for types %v and %v",
+			left.Type(), right.Type(),
 		)
 	}
 }

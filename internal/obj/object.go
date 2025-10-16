@@ -50,7 +50,7 @@ import (
 type (
 	Object           C.struct_object
 	CompiledFunction C.struct_function
-	Type             = C.enum_obj_type
+	Type             C.enum_obj_type
 )
 
 const (
@@ -108,8 +108,12 @@ var (
 	FalseObj = Object(C.false_obj)
 )
 
+func (t Type) String() string {
+	return C.GoString(C.otype_str((C.enum_obj_type)(t)))
+}
+
 func (o Object) Type() Type {
-	return o._type
+	return Type(o._type)
 }
 
 func (o Object) TypeString() string {

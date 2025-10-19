@@ -18,15 +18,15 @@ containsChar = fn(set, ch) {
 	false
 }
 
-isHex = fn(c) {
-	(c >= "0" && c <= "9") || (c >= "a" && c <= "f") || (c >= "A" && c <= "F")
-}
+isHex = fn(c) { (c >= "0" && c <= "9") || (c >= "a" && c <= "f") || (c >= "A" && c <= "F") }
 
 # --- number helpers ---
 Pow10 = fn(exp) {
 	p = 1.0
-	for k = 0; k < exp; ++k { p = p * 10.0 }
-	p
+	for k = 0; k < exp; ++k {
+		p = p * 10.0
+	}
+	return p
 }
 
 # --- Parser constructor ---
@@ -361,7 +361,9 @@ encodeListJSON = fn(xs) {
 	buf = "["
 	for i = 0; i < len(xs); ++i {
 		if i > 0 { buf += "," }
-		if failed(v = encodeJSON(xs[i])) { return v }
+		if failed(v = encodeJSON(xs[i])) {
+			return v
+		}
 		buf += v
 	}
 	buf + "]"
@@ -398,7 +400,6 @@ encodeJSON = fn(x) {
 	} else if t == "list" {
 		encodeListJSON(x)
 	} else if t == "map" {
-		println("dio cane")
 		encodeMapJSON(x)
 	} else {
 		error("json encode error: unsupported type " + t)

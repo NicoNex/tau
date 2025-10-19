@@ -189,11 +189,7 @@ makeResponseWriter = fn() {
 	# Write writes data to the response body
 	w.Write = fn(data) {
 		if type(data) != "string" {
-			if type(data) == "bytes" {
-				data = string(data)
-			} else {
-				data = string(data)
-			}
+			data = string(data)
 		}
 
 		w.body += data
@@ -387,17 +383,16 @@ NewClient = fn() {
 	return client
 }
 
-# Default client
-defaultClient = NewClient()
+DefaultClient = NewClient()
 
 # Get issues a GET request using the default client (like Go's http.Get)
 Get = fn(url) {
-	return defaultClient.Get(url)
+	return DefaultClient.Get(url)
 }
 
 # Post issues a POST request using the default client (like Go's http.Post)
 Post = fn(url, contentType, body) {
-	return defaultClient.Post(url, contentType, body)
+	return DefaultClient.Post(url, contentType, body)
 }
 
 # NewRequest creates a new HTTP request (like Go's http.NewRequest)
@@ -452,16 +447,16 @@ NewServeMux = fn() {
 }
 
 # Default ServeMux
-defaultServeMux = NewServeMux()
+DefaultServeMux = NewServeMux()
 
 # Handle registers a handler for the given pattern on the default mux
 Handle = fn(pattern, handler) {
-	defaultServeMux.Handle(pattern, handler)
+	DefaultServeMux.Handle(pattern, handler)
 }
 
 # HandleFunc registers a handler function for the given pattern on the default mux
 HandleFunc = fn(pattern, handler) {
-	defaultServeMux.HandleFunc(pattern, handler)
+	DefaultServeMux.HandleFunc(pattern, handler)
 }
 
 # Server represents an HTTP server (like Go's http.Server)
@@ -476,8 +471,6 @@ NewServer = fn(addr, handler) {
 		if failed(ln = net.Listen("tcp", server.Addr)) {
 			return ln
 		}
-
-		print("HTTP server listening on {server.Addr}")
 
 		# Accept connections
 		for {
@@ -585,8 +578,6 @@ RedirectHandler = fn(url, code) {
 
 # FileServer serves static files from a directory (simplified version)
 FileServer = fn(root) {
-	import("stdlib/os.tau")
-
 	return fn(w, req) {
 		# Security: prevent directory traversal
 		if strings.Contains(req.URL, "..") {

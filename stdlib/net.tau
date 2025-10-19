@@ -232,6 +232,7 @@ makePacketConn = fn(fd, network, laddr) {
 	return conn
 }
 
+# Forward declaration
 SplitHostPort = fn(hostport) {}
 
 # Dial - connect to network address (Go: func Dial(network, address string) (Conn, error))

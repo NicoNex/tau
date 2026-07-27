@@ -64,7 +64,9 @@ inline struct state new_state() {
 }
 
 inline void state_dispose(struct state s) {
-	free(s.consts.list);
+	// The constants are not freed: they belong to the compiler, which is
+	// written in Go, and freeing memory this side did not allocate is how a
+	// heap gets corrupted.
 	heap_dispose();
 	pool_dispose(s.globals);
 }
@@ -927,6 +929,7 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 
 static inline void vm_exec_return(struct vm * restrict vm) {
 	struct frame *frame = vm_pop_frame(vm);
+
 	vm->sp = frame->base_ptr - 1;
 	vm_stack_push(vm, null_obj);
 }
@@ -934,6 +937,7 @@ static inline void vm_exec_return(struct vm * restrict vm) {
 static inline void vm_exec_return_value(struct vm * restrict vm) {
 	struct object *o = &vm_stack_pop(vm);
 	struct frame *frame = vm_pop_frame(vm);
+
 	vm->sp = frame->base_ptr - 1;
 	vm_stack_push(vm, *o);
 }

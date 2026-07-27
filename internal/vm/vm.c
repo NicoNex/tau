@@ -1,6 +1,7 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <stddef.h>
 #include <stdlib.h>
 #include <setjmp.h>
 
@@ -738,9 +739,15 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 	char *strings[numargs];
 	size_t ncopies = 0;
 
-	// Convert Tau types to C types.
+	// Convert Tau types to C types. The arguments are read where they are:
+	// popping them here would leave them above sp, where the collector does
+	// not look, and the call below parks this VM on purpose. A collection
+	// while the C function runs would then free the very buffers it is
+	// reading.
+	struct object *args = &vm->stack[vm->sp - numargs];
+
 	for (int64_t i = numargs - 1; i >= 0; i--) {
-		struct object *o = &vm_stack_pop(vm);
+		struct object *o = &args[i];
 
 		switch (o->type) {
 		case obj_boolean:
@@ -787,7 +794,6 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 			vm_errorf(vm, "unsupported argument type %s for native objects", otype_str(o->type));
 		}
 	}
-	vm->sp--;
 
 	if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, numargs, &ffi_type_pointer, arg_types) != FFI_OK) {
 		vm_stack_push(vm, errorf("failed to prepare the native function"));
@@ -795,13 +801,17 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 	}
 
 	// A native call can block for an arbitrary amount of time (sockets, IO):
-	// park so that it doesn't hold back a collection. The arguments stay
-	// reachable from the stack of this VM, which nothing is mutating.
+	// park so that it doesn't hold back a collection. The arguments are still
+	// on the stack, so a collection happening now marks them and the buffers
+	// the C function is reading stay where they are.
 	ffi_arg return_value = 0;
 
 	gc_park();
 	ffi_call(&cif, n->data.handle, &return_value, arg_values);
 	gc_unpark();
+
+	// Now they can go: the arguments and the native object under them.
+	vm->sp -= numargs + 1;
 
 	for (size_t i = 0; i < ncopies; i++) {
 		free(copies[i]);

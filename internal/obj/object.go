@@ -250,3 +250,4 @@ func Printf(s string, a ...any) {
 func SetStdout(fd int, name string) {
 	C.set_stdout(C.int(fd), C.CString(name))
 }
+

@@ -9,6 +9,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/NicoNex/tau/internal/ast"
@@ -72,7 +73,19 @@ func ExecFileVM(f string) (err error) {
 	var bytecode compiler.Bytecode
 
 	if filepath.Ext(f) == ".tauc" {
-		bytecode = compiler.DecodeBytecode(readFile(f))
+		raw := readFile(f)
+
+		if IsBundle(raw) {
+			var clean func()
+
+			if bytecode, clean, err = openBundle(raw); err != nil {
+				fmt.Println(err)
+				return err
+			}
+			defer clean()
+		} else {
+			bytecode = compiler.DecodeBytecode(raw)
+		}
 	} else {
 		if bytecode, err = compile(f); err != nil {
 			fmt.Println(err)
@@ -85,26 +98,39 @@ func ExecFileVM(f string) (err error) {
 	return nil
 }
 
-func CompileFiles(files []string) error {
+// SetArgs hands the command line to the program about to run, which reads it
+// back as os.Args. It travels in the environment rather than as a builtin so
+// that the language keeps its small set of globals: the os module is the only
+// one that knows these variables exist, and it clears them once read.
+//
+// ponytail: one variable per argument because an argument may hold anything
+// but a NUL, so no single separator would be safe to join them with.
+func SetArgs(args []string) {
+	os.Setenv("TAU_ARGC", strconv.Itoa(len(args)))
+	for i, a := range args {
+		os.Setenv(fmt.Sprintf("TAU_ARG%d", i), a)
+	}
+}
+
+// CompileFiles compiles each file into a self contained '.tauc' bundle. With
+// out empty each bundle is written next to its source.
+func CompileFiles(files []string, out string) error {
+	if out != "" && len(files) > 1 {
+		return errors.New("build: -o takes a single input file")
+	}
+
 	for _, f := range files {
-		b := readFile(f)
-
-		res, errs := parser.Parse(f, string(b))
-		if len(errs) != 0 {
-			for _, e := range errs {
-				fmt.Println(e)
-			}
-			return ErrParseError
+		bundle, err := Bundle(f)
+		if err != nil {
+			return err
 		}
 
-		c := compiler.New()
-		c.SetFileInfo(f, string(b))
-		if err := c.Compile(res); err != nil {
-			fmt.Println(err)
-			continue
+		dst := out
+		if dst == "" {
+			ext := filepath.Ext(f)
+			dst = f[:len(f)-len(ext)] + ".tauc"
 		}
-		ext := filepath.Ext(f)
-		writeFile(f[:len(f)-len(ext)]+".tauc", c.Bytecode().Encode())
+		writeFile(dst, bundle)
 	}
 
 	return nil
@@ -187,4 +213,12 @@ func TestFiles(paths []string) error {
 	}
 	fmt.Printf("ok      %d test files passed\n", len(files))
 	return nil
+}
+
+// FormatFiles rewrites the given tau files in the canonical style, walking
+// directories for '.tau' files. With write the files are rewritten in place,
+// with list only the names of the ones that differ are printed, otherwise the
+// formatted source goes to standard output.
+func FormatFiles(paths []string, write, list bool) error {
+	return errors.New("fmt: not implemented yet")
 }

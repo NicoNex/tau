@@ -1,5 +1,8 @@
 #include <stdint.h>
+#include <stdlib.h>
 #include <string.h>
+#include <math.h>
+#include <stdio.h>
 #include <time.h>
 #include <unistd.h>
 #include <sys/types.h>
@@ -379,3 +382,165 @@ int64_t sys_errno() {
 void sys_set_errno(int64_t err) {
     errno = (int)err;
 }
+
+// ========== Environment ==========
+
+// Writes the value of the variable name into out and returns its length, or
+// -1 when the variable isn't set.
+int64_t sys_getenv(const char *name, void *out, int64_t outlen) {
+    const char *val = getenv(name);
+    if (val == NULL) return -1;
+
+    size_t len = strlen(val);
+    if ((int64_t)len >= outlen) len = outlen > 0 ? outlen - 1 : 0;
+    memcpy(out, val, len);
+    ((char *)out)[len] = '\0';
+
+    return len;
+}
+
+int64_t sys_setenv(const char *name, const char *value, int64_t overwrite) {
+#if !defined(_WIN32) && !defined(WIN32)
+    return setenv(name, value, (int)overwrite);
+#else
+    if (!overwrite && getenv(name) != NULL) return 0;
+    return _putenv_s(name, value);
+#endif
+}
+
+int64_t sys_unsetenv(const char *name) {
+#if !defined(_WIN32) && !defined(WIN32)
+    return unsetenv(name);
+#else
+    return _putenv_s(name, "");
+#endif
+}
+
+// ========== File Metadata ==========
+
+// The fields of a stat are read one at a time: there is no struct to hand
+// back, and a path lookup is cheap next to the cost of a native call.
+static int stat_of(const char *path, struct stat *st) {
+    return stat(path, st);
+}
+
+int64_t sys_stat_size(const char *path) {
+    struct stat st;
+    if (stat_of(path, &st) != 0) return -1;
+    return (int64_t)st.st_size;
+}
+
+int64_t sys_stat_mode(const char *path) {
+    struct stat st;
+    if (stat_of(path, &st) != 0) return -1;
+    return (int64_t)st.st_mode;
+}
+
+// The modification time in seconds since the Unix epoch.
+int64_t sys_stat_mtime(const char *path) {
+    struct stat st;
+    if (stat_of(path, &st) != 0) return -1;
+    return (int64_t)st.st_mtime;
+}
+
+int64_t sys_stat_isdir(const char *path) {
+    struct stat st;
+    if (stat_of(path, &st) != 0) return -1;
+    return S_ISDIR(st.st_mode) ? 1 : 0;
+}
+
+int64_t sys_rename(const char *from, const char *to) {
+    return rename(from, to);
+}
+
+int64_t sys_getcwd(void *out, int64_t outlen) {
+#if !defined(_WIN32) && !defined(WIN32)
+    if (getcwd(out, (size_t)outlen) == NULL) return -1;
+#else
+    if (_getcwd(out, (int)outlen) == NULL) return -1;
+#endif
+    return (int64_t)strlen(out);
+}
+
+int64_t sys_chdir(const char *path) {
+#if !defined(_WIN32) && !defined(WIN32)
+    return chdir(path);
+#else
+    return _chdir(path);
+#endif
+}
+
+// ========== Directories ==========
+
+#if !defined(_WIN32) && !defined(WIN32)
+#include <dirent.h>
+
+// A directory is read through the handle sys_opendir returns, one name per
+// call, until sys_readdir reports -1.
+int64_t sys_opendir(const char *path) {
+    return (int64_t)(intptr_t)opendir(path);
+}
+
+int64_t sys_readdir(int64_t dir, void *out, int64_t outlen) {
+    if (dir == 0) return -1;
+
+    struct dirent *e = readdir((DIR *)(intptr_t)dir);
+    if (e == NULL) return -1;
+
+    size_t len = strlen(e->d_name);
+    if ((int64_t)len >= outlen) len = outlen > 0 ? outlen - 1 : 0;
+    memcpy(out, e->d_name, len);
+    ((char *)out)[len] = '\0';
+
+    return (int64_t)len;
+}
+
+int64_t sys_closedir(int64_t dir) {
+    if (dir == 0) return -1;
+    return closedir((DIR *)(intptr_t)dir);
+}
+#else
+int64_t sys_opendir(const char *path) { (void)path; return 0; }
+int64_t sys_readdir(int64_t dir, void *out, int64_t outlen) { (void)dir; (void)out; (void)outlen; return -1; }
+int64_t sys_closedir(int64_t dir) { (void)dir; return -1; }
+#endif
+
+// ========== Math ==========
+
+// A native call always brings back a machine word, so a double comes back as
+// its bits and float(x, 64) on the tau side reads them as the number they
+// are.
+static inline int64_t bits(double d) {
+    int64_t i;
+    memcpy(&i, &d, sizeof i);
+    return i;
+}
+
+int64_t sys_sqrt(double x) { return bits(sqrt(x)); }
+int64_t sys_cbrt(double x) { return bits(cbrt(x)); }
+int64_t sys_exp(double x) { return bits(exp(x)); }
+int64_t sys_log(double x) { return bits(log(x)); }
+int64_t sys_log2(double x) { return bits(log2(x)); }
+int64_t sys_log10(double x) { return bits(log10(x)); }
+int64_t sys_sin(double x) { return bits(sin(x)); }
+int64_t sys_cos(double x) { return bits(cos(x)); }
+int64_t sys_tan(double x) { return bits(tan(x)); }
+int64_t sys_asin(double x) { return bits(asin(x)); }
+int64_t sys_acos(double x) { return bits(acos(x)); }
+int64_t sys_atan(double x) { return bits(atan(x)); }
+int64_t sys_sinh(double x) { return bits(sinh(x)); }
+int64_t sys_cosh(double x) { return bits(cosh(x)); }
+int64_t sys_tanh(double x) { return bits(tanh(x)); }
+int64_t sys_floor(double x) { return bits(floor(x)); }
+int64_t sys_ceil(double x) { return bits(ceil(x)); }
+int64_t sys_round(double x) { return bits(round(x)); }
+int64_t sys_trunc(double x) { return bits(trunc(x)); }
+int64_t sys_fabs(double x) { return bits(fabs(x)); }
+int64_t sys_pow(double x, double y) { return bits(pow(x, y)); }
+int64_t sys_atan2(double y, double x) { return bits(atan2(y, x)); }
+int64_t sys_fmod(double x, double y) { return bits(fmod(x, y)); }
+int64_t sys_hypot(double x, double y) { return bits(hypot(x, y)); }
+int64_t sys_inf(int64_t sign) { return bits(sign < 0 ? -INFINITY : INFINITY); }
+int64_t sys_nan(void) { return bits(NAN); }
+int64_t sys_isnan(double x) { return isnan(x) ? 1 : 0; }
+int64_t sys_isinf(double x) { return isinf(x) ? 1 : 0; }

@@ -348,3 +348,122 @@ TimeMono = fn() { int(sys.sys_time_mono_ms(), 64) }
 
 # SleepMillis pauses the current tau routine for ms milliseconds.
 SleepMillis = fn(ms) { sys.sys_sleep_ms(ms) }
+
+# ========== Environment ==========
+
+# Getenv returns the value of the variable name, or null when it isn't set.
+Getenv = fn(name) {
+	buf = bytes(4096)
+	n = int(sys.sys_getenv(name, buf, 4096))
+	if n < 0 {
+		return null
+	}
+	return string(slice(buf, 0, n))
+}
+
+# Setenv sets the variable name to value, overwriting what was there.
+Setenv = fn(name, value) {
+	if int(sys.sys_setenv(name, value, 1)) < 0 {
+		return Error("setenv")
+	}
+	return null
+}
+
+# Unsetenv removes the variable name.
+Unsetenv = fn(name) {
+	if int(sys.sys_unsetenv(name)) < 0 {
+		return Error("unsetenv")
+	}
+	return null
+}
+
+# ========== File Metadata ==========
+
+# The bits of a file mode, as returned by StatMode.
+S_IFMT = 0170000
+S_IFDIR = 0040000
+S_IFREG = 0100000
+S_IFLNK = 0120000
+
+# StatSize returns the size of the file at path in bytes.
+StatSize = fn(path) {
+	n = int(sys.sys_stat_size(path), 64)
+	if n < 0 {
+		return Error("stat {path}")
+	}
+	return n
+}
+
+# StatMode returns the mode of the file at path, permissions and type.
+StatMode = fn(path) {
+	n = int(sys.sys_stat_mode(path))
+	if n < 0 {
+		return Error("stat {path}")
+	}
+	return n
+}
+
+# StatMtime returns when the file at path was last modified, in seconds since
+# the Unix epoch.
+StatMtime = fn(path) {
+	n = int(sys.sys_stat_mtime(path), 64)
+	if n < 0 {
+		return Error("stat {path}")
+	}
+	return n
+}
+
+# StatIsDir reports whether path is a directory.
+StatIsDir = fn(path) {
+	n = int(sys.sys_stat_isdir(path))
+	if n < 0 {
+		return Error("stat {path}")
+	}
+	return n == 1
+}
+
+Rename = fn(from, to) {
+	if int(sys.sys_rename(from, to)) < 0 {
+		return Error("rename {from}")
+	}
+	return null
+}
+
+# Getwd returns the working directory.
+Getwd = fn() {
+	buf = bytes(4096)
+	n = int(sys.sys_getcwd(buf, 4096))
+	if n < 0 {
+		return Error("getcwd")
+	}
+	return string(slice(buf, 0, n))
+}
+
+Chdir = fn(path) {
+	if int(sys.sys_chdir(path)) < 0 {
+		return Error("chdir {path}")
+	}
+	return null
+}
+
+# ========== Directories ==========
+
+# Readdirnames returns the names inside the directory at path, "." and ".."
+# included, the way the system hands them over.
+Readdirnames = fn(path) {
+	d = int(sys.sys_opendir(path), 64)
+	if d == 0 {
+		return Error("opendir {path}")
+	}
+
+	names = []
+	buf = bytes(4096)
+	for {
+		n = int(sys.sys_readdir(d, buf, 4096))
+		if n < 0 {
+			sys.sys_closedir(d)
+			return names
+		}
+		names = append(names, string(slice(buf, 0, n)))
+	}
+}

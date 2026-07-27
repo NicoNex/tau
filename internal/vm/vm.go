@@ -158,6 +158,23 @@ func lookupPaths(vmdir, taupath string) []string {
 	return paths
 }
 
+// SearchDirs is searchDirs, for the tools that have to find a module the way
+// the runtime finds it.
+func SearchDirs(vmdir string) []string { return searchDirs(vmdir) }
+
+// LookupModule resolves the module taupath imported by vmfile.
+func LookupModule(vmfile, taupath string) (string, error) { return lookup(vmfile, taupath) }
+
+// SetBundledModules hands the runtime the modules carried inside a bundle.
+// They are found by the name they are imported with, before the filesystem is
+// looked at, so a bundled program runs with nothing installed.
+//
+// ponytail: keyed by the import string, so two different modules imported
+// under the same name would collide. Key by importer too if that ever bites.
+func SetBundledModules(mods map[string]string) { bundled = mods }
+
+var bundled map[string]string
+
 func lookup(vmfile, taupath string) (string, error) {
 	// The directory of the importing file, so that a module finds the ones
 	// that sit next to it whatever the working directory is.
@@ -178,11 +195,19 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 		return 1
 	}
 
-	p, err := lookup(C.GoString(vm.file), path)
-	if err != nil {
-		msg := fmt.Sprintf("import: %v", err)
-		C.go_vm_errorf(vm, C.CString(msg))
-		return 1
+	// A bundled module comes with the program, so it is looked for before the
+	// filesystem: that is what makes a built program run on its own.
+	src, isBundled := bundled[path]
+
+	p := path
+	if !isBundled {
+		var err error
+
+		if p, err = lookup(C.GoString(vm.file), path); err != nil {
+			msg := fmt.Sprintf("import: %v", err)
+			C.go_vm_errorf(vm, C.CString(msg))
+			return 1
+		}
 	}
 
 	// Already imported: push the module and carry on, a non zero result would
@@ -193,12 +218,16 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 		return 0
 	}
 
-	b, err := os.ReadFile(p)
-	if err != nil {
-		msg := fmt.Sprintf("import: %v", err)
-		C.go_vm_errorf(vm, C.CString(msg))
-		return 1
+	if !isBundled {
+		b, err := os.ReadFile(p)
+		if err != nil {
+			msg := fmt.Sprintf("import: %v", err)
+			C.go_vm_errorf(vm, C.CString(msg))
+			return 1
+		}
+		src = string(b)
 	}
+	b := []byte(src)
 
 	tree, errs := parser.Parse(p, string(b))
 	if len(errs) > 0 {

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
 	"runtime"
@@ -9,41 +8,131 @@ import (
 	"github.com/NicoNex/tau"
 )
 
+// run executes a tau file, handing it the arguments that follow so the
+// program can read them through os.Args.
+func run() error {
+	opt := parseRunOpts()
+	if opt.path == "" {
+		usageRun()
+		return errUsage
+	}
+
+	tau.SetArgs(append([]string{opt.path}, opt.args...))
+	return tau.ExecFileVM(opt.path)
+}
+
+// build compiles tau files down to .tauc bytecode.
+func build() error {
+	opt := parseBuildOpts()
+	if len(opt.files) == 0 {
+		usageBuild()
+		return errUsage
+	}
+	return tau.CompileFiles(opt.files, opt.output)
+}
+
+// test runs the *_test.tau files, like `go test` does.
+func test() error {
+	return tau.TestFiles(parseTestOpts().paths)
+}
+
+// format rewrites tau files in the canonical style, like `go fmt` does.
+func format() error {
+	opt := parseFmtOpts()
+	if len(opt.paths) == 0 {
+		opt.paths = []string{"."}
+	}
+	return tau.FormatFiles(opt.paths, opt.write, opt.list)
+}
+
+func version() error {
+	tau.PrintVersionInfo(os.Stdout)
+	return nil
+}
+
+func help() error {
+	if len(os.Args) < 3 {
+		usageGeneral()
+		return nil
+	}
+
+	switch cmd := os.Args[2]; cmd {
+	case "run":
+		usageRun()
+	case "build":
+		usageBuild()
+	case "test":
+		usageTest()
+	case "fmt":
+		usageFmt()
+	case "repl":
+		usageRepl()
+	default:
+		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", cmd)
+		usageGeneral()
+	}
+	return nil
+}
+
+// repl opens the interactive prompt, falling back to the simple one where a
+// terminal isn't available.
+func repl() error {
+	opt := parseReplOpts()
+	if opt.simple || runtime.GOOS == "windows" {
+		tau.SimpleREPL()
+	} else {
+		tau.REPL()
+	}
+	return nil
+}
+
+func check(err error) {
+	if err == nil {
+		return
+	}
+	if err != errUsage {
+		fmt.Fprintln(os.Stderr, err)
+	}
+	os.Exit(1)
+}
+
 func main() {
-	var (
-		compile bool
-		version bool
-		simple  bool
-	)
-
-	flag.BoolVar(&compile, "c", false, "Compile a tau file into a '.tauc' bytecode file.")
-	flag.BoolVar(&simple, "s", false, "Use simple REPL instead of opening a terminal.")
-	flag.BoolVar(&version, "v", false, "Print Tau version information.")
-	flag.Parse()
-
-	// "tau test [path...]" runs the *_test.tau files, like `go test` does.
-	if flag.Arg(0) == "test" {
-		if err := tau.TestFiles(flag.Args()[1:]); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+	if len(os.Args) < 2 {
+		tau.SetArgs(os.Args)
+		tau.REPL()
 		return
 	}
 
-	switch {
-	case compile:
-		tau.CompileFiles(flag.Args())
-	case version:
-		tau.PrintVersionInfo(os.Stdout)
-	case flag.NArg() > 0:
-		// A file that doesn't compile has to fail: a test runner reporting
-		// success on a broken file is worse than useless.
-		if err := tau.ExecFileVM(flag.Arg(0)); err != nil {
-			os.Exit(1)
-		}
-	case simple || runtime.GOOS == "windows":
-		tau.SimpleREPL()
+	switch cmd := os.Args[1]; cmd {
+	case "run":
+		check(run())
+	case "build":
+		check(build())
+	case "test":
+		check(test())
+	case "fmt":
+		check(format())
+	case "repl":
+		check(repl())
+	case "version", "-v", "--version":
+		check(version())
+	case "help", "-h", "--help":
+		check(help())
 	default:
-		tau.REPL()
+		// "tau file.tau args..." stays a shorthand for "tau run", so a
+		// shebang line and every script written so far keeps working.
+		if isFile(cmd) {
+			tau.SetArgs(os.Args[1:])
+			check(tau.ExecFileVM(cmd))
+			return
+		}
+		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", cmd)
+		usageGeneral()
+		os.Exit(1)
 	}
+}
+
+func isFile(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
 }

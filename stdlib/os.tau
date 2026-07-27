@@ -115,3 +115,189 @@ Chmod = fn(path, mode) { syscall.Chmod(path, mode) }
 
 # Exists reports whether path exists.
 Exists = fn(path) { !failed(syscall.Access(path, syscall.F_OK)) }
+
+# ========== Standard Streams ==========
+
+Stdin = newFile(0, "/dev/stdin")
+Stdout = newFile(1, "/dev/stdout")
+Stderr = newFile(2, "/dev/stderr")
+
+# ========== Arguments and Environment ==========
+
+# args reads the command line the runtime left in the environment, one
+# variable per argument, and takes it away so that a process started from here
+# doesn't inherit it.
+args = fn() {
+	n = syscall.Getenv("TAU_ARGC")
+	if n == null {
+		return []
+	}
+	syscall.Unsetenv("TAU_ARGC")
+
+	out = []
+	for i = 0; i < int(n); ++i {
+		name = "TAU_ARG{i}"
+		out = append(out, syscall.Getenv(name))
+		syscall.Unsetenv(name)
+	}
+	return out
+}
+
+# Args is the command line: the program itself first, then its arguments.
+Args = args()
+
+# Getenv returns the value of the environment variable name, or an empty
+# string when it isn't set. LookupEnv tells the two apart.
+Getenv = fn(name) {
+	v = syscall.Getenv(name)
+	if v == null {
+		return ""
+	}
+	return v
+}
+
+# LookupEnv returns the value of name and whether it was set at all.
+LookupEnv = fn(name) {
+	v = syscall.Getenv(name)
+	return [if v == null { "" } else { v }, v != null]
+}
+
+Setenv = fn(name, value) { syscall.Setenv(name, value) }
+Unsetenv = fn(name) { syscall.Unsetenv(name) }
+
+# ========== Files and Directories ==========
+
+Rename = fn(from, to) { syscall.Rename(from, to) }
+Getwd = fn() { syscall.Getwd() }
+Chdir = fn(path) { syscall.Chdir(path) }
+
+# TempDir returns the directory for temporary files.
+TempDir = fn() {
+	d = syscall.Getenv("TMPDIR")
+	if d == null {
+		return "/tmp"
+	}
+	return d
+}
+
+# Stat returns what is known about the file at path: its Name, Size in bytes,
+# Mode, whether it IsDir and when it was last modified, in seconds since the
+# Unix epoch.
+Stat = fn(path) {
+	if failed(size = syscall.StatSize(path)) {
+		return size
+	}
+	if failed(mode = syscall.StatMode(path)) {
+		return mode
+	}
+	if failed(mtime = syscall.StatMtime(path)) {
+		return mtime
+	}
+
+	st = new()
+	st.Name = path
+	st.Size = size
+	st.Mode = mode
+	st.Perm = mode & 0777
+	st.IsDir = (mode & syscall.S_IFMT) == syscall.S_IFDIR
+	st.ModTime = mtime
+	return st
+}
+
+# IsDir reports whether path is a directory. A path that isn't there is not.
+IsDir = fn(path) {
+	d = syscall.StatIsDir(path)
+	if failed(d) {
+		return false
+	}
+	return d
+}
+
+# ReadDir returns the names inside the directory at path, sorted, without
+# "." and "..".
+ReadDir = fn(path) {
+	if failed(names = syscall.Readdirnames(path)) {
+		return names
+	}
+
+	out = []
+	for i = 0; i < len(names); ++i {
+		if names[i] != "." && names[i] != ".." {
+			out = append(out, names[i])
+		}
+	}
+	return sorted(out)
+}
+
+# sorted returns the strings in order. Insertion sort: a directory holds few
+# enough names that anything smarter would only be longer to read.
+sorted = fn(l) {
+	for i = 1; i < len(l); ++i {
+		v = l[i]
+		j = i - 1
+		for j >= 0 && l[j] > v {
+			l[j+1] = l[j]
+			--j
+		}
+		l[j+1] = v
+	}
+	return l
+}
+
+# MkdirAll creates path and every directory missing above it.
+MkdirAll = fn(path, perm) {
+	if perm == null {
+		perm = 0755
+	}
+	if IsDir(path) {
+		return null
+	}
+
+	parts = []
+	start = 0
+	for i = 0; i < len(path); ++i {
+		if path[i] == "/" {
+			parts = append(parts, slice(path, start, i))
+			start = i + 1
+		}
+	}
+	parts = append(parts, slice(path, start, len(path)))
+
+	# An absolute path starts with an empty part, which rebuilds the leading
+	# slash on its own.
+	cur = ""
+	for i = 0; i < len(parts); ++i {
+		if parts[i] == "" {
+			cur = "/"
+			continue
+		}
+
+		cur = if cur == "" || cur == "/" { cur + parts[i] } else { cur + "/" + parts[i] }
+		if !IsDir(cur) {
+			if failed(err = Mkdir(cur, perm)) {
+				return err
+			}
+		}
+	}
+	return null
+}
+
+# RemoveAll removes path and everything under it.
+RemoveAll = fn(path) {
+	if !IsDir(path) {
+		if !Exists(path) {
+			return null
+		}
+		return Remove(path)
+	}
+
+	if failed(names = ReadDir(path)) {
+		return names
+	}
+	for i = 0; i < len(names); ++i {
+		if failed(err = RemoveAll(path + "/" + names[i])) {
+			return err
+		}
+	}
+	return Rmdir(path)
+}

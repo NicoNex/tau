@@ -1,78 +1,130 @@
-libc = plugin("/usr/lib/libc.so.6")
+# os - files.
+#
+# Everything goes through syscall, no dependency on the C library of the host.
 
-eof = -1
+syscall = import("syscall")
 
-EOF = fn() { eof }
+O_RDONLY = syscall.O_RDONLY
+O_WRONLY = syscall.O_WRONLY
+O_RDWR = syscall.O_RDWR
+O_CREAT = syscall.O_CREAT
+O_TRUNC = syscall.O_TRUNC
+O_APPEND = syscall.O_APPEND
+O_EXCL = syscall.O_EXCL
 
-Mkdir = fn(path, perm) { int(libc.mkdir(path, perm)) }
+bufsize = 32768
 
-Open = fn(path, perm) {
-	file = new()
+newFile = fn(fd, path) {
+	f = new()
+	f.fd = fd
+	f.Name = path
 
-	if failed(file.f = libc.fopen(path, perm)) {
-		return file.f
-	}
-
-	file.Close = fn() { libc.fclose(file.f) }
-
-	file.Read = fn() {
-		buf = []
-
-		for c = int(libc.fgetc(file.f)); c != eof; c = int(libc.fgetc(file.f)) {
-			buf = append(buf, c)
+	# Read returns up to n bytes, or an empty bytes value at end of file.
+	f.Read = fn(n) {
+		if n == null {
+			n = bufsize
 		}
-		return bytes(buf)
+
+		buf = bytes(n)
+		if failed(read = syscall.Read(f.fd, buf, n)) {
+			return read
+		}
+		return slice(buf, 0, read)
 	}
 
-	file.ReadString = fn() { string(file.Read()) }
+	# ReadAll returns the rest of the file.
+	f.ReadAll = fn() {
+		out = []
 
-	file.Write = fn(a) {
-		if type(a) != "bytes" {
-			if failed(a = bytes(a)) {
-				return a
+		for true {
+			if failed(chunk = f.Read(bufsize)) {
+				return chunk
+			}
+			if len(chunk) == 0 {
+				return bytes(out)
+			}
+			for i = 0; i < len(chunk); ++i {
+				out = append(out, chunk[i])
 			}
 		}
-
-		for i = 0; i < len(a); ++i {
-			libc.fputc(a[i], file.f)
-		}
-		return i
 	}
 
-	return file
+	f.ReadString = fn() { string(f.ReadAll()) }
+
+	# Write writes a string or bytes and returns how many bytes went out.
+	f.Write = fn(data) {
+		if type(data) != "bytes" {
+			if failed(data = bytes(string(data))) {
+				return data
+			}
+		}
+		return syscall.Write(f.fd, data, len(data))
+	}
+
+	f.Seek = fn(offset, whence) { syscall.Lseek(f.fd, offset, whence) }
+	f.Close = fn() { syscall.Close(f.fd) }
+
+	return f
 }
 
+# Open returns the file at path open with the given flags. Perm is only used
+# when the file is created, 0644 is the usual value.
+Open = fn(path, flags, perm) {
+	if flags == null {
+		flags = O_RDONLY
+	}
+	if perm == null {
+		perm = 0644
+	}
+
+	if failed(fd = syscall.Open(path, flags, perm)) {
+		return fd
+	}
+	return newFile(fd, path)
+}
+
+# Create opens path for writing, truncating it or creating it as needed.
+Create = fn(path) { Open(path, O_WRONLY | O_CREAT | O_TRUNC, 0644) }
+
+# ReadFile returns the whole content of path as bytes.
 ReadFile = fn(path) {
-	if failed(f = Open(path, "r")) {
+	if failed(f = Open(path, O_RDONLY, 0)) {
 		return f
 	}
-	if failed(b = f.Read()) {
+
+	data = f.ReadAll()
+	f.Close()
+	return data
+}
+
+ReadFileString = fn(path) {
+	if failed(b = ReadFile(path)) {
 		return b
 	}
-	if failed(err = f.Close()) {
-		return err
-	}
-	return b
+	return string(b)
 }
 
-ReadFileString = fn(path) { string(ReadFile(path)) }
-
+# WriteFile writes data, a string or bytes, to path.
 WriteFile = fn(path, data) {
-	if type(data) != "bytes" {
-		if failed(data = bytes(data)) {
-			return data
-		}
-	}
-
-	if failed(f = Open(path, "w")) {
+	if failed(f = Create(path)) {
 		return f
 	}
-	if failed(err = f.Write(data)) {
-		return err
-	}
+
+	n = f.Write(data)
 	f.Close()
+	return n
 }
 
-Chmod = fn(path, mode) { int(libc.chmod(path, mode)) == 0 }
-Remove = fn(path) { int(libc.remove(path)) == 0 }
-Unlink = fn(path) { int(libc.unlink(path)) == 0 }
+Mkdir = fn(path, perm) {
+	if perm == null {
+		perm = 0755
+	}
+	return syscall.Mkdir(path, perm)
+}
+
+Remove = fn(path) { syscall.Unlink(path) }
+Rmdir = fn(path) { syscall.Rmdir(path) }
+Chmod = fn(path, mode) { syscall.Chmod(path, mode) }
+
+# Exists reports whether path exists.
+Exists = fn(path) { !failed(syscall.Access(path, syscall.F_OK)) }

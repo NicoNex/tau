@@ -1,0 +1,364 @@
+# syscall.tau - Low-level system call interface for Tau
+# Provides a cross-platform abstraction layer for system calls
+# Similar to Go's syscall package
+
+# The library is looked up next to the installed stdlib, plugin() falls back
+# to ~/.local/lib/tau and /lib/tau when the relative path doesn't exist.
+sys = plugin("syscall/libsyscall.so")
+
+# ========== Error Handling ==========
+
+Errno = fn() { int(sys.sys_errno()) }
+SetErrno = fn(err) { sys.sys_set_errno(err) }
+
+# Strerror returns the message of an errno value.
+Strerror = fn(err) {
+	buf = bytes(256)
+	n = int(sys.sys_strerror(err, buf, 256))
+	return string(slice(buf, 0, n))
+}
+
+# Error builds an error for a failed call, with the message of the errno.
+Error = fn(what) {
+	err = Errno()
+	return error("{what}: {Strerror(err)} (errno {err})")
+}
+
+# ========== File Operation Constants ==========
+
+# open() flags - Linux/macOS values (POSIX)
+O_RDONLY = 0x0000
+O_WRONLY = 0x0001
+O_RDWR = 0x0002
+O_CREAT = 0x0040
+O_EXCL = 0x0080
+O_TRUNC = 0x0200
+O_APPEND = 0x0400
+O_NONBLOCK = 0x0800
+O_SYNC = 0x1000
+
+# File permissions
+S_IRWXU = 0x01C0  # User: rwx
+S_IRUSR = 0x0100  # User: r--
+S_IWUSR = 0x0080  # User: -w-
+S_IXUSR = 0x0040  # User: --x
+S_IRWXG = 0x0038  # Group: rwx
+S_IRGRP = 0x0020  # Group: r--
+S_IWGRP = 0x0010  # Group: -w-
+S_IXGRP = 0x0008  # Group: --x
+S_IRWXO = 0x0007  # Other: rwx
+S_IROTH = 0x0004  # Other: r--
+S_IWOTH = 0x0002  # Other: -w-
+S_IXOTH = 0x0001  # Other: --x
+
+# lseek() whence
+SEEK_SET = 0
+SEEK_CUR = 1
+SEEK_END = 2
+
+# access() mode
+F_OK = 0  # Test for existence
+X_OK = 1  # Test for execute permission
+W_OK = 2  # Test for write permission
+R_OK = 4  # Test for read permission
+
+# ========== Network Constants ==========
+
+# Address families
+AF_INET = 2       # IPv4
+AF_INET6 = 10     # IPv6
+AF_UNIX = 1       # Unix domain sockets
+
+# Socket types
+SOCK_STREAM = 1   # TCP
+SOCK_DGRAM = 2    # UDP
+SOCK_RAW = 3      # Raw socket
+
+# Protocols
+IPPROTO_IP = 0
+IPPROTO_TCP = 6
+IPPROTO_UDP = 17
+
+# Socket options - level
+SOL_SOCKET = 1
+
+# Socket options - names
+SO_REUSEADDR = 2
+SO_REUSEPORT = 15
+SO_KEEPALIVE = 9
+SO_BROADCAST = 6
+SO_LINGER = 13
+SO_RCVBUF = 8
+SO_SNDBUF = 7
+SO_RCVTIMEO = 20
+SO_SNDTIMEO = 21
+
+# shutdown() how
+SHUT_RD = 0
+SHUT_WR = 1
+SHUT_RDWR = 2
+
+# Listen backlog
+SOMAXCONN = 128
+
+# ========== Error Constants ==========
+
+EPERM = 1           # Operation not permitted
+ENOENT = 2          # No such file or directory
+ESRCH = 3           # No such process
+EINTR = 4           # Interrupted system call
+EIO = 5             # I/O error
+ENXIO = 6           # No such device or address
+E2BIG = 7           # Argument list too long
+ENOEXEC = 8         # Exec format error
+EBADF = 9           # Bad file number
+ECHILD = 10         # No child processes
+EAGAIN = 11         # Try again
+ENOMEM = 12         # Out of memory
+EACCES = 13         # Permission denied
+EFAULT = 14         # Bad address
+ENOTBLK = 15        # Block device required
+EBUSY = 16          # Device or resource busy
+EEXIST = 17         # File exists
+EXDEV = 18          # Cross-device link
+ENODEV = 19         # No such device
+ENOTDIR = 20        # Not a directory
+EISDIR = 21         # Is a directory
+EINVAL = 22         # Invalid argument
+ENFILE = 23         # File table overflow
+EMFILE = 24         # Too many open files
+ENOTTY = 25         # Not a typewriter
+ETXTBSY = 26        # Text file busy
+EFBIG = 27          # File too large
+ENOSPC = 28         # No space left on device
+ESPIPE = 29         # Illegal seek
+EROFS = 30          # Read-only file system
+EMLINK = 31         # Too many links
+EPIPE = 32          # Broken pipe
+EDOM = 33           # Math argument out of domain
+ERANGE = 34         # Math result not representable
+
+# ========== File Operations ==========
+
+Open = fn(path, flags, mode) {
+	result = int(sys.sys_open(path, flags, mode))
+	if result < 0 {
+		return error("open failed: errno {Errno()}")
+	}
+	return result
+}
+
+Close = fn(fd) {
+	result = int(sys.sys_close(fd))
+	if result < 0 {
+		return error("close failed: errno {Errno()}")
+	}
+	return result
+}
+
+Read = fn(fd, buf, count) {
+	result = int(sys.sys_read(fd, buf, count))
+	if result < 0 {
+		return error("read failed: errno {Errno()}")
+	}
+	return result
+}
+
+Write = fn(fd, buf, count) {
+	result = int(sys.sys_write(fd, buf, count))
+	if result < 0 {
+		return error("write failed: errno {Errno()}")
+	}
+	return result
+}
+
+Lseek = fn(fd, offset, whence) {
+	result = int(sys.sys_lseek(fd, offset, whence))
+	if result < 0 {
+		return error("lseek failed: errno {Errno()}")
+	}
+	return result
+}
+
+Unlink = fn(path) {
+	result = int(sys.sys_unlink(path))
+	if result < 0 {
+		return error("unlink failed: errno {Errno()}")
+	}
+	return result
+}
+
+Mkdir = fn(path, mode) {
+	result = int(sys.sys_mkdir(path, mode))
+	if result < 0 {
+		return error("mkdir failed: errno {Errno()}")
+	}
+	return result
+}
+
+Rmdir = fn(path) {
+	result = int(sys.sys_rmdir(path))
+	if result < 0 {
+		return error("rmdir failed: errno {Errno()}")
+	}
+	return result
+}
+
+Chmod = fn(path, mode) {
+	result = int(sys.sys_chmod(path, mode))
+	if result < 0 {
+		return error("chmod failed: errno {Errno()}")
+	}
+	return result
+}
+
+Access = fn(path, mode) {
+	result = int(sys.sys_access(path, mode))
+	if result < 0 {
+		return error("access failed: errno {Errno()}")
+	}
+	return result
+}
+
+# ========== Network Operations ==========
+
+Socket = fn(domain, socktype, protocol) {
+	result = int(sys.sys_socket(domain, socktype, protocol))
+	if result < 0 {
+		return error("socket failed: errno {Errno()}")
+	}
+	return result
+}
+
+Bind = fn(sockfd, addr, addrlen) {
+	result = int(sys.sys_bind(sockfd, addr, addrlen))
+	if result < 0 {
+		return error("bind failed: errno {Errno()}")
+	}
+	return result
+}
+
+Listen = fn(sockfd, backlog) {
+	result = int(sys.sys_listen(sockfd, backlog))
+	if result < 0 {
+		return error("listen failed: errno {Errno()}")
+	}
+	return result
+}
+
+Accept = fn(sockfd, addr, addrlen) {
+	result = int(sys.sys_accept(sockfd, addr, addrlen))
+	if result < 0 {
+		return error("accept failed: errno {Errno()}")
+	}
+	return result
+}
+
+Connect = fn(sockfd, addr, addrlen) {
+	result = int(sys.sys_connect(sockfd, addr, addrlen))
+	if result < 0 {
+		return error("connect failed: errno {Errno()}")
+	}
+	return result
+}
+
+Send = fn(sockfd, buf, len, flags) {
+	result = int(sys.sys_send(sockfd, buf, len, flags))
+	if result < 0 {
+		return error("send failed: errno {Errno()}")
+	}
+	return result
+}
+
+Recv = fn(sockfd, buf, len, flags) {
+	result = int(sys.sys_recv(sockfd, buf, len, flags))
+	if result < 0 {
+		return error("recv failed: errno {Errno()}")
+	}
+	return result
+}
+
+Sendto = fn(sockfd, buf, len, flags, dest_addr, addrlen) {
+	result = int(sys.sys_sendto(sockfd, buf, len, flags, dest_addr, addrlen))
+	if result < 0 {
+		return error("sendto failed: errno {Errno()}")
+	}
+	return result
+}
+
+Recvfrom = fn(sockfd, buf, len, flags, src_addr, addrlen) {
+	result = int(sys.sys_recvfrom(sockfd, buf, len, flags, src_addr, addrlen))
+	if result < 0 {
+		return error("recvfrom failed: errno {Errno()}")
+	}
+	return result
+}
+
+Setsockopt = fn(sockfd, level, optname, optval, optlen) {
+	result = int(sys.sys_setsockopt(sockfd, level, optname, optval, optlen))
+	if result < 0 {
+		return error("setsockopt failed: errno {Errno()}")
+	}
+	return result
+}
+
+Getsockopt = fn(sockfd, level, optname, optval, optlen) {
+	result = int(sys.sys_getsockopt(sockfd, level, optname, optval, optlen))
+	if result < 0 {
+		return error("getsockopt failed: errno {Errno()}")
+	}
+	return result
+}
+
+Shutdown = fn(sockfd, how) {
+	result = int(sys.sys_shutdown(sockfd, how))
+	if result < 0 {
+		return error("shutdown failed: errno {Errno()}")
+	}
+	return result
+}
+
+# ========== Network Helper Functions ==========
+
+Htons = fn(hostshort) { int(sys.sys_htons(hostshort)) }
+Ntohs = fn(netshort) { int(sys.sys_ntohs(netshort)) }
+Htonl = fn(hostlong) { int(sys.sys_htonl(hostlong)) }
+Ntohl = fn(netlong) { int(sys.sys_ntohl(netlong)) }
+InetAddr = fn(cp) { int(sys.sys_inet_addr(cp)) }
+
+# ========== Address Helpers ==========
+
+# SockaddrInSize is the length of a sockaddr_in.
+SockaddrInSize = fn() { int(sys.sys_sockaddr_in_size()) }
+
+# SockaddrIn returns a sockaddr_in filled for ip:port, ready for Bind,
+# Connect and Sendto. An empty ip means "any address".
+SockaddrIn = fn(ip, port) {
+	buf = bytes(SockaddrInSize())
+	sys.sys_sockaddr_in(buf, ip, port)
+	return buf
+}
+
+# SockaddrPort returns the port stored in a sockaddr_in.
+SockaddrPort = fn(sa) { int(sys.sys_sockaddr_port(sa)) }
+
+# SockaddrIP returns the dotted address stored in a sockaddr_in.
+SockaddrIP = fn(sa) {
+	buf = bytes(64)
+	n = int(sys.sys_sockaddr_ip(sa, buf, 64))
+	return string(slice(buf, 0, n))
+}
+
+# ========== Time ==========
+
+# TimeUnix returns the wall clock time in seconds since the Unix epoch.
+TimeUnix = fn() { int(sys.sys_time_unix()) }
+
+# TimeMillis returns the wall clock time in milliseconds.
+TimeMillis = fn() { int(sys.sys_time_ms()) }
+
+# TimeMono returns a monotonic timestamp in milliseconds.
+TimeMono = fn() { int(sys.sys_time_mono_ms()) }
+
+# SleepMillis pauses the current tau routine for ms milliseconds.
+SleepMillis = fn(ms) { sys.sys_sleep_ms(ms) }

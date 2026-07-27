@@ -99,9 +99,13 @@ static struct object string_b(struct object *args, size_t len) {
 
 	struct object o = args[0];
 	switch (o.type) {
+	// The returned word is the char * itself.
 	case obj_native: {
 		char *s = (char *) o.data.handle;
-		return new_string_obj(s, strlen(s));
+		if (s == NULL) {
+			return new_string_obj(strdup(""), 0);
+		}
+		return new_string_obj(strndup(s, 4096), strnlen(s, 4096));
 	}
 
 	case obj_bytes:
@@ -154,19 +158,21 @@ static struct object int_b(struct object *args, size_t len) {
 		}
 	}
 
+	// A native value is the word a C function returned, the optional second
+	// argument says how many of its bits are meaningful.
 	case obj_native:
 		if (len == 1) {
-			return new_integer_obj(*(int32_t*)args[0].data.handle);
+			return new_integer_obj((int32_t) args[0].data.i);
 		} else if (args[1].type != obj_integer) {
 			return errorf("int: second argument must be an integer");
 		}
 
 		switch (args[1].data.i) {
-		case 0:  return new_integer_obj(*(int32_t*)args[0].data.handle);
-		case 8:  return new_integer_obj(*(int8_t*)args[0].data.handle);
-		case 16: return new_integer_obj(*(int16_t*)args[0].data.handle);
-		case 32: return new_integer_obj(*(int32_t*)args[0].data.handle);
-		case 64: return new_integer_obj(*(int64_t*)args[0].data.handle);
+		case 0:  return new_integer_obj((int32_t) args[0].data.i);
+		case 8:  return new_integer_obj((int8_t) args[0].data.i);
+		case 16: return new_integer_obj((int16_t) args[0].data.i);
+		case 32: return new_integer_obj((int32_t) args[0].data.i);
+		case 64: return new_integer_obj(args[0].data.i);
 		default: return errorf("int: invalid bit size, must be a power of 2 and not exceed 64, got %lld", args[1].data.i);
 		}
 
@@ -201,19 +207,23 @@ static struct object float_b(struct object *args, size_t len) {
 		}
 	}
 
-	case obj_native:
+	case obj_native: {
+		float f32;
+		memcpy(&f32, &args[0].data.i, sizeof(f32));
+
 		if (len == 1) {
-			return new_float_obj(*(double*)args[0].data.handle);
+			return new_float_obj(args[0].data.f);
 		} else if (args[1].type != obj_integer) {
 			return errorf("float: second argument must be an integer");
 		}
 
 		switch (args[1].data.i) {
-		case 0:  return new_float_obj(*(float*)args[0].data.handle);
-		case 32: return new_float_obj(*(float*)args[0].data.handle);
-		case 64: return new_float_obj(*(double*)args[0].data.handle);
+		case 0:  return new_float_obj(f32);
+		case 32: return new_float_obj(f32);
+		case 64: return new_float_obj(args[0].data.f);
 		default: return errorf("float: invalid bit size, must be either 0, 32 or 64, got %lld", args[1].data.i);
 		}
+	}
 
 	default: {
 		char *s = object_str(args[0]);
@@ -324,7 +334,7 @@ static struct object plugin_b(struct object *args, size_t len) {
 		return errorf("plugin: first argument must be string, got %s instead", otype_str(args[0].type));
 	}
 	char *path = args[0].data.str->str;
-	void *handle = dlopen(path, RTLD_LAZY);
+	void *handle = plugin_open(path);
 	if (!handle) {
 		return errorf("plugin: %s", dlerror());
 	}
@@ -547,10 +557,16 @@ static struct object slice_b(struct object *args, size_t len) {
 static struct object keys_b(struct object *args, size_t len) {
 	if (len != 1) {
 		return errorf("keys: wrong number of arguments, expected 1, got %lu", len);
-	} else if (args[0].type != obj_map) {
-		return errorf("keys: argument must be a map, got %s instead", otype_str(args[0].type));
 	}
-	return map_keys(args[0]);
+
+	switch (args[0].type) {
+	case obj_map:
+		return map_keys(args[0]);
+	case obj_object:
+		return object_keys(args[0]);
+	default:
+		return errorf("keys: argument must be a map or an object, got %s instead", otype_str(args[0].type));
+	}
 }
 
 static struct object delete_b(struct object *args, size_t len) {
@@ -581,8 +597,15 @@ static struct object bytes_b(struct object *args, size_t len) {
 
 	struct object arg = args[0];
 	switch (arg.type) {
+	// bytes(n) allocates an empty buffer of n bytes, like Go's make([]byte, n).
+	case obj_integer: {
+		if (arg.data.i < 0) {
+			return errorf("bytes: size must be positive, got %ld", arg.data.i);
+		}
+		return new_bytes_obj(calloc(arg.data.i, sizeof(uint8_t)), arg.data.i);
+	}
 	case obj_string:
-		return new_bytes_slice(arg.data.str->str, arg.data.str->len, arg.marked);
+		return new_bytes_slice((uint8_t *) arg.data.str->str, arg.data.str->len, arg.marked);
 	case obj_list: {
 		size_t len = arg.data.list->len;
 		struct object *list = arg.data.list->list;

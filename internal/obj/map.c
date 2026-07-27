@@ -185,10 +185,42 @@ void dispose_map_obj(struct object map) {
 }
 
 // TODO: actually return map content as string.
+// Appends "key: value" for every pair, in the order of the tree.
+static void _map_str(struct map_node * restrict n, char **buf, size_t *len, size_t *cap) {
+	if (n == NULL) return;
+
+	_map_str(n->l, buf, len, cap);
+
+	char *k = object_str(n->val.key);
+	char *v = object_str(n->val.val);
+	size_t need = strlen(k) + strlen(v) + 4;
+
+	if (*len + need >= *cap) {
+		*cap = (*len + need) * 2;
+		*buf = realloc(*buf, *cap);
+	}
+	if (*len > 1) {
+		memcpy(*buf + *len, ", ", 2);
+		*len += 2;
+	}
+	*len += sprintf(*buf + *len, "%s: %s", k, v);
+	free(k);
+	free(v);
+
+	_map_str(n->r, buf, len, cap);
+}
+
 char *map_str(struct object map) {
-	char *str = malloc(sizeof(char) * 64);
-	str[63] = '\0';
-	sprintf(str, "map[%p]", map.data.map->root);
+	size_t cap = 64;
+	size_t len = 1;
+	char *str = malloc(cap);
+
+	str[0] = '{';
+	_map_str(map.data.map->root, &str, &len, &cap);
+
+	if (len + 2 >= cap) str = realloc(str, len + 2);
+	str[len++] = '}';
+	str[len] = '\0';
 
 	return str;
 }

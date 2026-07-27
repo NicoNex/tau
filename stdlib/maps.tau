@@ -1,0 +1,61 @@
+# maps - operations on maps and objects.
+#
+# Reading a missing key gives null, which is indistinguishable from a null
+# stored on purpose: Has answers that question, Get gives a default.
+
+cmp = import("cmp")
+
+# Has reports whether m holds the key k.
+Has = fn(m, k) {
+	ks = keys(m)
+	for i = 0; i < len(ks); ++i {
+		if cmp.Equal(ks[i], k) {
+			return true
+		}
+	}
+	return false
+}
+
+# Get returns m[k], or def if the key is absent.
+Get = fn(m, k, def) {
+	if Has(m, k) {
+		return m[k]
+	}
+	return def
+}
+
+# Keys returns the keys of m. Works on objects too, where they are the names
+# of the fields.
+Keys = fn(m) { keys(m) }
+
+# Values returns the values of m, in the same order as Keys.
+Values = fn(m) {
+	ks = keys(m)
+	out = []
+	for i = 0; i < len(ks); ++i {
+		out = append(out, m[ks[i]])
+	}
+	return out
+}
+
+# Len returns the number of entries.
+Len = fn(m) { len(keys(m)) }
+
+# Each calls f(key, value) for every entry.
+Each = fn(m, f) {
+	ks = keys(m)
+	for i = 0; i < len(ks); ++i {
+		f(ks[i], m[ks[i]])
+	}
+}
+
+# Merge returns a new map with the entries of a and b, those of b winning.
+Merge = fn(a, b) {
+	out = {}
+	Each(a, fn(k, v) { out[k] = v })
+	Each(b, fn(k, v) { out[k] = v })
+	return out
+}
+
+# Equal reports whether two maps hold the same entries.
+Equal = fn(a, b) { cmp.Equal(a, b) }

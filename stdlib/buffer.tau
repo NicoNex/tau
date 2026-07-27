@@ -1,0 +1,111 @@
+# buffer - growing buffers of text and bytes.
+#
+# Concatenating with + copies the whole string every time, so building a
+# string piece by piece costs O(n^2). A buffer keeps the pieces apart and
+# joins them once.
+
+# Builder accumulates strings.
+#
+#	b = buffer.Builder()
+#	b.Write("hello ")
+#	b.Write("world")
+#	b.String()
+Builder = fn() {
+	b = new()
+	b.parts = []
+	b.size = 0
+
+	# Write appends s to the buffer and returns the number of bytes written.
+	b.Write = fn(s) {
+		if type(s) != "string" {
+			s = string(s)
+		}
+		b.parts = append(b.parts, s)
+		b.size = b.size + len(s)
+		return len(s)
+	}
+
+	# WriteByte appends a single byte given as its integer value.
+	b.WriteByte = fn(c) { b.Write(string(bytes([c]))) }
+
+	# Len returns the number of bytes accumulated so far.
+	b.Len = fn() { b.size }
+
+	# String returns the concatenation of everything written.
+	b.String = fn() {
+		out = ""
+		for i = 0; i < len(b.parts); ++i {
+			out = out + b.parts[i]
+		}
+		# Collapse the pieces, further writes start from here.
+		b.parts = [out]
+		return out
+	}
+
+	# Reset empties the buffer.
+	b.Reset = fn() {
+		b.parts = []
+		b.size = 0
+	}
+
+	return b
+}
+
+# Buffer accumulates bytes. Read and Write make it usable wherever a stream
+# of bytes is expected.
+Buffer = fn() {
+	b = new()
+	b.data = []
+	b.off = 0
+
+	# Write appends bytes, a string or a list of byte values.
+	b.Write = fn(x) {
+		t = type(x)
+		if t == "string" {
+			x = bytes(x)
+			t = "bytes"
+		}
+		if t != "bytes" && t != "list" {
+			return error("buffer: cannot write {t}")
+		}
+
+		for i = 0; i < len(x); ++i {
+			b.data = append(b.data, x[i])
+		}
+		return len(x)
+	}
+
+	b.WriteByte = fn(c) {
+		b.data = append(b.data, c)
+		return 1
+	}
+
+	# Len returns the number of bytes still to be read.
+	b.Len = fn() { len(b.data) - b.off }
+
+	# Read returns up to n bytes and consumes them, or all of them if n is null.
+	b.Read = fn(n) {
+		if n == null || n > b.Len() {
+			n = b.Len()
+		}
+		if n <= 0 {
+			return bytes([])
+		}
+
+		out = slice(b.data, b.off, b.off + n)
+		b.off = b.off + n
+		return bytes(out)
+	}
+
+	# Bytes returns everything that hasn't been read, without consuming it.
+	b.Bytes = fn() { bytes(slice(b.data, b.off, len(b.data))) }
+
+	b.String = fn() { string(b.Bytes()) }
+
+	b.Reset = fn() {
+		b.data = []
+		b.off = 0
+	}
+
+	return b
+}

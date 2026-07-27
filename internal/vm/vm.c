@@ -73,6 +73,9 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 	struct vm *vm = calloc(1, sizeof(struct vm));
 	vm->file = file;
 	vm->state = new_state();
+	// The globals this program defines: an imported module gets its own
+	// globals right after these ones.
+	vm->state.ndefs = bc.ndefs;
 	vm->state.consts = (struct pool) {
 		.list = bc.consts,
 		.len = bc.nconsts,
@@ -670,6 +673,9 @@ static inline void vm_exec_index(struct vm * restrict vm) {
 			vm_errorf(vm, "index out of range");
 		}
 		vm_stack_push(vm, new_integer_obj(b[idx]));
+	} else if (ASSERT(left, obj_object) && ASSERT(right, obj_string)) {
+		// Dynamic access to a field, the counterpart of obj[name] = value.
+		vm_stack_push(vm, object_get(*left, right->data.str->str));
 	} else if (ASSERT(left, obj_map) && ASSERT4(right, obj_integer, obj_float, obj_string, obj_boolean)) {
 		struct map_pair mp = map_get(*left, *right);
 		vm_stack_push(vm, mp.val);
@@ -753,22 +759,24 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 		return;
 	}
 
-	void *return_value = malloc(sizeof(&ffi_type_pointer));
 	// A native call can block for an arbitrary amount of time (sockets, IO):
 	// park so that it doesn't hold back a collection. The arguments stay
 	// reachable from the stack of this VM, which nothing is mutating.
+	ffi_arg return_value = 0;
+
 	gc_park();
-	ffi_call(&cif, n->data.handle, return_value, arg_values);
+	ffi_call(&cif, n->data.handle, &return_value, arg_values);
 	gc_unpark();
 
+	// The result is the returned word itself, not a pointer to a buffer
+	// holding it: there is nothing to free and nothing for the collector to
+	// look after.
 	struct object res = (struct object) {
-		.data.handle = return_value,
+		.data.i = (int64_t) return_value,
 		.type = obj_native,
-		.marked = MARKPTR()
+		.marked = NULL
 	};
 	vm_stack_push(vm, res);
-	vm_heap_add(vm, res);
-	gc();
 }
 
 static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {

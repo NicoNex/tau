@@ -1,0 +1,147 @@
+# list - operations on lists.
+#
+# Everything returns a new list, nothing is modified in place except Sort,
+# which sorts a copy.
+
+cmp = import("cmp")
+
+# Each calls f(x) for every element.
+Each = fn(xs, f) {
+	for i = 0; i < len(xs); ++i {
+		f(xs[i])
+	}
+}
+
+# Map returns the list of f(x) for every element.
+Map = fn(xs, f) {
+	out = []
+	for i = 0; i < len(xs); ++i {
+		out = append(out, f(xs[i]))
+	}
+	return out
+}
+
+# Filter returns the elements for which f(x) is true.
+Filter = fn(xs, f) {
+	out = []
+	for i = 0; i < len(xs); ++i {
+		if f(xs[i]) {
+			out = append(out, xs[i])
+		}
+	}
+	return out
+}
+
+# Reduce folds the list from the left starting from acc.
+Reduce = fn(xs, acc, f) {
+	for i = 0; i < len(xs); ++i {
+		acc = f(acc, xs[i])
+	}
+	return acc
+}
+
+# Index returns the position of the first element equal to x, -1 if absent.
+Index = fn(xs, x) {
+	for i = 0; i < len(xs); ++i {
+		if cmp.Equal(xs[i], x) {
+			return i
+		}
+	}
+	return -1
+}
+
+# Contains reports whether x is in xs.
+Contains = fn(xs, x) { Index(xs, x) >= 0 }
+
+# Find returns the first element for which f(x) is true, null if there is none.
+Find = fn(xs, f) {
+	for i = 0; i < len(xs); ++i {
+		if f(xs[i]) {
+			return xs[i]
+		}
+	}
+	return null
+}
+
+# Copy returns a new list with the same elements. slice() would share the
+# same underlying array, so writing into it would touch the original.
+Copy = fn(xs) {
+	out = []
+	for i = 0; i < len(xs); ++i {
+		out = append(out, xs[i])
+	}
+	return out
+}
+
+# Reverse returns the elements in the opposite order.
+Reverse = fn(xs) {
+	out = []
+	for i = len(xs) - 1; i >= 0; --i {
+		out = append(out, xs[i])
+	}
+	return out
+}
+
+# Range returns the integers from start (included) to stop (excluded).
+Range = fn(start, stop) {
+	out = []
+	for i = start; i < stop; ++i {
+		out = append(out, i)
+	}
+	return out
+}
+
+# Join concatenates the elements as strings separated by sep.
+Join = fn(xs, sep) {
+	out = ""
+	for i = 0; i < len(xs); ++i {
+		if i > 0 {
+			out = out + sep
+		}
+		out = out + string(xs[i])
+	}
+	return out
+}
+
+swap = fn(xs, i, j) {
+	tmp = xs[i]
+	xs[i] = xs[j]
+	xs[j] = tmp
+	return xs
+}
+
+quicksort = fn(xs, lo, hi, less) {
+	if lo >= hi {
+		return xs
+	}
+
+	# Median of the ends and the middle, so that an already sorted list
+	# doesn't degenerate into O(n^2).
+	mid = lo + int((hi - lo) / 2)
+	if less(xs[mid], xs[lo]) { xs = swap(xs, mid, lo) }
+	if less(xs[hi], xs[lo]) { xs = swap(xs, hi, lo) }
+	if less(xs[hi], xs[mid]) { xs = swap(xs, hi, mid) }
+	xs = swap(xs, mid, hi)
+
+	pivot = xs[hi]
+	i = lo
+	for j = lo; j < hi; ++j {
+		if less(xs[j], pivot) {
+			xs = swap(xs, i, j)
+			++i
+		}
+	}
+	xs = swap(xs, i, hi)
+
+	xs = quicksort(xs, lo, i - 1, less)
+	return quicksort(xs, i + 1, hi, less)
+}
+
+# Sort returns the elements ordered by less(a, b), which must be true when a
+# comes first. Pass null to order with the < operator.
+Sort = fn(xs, less) {
+	if less == null {
+		less = fn(a, b) { a < b }
+	}
+	return quicksort(Copy(xs), 0, len(xs) - 1, less)
+}

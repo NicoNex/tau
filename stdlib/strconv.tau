@@ -1,0 +1,159 @@
+# strconv - conversions between strings and numbers.
+#
+# The int() and float() builtins convert without complaining: int("abc") is 0.
+# These functions return an error instead, so that a parser can tell a real
+# zero from garbage.
+
+digits = "0123456789abcdefghijklmnopqrstuvwxyz"
+
+digitValue = fn(c) {
+	for i = 0; i < len(digits); ++i {
+		if c == digits[i] {
+			return i
+		}
+	}
+	return -1
+}
+
+lower = fn(s) {
+	out = ""
+	for i = 0; i < len(s); ++i {
+		c = s[i]
+		if c >= "A" && c <= "Z" {
+			out = out + digits[10 + (int(bytes(c)[0]) - 65)]
+		} else {
+			out = out + c
+		}
+	}
+	return out
+}
+
+# ParseInt interprets s in the given base (2 to 36) and returns its value, or
+# an error if s is not a whole number in that base.
+ParseInt = fn(s, base) {
+	if type(s) != "string" {
+		return error("strconv: ParseInt expects a string, got {type(s)}")
+	}
+	if base < 2 || base > 36 {
+		return error("strconv: invalid base {base}")
+	}
+	if len(s) == 0 {
+		return error("strconv: empty string")
+	}
+
+	i = 0
+	sign = 1
+	if s[0] == "-" {
+		sign = -1
+		i = 1
+	} else if s[0] == "+" {
+		i = 1
+	}
+	if i == len(s) {
+		return error("strconv: invalid number \"{s}\"")
+	}
+
+	str = lower(s)
+	n = 0
+	for i < len(str) {
+		d = digitValue(str[i])
+		if d < 0 || d >= base {
+			return error("strconv: invalid number \"{s}\"")
+		}
+		n = n * base + d
+		++i
+	}
+
+	return sign * n
+}
+
+# Atoi is ParseInt in base 10.
+Atoi = fn(s) { ParseInt(s, 10) }
+
+# ParseFloat returns the value of s as a float, or an error if s is not a
+# number. It accepts the forms 12, 12.5, .5 and -12.5.
+ParseFloat = fn(s) {
+	if type(s) != "string" {
+		return error("strconv: ParseFloat expects a string, got {type(s)}")
+	}
+	if len(s) == 0 {
+		return error("strconv: empty string")
+	}
+
+	i = 0
+	sign = 1.0
+	if s[0] == "-" {
+		sign = -1.0
+		i = 1
+	} else if s[0] == "+" {
+		i = 1
+	}
+
+	intPart = 0.0
+	fracPart = 0.0
+	scale = 1.0
+	ndigits = 0
+	seenDot = false
+
+	for i < len(s) {
+		c = s[i]
+		++i
+
+		if c == "." {
+			if seenDot {
+				return error("strconv: invalid number \"{s}\"")
+			}
+			seenDot = true
+			continue
+		}
+
+		d = digitValue(c)
+		if d < 0 || d > 9 {
+			return error("strconv: invalid number \"{s}\"")
+		}
+		++ndigits
+
+		if seenDot {
+			scale = scale / 10.0
+			fracPart = fracPart + float(d) * scale
+		} else {
+			intPart = intPart * 10.0 + float(d)
+		}
+	}
+
+	if ndigits == 0 {
+		return error("strconv: invalid number \"{s}\"")
+	}
+
+	return sign * (intPart + fracPart)
+}
+
+# Itoa returns the decimal representation of the integer i.
+Itoa = fn(i) { string(i) }
+
+# FormatInt returns the representation of i in the given base (2 to 36).
+FormatInt = fn(i, base) {
+	if base < 2 || base > 36 {
+		return error("strconv: invalid base {base}")
+	}
+	if i == 0 {
+		return "0"
+	}
+
+	neg = i < 0
+	if neg {
+		i = -i
+	}
+
+	out = ""
+	for i > 0 {
+		out = digits[i % base] + out
+		# The division always yields a float, int() truncates it back.
+		i = int(i / base)
+	}
+
+	if neg {
+		return "-" + out
+	}
+	return out
+}

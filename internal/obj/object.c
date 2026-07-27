@@ -87,11 +87,40 @@ void dispose_object_obj(struct object obj) {
 	free(obj.data.obj);
 }
 
-// TODO: actually return object content as string.
+// Appends "name: value" for every field, in the order of the tree.
+static void _object_obj_str(struct object_node * restrict n, char **buf, size_t *len, size_t *cap) {
+	if (n == NULL) return;
+
+	_object_obj_str(n->l, buf, len, cap);
+
+	char *v = object_str(n->val);
+	size_t need = strlen(n->name) + strlen(v) + 4;
+
+	if (*len + need >= *cap) {
+		*cap = (*len + need) * 2;
+		*buf = realloc(*buf, *cap);
+	}
+	if (*len > 1) {
+		memcpy(*buf + *len, ", ", 2);
+		*len += 2;
+	}
+	*len += sprintf(*buf + *len, "%s: %s", n->name, v);
+	free(v);
+
+	_object_obj_str(n->r, buf, len, cap);
+}
+
 char *object_obj_str(struct object obj) {
-	char *str = malloc(sizeof(char) * 64);
-	str[63] = '\0';
-	sprintf(str, "object[%p]", *obj.data.obj);
+	size_t cap = 64;
+	size_t len = 1;
+	char *str = malloc(cap);
+
+	str[0] = '{';
+	_object_obj_str(*obj.data.obj, &str, &len, &cap);
+
+	if (len + 2 >= cap) str = realloc(str, len + 2);
+	str[len++] = '}';
+	str[len] = '\0';
 
 	return str;
 }
@@ -109,6 +138,26 @@ struct object object_to_module(struct object o) {
 
 	_object_to_module(mod, *o.data.obj);
 	return mod;
+}
+
+static void _object_keys(struct object_node * restrict n, struct list *list) {
+	if (n != NULL) {
+		char *name = strdup(n->name);
+		list->list[list->len++] = new_string_obj(name, strlen(name));
+		_object_keys(n->l, list);
+		_object_keys(n->r, list);
+	}
+}
+
+static size_t _object_len(struct object_node * restrict n) {
+	return n == NULL ? 0 : 1 + _object_len(n->l) + _object_len(n->r);
+}
+
+struct object object_keys(struct object o) {
+	struct object list = make_list(_object_len(*o.data.obj));
+
+	_object_keys(*o.data.obj, list.data.list);
+	return list;
 }
 
 void mark_object_obj(struct object o) {

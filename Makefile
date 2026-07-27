@@ -34,9 +34,9 @@ ifneq ($(GCC),)
     CC = $(GCC)
 endif
 
-.PHONY: all tau libffi install profile run
+.PHONY: all tau libffi syscall install profile run
 
-all: libffi tau
+all: libffi syscall tau
 
 libffi:
 	if [ ! -d libffi ] || [ $$(ls -1q libffi | wc -l) -eq 0 ]; then \
@@ -88,7 +88,10 @@ gc-debug:
 	cd cmd/tau && \
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DGC_DEBUG" CGO_LDFLAGS="$(LDFLAGS)" go build -o $(DIR)/tau
 
-install:
+syscall:
+	$(MAKE) -C stdlib/syscall CC=$(CC)
+
+install: syscall
 	mkdir -p ~/.local/bin
 	mkdir -p ~/.local/lib/tau
 	cp tau ~/.local/bin/tau

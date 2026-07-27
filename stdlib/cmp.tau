@@ -1,0 +1,55 @@
+# cmp - comparison and ordering of values.
+#
+# The == operator compares scalars by value and everything else by identity,
+# like Go does with slices and maps. Equal is the structural comparison.
+
+# Equal reports whether a and b hold the same value, walking lists, maps,
+# objects and bytes.
+Equal = fn(a, b) {
+	ta = type(a)
+	if ta != type(b) {
+		return false
+	}
+
+	if ta == "list" || ta == "bytes" {
+		if len(a) != len(b) {
+			return false
+		}
+		for i = 0; i < len(a); ++i {
+			if !Equal(a[i], b[i]) {
+				return false
+			}
+		}
+		return true
+	}
+
+	if ta == "map" || ta == "object" {
+		ka = keys(a)
+		if len(ka) != len(keys(b)) {
+			return false
+		}
+		for i = 0; i < len(ka); ++i {
+			if !Equal(a[ka[i]], b[ka[i]]) {
+				return false
+			}
+		}
+		return true
+	}
+
+	return a == b
+}
+
+# Compare returns -1 if a is less than b, 0 if they are equal, 1 otherwise.
+# Only values that the < operator accepts can be compared.
+Compare = fn(a, b) {
+	if a < b {
+		return -1
+	}
+	if b < a {
+		return 1
+	}
+	return 0
+}
+
+Min = fn(a, b) { if a < b { a } else { b } }
+Max = fn(a, b) { if a < b { b } else { a } }

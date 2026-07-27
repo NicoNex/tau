@@ -224,6 +224,7 @@ struct object new_object();
 struct object object_get(struct object obj, char *name);
 struct object object_set(struct object obj, char *name, struct object val);
 struct object object_to_module(struct object o);
+struct object object_keys(struct object o);
 void mark_object_obj(struct object o);
 char *object_obj_str(struct object obj);
 void dispose_object_obj(struct object obj);

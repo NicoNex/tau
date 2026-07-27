@@ -109,51 +109,59 @@ func isExported(n string) bool {
 	return unicode.IsUpper(r)
 }
 
-func lookupPaths(vmpath, taupath string) []string {
-	home, err := os.UserHomeDir()
+// searchDirs are the directories a module is looked up into, in order: next
+// to the file that imports it, then the ones the stdlib is installed in. The
+// TAUPATH environment variable, a list separated like PATH, comes first.
+func searchDirs(vmdir string) []string {
+	dirs := []string{}
+
+	if taupath := os.Getenv("TAUPATH"); taupath != "" {
+		dirs = append(dirs, filepath.SplitList(taupath)...)
+	}
+	dirs = append(dirs, vmdir)
+
+	if home, err := os.UserHomeDir(); err == nil {
+		dirs = append(dirs, filepath.Join(home, ".local", "lib", "tau"))
+	}
+
+	return append(dirs, filepath.Join("/", "usr", "local", "lib", "tau"), filepath.Join("/", "lib", "tau"))
+}
+
+func lookupPaths(vmdir, taupath string) []string {
 	taupath = filepath.Clean(taupath)
 
-	// If the module name has no extension.
-	if filepath.Ext(taupath) != "" {
-		paths := []string{taupath, filepath.Join(vmpath, taupath)}
-
-		if err == nil {
-			paths = append(
-				paths,
-				filepath.Join(home, ".local", "lib", "tau", taupath),
-			)
+	// An absolute path is taken as it is.
+	if filepath.IsAbs(taupath) {
+		if filepath.Ext(taupath) != "" {
+			return []string{taupath}
 		}
-
-		paths = append(paths, filepath.Join("/", "lib", "tau", taupath))
-		return paths
+		return []string{taupath + ".tau", taupath + ".tauc"}
 	}
 
-	paths := []string{
-		taupath + ".tau",
-		taupath + ".tauc",
-		filepath.Join(vmpath, taupath) + ".tau",
-		filepath.Join(vmpath, taupath) + ".tauc",
+	exts := []string{".tau", ".tauc"}
+	if filepath.Ext(taupath) != "" {
+		exts = []string{""}
 	}
 
-	if err == nil {
-		paths = append(
-			paths,
-			filepath.Join(home, ".local", "lib", "tau", taupath+".tau"),
-			filepath.Join(home, ".local", "lib", "tau", taupath+".tauc"),
-		)
+	// Relative to the working directory first, that's what the user typed.
+	paths := []string{}
+	for _, ext := range exts {
+		paths = append(paths, taupath+ext)
 	}
 
-	paths = append(
-		paths,
-		filepath.Join("/", "lib", "tau", taupath+".tau"),
-		filepath.Join("/", "lib", "tau", taupath+".tauc"),
-	)
+	for _, dir := range searchDirs(vmdir) {
+		for _, ext := range exts {
+			paths = append(paths, filepath.Join(dir, taupath)+ext)
+		}
+	}
 
 	return paths
 }
 
 func lookup(vmfile, taupath string) (string, error) {
-	for _, p := range lookupPaths(filepath.Base(vmfile), taupath) {
+	// The directory of the importing file, so that a module finds the ones
+	// that sit next to it whatever the working directory is.
+	for _, p := range lookupPaths(filepath.Dir(vmfile), taupath) {
 		if _, err := os.Stat(p); err == nil {
 			return p, nil
 		}
@@ -177,10 +185,12 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 		return 1
 	}
 
+	// Already imported: push the module and carry on, a non zero result would
+	// stop the VM.
 	if mod, ok := importTab[p]; ok {
 		vm.stack[vm.sp] = mod
 		vm.sp++
-		return 1
+		return 0
 	}
 
 	b, err := os.ReadFile(p)
@@ -190,15 +200,15 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 		return 1
 	}
 
-	tree, errs := parser.Parse(path, string(b))
+	tree, errs := parser.Parse(p, string(b))
 	if len(errs) > 0 {
-		m := fmt.Sprintf("import: multiple errors in module %s", path)
+		m := fmt.Sprintf("import: %v", errs[0])
 		C.go_vm_errorf(vm, C.CString(m))
 		return 1
 	}
 
 	c := compiler.NewImport(int(vm.state.ndefs), &Consts)
-	c.SetFileInfo(path, string(b))
+	c.SetFileInfo(p, string(b))
 	if err := c.Compile(tree); err != nil {
 		C.go_vm_errorf(vm, C.CString(err.Error()))
 		return 1
@@ -207,7 +217,9 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	bc := c.Bytecode()
 	(*State)(&vm.state).SetConsts(Consts)
 	vm.state.ndefs = C.uint32_t(bc.NDefs())
-	tvm := C.new_vm_with_state(C.CString(path), cbytecode(bc), vm.state)
+	// The resolved path, so that the modules imported by this one are looked
+	// up next to it.
+	tvm := C.new_vm_with_state(C.CString(p), cbytecode(bc), vm.state)
 	defer C.vm_dispose(tvm)
 	if i := C.vm_run(tvm); i != 0 {
 		C.go_vm_errorf(vm, C.CString("import error"))

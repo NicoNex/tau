@@ -1,0 +1,40 @@
+# errors - errors as values.
+#
+# A function that can fail returns an error as its result, the caller checks
+# it with failed():
+#
+#	if failed(n = strconv.ParseInt("x", 10)) {
+#		return errors.Wrap(n, "parsing the port")
+#	}
+
+# New builds an error with the given message.
+New = fn(msg) { error(msg) }
+
+# Wrap returns a new error adding context to err, keeping its message.
+Wrap = fn(err, msg) { error("{msg}: {string(err)}") }
+
+# Is reports whether err is an error whose message contains target.
+Is = fn(err, target) {
+	if type(err) != "error" {
+		return false
+	}
+
+	msg = string(err)
+	sub = string(target)
+	maxAttempts = len(msg) - len(sub)
+
+	for i = 0; i <= maxAttempts; ++i {
+		if sub == slice(msg, i, i + len(sub)) {
+			return true
+		}
+	}
+	return false
+}
+
+# Message returns the text of err, or the empty string if err is not an error.
+Message = fn(err) {
+	if type(err) != "error" {
+		return ""
+	}
+	return string(err)
+}

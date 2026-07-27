@@ -1,0 +1,30 @@
+# stress GC under concurrency: routines allocate heap strings, send them to
+# parent through a pipe, while both sides churn allocations to force GC.
+worker = fn(p, id) {
+	for i = 0; i < 2000; ++i {
+		msg = "worker-{id}-msg-{i}-payload"
+		send(p, msg)
+	}
+	send(p, "DONE")
+}
+
+p = pipe()
+n = 6
+for w = 0; w < n; ++w {
+	tau worker(p, w)
+}
+
+got = 0
+done = 0
+for done < n {
+	v = recv(p)
+	# force parent-side allocation/GC while receiving heap objs from children
+	tmp = "received-{v}"
+	if len(tmp) > 0 {
+		got = got + 1
+	}
+	if v == "DONE" {
+		done = done + 1
+	}
+}
+println(got)

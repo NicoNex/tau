@@ -1,0 +1,19 @@
+a = import("tests/test_nested_a.tau")
+
+print("Type of a: ")
+print(type(a))
+print("\n")
+
+print("Type of a.PublicFunc: ")
+print(type(a.PublicFunc))
+print("\n")
+
+if a.PublicFunc == null {
+    print("a.PublicFunc is null!\n")
+} else {
+    print("a.PublicFunc exists, calling it...\n")
+    result = a.PublicFunc()
+    print("Result: ")
+    print(result)
+    print("\n")
+}

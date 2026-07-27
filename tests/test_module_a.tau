@@ -1,0 +1,10 @@
+# Module A that imports syscall
+syscall = import("stdlib/syscall")
+
+println("In module A: syscall.S_IRUSR = {syscall.S_IRUSR}")
+
+TestFunc = fn() {
+	println("In TestFunc: syscall.S_IRUSR = {syscall.S_IRUSR}")
+	perm = syscall.S_IRUSR | syscall.S_IWUSR
+	return perm
+}

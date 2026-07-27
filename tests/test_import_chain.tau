@@ -1,0 +1,13 @@
+#!/usr/bin/env tau
+
+println("Testing import chain...")
+os = import("stdlib/os")
+println("os imported successfully")
+
+println("\nTesting os.Open...")
+if failed(f = os.Open("/tmp/test_import.txt", "w")) {
+	println("FAILED: {f}")
+	exit(1)
+}
+println("File opened successfully")
+f.Close()

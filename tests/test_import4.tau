@@ -1,0 +1,13 @@
+print("Importing test module...\n")
+mod = import("test_module.tau")
+
+print("After import, checking mod.libc:\n")
+print("Type: ")
+print(type(mod.libc))
+print("\n")
+
+print("\nCalling mod.testFunc():\n")
+result = mod.testFunc()
+print("Returned type: ")
+print(type(result))
+print("\n")

@@ -1,0 +1,12 @@
+# Module B - imports A and has its own private variable
+a = import("tests/test_nested_a.tau")
+
+privateDataB = "Secret from B"
+
+PublicFuncB = fn() {
+    return privateDataB
+}
+
+PublicCallA = fn() {
+    return a.PublicFunc()
+}

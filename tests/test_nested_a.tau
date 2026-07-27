@@ -1,0 +1,6 @@
+# Module A - has a private variable
+privateData = "Secret from A"
+
+PublicFunc = fn() {
+    return privateData
+}

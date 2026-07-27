@@ -1,0 +1,20 @@
+net = import("stdlib/net.tau")
+print("Type of net: ")
+print(type(net))
+print("\n")
+
+# Try to call Listen
+print("Trying to call net.Listen:\n")
+print(type(net.Listen))
+print("\n")
+
+# Try to actually call it
+result = net.Listen("tcp", ":8080")
+if failed(result) {
+    print("Failed: ")
+    print(result)
+    print("\n")
+} else {
+    print("Success! Listener created\n")
+    result.Close()
+}

@@ -21,7 +21,7 @@ ReadAll = fn(r) {
 	}
 
 	out = bytes(0)
-	for true {
+	for {
 		if failed(chunk = r.Read(bufsize)) {
 			return chunk
 		}
@@ -62,7 +62,7 @@ Copy = fn(dst, src) {
 	}
 
 	total = 0
-	for true {
+	for {
 		if failed(chunk = src.Read(bufsize)) {
 			return chunk
 		}

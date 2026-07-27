@@ -1,0 +1,14 @@
+# Test if plugin works directly
+libc = plugin("/usr/lib/libc.so.6")
+print("Type of libc: ")
+print(type(libc))
+print("\n")
+
+if libc == null {
+    print("libc is null!\n")
+} else {
+    print("libc loaded successfully\n")
+    print("libc.socket: ")
+    print(type(libc.socket))
+    print("\n")
+}

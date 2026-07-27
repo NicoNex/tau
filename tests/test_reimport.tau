@@ -1,0 +1,16 @@
+# Test if re-importing gives us a fresh object
+a1 = import("tests/test_simple_a.tau")
+print("First import a1.SimpleVar = ")
+print(a1.SimpleVar)
+print("\n")
+
+a2 = import("tests/test_simple_a.tau")
+print("Second import a2.SimpleVar = ")
+print(a2.SimpleVar)
+print("\n")
+
+if a1 == a2 {
+    print("Same object (cached)\n")
+} else {
+    print("Different objects\n")
+}

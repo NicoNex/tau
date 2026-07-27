@@ -1,0 +1,26 @@
+#!/usr/bin/env tau
+
+syscall = import("stdlib/syscall")
+
+println("Direct access: syscall.S_IRUSR = {syscall.S_IRUSR}")
+
+# Test 1: Reference at function definition time
+testFunc1 = fn() {
+	perm = syscall.S_IRUSR | syscall.S_IWUSR
+	println("testFunc1: perm = {perm}")
+}
+
+println("\nCalling testFunc1...")
+testFunc1()
+
+# Test 2: Store in variable first
+S_IRUSR = syscall.S_IRUSR
+S_IWUSR = syscall.S_IWUSR
+
+testFunc2 = fn() {
+	perm = S_IRUSR | S_IWUSR
+	println("testFunc2: perm = {perm}")
+}
+
+println("\nCalling testFunc2...")
+testFunc2()

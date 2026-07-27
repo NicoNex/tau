@@ -1,0 +1,9 @@
+print("Main program starting...\n")
+b = import("tests/test_debug_b.tau")
+
+print("Calling b.PublicCallA()...\n")
+result = b.PublicCallA()
+
+print("Result: ")
+print(result)
+print("\n")

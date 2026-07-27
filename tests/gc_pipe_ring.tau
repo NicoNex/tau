@@ -1,0 +1,24 @@
+# Buffered pipe: the ring wraps around many times while the GC runs, both the
+# mark phase and the growth of the buffer must follow head instead of index 0.
+producer = fn(p, n) {
+	for i = 0; i < n; ++i {
+		send(p, "payload-{i}")
+	}
+	send(p, "END")
+}
+
+p = pipe(4)
+n = 5000
+tau producer(p, n)
+
+got = 0
+running = true
+for running {
+	v = recv(p)
+	if v == "END" {
+		running = false
+	} else {
+		got = got + 1
+	}
+}
+println(got == n, got)

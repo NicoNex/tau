@@ -1,0 +1,144 @@
+# testing - a small test runner.
+#
+# A test file declares its cases and hands them to Main, which runs them all
+# and exits non zero if any of them failed:
+#
+#	testing = import("testing")
+#	cmp = import("cmp")
+#
+#	testing.Main([
+#		["Equal on lists", fn(t) {
+#			t.AssertEq(cmp.Equal([1, 2], [1, 2]), true)
+#		}],
+#		["Compare", fn(t) {
+#			t.AssertEq(cmp.Compare(2, 3), -1)
+#		}],
+#	])
+#
+# There are no exceptions, so a failed assertion records the failure and the
+# case keeps going: to stop it, return right after t.Fatal.
+
+cmp = import("cmp")
+time = import("time")
+
+# newT builds the object a test case is given.
+newT = fn(name) {
+	t = new()
+	t.Name = name
+	t.failed = false
+	t.skipped = false
+	t.messages = []
+
+	# Error records a failure and lets the case carry on.
+	t.Error = fn(msg) {
+		t.failed = true
+		t.messages = append(t.messages, string(msg))
+	}
+
+	# Fatal records a failure meant to end the case. Nothing can interrupt a
+	# function from the outside, so return right after calling it.
+	t.Fatal = fn(msg) {
+		t.Error(msg)
+		return null
+	}
+
+	# Assert fails the case if cond isn't true.
+	t.Assert = fn(cond, msg) {
+		if cond != true {
+			t.Error(if msg == null { "assertion failed" } else { msg })
+			return false
+		}
+		return true
+	}
+
+	# AssertEq fails the case unless got and want hold the same value,
+	# compared structurally.
+	t.AssertEq = fn(got, want) {
+		if !cmp.Equal(got, want) {
+			t.Error("got {got}, want {want}")
+			return false
+		}
+		return true
+	}
+
+	# AssertNe is AssertEq the other way round.
+	t.AssertNe = fn(got, want) {
+		if cmp.Equal(got, want) {
+			t.Error("got {got}, want anything else")
+			return false
+		}
+		return true
+	}
+
+	# AssertError fails the case unless x is an error.
+	t.AssertError = fn(x) {
+		if type(x) != "error" {
+			t.Error("got {type(x)} {x}, want an error")
+			return false
+		}
+		return true
+	}
+
+	# Skip marks the case as not run.
+	t.Skip = fn(msg) {
+		t.skipped = true
+		t.messages = append(t.messages, if msg == null { "skipped" } else { string(msg) })
+		return null
+	}
+
+	t.Failed = fn() { t.failed }
+
+	return t
+}
+
+# Run runs one case and returns its t, already reported.
+Run = fn(name, f) {
+	t = newT(name)
+	start = time.Mono()
+	f(t)
+	elapsed = time.Since(start)
+
+	if t.skipped {
+		println("--- SKIP: {name}")
+	} else if t.failed {
+		println("--- FAIL: {name} ({elapsed}ms)")
+	} else {
+		println("--- PASS: {name} ({elapsed}ms)")
+	}
+
+	for i = 0; i < len(t.messages); ++i {
+		println("        {t.messages[i]}")
+	}
+
+	return t
+}
+
+# Main runs every [name, function] pair and exits: 0 when they all pass, 1 as
+# soon as one of them doesn't.
+Main = fn(cases) {
+	failed = 0
+	skipped = 0
+	start = time.Mono()
+
+	for i = 0; i < len(cases); ++i {
+		t = Run(cases[i][0], cases[i][1])
+		if t.failed {
+			++failed
+		}
+		if t.skipped {
+			++skipped
+		}
+	}
+
+	elapsed = time.Since(start)
+	total = len(cases)
+	passed = total - failed - skipped
+
+	if failed > 0 {
+		println("FAIL    {failed} failed, {passed} passed of {total} ({elapsed}ms)")
+		exit(1)
+	}
+
+	println("ok      {passed} passed of {total} ({elapsed}ms)")
+	exit(0)
+}

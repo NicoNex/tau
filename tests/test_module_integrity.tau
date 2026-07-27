@@ -1,0 +1,22 @@
+# First, import A directly and check it
+print("Test 1: Direct import of A\n")
+a1 = import("tests/test_simple_a.tau")
+print("a1.SimpleVar = ")
+print(a1.SimpleVar)
+print("\n\n")
+
+# Now import B (which imports A)
+print("Test 2: Import B (which imports A)\n")
+b = import("tests/test_simple_b.tau")
+
+# Check if we can still access a1
+print("After importing B, a1.SimpleVar = ")
+print(a1.SimpleVar)
+print("\n\n")
+
+# Now call B's function
+print("Test 3: Call B's function\n")
+result = b.GetSimpleVar()
+print("Result from B.GetSimpleVar(): ")
+print(result)
+print("\n")

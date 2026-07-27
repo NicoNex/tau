@@ -26,7 +26,11 @@ func main() {
 	case version:
 		tau.PrintVersionInfo(os.Stdout)
 	case flag.NArg() > 0:
-		tau.ExecFileVM(flag.Arg(0))
+		// A file that doesn't compile has to fail: a test runner reporting
+		// success on a broken file is worse than useless.
+		if err := tau.ExecFileVM(flag.Arg(0)); err != nil {
+			os.Exit(1)
+		}
 	case simple || runtime.GOOS == "windows":
 		tau.SimpleREPL()
 	default:

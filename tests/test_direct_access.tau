@@ -1,0 +1,20 @@
+a = import("tests/test_simple_a.tau")
+
+print("Direct access: a.SimpleVar = ")
+print(a.SimpleVar)
+print("\n")
+
+# Store in a variable
+myVar = a
+print("Through variable: myVar.SimpleVar = ")
+print(myVar.SimpleVar)
+print("\n")
+
+# Through a function that captures it
+f = fn() {
+    return a.SimpleVar
+}
+
+print("Through closure: f() = ")
+print(f())
+print("\n")

@@ -1,0 +1,22 @@
+#!/usr/bin/env tau
+
+# Replicate what os.tau does
+syscall = import("stdlib/syscall")
+
+println("syscall.S_IRUSR = {syscall.S_IRUSR}")
+println("syscall.S_IWUSR = {syscall.S_IWUSR}")
+
+Open = fn(path, mode) {
+	println("Inside Open function")
+	println("  syscall.S_IRUSR = {syscall.S_IRUSR}")
+
+	flags = 0
+	perm = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP | syscall.S_IROTH
+
+	println("  perm = {perm}")
+	return perm
+}
+
+println("\nCalling Open...")
+result = Open("/tmp/test.txt", "w")
+println("Result: {result}")

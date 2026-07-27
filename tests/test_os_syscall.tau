@@ -1,0 +1,11 @@
+#!/usr/bin/env tau
+
+println("Testing os module's syscall import...")
+
+# Import os which internally imports syscall
+os = import("stdlib/os")
+
+# Try to create a simple test that accesses syscall from within os
+println("Calling os.Mkdir...")
+result = os.Mkdir("/tmp/test_os_syscall", 0755)
+println("Result: {result}")

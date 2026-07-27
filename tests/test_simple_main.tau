@@ -1,0 +1,7 @@
+b = import("tests/test_simple_b.tau")
+
+print("In main, calling b.GetSimpleVar():\n")
+result = b.GetSimpleVar()
+print("Result: ")
+print(result)
+print("\n")

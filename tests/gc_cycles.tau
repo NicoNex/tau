@@ -1,0 +1,17 @@
+# Objects that reference themselves through a closure: the mark phase used to
+# recur forever on them.
+Dog = fn(name, age) {
+	d = new()
+	d.name = name
+	d.age = age
+	d.humanage = fn() { d.age * 7 }
+	return d
+}
+
+last = null
+for i = 0; i < 20000; ++i {
+	last = Dog("dog-{i}", i)
+}
+
+# 19999 * 7
+println(last.name, last.humanage())

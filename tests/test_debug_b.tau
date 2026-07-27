@@ -1,0 +1,25 @@
+print("Module B loading...\n")
+a = import("tests/test_nested_a.tau")
+
+print("In module B, type of a: ")
+print(type(a))
+print("\n")
+
+print("In module B, type of a.PublicFunc: ")
+print(type(a.PublicFunc))
+print("\n")
+
+# This will be called from outside
+PublicCallA = fn() {
+    print("Inside PublicCallA, type of a: ")
+    print(type(a))
+    print("\n")
+
+    print("Inside PublicCallA, type of a.PublicFunc: ")
+    print(type(a.PublicFunc))
+    print("\n")
+
+    return a.PublicFunc()
+}
+
+print("Module B loaded.\n")

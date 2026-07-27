@@ -1,0 +1,11 @@
+#!/usr/bin/env tau
+
+syscall = import("stdlib/syscall")
+
+println("Testing syscall constants...")
+println("S_IRUSR = {syscall.S_IRUSR}")
+println("S_IWUSR = {syscall.S_IWUSR}")
+println("S_IRGRP = {syscall.S_IRGRP}")
+println("S_IROTH = {syscall.S_IROTH}")
+println("O_RDONLY = {syscall.O_RDONLY}")
+println("O_WRONLY = {syscall.O_WRONLY}")

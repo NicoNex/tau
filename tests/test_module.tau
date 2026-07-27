@@ -1,0 +1,12 @@
+print("Loading test module...\n")
+libc = plugin("/usr/lib/libc.so.6")
+print("libc type in module: ")
+print(type(libc))
+print("\n")
+
+testFunc = fn() {
+    print("Inside testFunc, libc type: ")
+    print(type(libc))
+    print("\n")
+    return libc
+}

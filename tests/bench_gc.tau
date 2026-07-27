@@ -1,0 +1,15 @@
+# allocation-heavy: stresses GC mark/sweep + MARKPTR alloc
+build = fn(n) {
+	xs = []
+	for i = 0; i < n; ++i {
+		xs = append(xs, "item-{i}")
+	}
+	xs
+}
+
+total = 0
+for r = 0; r < 200; ++r {
+	xs = build(2000)
+	total = total + len(xs)
+}
+println(total)

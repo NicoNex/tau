@@ -1,0 +1,18 @@
+print("Importing A directly\n")
+a1 = import("tests/test_simple_a.tau")
+print("a1 = ")
+print(a1)
+print("\n")
+print("a1.SimpleVar = ")
+print(a1.SimpleVar)
+print("\n\n")
+
+print("Importing B\n")
+b = import("tests/test_simple_b.tau")
+print("\nAfter importing B\n")
+
+print("Calling b.GetSimpleVar()\n")
+result = b.GetSimpleVar()
+print("Result: ")
+print(result)
+print("\n")

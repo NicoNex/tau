@@ -74,7 +74,7 @@ func ExecFileVM(f string) (err error) {
 	} else {
 		if bytecode, err = compile(f); err != nil {
 			fmt.Println(err)
-			return
+			return err
 		}
 	}
 

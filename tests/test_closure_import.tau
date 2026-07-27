@@ -1,0 +1,6 @@
+mod = import("test_closure_module.tau")
+
+print("Calling mod.PublicFunc():\n")
+result = mod.PublicFunc()
+print(result)
+print("\n")

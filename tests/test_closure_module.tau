@@ -1,0 +1,7 @@
+# Test if closures preserve module-local variables
+privateVar = "I am private"
+
+PublicFunc = fn() {
+    # This should capture privateVar in its closure
+    return privateVar
+}

@@ -1,0 +1,21 @@
+# A slice keeps its parent alive: the parent string/list is unreachable but its
+# buffer is still used by the slice.
+mkstr = fn(i) {
+	s = "0123456789-abcdef-{i}"
+	slice(s, 4, 10)
+}
+
+mklist = fn(i) {
+	xs = [i, i+1, i+2, i+3, i+4]
+	slice(xs, 1, 4)
+}
+
+strs = []
+lists = []
+for i = 0; i < 5000; ++i {
+	strs = append(strs, mkstr(i))
+	lists = append(lists, mklist(i))
+}
+
+println(len(strs), strs[0], strs[4999])
+println(len(lists), lists[0], lists[4999])

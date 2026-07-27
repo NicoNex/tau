@@ -1,0 +1,18 @@
+net = import("stdlib/net.tau")
+
+# Check if libc exists in the net module
+print("Checking net module internals...\n")
+print("Type of net: ")
+print(type(net))
+print("\n")
+
+# Try to access internal variables
+print("net.libc type: ")
+print(type(net.libc))
+print("\n")
+
+if net.libc == null {
+    print("net.libc is null!\n")
+} else {
+    print("net.libc exists\n")
+}

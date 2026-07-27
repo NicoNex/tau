@@ -1,0 +1,13 @@
+print("About to import b\n")
+b = import("tests/test_simple_b.tau")
+print("Imported b\n")
+
+# Define some main program globals
+mainVar1 = "Main Var 1"
+mainVar2 = "Main Var 2"
+
+print("Calling b.GetSimpleVar():\n")
+result = b.GetSimpleVar()
+print("Result: ")
+print(result)
+print("\n")

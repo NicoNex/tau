@@ -1,0 +1,7 @@
+#!/usr/bin/env tau
+
+println("Loading syscall module...")
+syscall = import("stdlib/syscall")
+println("Syscall module loaded successfully!")
+println("AF_INET = {syscall.AF_INET}")
+println("SOCK_STREAM = {syscall.SOCK_STREAM}")

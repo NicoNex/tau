@@ -1,0 +1,23 @@
+#!/usr/bin/env tau
+
+println("Testing what syscall exports...")
+syscall = import("stdlib/syscall")
+
+println("Type of syscall: {type(syscall)}")
+println("syscall object: {syscall}")
+
+# Try accessing constants
+println("\nTrying to access constants:")
+println("syscall.AF_INET = {syscall.AF_INET}")
+println("syscall.S_IRUSR = {syscall.S_IRUSR}")
+
+# Check if they exist at all
+println("\nChecking keys:")
+if type(syscall) == "object" {
+	keys_list = keys(syscall)
+	println("Number of keys: {len(keys_list)}")
+	for i = 0; i < len(keys_list); ++i {
+		println("  Key {i}: {keys_list[i]}")
+		if i > 20 { break }  # Limit output
+	}
+}

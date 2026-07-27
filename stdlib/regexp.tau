@@ -259,7 +259,7 @@ parser = fn(pattern) {
 			return atom
 		}
 
-		for true {
+		for {
 			c = p.peek()
 			min = 0
 			max = -1
@@ -640,7 +640,7 @@ run = fn(prog, text, pos, nslots) {
 	matched = null
 	i = pos
 
-	for true {
+	for {
 		if len(clist) == 0 {
 			return matched
 		}

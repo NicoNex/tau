@@ -1,0 +1,18 @@
+# Simple module B imports A
+a = import("tests/test_simple_a.tau")
+
+print("In module B during load:\n")
+print("a.SimpleVar = ")
+print(a.SimpleVar)
+print("\n")
+
+GetSimpleVar = fn() {
+    print("In GetSimpleVar:\n")
+    print("a = ")
+    print(a)
+    print("\n")
+    print("a.SimpleVar = ")
+    print(a.SimpleVar)
+    print("\n")
+    return a.SimpleVar
+}

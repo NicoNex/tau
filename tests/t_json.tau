@@ -1,0 +1,8 @@
+json = import("json")
+o = {"name": "tau", "n": 42, "ok": true, "xs": [1, 2, 3], "sub": {"k": "v"}}
+enc = json.Marshal(o)
+println("encoded:", enc)
+dec = json.Unmarshal(enc)
+println("decoded name:", dec["name"], "n:", dec["n"], "xs1:", dec["xs"][1], "sub.k:", dec["sub"]["k"])
+println("roundtrip:", json.Marshal(dec) == enc)
+println("bad:", type(json.Unmarshal("{oops")))

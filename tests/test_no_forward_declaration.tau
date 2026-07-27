@@ -1,0 +1,6 @@
+test()
+
+test = fn() {
+	println("it works")
+}
+

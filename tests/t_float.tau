@@ -1,0 +1,15 @@
+strconv = import("strconv")
+json = import("json")
+
+# a float prints its own value, not six rounded decimals
+println(3.14159265, 0.1 + 0.2, 1.0, 1.0/3.0)
+println(1e21, 1.5e-8, 6.02e23)
+
+# exponent literals with more than one digit
+println(1e2 == 100.0, 2.5e-3, 1e100 > 1e99)
+
+println(strconv.FormatFloat(3.14159, 2), strconv.FormatFloat(2.0, 3), strconv.FormatFloat(-1.567, 1))
+println(strconv.ParseFloat("3.25"), strconv.ParseFloat("-0.5"), type(strconv.ParseFloat("x")))
+
+enc = json.Marshal({"pi": 3.14159265, "n": 1.0})
+println(enc, json.Unmarshal(enc)["pi"] == 3.14159265)

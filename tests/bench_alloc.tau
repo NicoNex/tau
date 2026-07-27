@@ -1,0 +1,8 @@
+# pure allocation churn: short-lived strings die immediately -> frequent GC,
+# heavy free path. Isolates MARKPTR calloc + sweep cost (no append O(n^2)).
+sink = 0
+for i = 0; i < 3000000; ++i {
+	s = "abcdefghij-{i}"
+	sink = sink + len(s)
+}
+println(sink)

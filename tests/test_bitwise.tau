@@ -1,0 +1,14 @@
+#!/usr/bin/env tau
+
+syscall = import("stdlib/syscall")
+
+println("Testing bitwise OR operations...")
+a = syscall.S_IRUSR
+b = syscall.S_IWUSR
+println("a = {a}, b = {b}")
+result = a | b
+println("a | b = {result}")
+
+perm = syscall.S_IRUSR | syscall.S_IWUSR | syscall.S_IRGRP | syscall.S_IROTH
+println("perm = {perm}")
+println("Expected: {0644} = 420")

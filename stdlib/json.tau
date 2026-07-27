@@ -196,7 +196,7 @@ Parser = fn(src) {
 		p.skipSpace()
 		if p.inBounds() && p.peek() == "]" { p.advance(1); return arr }
 
-		for true {
+		for {
 			if failed(v = p.parseValue()) { return v }
 			arr = append(arr, v)
 

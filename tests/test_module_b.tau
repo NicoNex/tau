@@ -1,0 +1,8 @@
+#!/usr/bin/env tau
+
+# Import module A which internally imports syscall
+modA = import("tests/test_module_a")
+
+println("In module B, calling modA.TestFunc...")
+result = modA.TestFunc()
+println("Result: {result}")

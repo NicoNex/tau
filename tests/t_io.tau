@@ -1,0 +1,63 @@
+io = import("io")
+os = import("os")
+buffer = import("buffer")
+net = import("net")
+time = import("time")
+
+# a buffer is a reader and a writer
+b = buffer.Buffer()
+b.Write("hello ")
+b.Write("io")
+println("isreader:", io.IsReader(b), io.IsWriter(b), io.IsReader(42), io.IsWriter("x"))
+println("readall:", string(io.ReadAll(b)))
+
+# file to buffer, without either knowing about the other
+os.WriteFile("/tmp/tau_io.txt", "copied through io\n")
+f = os.Open("/tmp/tau_io.txt", os.O_RDONLY, 0)
+dst = buffer.Buffer()
+n = io.Copy(dst, f)
+f.Close()
+println("copy:", n, string(dst.Bytes()))
+
+# file to file
+src = os.Open("/tmp/tau_io.txt", os.O_RDONLY, 0)
+out = os.Create("/tmp/tau_io2.txt")
+io.Copy(out, src)
+src.Close()
+out.Close()
+println("file copy:", os.ReadFileString("/tmp/tau_io2.txt") == "copied through io\n")
+
+# big roundtrip
+big = ""
+for i = 0; i < 20000; ++i { big = big + "0123456789" }
+os.WriteFile("/tmp/tau_io3.txt", big)
+f3 = os.Open("/tmp/tau_io3.txt", os.O_RDONLY, 0)
+data = io.ReadAll(f3)
+f3.Close()
+println("big:", len(data) == 200000)
+
+# ReadFull and CopyN
+b2 = buffer.Buffer()
+b2.Write("abcdefghij")
+println("readfull:", string(io.ReadFull(b2, 4)), "remaining:", b2.Len())
+
+# a network connection is a reader/writer too
+serve = fn(done) {
+	ln = net.Listen("tcp", "127.0.0.1:18101")
+	c = ln.Accept()
+	sink = buffer.Buffer()
+	io.CopyN(sink, c, 5)
+	io.WriteString(c, "got:" + sink.String())
+	c.Close()
+	ln.Close()
+	send(done, "ok")
+}
+done = pipe()
+tau serve(done)
+time.Sleep(150)
+c = net.Dial("tcp", "127.0.0.1:18101")
+io.WriteString(c, "hello")
+println("net:", string(c.Read(null)), recv(done))
+c.Close()
+
+println("errors:", type(io.Copy(42, b)), type(io.ReadAll("nope")))

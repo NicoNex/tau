@@ -1,0 +1,29 @@
+http = import("http")
+net = import("net")
+time = import("time")
+
+serve = fn(done) {
+	ln = net.Listen("tcp", "127.0.0.1:18100")
+	if failed(ln) { send(done, "listen: {string(ln)}"); return null }
+
+	c = ln.Accept()
+	if failed(c) { send(done, "accept: {string(c)}"); ln.Close(); return null }
+
+	req = string(c.Read(null))
+	c.Write("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\nhello")
+	c.Close()
+	ln.Close()
+	send(done, slice(req, 0, 14))
+}
+
+done = pipe()
+tau serve(done)
+time.Sleep(150)
+
+resp = http.Get("http://127.0.0.1:18100/hi")
+if failed(resp) {
+	println("client error:", string(resp))
+} else {
+	println("status:", resp.StatusCode, "body:", resp.Body)
+}
+println("server saw:", recv(done))

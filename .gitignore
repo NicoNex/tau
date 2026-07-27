@@ -8,13 +8,22 @@
 *.prof
 *.tau
 
+# The test suite is part of the repo.
+!/tests/*.tau
+
 /.vscode
 **/.DS_store
 
 /tau
 /cmd/tau/tau
 #!/examples/*.tau
+
+# The test suite is part of the repo.
+!/tests/*.tau
 !/stdlib/*.tau
+
+# The test suite is part of the repo.
+!/tests/*.tau
 internal/obj/libffi
 internal/vm/bdwgc
 profile

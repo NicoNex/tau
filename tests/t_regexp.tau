@@ -1,0 +1,47 @@
+re = import("regexp")
+
+d = re.Compile("[0-9]+")
+println("match:", d.MatchString("abc 123"), d.MatchString("no digits"))
+println("find:", d.FindString("abc 123 def 45"))
+println("findall:", d.FindAllString("a1 b22 c333", -1))
+println("findall n=2:", d.FindAllString("a1 b22 c333", 2))
+println("index:", d.FindStringIndex("abc 123"))
+println("replace:", d.ReplaceAllString("a1b22c", "#"))
+println("replacefunc:", d.ReplaceAllStringFunc("a1b22c", fn(m) { "<{m}>" }))
+println("split:", d.Split("a1b22c333d", -1))
+
+w = re.Compile("^[a-z]+$")
+println("anchors:", w.MatchString("hello"), w.MatchString("hello1"), w.MatchString("1hello"))
+
+alt = re.Compile("cat|dog")
+println("alt:", alt.MatchString("cat"), alt.FindString("a cat here"), alt.FindString("hotdog"), alt.MatchString("bird"))
+
+g = re.Compile("(\\w+)@(\\w+)\\.com")
+println("submatch:", g.FindStringSubmatch("mail: bob@example.com!"))
+println("subindex:", g.FindStringSubmatchIndex("bob@example.com"))
+println("ngroups:", g.NumSubexp())
+
+opt = re.Compile("colou?r")
+println("opt:", opt.MatchString("color"), opt.MatchString("colour"), opt.MatchString("colouur"))
+
+star = re.Compile("ab*c")
+println("star:", star.MatchString("ac"), star.MatchString("abbbc"), star.MatchString("adc"))
+
+cnt = re.Compile("^a{2,3}$")
+println("count:", cnt.MatchString("a"), cnt.MatchString("aa"), cnt.MatchString("aaa"), cnt.MatchString("aaaa"))
+
+lazy = re.Compile("<.+?>")
+println("lazy:", lazy.FindString("<a><b>"))
+greedy = re.Compile("<.+>")
+println("greedy:", greedy.FindString("<a><b>"))
+
+b = re.Compile("\\bcat\\b")
+println("wordb:", b.MatchString("a cat here"), b.MatchString("concatenate"))
+
+println("quotemeta:", re.QuoteMeta("a.b*c"))
+println("shortcut:", re.MatchString("^h", "hello"))
+println("bad:", type(re.Compile("[unclosed")), type(re.Compile("a**")), type(re.Compile("(")))
+
+# the pattern that makes a backtracking engine hang
+evil = re.Compile("(a+)+b")
+println("no blowup:", evil.MatchString("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))

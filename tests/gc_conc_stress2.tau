@@ -1,0 +1,31 @@
+# Many routines allocating and exchanging objects while the collector stops the
+# world: lists, maps, closures and strings all cross thread boundaries.
+worker = fn(p, id) {
+	acc = []
+	for i = 0; i < 500; ++i {
+		m = {"id": id, "i": i, "s": "payload-{id}-{i}"}
+		acc = append(acc, m)
+		if i % 50 == 0 {
+			send(p, acc[len(acc)-1])
+		}
+	}
+	send(p, "DONE-{id}")
+}
+
+p = pipe(8)
+n = 16
+for w = 0; w < n; ++w {
+	tau worker(p, w)
+}
+
+done = 0
+msgs = 0
+for done < n {
+	v = recv(p)
+	if type(v) == "string" {
+		done = done + 1
+	} else {
+		msgs = msgs + len(keys(v))
+	}
+}
+println(done, msgs)

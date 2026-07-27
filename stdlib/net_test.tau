@@ -1,0 +1,74 @@
+testing = import("testing")
+net = import("net")
+
+# addr is a port high enough to be free and fixed enough to be dialled: the
+# listener has no way to report the port the kernel picked.
+addr = "127.0.0.1:45123"
+
+testing.Main([
+		["JoinHostPort and SplitHostPort", fn(t) {
+				t.AssertEq(net.JoinHostPort("127.0.0.1", 80), "127.0.0.1:80")
+
+				hp = net.SplitHostPort("127.0.0.1:8080")
+				t.AssertEq([hp.Host, hp.Port], ["127.0.0.1", 8080])
+
+				# An empty host means every interface.
+				hp = net.SplitHostPort(":80")
+				t.AssertEq([hp.Host, hp.Port], ["", 80])
+
+				t.AssertError(net.SplitHostPort("127.0.0.1"))
+				t.AssertError(net.SplitHostPort("127.0.0.1:http"))
+			}],
+		["ParseIP", fn(t) {
+				t.AssertEq(net.ParseIP("192.168.1.1"), "192.168.1.1")
+				t.AssertEq(net.ParseIP("0.0.0.0"), "0.0.0.0")
+				t.AssertError(net.ParseIP("256.1.1.1"))
+				t.AssertError(net.ParseIP("1.2.3"))
+				t.AssertError(net.ParseIP("nope"))
+			}],
+		["LookupPort", fn(t) {
+				t.AssertEq(net.LookupPort("tcp", "http"), 80)
+				t.AssertEq(net.LookupPort("tcp", "443"), 443)
+				t.AssertError(net.LookupPort("tcp", "nope"))
+			}],
+		["a listener and a connection talk to each other", fn(t) {
+				if failed(ln = net.Listen("tcp", addr)) {
+					t.Skip("cannot listen on {addr}: {ln}")
+					return null
+				}
+
+				# The server echoes one message back, uppercased by nobody: what
+				# matters is that the bytes make the round trip.
+				done = pipe()
+				tau fn() {
+					if failed(conn = ln.Accept()) {
+						send(done, "accept: {conn}")
+						return null
+					}
+
+					data = conn.Read(1024)
+					conn.Write("echo: " + string(data))
+					conn.Close()
+					send(done, "ok")
+				}()
+
+				if failed(c = net.Dial("tcp", addr)) {
+					ln.Close()
+					t.Fatal("dial: {c}")
+					return null
+				}
+
+				c.SetTimeout(2000)
+				c.Write("hello")
+				t.AssertEq(string(c.Read(1024)), "echo: hello")
+
+				t.AssertEq(recv(done), "ok")
+				c.Close()
+				ln.Close()
+				close(done)
+			}],
+		["what isn't there is an error", fn(t) {
+				t.AssertError(net.Dial("tcp", "127.0.0.1:1"))
+				t.AssertError(net.Dial("tcp", "nope"))
+			}]
+	])

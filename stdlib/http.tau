@@ -1,11 +1,20 @@
-# http.tau - HTTP client and server library for Tau (inspired by Go's net/http)
-# Provides high-level HTTP primitives matching Go's net/http library API
+# http - HTTP/1.1 client and server, in the shape of Go's net/http.
+#
+# A client sends a request and reads a response; a server accepts connections
+# and hands each one to a handler, which is any function of (w, r). Headers
+# are kept in a map whose keys are lowercase, so looking one up doesn't
+# depend on how the other side chose to spell it.
+#
+# What is not here: TLS, chunked transfer encoding, keep alive. Every
+# connection carries one exchange and is closed.
 
-os = import("os")
 net = import("net")
 strings = import("strings")
+strconv = import("strconv")
+bufio = import("bufio")
 
-# HTTP status codes (exported constants)
+# ========== Status Codes ==========
+
 StatusOK = 200
 StatusCreated = 201
 StatusAccepted = 202
@@ -23,609 +32,610 @@ StatusNotFound = 404
 StatusMethodNotAllowed = 405
 StatusRequestTimeout = 408
 StatusConflict = 409
-StatusGone = 410
+StatusPayloadTooLarge = 413
+StatusUnsupportedMediaType = 415
+StatusTooManyRequests = 429
 StatusInternalServerError = 500
 StatusNotImplemented = 501
 StatusBadGateway = 502
 StatusServiceUnavailable = 503
 StatusGatewayTimeout = 504
 
-# HTTP methods (exported constants)
-MethodGet = "GET"
-MethodPost = "POST"
-MethodPut = "PUT"
-MethodDelete = "DELETE"
-MethodPatch = "PATCH"
-MethodHead = "HEAD"
-MethodOptions = "OPTIONS"
-
-# Internal helper functions
-
-# Parse HTTP request line
-parseRequestLine = fn(line) {
-	parts = []
-	part = ""
-
-	for i = 0; i < len(line); ++i {
-		if line[i] == " " {
-			if len(part) > 0 {
-				parts = append(parts, part)
-				part = ""
-			}
-		} else {
-			part += line[i]
-		}
-	}
-
-	if len(part) > 0 {
-		parts = append(parts, part)
-	}
-
-	if len(parts) < 3 {
-		return error("invalid request line")
-	}
-
-	result = new()
-	result.Method = parts[0]
-	result.Path = parts[1]
-	result.Proto = parts[2]
-
-	return result
+statusText = {
+	200: "OK",
+	201: "Created",
+	202: "Accepted",
+	204: "No Content",
+	301: "Moved Permanently",
+	302: "Found",
+	303: "See Other",
+	304: "Not Modified",
+	307: "Temporary Redirect",
+	308: "Permanent Redirect",
+	400: "Bad Request",
+	401: "Unauthorized",
+	403: "Forbidden",
+	404: "Not Found",
+	405: "Method Not Allowed",
+	408: "Request Timeout",
+	409: "Conflict",
+	413: "Payload Too Large",
+	415: "Unsupported Media Type",
+	429: "Too Many Requests",
+	500: "Internal Server Error",
+	501: "Not Implemented",
+	502: "Bad Gateway",
+	503: "Service Unavailable",
+	504: "Gateway Timeout"
 }
 
-# Parse HTTP headers
-parseHeaders = fn(lines) {
-	headers = new()
+# StatusText returns the reason phrase of a status code, empty when the code
+# is not one of the known ones.
+StatusText = fn(code) {
+	if statusText[code] == null {
+		return ""
+	}
+	return statusText[code]
+}
 
-	for i = 1; i < len(lines); ++i {
-		line = lines[i]
+# ========== Methods ==========
 
-		if len(line) == 0 {
-			break
-		}
+MethodGet = "GET"
+MethodHead = "HEAD"
+MethodPost = "POST"
+MethodPut = "PUT"
+MethodPatch = "PATCH"
+MethodDelete = "DELETE"
+MethodOptions = "OPTIONS"
 
-		colonIdx = strings.Index(line, ":")
-		if colonIdx == -1 {
+# ========== URLs ==========
+
+# ParseURL takes a URL apart: Scheme, Host with its port, Path, RawQuery and
+# Query, which is the query string already split into a map.
+ParseURL = fn(rawurl) {
+	scheme = "http"
+	rest = rawurl
+
+	if strings.HasPrefix(rawurl, "http://") {
+		rest = slice(rawurl, 7, len(rawurl))
+	} else if strings.HasPrefix(rawurl, "https://") {
+		return error("http: https is not supported")
+	} else if strings.Contains(rawurl, "://") {
+		return error("http: unsupported scheme in \"{rawurl}\"")
+	}
+
+	host = rest
+	path = "/"
+
+	if (i = strings.Index(rest, "/")) != -1 {
+		host = slice(rest, 0, i)
+		path = slice(rest, i, len(rest))
+	}
+
+	if host == "" {
+		return error("http: no host in \"{rawurl}\"")
+	}
+
+	query = ""
+	if (i = strings.Index(path, "?")) != -1 {
+		query = slice(path, i + 1, len(path))
+		path = slice(path, 0, i)
+	}
+
+	u = new()
+	u.Scheme = scheme
+	u.Host = if strings.Index(host, ":") == -1 { host + ":80" } else { host }
+	u.Hostname = net.SplitHostPort(u.Host).Host
+	u.Path = path
+	u.RawQuery = query
+	u.Query = ParseQuery(query)
+	return u
+}
+
+# ParseQuery reads a query string into a map. A key without a value maps to
+# the empty string, the way an empty field does.
+ParseQuery = fn(raw) {
+	out = {}
+	if raw == "" {
+		return out
+	}
+
+	pairs = strings.Split(raw, "&")
+	for i = 0; i < len(pairs); ++i {
+		p = pairs[i]
+		if p == "" {
 			continue
 		}
 
-		key = slice(line, 0, colonIdx)
-		value = strings.TrimSpace(slice(line, colonIdx + 1, len(line)))
-
-		# Store header with lowercase key for case-insensitive access
-		headers[strings.ToLower(key)] = value
-	}
-
-	return headers
-}
-
-# Split request into lines
-splitLines = fn(request) {
-	lines = []
-	line = ""
-
-	for i = 0; i < len(request); ++i {
-		if request[i] == "\n" {
-			lines = append(lines, line)
-			line = ""
-		} else if request[i] != "\r" {
-			line += request[i]
+		if (j = strings.Index(p, "=")) == -1 {
+			out[unescape(p)] = ""
+		} else {
+			out[unescape(slice(p, 0, j))] = unescape(slice(p, j + 1, len(p)))
 		}
 	}
+	return out
+}
 
-	if len(line) > 0 {
-		lines = append(lines, line)
+hexValue = fn(c) {
+	if c >= "0" && c <= "9" {
+		return bytes(c)[0] - 48
+	}
+	if c >= "a" && c <= "f" {
+		return bytes(c)[0] - 87
+	}
+	if c >= "A" && c <= "F" {
+		return bytes(c)[0] - 55
+	}
+	return -1
+}
+
+# unescape turns %XX back into the byte it stands for, and + into a space.
+unescape = fn(s) {
+	out = []
+	for i = 0; i < len(s); ++i {
+		c = s[i]
+
+		if c == "+" {
+			out = append(out, 32)
+		} else if c == "%" && i + 2 < len(s) && hexValue(s[i + 1]) >= 0 && hexValue(s[i + 2]) >= 0 {
+			out = append(out, hexValue(s[i + 1]) << 4 | hexValue(s[i + 2]))
+			i = i + 2
+		} else {
+			out = append(out, bytes(c)[0])
+		}
+	}
+	return string(bytes(out))
+}
+
+unreserved = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_.~"
+hexDigits = "0123456789ABCDEF"
+
+# Escape writes a string so that it can travel inside a URL.
+Escape = fn(s) {
+	b = bytes(s)
+	out = ""
+
+	for i = 0; i < len(b); ++i {
+		c = string(bytes([b[i]]))
+		if strings.Contains(unreserved, c) {
+			out = out + c
+		} else {
+			out = out + "%" + hexDigits[b[i] >> 4] + hexDigits[b[i] & 0x0f]
+		}
+	}
+	return out
+}
+
+# ========== Headers ==========
+
+# newHeader returns an empty header map with the two ways of reaching into
+# it: Get and Set, which don't care about case.
+newHeader = fn() {{} }
+
+# HeaderGet returns the value of a header, or an empty string.
+HeaderGet = fn(h, name) {
+	v = h[strings.ToLower(name)]
+	if v == null {
+		return ""
+	}
+	return v
+}
+
+HeaderSet = fn(h, name, value) {
+	h[strings.ToLower(name)] = string(value)
+	return h
+}
+
+# canonical writes a header name the way HTTP does: Content-Type.
+canonical = fn(name) {
+	parts = strings.Split(strings.ToLower(name), "-")
+	for i = 0; i < len(parts); ++i {
+		if len(parts[i]) > 0 {
+			parts[i] = strings.ToUpper(slice(parts[i], 0, 1)) + slice(parts[i], 1, len(parts[i]))
+		}
+	}
+	return strings.Join(parts, "-")
+}
+
+# readHeaders reads the header lines up to the empty one that ends them.
+readHeaders = fn(r) {
+	h = newHeader()
+
+	for {
+		line = r.ReadLine()
+		if line == null || line == "" {
+			return h
+		}
+
+		if (i = strings.Index(line, ":")) != -1 {
+			name = strings.ToLower(strings.TrimSpace(slice(line, 0, i)))
+			h[name] = strings.TrimSpace(slice(line, i + 1, len(line)))
+		}
+	}
+}
+
+# readBody returns as many bytes as Content-Length says. Without that header
+# there is a body only if the sender is going to close the connection to mark
+# its end, which is what toEnd is for: true for a response, false for a
+# request, where waiting for a close that never comes would hang the server.
+readBody = fn(r, h, toEnd) {
+	length = HeaderGet(h, "content-length")
+
+	if length == "" {
+		if toEnd {
+			return string(r.ReadAll())
+		}
+		return ""
+	}
+	if failed(n = strconv.Atoi(length)) {
+		return error("http: bad Content-Length \"{length}\"")
+	}
+	if n <= 0 {
+		return ""
+	}
+	return string(r.Read(n))
+}
+
+# ========== Requests and Responses ==========
+
+# NewRequest builds a request. Body may be null for the methods that carry
+# none.
+NewRequest = fn(method, url, body) {
+	if failed(u = ParseURL(url)) {
+		return u
 	}
 
-	return lines
-}
-
-# StatusText returns the text for the HTTP status code
-StatusText = fn(code) {
-	if code == 200 { return "OK" }
-	if code == 201 { return "Created" }
-	if code == 202 { return "Accepted" }
-	if code == 204 { return "No Content" }
-	if code == 301 { return "Moved Permanently" }
-	if code == 302 { return "Found" }
-	if code == 303 { return "See Other" }
-	if code == 304 { return "Not Modified" }
-	if code == 307 { return "Temporary Redirect" }
-	if code == 308 { return "Permanent Redirect" }
-	if code == 400 { return "Bad Request" }
-	if code == 401 { return "Unauthorized" }
-	if code == 403 { return "Forbidden" }
-	if code == 404 { return "Not Found" }
-	if code == 405 { return "Method Not Allowed" }
-	if code == 408 { return "Request Timeout" }
-	if code == 409 { return "Conflict" }
-	if code == 410 { return "Gone" }
-	if code == 500 { return "Internal Server Error" }
-	if code == 501 { return "Not Implemented" }
-	if code == 502 { return "Bad Gateway" }
-	if code == 503 { return "Service Unavailable" }
-	if code == 504 { return "Gateway Timeout" }
-
-	return "Unknown"
-}
-
-# Request represents an HTTP request (like Go's http.Request)
-makeRequest = fn(method, url, body) {
 	req = new()
-	req.Method = method
+	req.Method = if method == null { MethodGet } else { strings.ToUpper(method) }
 	req.URL = url
-	req.Body = body
-	req.Header = new()
-	req.Proto = "HTTP/1.1"
-
+	req.Path = u.Path
+	req.RawQuery = u.RawQuery
+	req.Query = u.Query
+	req.Host = u.Host
+	req.Header = newHeader()
+	req.Body = if body == null { "" } else { string(body) }
 	return req
 }
 
-# Response represents an HTTP response (like Go's http.Response)
-makeResponse = fn() {
+newResponse = fn() {
 	resp = new()
-	resp.StatusCode = 200
-	resp.Status = "200 OK"
+	resp.StatusCode = 0
+	resp.Status = ""
 	resp.Proto = "HTTP/1.1"
-	resp.Header = new()
+	resp.Header = newHeader()
 	resp.Body = ""
-
 	return resp
 }
 
-# ResponseWriter interface - used to construct HTTP responses (like Go's http.ResponseWriter)
-makeResponseWriter = fn() {
-	w = new()
-	w.statusCode = 200
-	w.headers = {}
-	w.body = ""
-	w.headerWritten = false
+# ========== Client ==========
 
-	# Header returns the header map
-	w.Header = fn() {
-		return w.headers
-	}
-
-	# Write writes data to the response body
-	w.Write = fn(data) {
-		if type(data) != "string" {
-			data = string(data)
-		}
-
-		w.body += data
-		return len(data)
-	}
-
-	# WriteHeader sends an HTTP response header with status code
-	w.WriteHeader = fn(statusCode) {
-		if !w.headerWritten {
-			w.statusCode = statusCode
-			w.headerWritten = true
-		}
-	}
-
-	# Build the complete HTTP response
-	w.BuildResponse = fn() {
-		# Build status line
-		response = "HTTP/1.1 {w.statusCode} {StatusText(w.statusCode)}\r\n"
-
-		# Add Content-Length if not set
-		if w.headers["content-length"] == null {
-			w.headers["content-length"] = string(len(w.body))
-		}
-
-		# Add headers
-		keys = []
-		# Collect header keys (simplified - in real implementation would iterate properly)
-		if w.headers["content-type"] != null {
-			response += "Content-Type: {w.headers[\"content-type\"]}\r\n"
-		}
-		if w.headers["content-length"] != null {
-			response += "Content-Length: {w.headers[\"content-length\"]}\r\n"
-		}
-
-		# Add any other headers manually set
-		keys = keys(w.headers)
-		for i = 0; i < len(keys); i += 1 {
-			key = keys[i]
-
-			if key != "content-type" && key != "content-length" {
-				response += "{key}: {w.headers[key]}\r\n"
-			}
-		}
-
-		response += "\r\n"
-		response += w.body
-
-		return response
-	}
-
-	return w
-}
-
-# Client represents an HTTP client (like Go's http.Client)
-NewClient = fn() {
+# NewClient returns a client. Timeout is in milliseconds and may be null.
+NewClient = fn(timeout) {
 	client = new()
+	client.Timeout = if timeout == null { 30000 } else { timeout }
 
-	# Do sends an HTTP request and returns a response
+	# Do sends a request and returns the response.
 	client.Do = fn(req) {
-		# Parse URL
-		if !strings.HasPrefix(req.URL, "http://") {
-			return error("only http:// URLs supported")
+		if failed(u = ParseURL(req.URL)) {
+			return u
 		}
-
-		rest = slice(req.URL, 7, len(req.URL))
-
-		# Find host and path
-		pathIdx = strings.Index(rest, "/")
-
-		if pathIdx == -1 {
-			hostport = rest
-			path = "/"
-		} else {
-			hostport = slice(rest, 0, pathIdx)
-			path = slice(rest, pathIdx, len(rest))
-		}
-
-		# Add default port if missing
-		if failed(hp = net.SplitHostPort(hostport)) {
-			hostport = net.JoinHostPort(hostport, 80)
-		}
-
-		# Connect
-		if failed(conn = net.Dial("tcp", hostport)) {
+		if failed(conn = net.Dial("tcp", u.Host)) {
 			return conn
 		}
+		conn.SetTimeout(client.Timeout)
 
-		# Parse host for header
-		hp2 = net.SplitHostPort(hostport)
-		host = if failed(hp2) { hostport } else { hp2.Host }
-
-		# Build request
-		request = "{req.Method} {path} HTTP/1.1\r\n"
-		request += "Host: {host}\r\n"
-
-		# Add custom headers
-		if req.Header["user-agent"] != null {
-			request += "User-Agent: {req.Header[\"user-agent\"]}\r\n"
-		}
-		if req.Header["content-type"] != null {
-			request += "Content-Type: {req.Header[\"content-type\"]}\r\n"
+		target = u.Path
+		if u.RawQuery != "" {
+			target = target + "?" + u.RawQuery
 		}
 
-		# Add body if present
-		if req.Body != null && len(req.Body) > 0 {
-			request += "Content-Length: {len(req.Body)}\r\n"
-			request += "\r\n"
-			request += req.Body
-		} else {
-			request += "Connection: close\r\n"
-			request += "\r\n"
+		out = "{req.Method} {target} HTTP/1.1\r\n"
+		out = out + "Host: {u.Hostname}\r\n"
+		out = out + "Connection: close\r\n"
+
+		if HeaderGet(req.Header, "user-agent") == "" {
+			out = out + "User-Agent: tau-http/1.0\r\n"
 		}
 
-		# Send request
-		if failed(n = conn.Write(request)) {
+		ks = keys(req.Header)
+		for i = 0; i < len(ks); ++i {
+			out = out + "{canonical(ks[i])}: {req.Header[ks[i]]}\r\n"
+		}
+
+		if len(req.Body) > 0 {
+			out = out + "Content-Length: {len(req.Body)}\r\n"
+		}
+
+		out = out + "\r\n" + req.Body
+
+		if failed(n = conn.Write(out)) {
 			conn.Close()
 			return n
 		}
 
-		# Read response
-		responseText = ""
-		for {
-			if failed(chunk = conn.Read(4096)) {
-				break
-			}
-
-			if len(chunk) == 0 {
-				break
-			}
-
-			responseText += string(chunk)
-		}
-
+		resp = readResponse(conn)
 		conn.Close()
-
-		# Parse response
-		lines = splitLines(responseText)
-		if len(lines) == 0 {
-			return error("empty response")
-		}
-
-		# Parse status line
-		statusLine = lines[0]
-		parts = strings.Split(statusLine, " ")
-
-		resp = makeResponse()
-		if len(parts) >= 2 {
-			resp.StatusCode = int(parts[1])
-			resp.Status = statusLine
-		}
-
-		# Parse headers
-		resp.Header = parseHeaders(lines)
-
-		# Find body (after empty line)
-		bodyStart = -1
-		for i = 0; i < len(lines); ++i {
-			if len(lines[i]) == 0 {
-				bodyStart = i + 1
-				break
-			}
-		}
-
-		if bodyStart != -1 {
-			body = ""
-			for i = bodyStart; i < len(lines); ++i {
-				body += lines[i]
-				if i < len(lines) - 1 {
-					body += "\n"
-				}
-			}
-			resp.Body = body
-		}
-
 		return resp
 	}
 
-	# Get issues a GET request
 	client.Get = fn(url) {
-		req = makeRequest("GET", url, null)
+		if failed(req = NewRequest(MethodGet, url, null)) {
+			return req
+		}
 		return client.Do(req)
 	}
 
-	# Post issues a POST request
 	client.Post = fn(url, contentType, body) {
-		req = makeRequest("POST", url, body)
-		req.Header["content-type"] = contentType
+		if failed(req = NewRequest(MethodPost, url, body)) {
+			return req
+		}
+		HeaderSet(req.Header, "content-type", if contentType == null { "text/plain" } else { contentType })
+		return client.Do(req)
+	}
+
+	client.Head = fn(url) {
+		if failed(req = NewRequest(MethodHead, url, null)) {
+			return req
+		}
 		return client.Do(req)
 	}
 
 	return client
 }
 
-DefaultClient = NewClient()
+# readResponse reads a whole response off a connection.
+readResponse = fn(conn) {
+	r = bufio.NewReader(conn, 4096)
 
-# Get issues a GET request using the default client (like Go's http.Get)
-Get = fn(url) {
-	return DefaultClient.Get(url)
+	line = r.ReadLine()
+	if line == null || line == "" {
+		return error("http: empty response")
+	}
+
+	parts = strings.SplitN(line, " ", 3)
+	if len(parts) < 2 {
+		return error("http: malformed status line \"{line}\"")
+	}
+	if failed(code = strconv.Atoi(parts[1])) {
+		return error("http: malformed status code \"{parts[1]}\"")
+	}
+
+	resp = newResponse()
+	resp.Proto = parts[0]
+	resp.StatusCode = code
+	resp.Status = if len(parts) > 2 { parts[2] } else { StatusText(code) }
+	resp.Header = readHeaders(r)
+
+	if failed(body = readBody(r, resp.Header, true)) {
+		return body
+	}
+	resp.Body = body
+	return resp
 }
 
-# Post issues a POST request using the default client (like Go's http.Post)
-Post = fn(url, contentType, body) {
-	return DefaultClient.Post(url, contentType, body)
+DefaultClient = NewClient(null)
+
+Get = fn(url) { DefaultClient.Get(url) }
+Post = fn(url, contentType, body) { DefaultClient.Post(url, contentType, body) }
+Head = fn(url) { DefaultClient.Head(url) }
+
+# ========== Server ==========
+
+# newResponseWriter is what a handler writes into. Nothing reaches the
+# connection until the handler is done: the status line comes first, and a
+# handler is free to change its mind about it until it writes something.
+newResponseWriter = fn() {
+	w = new()
+	w.statusCode = StatusOK
+	w.headers = newHeader()
+	w.body = ""
+
+	w.Header = fn() { w.headers }
+	w.WriteHeader = fn(code) { w.statusCode = code }
+
+	w.Write = fn(data) {
+		s = string(data)
+		w.body = w.body + s
+		return len(s)
+	}
+
+	w.WriteString = fn(s) { w.Write(s) }
+
+	# response is the bytes to send back.
+	w.response = fn() {
+		out = "HTTP/1.1 {w.statusCode} {StatusText(w.statusCode)}\r\n"
+
+		HeaderSet(w.headers, "content-length", len(w.body))
+		if HeaderGet(w.headers, "content-type") == "" {
+			HeaderSet(w.headers, "content-type", "text/plain; charset=utf-8")
+		}
+		HeaderSet(w.headers, "connection", "close")
+
+		ks = keys(w.headers)
+		for i = 0; i < len(ks); ++i {
+			out = out + "{canonical(ks[i])}: {w.headers[ks[i]]}\r\n"
+		}
+
+		return out + "\r\n" + w.body
+	}
+
+	return w
 }
 
-# NewRequest creates a new HTTP request (like Go's http.NewRequest)
-NewRequest = fn(method, url, body) {
-	return makeRequest(method, url, body)
+# readRequest reads a request off a connection.
+readRequest = fn(conn) {
+	r = bufio.NewReader(conn, 4096)
+
+	line = r.ReadLine()
+	if line == null || line == "" {
+		return error("http: empty request")
+	}
+
+	parts = strings.Split(line, " ")
+	if len(parts) < 2 {
+		return error("http: malformed request line \"{line}\"")
+	}
+
+	target = parts[1]
+	query = ""
+	if (i = strings.Index(target, "?")) != -1 {
+		query = slice(target, i + 1, len(target))
+		target = slice(target, 0, i)
+	}
+
+	req = new()
+	req.Method = parts[0]
+	req.Proto = if len(parts) > 2 { parts[2] } else { "HTTP/1.0" }
+	req.Path = target
+	req.URL = target
+	req.RawQuery = query
+	req.Query = ParseQuery(query)
+	req.Header = readHeaders(r)
+	req.Host = HeaderGet(req.Header, "host")
+	req.RemoteAddr = conn.RemoteAddr
+
+	if failed(body = readBody(r, req.Header, false)) {
+		return body
+	}
+	req.Body = body
+	return req
 }
 
-# ServeMux is an HTTP request multiplexer (like Go's http.ServeMux)
+# NewServeMux returns a multiplexer. A pattern ending in "/" matches every
+# path below it, anything else matches exactly, and the longest pattern that
+# matches wins, as in Go.
 NewServeMux = fn() {
 	mux = new()
-	mux.handlers = []
+	mux.patterns = []
+	mux.handlers = {}
 
-	# Handle registers a handler for the given pattern
 	mux.Handle = fn(pattern, handler) {
-		route = new()
-		route.Pattern = pattern
-		route.Handler = handler
-
-		mux.handlers = append(mux.handlers, route)
+		if mux.handlers[pattern] == null {
+			mux.patterns = append(mux.patterns, pattern)
+		}
+		mux.handlers[pattern] = handler
+		return null
 	}
 
-	# HandleFunc registers a handler function for the given pattern
-	mux.HandleFunc = fn(pattern, handler) {
-		mux.Handle(pattern, handler)
-	}
+	mux.HandleFunc = fn(pattern, handler) { mux.Handle(pattern, handler) }
 
-	# ServeHTTP dispatches the request to the handler
-	mux.ServeHTTP = fn(w, req) {
-		# Find matching handler
-		for i = 0; i < len(mux.handlers); ++i {
-			route = mux.handlers[i]
+	# Handler returns the handler for a path, or null when none matches.
+	mux.Handler = fn(path) {
+		best = ""
+		for i = 0; i < len(mux.patterns); ++i {
+			p = mux.patterns[i]
 
-			# Exact match
-			if route.Pattern == req.URL {
-				route.Handler(w, req)
-				return
-			}
-
-			# Prefix match for paths ending with /
-			if strings.HasSuffix(route.Pattern, "/") && strings.HasPrefix(req.URL, route.Pattern) {
-				route.Handler(w, req)
-				return
+			matches = if strings.HasSuffix(p, "/") { strings.HasPrefix(path, p) } else { path == p }
+			if matches && len(p) > len(best) {
+				best = p
 			}
 		}
 
-		# No handler found - return 404
-		w.WriteHeader(StatusNotFound)
-		w.Write("404 page not found\n")
+		if best == "" {
+			return null
+		}
+		return mux.handlers[best]
+	}
+
+	mux.ServeHTTP = fn(w, r) {
+		h = mux.Handler(r.Path)
+		if h == null {
+			NotFound(w, r)
+			return null
+		}
+		return h(w, r)
 	}
 
 	return mux
 }
 
-# Default ServeMux
 DefaultServeMux = NewServeMux()
 
-# Handle registers a handler for the given pattern on the default mux
-Handle = fn(pattern, handler) {
-	DefaultServeMux.Handle(pattern, handler)
+Handle = fn(pattern, handler) { DefaultServeMux.Handle(pattern, handler) }
+HandleFunc = fn(pattern, handler) { DefaultServeMux.HandleFunc(pattern, handler) }
+
+# NotFound is the handler for a path nothing was registered for.
+NotFound = fn(w, r) {
+	w.WriteHeader(StatusNotFound)
+	w.Write("404 page not found\n")
+	return null
 }
 
-# HandleFunc registers a handler function for the given pattern on the default mux
-HandleFunc = fn(pattern, handler) {
-	DefaultServeMux.HandleFunc(pattern, handler)
+# Error replies with a message and a status code.
+Error = fn(w, msg, code) {
+	w.WriteHeader(code)
+	w.Write(string(msg) + "\n")
+	return null
 }
 
-# Server represents an HTTP server (like Go's http.Server)
+# Redirect replies with a redirect to url.
+Redirect = fn(w, r, url, code) {
+	HeaderSet(w.Header(), "location", url)
+	w.WriteHeader(if code == null { StatusFound } else { code })
+	w.Write("")
+	return null
+}
+
+# serve reads one exchange off a connection and answers it.
+serve = fn(conn, handler) {
+	w = newResponseWriter()
+
+	if failed(req = readRequest(conn)) {
+		w.WriteHeader(StatusBadRequest)
+		w.Write("400 bad request\n")
+	} else if type(handler) == "closure" {
+		handler(w, req)
+	} else {
+		handler.ServeHTTP(w, req)
+	}
+
+	conn.Write(w.response())
+	conn.Close()
+	return null
+}
+
+# NewServer returns a server. Handler is a mux or any function of (w, r).
 NewServer = fn(addr, handler) {
 	server = new()
 	server.Addr = addr
-	server.Handler = handler
+	server.Handler = if handler == null { DefaultServeMux } else { handler }
+	server.running = false
 
-	# ListenAndServe listens and serves HTTP requests
+	# ListenAndServe accepts connections until Close is called, one tau
+	# routine per connection so that a slow client holds up nobody.
 	server.ListenAndServe = fn() {
-		# Create listener
 		if failed(ln = net.Listen("tcp", server.Addr)) {
 			return ln
 		}
 
-		# Accept connections
-		for {
+		server.ln = ln
+		server.running = true
+
+		for server.running {
 			if failed(conn = ln.Accept()) {
-				continue
-			}
-
-			# Read request
-			if failed(data = conn.Read(4096)) {
-				conn.Close()
-				continue
-			}
-
-			requestText = string(data)
-
-			# Parse request
-			lines = splitLines(requestText)
-			if len(lines) == 0 {
-				conn.Close()
-				continue
-			}
-
-			# Parse request line
-			reqLine = parseRequestLine(lines[0])
-			if failed(reqLine = parseRequestLine(lines[0])) {
-				conn.Close()
-				continue
-			}
-
-			# Create request object
-			req = new()
-			req.Method = reqLine.Method
-			req.URL = reqLine.Path
-			req.Proto = reqLine.Proto
-			req.Header = parseHeaders(lines)
-
-			# Find body
-			bodyStart = -1
-			for i = 0; i < len(lines); ++i {
-				if len(lines[i]) == 0 {
-					bodyStart = i + 1
-					break
+				if !server.running {
+					return null
 				}
+				continue
 			}
-
-			if bodyStart != -1 && bodyStart < len(lines) {
-				body = ""
-				for i = bodyStart; i < len(lines); ++i {
-					body += lines[i]
-					if i < len(lines) - 1 {
-						body += "\n"
-					}
-				}
-				req.Body = body
-			}
-
-			# Create response writer
-			w = makeResponseWriter()
-
-			# Call handler
-			if server.Handler != null {
-				server.Handler.ServeHTTP(w, req)
-			} else {
-				w.WriteHeader(StatusNotFound)
-				w.Write("404 page not found\n")
-			}
-
-			# Send response
-			response = w.BuildResponse()
-			conn.Write(response)
-			conn.Close()
+			tau serve(conn, server.Handler)
 		}
 
-		ln.Close()
+		return null
+	}
+
+	server.Close = fn() {
+		server.running = false
+		if server.ln != null {
+			return server.ln.Close()
+		}
+		return null
 	}
 
 	return server
 }
 
-# ListenAndServe listens on the TCP network address and serves requests (like Go's http.ListenAndServe)
+# ListenAndServe serves handler on addr until something goes wrong.
 ListenAndServe = fn(addr, handler) {
-	if handler == null {
-		handler = DefaultServeMux
-	}
-
-	server = NewServer(addr, handler)
-	return server.ListenAndServe()
-}
-
-# NotFoundHandler returns a simple 404 handler
-NotFoundHandler = fn() {
-	return fn(w, req) {
-		w.WriteHeader(StatusNotFound)
-		w.Write("404 page not found\n")
-	}
-}
-
-# RedirectHandler returns a handler that redirects to the given URL
-RedirectHandler = fn(url, code) {
-	return fn(w, req) {
-		w.Header()["location"] = url
-		w.WriteHeader(code)
-	}
-}
-
-# FileServer serves static files from a directory (simplified version)
-FileServer = fn(root) {
-	return fn(w, req) {
-		# Security: prevent directory traversal
-		if strings.Contains(req.URL, "..") {
-			w.WriteHeader(StatusForbidden)
-			w.Write("403 Forbidden\n")
-			return
-		}
-
-		# Build file path
-		path = req.URL
-		if path == "/" {
-			path = "/index.html"
-		}
-
-		filepath = "{root}{path}"
-
-		# Read file
-		if failed(content = os.ReadFile(filepath)) {
-			w.WriteHeader(StatusNotFound)
-			w.Write("404 page not found\n")
-			return
-		}
-
-		# Determine content type based on extension
-		contentType = "text/plain"
-		if strings.HasSuffix(path, ".html") {
-			contentType = "text/html"
-		} else if strings.HasSuffix(path, ".css") {
-			contentType = "text/css"
-		} else if strings.HasSuffix(path, ".js") {
-			contentType = "application/javascript"
-		} else if strings.HasSuffix(path, ".json") {
-			contentType = "application/json"
-		}
-
-		w.Header()["content-type"] = contentType
-		w.Write(string(content))
-	}
-}
-
-# Error replies to the request with the specified error message and HTTP code
-Error = fn(w, error, code) {
-	w.WriteHeader(code)
-	w.Write(error)
-}
-
-# Redirect replies to the request with a redirect to url
-Redirect = fn(w, req, url, code) {
-	w.Header()["location"] = url
-	w.WriteHeader(code)
+	return NewServer(addr, handler).ListenAndServe()
 }

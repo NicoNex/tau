@@ -61,6 +61,59 @@ testing.Main([
 				t.AssertEq(time.Format(d, "100%%"), "100%")
 				t.AssertEq(time.String(0), "1970-01-01T00:00:00Z")
 			}],
+		["a zone shifts the clock, not the instant", fn(t) {
+				# 1700000000 is 22:13:20 UTC, which is midnight in Rome the day
+				# after when the offset is two hours.
+				d = time.DateIn(1700000000, 7200)
+
+				t.AssertEq([d.Year, d.Month, d.Day], [2023, 11, 15])
+				t.AssertEq([d.Hour, d.Minute], [0, 13])
+				t.AssertEq(d.Unix, 1700000000)
+				t.AssertEq(d.Offset, 7200)
+				t.AssertEq(time.Format(d, null), "2023-11-15T00:13:20+02:00")
+
+				# FromDateIn is the way back.
+				t.AssertEq(time.FromDateIn(2023, 11, 15, 0, 13, 20, 7200), 1700000000)
+			}],
+		["the local zone is the one of this machine", fn(t) {
+				off = time.LocalOffset(1700000000)
+				t.AssertEq(time.Local(1700000000).Offset, off)
+				t.AssertEq(time.Local(1700000000).Unix, 1700000000)
+
+				# Whatever the zone is, an offset is a whole number of minutes.
+				t.AssertEq(off % 60, 0)
+			}],
+		["the week starts where you say it does", fn(t) {
+				# The 14th of November 2023 is a Tuesday.
+				d = time.Date(1700000000)
+
+				t.AssertEq(d.Weekday, time.Tuesday)
+				t.AssertEq(time.ISOWeekday(d), 2)
+				t.AssertEq(time.IsWeekend(d), false)
+
+				monday = time.StartOfWeek(d, time.Monday)
+				sunday = time.StartOfWeek(d, time.Sunday)
+				t.AssertEq(time.String(monday), "2023-11-13T00:00:00Z")
+				t.AssertEq(time.String(sunday), "2023-11-12T00:00:00Z")
+
+				# A Sunday belongs to the week that is ending, not to the next one.
+				sun = time.Date(time.FromDate(2023, 11, 19, 15, 0, 0))
+				t.AssertEq(time.IsWeekend(sun), true)
+				t.AssertEq(time.ISOWeekday(sun), 7)
+				t.AssertEq(time.String(time.StartOfWeek(sun, time.Monday)), "2023-11-13T00:00:00Z")
+			}],
+		["the ISO week is the one of the calendar", fn(t) {
+				iso = fn(y, m, d) { time.ISOWeek(time.Date(time.FromDate(y, m, d, 12, 0, 0))) }
+
+				t.AssertEq(iso(2023, 11, 14), [2023, 46])
+
+				# The first days of a year can belong to the last week of the one
+				# before, and the last days to the first week of the one after.
+				t.AssertEq(iso(2021, 1, 1), [2020, 53])
+				t.AssertEq(iso(2020, 12, 31), [2020, 53])
+				t.AssertEq(iso(2024, 12, 30), [2025, 1])
+				t.AssertEq(iso(2024, 1, 1), [2024, 1])
+			}],
 		["Parse reads back what Format wrote", fn(t) {
 				t.AssertEq(time.Parse("2023-11-14T22:13:20Z"), 1700000000)
 				t.AssertEq(time.Parse("1970-01-01T00:00:00Z"), 0)

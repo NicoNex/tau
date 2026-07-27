@@ -428,7 +428,7 @@ Indent = fn(src, indent) {
 			out = out + c
 			# A quote closes the string unless it is escaped, and a backslash
 			# takes the next character with it whatever it is.
-			if c == "\\" && i+1 < len(src) {
+			if c == "\\" && i + 1 < len(src) {
 				++i
 				out = out + src[i]
 			} else if c == "\"" {

@@ -26,36 +26,36 @@ testing.Main([
 				t.AssertEq(json.Unmarshal(json.Marshal(o)), o)
 			}],
 		["objects are written as JSON objects", fn(t) {
-		o = new()
-		o.name = "tau"
-		o.n = 42
-		t.AssertEq(json.Marshal(o), `{"name":"tau","n":42}`)
-	}],
-	["Valid", fn(t) {
-		t.AssertEq(json.Valid(`{"a":1}`), true)
-		t.AssertEq(json.Valid("[1, 2]"), true)
-		t.AssertEq(json.Valid(`{oops`), false)
-		t.AssertEq(json.Valid(""), false)
-	}],
-	["MarshalIndent spreads the value over lines", fn(t) {
-		# A raw string: in an ordinary one a brace would open an
-		# interpolation.
-		t.AssertEq(json.MarshalIndent({"a": [1]}, "  "), `{
+				o = new()
+				o.name = "tau"
+				o.n = 42
+				t.AssertEq(json.Marshal(o), `{"name":"tau","n":42}`)
+			}],
+		["Valid", fn(t) {
+				t.AssertEq(json.Valid(`{"a":1}`), true)
+				t.AssertEq(json.Valid("[1, 2]"), true)
+				t.AssertEq(json.Valid(`{oops`), false)
+				t.AssertEq(json.Valid(""), false)
+			}],
+		["MarshalIndent spreads the value over lines", fn(t) {
+				# A raw string: in an ordinary one a brace would open an
+				# interpolation.
+				t.AssertEq(json.MarshalIndent({"a": [1]}, "  "), `{
   "a": [
     1
   ]
 }`)
 
-		# What is inside a string stays as it was.
-		t.AssertEq(json.MarshalIndent({"a": "x,y"}, " "), `{
+				# What is inside a string stays as it was.
+				t.AssertEq(json.MarshalIndent({"a": "x,y"}, " "), `{
  "a": "x,y"
 }`)
 
-		# Indented or not, it is the same value.
-		v = {"a": 1, "b": [1, 2], "c": {"d": true}}
-		t.AssertEq(json.Unmarshal(json.MarshalIndent(v, null)), v)
-	}],
-	["broken input is an error", fn(t) {
+				# Indented or not, it is the same value.
+				v = {"a": 1, "b": [1, 2], "c": {"d": true}}
+				t.AssertEq(json.Unmarshal(json.MarshalIndent(v, null)), v)
+			}],
+		["broken input is an error", fn(t) {
 				t.AssertError(json.Unmarshal(`{oops`))
 				t.AssertError(json.Unmarshal("[1,]"))
 				t.AssertError(json.Unmarshal(""))

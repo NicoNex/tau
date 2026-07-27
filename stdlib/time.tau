@@ -36,8 +36,9 @@ Measure = fn(f) {
 
 # ========== Dates ==========
 #
-# Everything here is UTC. Local time needs the timezone database of the
-# system, which is a module of its own the day it is wanted.
+# A date is UTC unless an offset says otherwise. Local takes the offset from
+# the timezone database of the system, daylight saving included, so an hour
+# in Rome is the hour in Rome.
 
 Days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 Months = ["January", "February", "March", "April", "May", "June", "July",
@@ -63,9 +64,19 @@ mod = fn(a, b) { a - div(a, b) * b }
 # The calendar arithmetic is the one Howard Hinnant wrote for chrono: days
 # are counted from the first of March so that the leap day falls at the end
 # of the year, where it does no harm.
-Date = fn(sec) {
-	days = div(sec, 86400)
-	rem = sec - days * 86400
+Date = fn(sec) { DateIn(sec, 0) }
+
+# DateIn is Date with a zone: offset is the seconds between that zone and
+# UTC, 3600 for Rome in winter and 7200 in summer. The fields read as the
+# clock on that wall reads, while Unix stays the instant it is.
+DateIn = fn(sec, offset) {
+	if offset == null {
+		offset = 0
+	}
+
+	local = sec + offset
+	days = div(local, 86400)
+	rem = local - days * 86400
 
 	z = days + 719468
 	era = div(z, 146097)
@@ -82,6 +93,7 @@ Date = fn(sec) {
 
 	t = new()
 	t.Unix = sec
+	t.Offset = offset
 	t.Year = y
 	t.Month = m
 	t.Day = d
@@ -92,6 +104,29 @@ Date = fn(sec) {
 	t.YearDay = days - daysFromCivil(y, 1, 1) + 1
 	return t
 }
+
+# LocalOffset is the offset of the local zone at the instant sec, or right
+# now when sec is null.
+LocalOffset = fn(sec) {
+	if sec == null {
+		sec = Unix()
+	}
+	return syscall.TzOffset(sec)
+}
+
+# LocalZone is the abbreviation of the local zone at that instant: CET, CEST.
+LocalZone = fn(sec) {
+	if sec == null {
+		sec = Unix()
+	}
+	return syscall.TzName(sec)
+}
+
+# Local returns the date sec stands for where this machine is.
+Local = fn(sec) { DateIn(sec, LocalOffset(sec)) }
+
+# Now returns the local date of this instant.
+NowLocal = fn() { Local(Unix()) }
 
 # daysFromCivil is the number of days between the Unix epoch and the given
 # date, the way back from Date.
@@ -113,6 +148,82 @@ FromDate = fn(year, month, day, hour, minute, second) {
 	return daysFromCivil(year, month, day) * 86400 + hour * 3600 + minute * 60 + second
 }
 
+# FromDateIn is FromDate in a zone: the date is read as the clock of that
+# zone reads it, and the instant comes back in UTC.
+FromDateIn = fn(year, month, day, hour, minute, second, offset) {
+	if offset == null {
+		offset = 0
+	}
+	return FromDate(year, month, day, hour, minute, second) - offset
+}
+
+# ========== Weeks ==========
+#
+# Weekday counts from Sunday, the way Go does. Where the week starts is a
+# question of where you are: in Italy it is Monday, which is what ISOWeekday
+# and the ISO week number below are about.
+
+Sunday = 0
+Monday = 1
+Tuesday = 2
+Wednesday = 3
+Thursday = 4
+Friday = 5
+Saturday = 6
+
+# ISOWeekday numbers the days from Monday as 1 to Sunday as 7.
+ISOWeekday = fn(t) { if t.Weekday == 0 { 7 } else { t.Weekday } }
+
+# IsWeekend reports whether the date falls on a Saturday or a Sunday.
+IsWeekend = fn(t) { t.Weekday == Sunday || t.Weekday == Saturday }
+
+# StartOfDay returns the instant the day of t begins, in its own zone.
+StartOfDay = fn(t) {
+	return FromDateIn(t.Year, t.Month, t.Day, 0, 0, 0, t.Offset)
+}
+
+# StartOfWeek returns the instant the week holding t begins, with first
+# saying which day that is: Monday in most of Europe, Sunday elsewhere. With
+# no first, Monday.
+StartOfWeek = fn(t, first) {
+	if first == null {
+		first = Monday
+	}
+
+	back = mod(t.Weekday - first, 7)
+	return StartOfDay(t) - back * 86400
+}
+
+# Week returns the number of the week holding t, counting from the first week
+# that starts on a first day, with the days before it in week 0. It is what a
+# calendar on a wall shows.
+Week = fn(t, first) {
+	if first == null {
+		first = Monday
+	}
+
+	jan1 = DateIn(FromDateIn(t.Year, 1, 1, 0, 0, 0, t.Offset), t.Offset)
+	lead = mod(first - jan1.Weekday, 7)
+	if t.YearDay <= lead {
+		return 0
+	}
+	return div(t.YearDay - lead - 1, 7) + 1
+}
+
+# ISOWeek returns the ISO 8601 year and week of t: weeks start on Monday and
+# week 1 is the one holding the 4th of January, so the first days of January
+# can belong to the last week of the year before.
+ISOWeek = fn(t) {
+	# The Thursday of this week decides which year the week belongs to.
+	thursday = StartOfDay(t) + (4 - ISOWeekday(t)) * 86400
+	th = DateIn(thursday, t.Offset)
+
+	jan4 = DateIn(FromDateIn(th.Year, 1, 4, 0, 0, 0, t.Offset), t.Offset)
+	firstWeek = StartOfWeek(jan4, Monday)
+
+	return [th.Year, div(thursday - firstWeek, 604800) + 1]
+}
+
 # IsLeap reports whether the year has a 29th of February.
 IsLeap = fn(y) { y % 4 == 0 && (y % 100 != 0 || y % 400 == 0) }
 
@@ -132,12 +243,13 @@ pad = fn(n, width) {
 #	%H hour      %M minute    %S second
 #	%b month name, short      %B month name
 #	%a day name, short        %A day name
-#	%% a per cent sign
+#	%z offset from UTC        %% a per cent sign
 #
 # With no layout the date is written as RFC 3339: 2006-01-02T15:04:05Z.
 Format = fn(t, layout) {
 	if layout == null {
-		layout = "%Y-%m-%dT%H:%M:%SZ"
+		# RFC 3339: a Z for UTC, the offset for anywhere else.
+		layout = if t.Offset == null || t.Offset == 0 { "%Y-%m-%dT%H:%M:%SZ" } else { "%Y-%m-%dT%H:%M:%S%z" }
 	}
 
 	out = ""
@@ -168,8 +280,23 @@ verb = fn(t, c) {
 	if c == "b" { return slice(Months[t.Month - 1], 0, 3) }
 	if c == "A" { return Days[t.Weekday] }
 	if c == "a" { return slice(Days[t.Weekday], 0, 3) }
+	if c == "z" { return offsetString(t.Offset) }
 	if c == "%" { return "%" }
 	return "%" + c
+}
+
+# offsetString writes a zone offset as RFC 3339 wants it: +01:00.
+offsetString = fn(off) {
+	if off == null {
+		off = 0
+	}
+
+	sign = "+"
+	if off < 0 {
+		sign = "-"
+		off = -off
+	}
+	return sign + pad(div(off, 3600), 2) + ":" + pad(mod(div(off, 60), 60), 2)
 }
 
 # Parse reads a date written as RFC 3339, "2006-01-02T15:04:05Z", and returns

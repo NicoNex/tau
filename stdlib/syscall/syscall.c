@@ -503,3 +503,55 @@ int64_t sys_opendir(const char *path) { (void)path; return 0; }
 int64_t sys_readdir(int64_t dir, void *out, int64_t outlen) { (void)dir; (void)out; (void)outlen; return -1; }
 int64_t sys_closedir(int64_t dir) { (void)dir; return -1; }
 #endif
+
+// ========== Time Zone ==========
+
+// The offset in seconds between local time and UTC at the instant t, the
+// daylight saving rules of the system included. This is the one place where
+// the timezone database of the host is read.
+int64_t sys_tz_offset(int64_t t) {
+    time_t when = (time_t)t;
+    struct tm local, utc;
+
+#if !defined(_WIN32) && !defined(WIN32)
+    if (localtime_r(&when, &local) == NULL) return 0;
+    if (gmtime_r(&when, &utc) == NULL) return 0;
+#else
+    if (localtime_s(&local, &when) != 0) return 0;
+    if (gmtime_s(&utc, &when) != 0) return 0;
+#endif
+
+    // Both are calendar dates for the same instant: the difference between
+    // them is the offset, and comparing the days keeps it right across
+    // midnight and across the end of a year.
+    int64_t days = local.tm_yday - utc.tm_yday;
+    if (local.tm_year != utc.tm_year) {
+        days = local.tm_year > utc.tm_year ? 1 : -1;
+    } else if (days > 1) {
+        days = -1;
+    } else if (days < -1) {
+        days = 1;
+    }
+
+    return days * 86400
+        + (local.tm_hour - utc.tm_hour) * 3600
+        + (local.tm_min - utc.tm_min) * 60
+        + (local.tm_sec - utc.tm_sec);
+}
+
+// The abbreviation of the local zone at the instant t, CET or CEST for
+// Italy. Returns its length.
+int64_t sys_tz_name(int64_t t, void *out, int64_t outlen) {
+    time_t when = (time_t)t;
+    struct tm local;
+
+#if !defined(_WIN32) && !defined(WIN32)
+    if (localtime_r(&when, &local) == NULL) return -1;
+    size_t len = strftime(out, (size_t)outlen, "%Z", &local);
+#else
+    if (localtime_s(&local, &when) != 0) return -1;
+    size_t len = strftime(out, (size_t)outlen, "%Z", &local);
+#endif
+
+    return (int64_t)len;
+}

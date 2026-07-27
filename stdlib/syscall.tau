@@ -467,3 +467,19 @@ Readdirnames = fn(path) {
 		names = append(names, string(slice(buf, 0, n)))
 	}
 }
+
+# ========== Time Zone ==========
+
+# TzOffset returns the seconds between local time and UTC at the instant sec,
+# daylight saving included.
+TzOffset = fn(sec) { int(sys.sys_tz_offset(sec), 64) }
+
+# TzName returns the abbreviation of the local zone at the instant sec.
+TzName = fn(sec) {
+	buf = bytes(64)
+	n = int(sys.sys_tz_name(sec, buf, 64))
+	if n < 0 {
+		return Error("tzname")
+	}
+	return string(slice(buf, 0, n))
+}

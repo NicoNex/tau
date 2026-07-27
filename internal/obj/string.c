@@ -17,7 +17,6 @@ void dispose_string_obj(struct object o) {
 	if (o.data.str->m_parent == NULL) {
 		free(o.data.str->str);
 	}
-	free(o.marked);
 	free(o.data.str);
 }
 

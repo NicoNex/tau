@@ -17,13 +17,8 @@ struct frame {
 	uint32_t base_ptr;
 };
 
-struct heap_node {
-	struct object obj;
-	struct heap_node* next;
-};
-
 struct heap {
-	struct heap_node* root;
+	struct gc_header *root;
 	size_t len;
 	int64_t treshold;
 };
@@ -86,6 +81,7 @@ void gc_remove_roots(void *handle);
 void gc_park(void);                // Before blocking (pipes, native calls, IO).
 void gc_unpark(void);              // After blocking.
 void gc_safepoint(void);           // Cheap check, parks only if a GC is pending.
+void gc_flush_headers(void);       // Frees the object headers this thread kept for reuse.
 void heap_add(struct object obj);
 void heap_dispose(void);
 void gc(void);

@@ -13,7 +13,6 @@ inline void dispose_function_data(struct function *fn) {
 
 void dispose_function_obj(struct object o) {
 	dispose_function_data(o.data.fn);
-	free(o.marked);
 }
 
 char *function_str(struct object o) {

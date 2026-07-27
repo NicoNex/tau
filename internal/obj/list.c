@@ -8,7 +8,6 @@ void dispose_list_obj(struct object o) {
 		free(o.data.list->list);
 	}
 	free(o.data.list);
-	free(o.marked);
 }
 
 // TODO: optimise this.

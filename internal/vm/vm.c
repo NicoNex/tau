@@ -797,6 +797,7 @@ static int run_and_cleanup(void *vmptr) {
 	// The heap is global: whatever this VM allocated and is still reachable
 	// from somewhere else (a pipe, the globals) survives.
 	gc_unregister(vm);
+	gc_flush_headers();
 	vm_dispose(vm);
 	return ret;
 }

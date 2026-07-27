@@ -6,7 +6,7 @@
 #include "../vm/thrd.h"
 #include "../tauerr/bookmark.h"
 
-#define MARKPTR() calloc(1, sizeof(uint32_t))
+#define MARKPTR() gc_mark_alloc()
 
 // Layout of the word pointed by object.marked:
 //
@@ -114,6 +114,18 @@ struct object {
 	uint32_t *marked;
 	enum obj_type type;
 };
+
+// Every collectable object owns one of these: the word object.marked points
+// to is its first field, so the collector gets the node of an object from its
+// mark pointer with a cast, and the object needs a single allocation for both
+// its mark and its slot in the heap.
+struct gc_header {
+	uint32_t mark;
+	struct gc_header *next;
+	struct object obj;
+};
+
+uint32_t *gc_mark_alloc(void);
 
 struct key_hash {
 	uint64_t type;

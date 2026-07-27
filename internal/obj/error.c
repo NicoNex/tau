@@ -5,7 +5,6 @@
 #include "object.h"
 
 void dispose_error_obj(struct object o) {
-	free(o.marked);
 	free(o.data.str->str);
 	free(o.data.str);
 }

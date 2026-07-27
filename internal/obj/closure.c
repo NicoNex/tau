@@ -5,7 +5,6 @@
 void dispose_closure_obj(struct object o) {
 	// The function belongs to the constants pool and is shared by every
 	// closure built from it, only the closure itself is freed here.
-	free(o.marked);
 	free(o.data.cl->free);
 	free(o.data.cl);
 }

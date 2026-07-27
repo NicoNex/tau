@@ -8,7 +8,6 @@ void dispose_bytes_obj(struct object o) {
 	if (o.data.bytes->m_parent == NULL) {
 		free(o.data.bytes->bytes);
 	}
-	free(o.marked);
 	free(o.data.bytes);
 }
 

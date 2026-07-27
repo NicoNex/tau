@@ -39,7 +39,6 @@ void dispose_pipe_obj(struct object pipe) {
 	mtx_destroy(&p->mu);
 	cnd_destroy(&p->not_empty);
 	cnd_destroy(&p->not_full);
-	free(pipe.marked);
 	free(p);
 }
 

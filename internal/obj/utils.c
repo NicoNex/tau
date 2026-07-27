@@ -11,6 +11,12 @@ __attribute__((weak)) uint32_t gc_epoch = 1;
 __attribute__((weak)) void gc_park(void) {}
 __attribute__((weak)) void gc_unpark(void) {}
 
+__attribute__((weak)) uint32_t *gc_mark_alloc(void) {
+	struct gc_header *h = malloc(sizeof(struct gc_header));
+	h->mark = 0;
+	return &h->mark;
+}
+
 char *otype_str(enum obj_type t) {
 	static char *strings[] = {
 		"null",
@@ -141,7 +147,6 @@ void free_obj(struct object o) {
 		dispose_bytes_obj(o);
 		return;
 	case obj_native:
-		free(o.marked);
 		dlclose(o.data.handle);
 		return;
 	default:

@@ -47,6 +47,52 @@ uint32_t gc_epoch = 1;
 // don't run a VM (e.g. `tau somebuiltin()`).
 static __thread struct vm_node *self = NULL;
 
+// Recycled headers, kept per thread so that allocating an object needs no
+// lock. A thread that ends gives back what it holds in gc_flush_headers.
+static __thread struct gc_header *free_headers = NULL;
+static __thread int nfree_headers = 0;
+// Build with -DMAX_FREE_HEADERS=0 to always go through malloc, so that a
+// sanitizer can see the use-after-frees the reuse would hide.
+#ifndef MAX_FREE_HEADERS
+	#define MAX_FREE_HEADERS 1024
+#endif
+
+// Header of a new object: mark word and heap node in a single allocation.
+uint32_t *gc_mark_alloc(void) {
+	struct gc_header *h = free_headers;
+
+	if (h != NULL) {
+		free_headers = h->next;
+		nfree_headers--;
+	} else {
+		h = malloc(sizeof(struct gc_header));
+	}
+	h->mark = 0;
+
+	return &h->mark;
+}
+
+static void gc_mark_recycle(struct gc_header *h) {
+	if (nfree_headers >= MAX_FREE_HEADERS) {
+		free(h);
+		return;
+	}
+	h->next = free_headers;
+	free_headers = h;
+	nfree_headers++;
+}
+
+// Called by a thread that is about to end, its headers are of no use to it.
+void gc_flush_headers(void) {
+	for (struct gc_header *h = free_headers; h != NULL;) {
+		struct gc_header *next = h->next;
+		free(h);
+		h = next;
+	}
+	free_headers = NULL;
+	nfree_headers = 0;
+}
+
 // ponytail: no lock here, gc_init runs from new_vm before any tau routine exists.
 void gc_init(void) {
 	if (initialised) return;
@@ -183,7 +229,8 @@ void heap_add(struct object obj) {
 	if (obj.marked == NULL || (*obj.marked & GC_TRACKED)) return;
 	*obj.marked |= GC_TRACKED;
 
-	struct heap_node *node = malloc(sizeof(struct heap_node));
+	// The node was allocated together with the mark word, no allocation here.
+	struct gc_header *node = (struct gc_header *) obj.marked;
 	node->obj = obj;
 
 	// Fast path: with a single registered VM only its own thread allocates and
@@ -227,20 +274,20 @@ static void mark_vm(struct vm *vm) {
 // Frees the unmarked objects and clears the mark of the surviving ones.
 // Must be called with the world stopped.
 static void sweep(void) {
-	struct heap_node **prev = &heap.root;
-	struct heap_node *n = heap.root;
+	struct gc_header **prev = &heap.root;
+	struct gc_header *n = heap.root;
 
 	while (n != NULL) {
-		struct heap_node *next = n->next;
+		struct gc_header *next = n->next;
 
-		if (*n->obj.marked & GC_MARK) {
-			*n->obj.marked &= ~GC_MARK;
+		if (n->mark & GC_MARK) {
+			n->mark &= ~GC_MARK;
 			prev = &n->next;
 		} else {
 			*prev = next;
 			heap.len--;
 			free_obj(n->obj);
-			free(n);
+			gc_mark_recycle(n);
 		}
 		n = next;
 	}
@@ -298,8 +345,8 @@ void gc(void) {
 
 void heap_dispose(void) {
 	gc_lock();
-	for (struct heap_node *n = heap.root; n != NULL;) {
-		struct heap_node *tmp = n->next;
+	for (struct gc_header *n = heap.root; n != NULL;) {
+		struct gc_header *tmp = n->next;
 		free_obj(n->obj);
 		free(n);
 		n = tmp;

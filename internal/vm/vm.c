@@ -374,6 +374,19 @@ static inline void vm_exec_add(struct vm * restrict vm) {
 		double r = to_double(right);
 		left->data.f = l + r;
 		left->type = obj_float;
+	} else if (M_ASSERT(left, right, obj_bytes)) {
+		size_t llen = left->data.bytes->len;
+		size_t rlen = right->data.bytes->len;
+		uint8_t *b = malloc(llen + rlen);
+
+		memcpy(b, left->data.bytes->bytes, llen);
+		memcpy(b + llen, right->data.bytes->bytes, rlen);
+
+		vm_stack_pop_ignore(vm);
+		struct object res = new_bytes_obj(b, llen + rlen);
+		vm_stack_push(vm, res);
+		vm_heap_add(vm, res);
+		gc();
 	} else if (M_ASSERT(left, right, obj_string)) {
 		// By length and not up to the NUL: a slice has none of its own, and
 		// copying past it would both give the wrong result and overrun.

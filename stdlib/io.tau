@@ -1,0 +1,93 @@
+# io - moving bytes between streams.
+#
+# There are no interfaces in tau, so a reader is simply any object with a
+# Read(n) that returns up to n bytes, and an empty bytes value when there is
+# nothing left. A writer is any object with a Write(data) returning how many
+# bytes went out. Files, network connections and buffers all have that shape,
+# so they work here without knowing about each other.
+
+bufsize = 32768
+
+# IsReader reports whether r can be read from.
+IsReader = fn(r) { type(r) == "object" && type(r.Read) == "closure" }
+
+# IsWriter reports whether w can be written to.
+IsWriter = fn(w) { type(w) == "object" && type(w.Write) == "closure" }
+
+# ReadAll returns everything left in r.
+ReadAll = fn(r) {
+	if !IsReader(r) {
+		return error("io: ReadAll wants a reader, got {type(r)}")
+	}
+
+	out = bytes(0)
+	for true {
+		if failed(chunk = r.Read(bufsize)) {
+			return chunk
+		}
+		if len(chunk) == 0 {
+			return out
+		}
+		out = out + chunk
+	}
+}
+
+# ReadFull returns exactly n bytes, or fewer if the stream ends first.
+ReadFull = fn(r, n) {
+	if !IsReader(r) {
+		return error("io: ReadFull wants a reader, got {type(r)}")
+	}
+
+	out = bytes(0)
+	for len(out) < n {
+		if failed(chunk = r.Read(n - len(out))) {
+			return chunk
+		}
+		if len(chunk) == 0 {
+			return out
+		}
+		out = out + chunk
+	}
+
+	return out
+}
+
+# Copy moves everything from src to dst and returns how many bytes it moved.
+Copy = fn(dst, src) {
+	if !IsWriter(dst) {
+		return error("io: Copy wants a writer, got {type(dst)}")
+	}
+	if !IsReader(src) {
+		return error("io: Copy wants a reader, got {type(src)}")
+	}
+
+	total = 0
+	for true {
+		if failed(chunk = src.Read(bufsize)) {
+			return chunk
+		}
+		if len(chunk) == 0 {
+			return total
+		}
+		if failed(n = dst.Write(chunk)) {
+			return n
+		}
+		total = total + n
+	}
+}
+
+# CopyN moves at most n bytes from src to dst.
+CopyN = fn(dst, src, n) {
+	if failed(data = ReadFull(src, n)) {
+		return data
+	}
+	return dst.Write(data)
+}
+
+# WriteString writes a string to a writer.
+WriteString = fn(w, s) {
+	if !IsWriter(w) {
+		return error("io: WriteString wants a writer, got {type(w)}")
+	}
+	return w.Write(s)
+}

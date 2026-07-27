@@ -3,6 +3,7 @@
 # Everything goes through syscall, no dependency on the C library of the host.
 
 syscall = import("syscall")
+io = import("io")
 
 O_RDONLY = syscall.O_RDONLY
 O_WRONLY = syscall.O_WRONLY
@@ -33,21 +34,7 @@ newFile = fn(fd, path) {
 	}
 
 	# ReadAll returns the rest of the file.
-	f.ReadAll = fn() {
-		out = []
-
-		for true {
-			if failed(chunk = f.Read(bufsize)) {
-				return chunk
-			}
-			if len(chunk) == 0 {
-				return bytes(out)
-			}
-			for i = 0; i < len(chunk); ++i {
-				out = append(out, chunk[i])
-			}
-		}
-	}
+	f.ReadAll = fn() { io.ReadAll(f) }
 
 	f.ReadString = fn() { string(f.ReadAll()) }
 

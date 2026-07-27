@@ -128,6 +128,41 @@ ParseFloat = fn(s) {
 	return sign * (intPart + fracPart)
 }
 
+# FormatFloat returns f written with prec digits after the point. A negative
+# prec gives the shortest representation that reads back as the same value,
+# which is what string(f) does.
+FormatFloat = fn(f, prec) {
+	if prec < 0 {
+		return string(float(f))
+	}
+
+	f = float(f)
+	neg = f < 0.0
+	if neg {
+		f = -f
+	}
+
+	scale = 1
+	for i = 0; i < prec; ++i {
+		scale = scale * 10
+	}
+
+	# Round at the last digit kept.
+	scaled = int(f * float(scale) + 0.5)
+	whole = int(scaled / scale)
+	out = string(whole)
+
+	if prec > 0 {
+		digits = string(scaled - whole * scale)
+		for len(digits) < prec {
+			digits = "0" + digits
+		}
+		out = out + "." + digits
+	}
+
+	return if neg { "-" + out } else { out }
+}
+
 # Itoa returns the decimal representation of the integer i.
 Itoa = fn(i) { string(i) }
 

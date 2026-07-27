@@ -144,7 +144,8 @@ func lexNumber(l *lexer) stateFn {
 	if l.accept("eE") {
 		typ = item.Float
 		l.accept("+-")
-		l.accept("0123456789")
+		// The whole exponent, not just its first digit.
+		l.acceptRun("0123456789")
 	}
 
 	l.emit(typ)

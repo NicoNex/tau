@@ -319,6 +319,37 @@ TrimRight = fn(str, cutset) {
 	return slice(str, 0, stop)
 }
 
+# PadLeft returns str padded with pad until it is width long, or str itself
+# if it is already that long. Pad defaults to a space.
+PadLeft = fn(str, width, pad) {
+	if pad == null || len(pad) == 0 {
+		pad = " "
+	}
+
+	b = buffer.Builder()
+	for len(str) + b.Len() < width {
+		b.Write(pad)
+	}
+	b.Write(str)
+
+	return b.String()
+}
+
+# PadRight is PadLeft, with the padding on the other side.
+PadRight = fn(str, width, pad) {
+	if pad == null || len(pad) == 0 {
+		pad = " "
+	}
+
+	b = buffer.Builder()
+	b.Write(str)
+	for b.Len() < width {
+		b.Write(pad)
+	}
+
+	return b.String()
+}
+
 Trim = fn(str, cutset) { TrimRight(TrimLeft(str, cutset), cutset) }
 
 TrimSpace = fn(str) { Trim(str, spaces) }

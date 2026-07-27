@@ -20,15 +20,6 @@ containsChar = fn(set, ch) {
 
 isHex = fn(c) { (c >= "0" && c <= "9") || (c >= "a" && c <= "f") || (c >= "A" && c <= "F") }
 
-# --- number helpers ---
-Pow10 = fn(exp) {
-	p = 1.0
-	for k = 0; k < exp; ++k {
-		p = p * 10.0
-	}
-	return p
-}
-
 # --- Parser constructor ---
 Parser = fn(src) {
 	p = new()
@@ -133,66 +124,49 @@ Parser = fn(src) {
 		p.errorf("unterminated string")
 	}
 
-	p.parseDigitsInt = fn() {
+	p.parseNumber = fn() {
+		p.skipSpace()
+		start = p.i
+
+		if p.inBounds() && p.peek() == "-" {
+			p.advance(1)
+		}
 		if !p.inBounds() || p.peek() < "0" || p.peek() > "9" {
 			return p.errorf("expected digit")
 		}
-		val = 0
 		for p.inBounds() && p.peek() >= "0" && p.peek() <= "9" {
-			val = val * 10 + (bytes(p.s[p.i])[0] - bytes("0")[0])
 			p.advance(1)
 		}
-		val
-	}
 
-	p.parseNumber = fn() {
-		p.skipSpace()
+		isFloat = false
 
-		sign = 1.0
-		if p.inBounds() && p.peek() == "-" { sign = -1.0; p.advance(1) }
-
-		if failed(intPart = p.parseDigitsInt()) { return intPart }
-
-		fracPart = 0.0
-		fracDiv  = 1.0
 		if p.inBounds() && p.peek() == "." {
+			isFloat = true
 			p.advance(1)
 			if !p.inBounds() || p.peek() < "0" || p.peek() > "9" {
 				return p.errorf("expected digit after '.'")
 			}
 			for p.inBounds() && p.peek() >= "0" && p.peek() <= "9" {
-				d = (bytes(p.peek())[0] - bytes("0")[0])
-				fracDiv = fracDiv * 10.0
-				fracPart = fracPart * 10.0 + d
 				p.advance(1)
 			}
 		}
 
-		expVal = 0
-		expSign = 1
 		if p.inBounds() && (p.peek() == "e" || p.peek() == "E") {
+			isFloat = true
 			p.advance(1)
 			if p.inBounds() && (p.peek() == "+" || p.peek() == "-") {
-				expSign = if p.peek() == "-" { -1 } else { 1 }
 				p.advance(1)
 			}
-			if failed(e = p.parseDigitsInt()) { return e }
-			expVal = e * expSign
+			if !p.inBounds() || p.peek() < "0" || p.peek() > "9" {
+				return p.errorf("expected digit in the exponent")
+			}
+			for p.inBounds() && p.peek() >= "0" && p.peek() <= "9" {
+				p.advance(1)
+			}
 		}
 
-		n = sign * (intPart + (if fracDiv != 1.0 { fracPart / fracDiv } else { 0.0 }))
-		if expVal > 0 {
-			n = n * Pow10(expVal)
-		} else if expVal < 0 {
-			n = n / Pow10(-expVal)
-		}
-
-		# A number written without a fraction or an exponent comes back as an
-		# integer, so that decoding and encoding again gives the same text.
-		if fracDiv == 1.0 && expVal == 0 {
-			return int(n)
-		}
-		n
+		text = slice(p.s, start, p.i)
+		return if isFloat { float(text) } else { int(text) }
 	}
 
 	p.matchWord = fn(w) {

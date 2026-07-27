@@ -1,0 +1,2 @@
+- create a folder called tests and put all tau test files in there, also always use "make tau" to compile and when checking for failed operations you can put the assignment to the variable inside the parenthesis of the failed builtin function call since the assignment expression returns the value on its right side
+- remember that tau supports octal numbers like 0644 or hex numbers like 0x123 so you can use them

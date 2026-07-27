@@ -1,0 +1,12 @@
+Things yet to be implemented:
+- tau fmt
+- better concurrency
+- improve c ffi
+- improve CGO
+- general code improvement
+- bufio
+- math
+- os (da completare)
+- path
+- time (da completare)
+- encoding/hex, encoding/base64

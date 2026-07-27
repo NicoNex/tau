@@ -153,14 +153,16 @@ parser = fn(pattern) {
 		return classOf(ranges, negated)
 	}
 
-	# parseCount reads {n}, {n,} and {n,m}.
+	# parseCount reads {n}, {n,} and {n,m}. It tells apart a brace that opens
+	# no count at all, which is a literal brace and gives null, from a count
+	# that is written wrong, which is an error.
 	p.parseCount = fn() {
 		digits = ""
 		for !p.done() && isDigit(p.peek()) {
 			digits = digits + p.next()
 		}
 		if len(digits) == 0 {
-			return error("regexp: missing number in {}")
+			return null
 		}
 
 		out = new()
@@ -176,8 +178,8 @@ parser = fn(pattern) {
 			out.max = if len(digits) == 0 { -1 } else { int(digits) }
 		}
 
-		if p.peek() != "}" {
-			return error("regexp: missing closing }")
+		if p.peek() != `}` {
+			return null
 		}
 		p.next()
 
@@ -272,13 +274,18 @@ parser = fn(pattern) {
 			} else if c == "?" {
 				p.next()
 				max = 1
-			} else if c == "{" {
+			} else if c == `{` {
 				# A brace that isn't a count is a literal brace.
 				save = p.i
 				p.next()
 				count = p.parseCount()
 
 				if failed(count) {
+					return count
+				}
+
+				# Not a count: the brace is a character like any other.
+				if count == null {
 					p.i = save
 					return atom
 				}

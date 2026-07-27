@@ -34,9 +34,13 @@ ifneq ($(GCC),)
     CC = $(GCC)
 endif
 
-.PHONY: all tau libffi syscall install profile run
+.PHONY: all tau libffi plugins syscall math install uninstall clean fmt profile test run
 
-all: libffi syscall tau
+# Where install puts things. PREFIX=/usr/local make install for a system wide
+# one.
+PREFIX ?= $(HOME)/.local
+
+all: libffi plugins tau
 
 libffi:
 	if [ ! -d libffi ] || [ $$(ls -1q libffi | wc -l) -eq 0 ]; then \
@@ -88,24 +92,46 @@ gc-debug:
 	cd cmd/tau && \
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DGC_DEBUG" CGO_LDFLAGS="$(LDFLAGS)" go build -o $(DIR)/tau
 
+# The shared objects the stdlib opens with plugin(). One directory each,
+# added here when a new one shows up.
+PLUGINS = syscall math
+
+plugins:
+	for p in $(PLUGINS); do $(MAKE) -C stdlib/$$p CC=$(CC) || exit 1; done
+
 syscall:
 	$(MAKE) -C stdlib/syscall CC=$(CC)
 
 math:
 	$(MAKE) -C stdlib/math CC=$(CC)
 
-install: syscall math
-	mkdir -p ~/.local/bin
-	mkdir -p ~/.local/lib/tau
-	cp tau ~/.local/bin/tau
-	cp -r stdlib/* ~/.local/lib/tau
-	rm -f ~/.local/lib/tau/*_test.tau
+# The tests live next to what they test, so they are dropped after the copy
+# rather than avoided during it, subdirectories included.
+install: tau plugins
+	mkdir -p $(PREFIX)/bin $(PREFIX)/lib/tau
+	cp tau $(PREFIX)/bin/tau
+	cp -r stdlib/. $(PREFIX)/lib/tau
+	find $(PREFIX)/lib/tau -name '*_test.tau' -delete
+	find $(PREFIX)/lib/tau \( -name 'Makefile' -o -name '*.c' \) -delete
+
+uninstall:
+	rm -f $(PREFIX)/bin/tau
+	rm -rf $(PREFIX)/lib/tau
+
+clean:
+	rm -f tau tau.exe profile
+	for p in $(PLUGINS); do $(MAKE) -C stdlib/$$p clean; done
+	find . -name '*.tauc' -delete
+
+# The canonical style, over everything that is tau source here.
+fmt: tau
+	./tau fmt -w stdlib tests examples
 
 profile:
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go build profile.go
 
-# The Go tests, then the stdlib ones and the ones about the language itself.
-test: tau
+# The Go tests first, then the ones written in tau.
+test: tau plugins
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go test ./internal/...
 	TAUPATH=$(DIR)/stdlib ./tau test stdlib
 

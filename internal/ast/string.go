@@ -27,11 +27,14 @@ func NewString(file, s string, parse parseFn, pos int) (Node, error) {
 
 	i := newInterpolator(file, str, parse)
 	nodes, str, err := i.nodes()
+	if err != nil {
+		return nil, err
+	}
 
 	if len(nodes) == 0 {
 		return NewRawString(str), nil
 	}
-	return String{s: str, parse: parse, substr: nodes, pos: pos}, err
+	return String{s: str, parse: parse, substr: nodes, pos: pos}, nil
 }
 
 func (s String) Eval() (obj.Object, error) {
@@ -79,6 +82,16 @@ func escape(s string) (string, error) {
 			i += width
 			if i < len(s) {
 				r, width := utf8.DecodeRuneInString(s[i:])
+
+				// A brace is written twice to stand for itself, so an
+				// escaped one becomes the pair the interpolator expects.
+				if r == '{' || r == '}' {
+					buf.WriteRune(r)
+					buf.WriteRune(r)
+					i += width
+					continue
+				}
+
 				esc, err := escapeRune(r)
 				if err != nil {
 					return "", err

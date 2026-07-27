@@ -222,7 +222,7 @@ Parser = fn(src) {
 		obj = {} # Tau map
 
 		p.skipSpace()
-		if p.inBounds() && p.peek() == "}" { p.advance(1); return obj }
+		if p.inBounds() && p.peek() == `}` { p.advance(1); return obj }
 
 		for {
 			if failed(k = p.parseString()) { return k }
@@ -296,8 +296,6 @@ Unmarshal = fn(s) {
 	}
 	p.parse()
 }
-
-encodeJSON = fn(x) {}
 
 escapeJSONString = fn(s) {
 	buf = "\""
@@ -379,12 +377,82 @@ encodeJSON = fn(x) {
 		string(x)
 	} else if t == "list" {
 		encodeListJSON(x)
-	} else if t == "map" {
+	} else if t == "map" || t == "object" {
 		encodeMapJSON(x)
 	} else {
 		error("json encode error: unsupported type " + t)
 	}
 }
 
-# Encode ANY Tau value (map/list/primitive) as JSON string
+# Marshal returns the JSON form of a value: null, booleans, numbers, strings,
+# lists, maps and objects, which are written as objects the way a struct is
+# in Go.
 Marshal = fn(v) { encodeJSON(v) }
+
+# Valid reports whether s holds one well formed JSON value and nothing else.
+Valid = fn(s) { !failed(Unmarshal(s)) }
+
+# MarshalIndent is Marshal with the output spread over several lines, indent
+# being what one level is written with. With no indent a tab is used.
+MarshalIndent = fn(v, indent) {
+	if failed(s = Marshal(v)) {
+		return s
+	}
+	return Indent(s, indent)
+}
+
+# Indent rewrites JSON with one value per line. It walks the text rather than
+# the value, so what is inside strings is left alone. The braces are written
+# as raw strings: in an ordinary one a brace opens an interpolation.
+Indent = fn(src, indent) {
+	if indent == null {
+		indent = "\t"
+	}
+
+	out = ""
+	depth = 0
+	inString = false
+
+	newline = fn(d) {
+		s = "\n"
+		for i = 0; i < d; ++i {
+			s = s + indent
+		}
+		return s
+	}
+
+	for i = 0; i < len(src); ++i {
+		c = src[i]
+
+		if inString {
+			out = out + c
+			# A quote closes the string unless it is escaped, and a backslash
+			# takes the next character with it whatever it is.
+			if c == "\\" && i+1 < len(src) {
+				++i
+				out = out + src[i]
+			} else if c == "\"" {
+				inString = false
+			}
+			continue
+		}
+
+		if c == "\"" {
+			inString = true
+			out = out + c
+		} else if c == `{` || c == "[" {
+			++depth
+			out = out + c + newline(depth)
+		} else if c == `}` || c == "]" {
+			--depth
+			out = out + newline(depth) + c
+		} else if c == "," {
+			out = out + c + newline(depth)
+		} else if c == ":" {
+			out = out + c + " "
+		} else {
+			out = out + c
+		}
+	}
+	return out
+}

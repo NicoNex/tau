@@ -36,11 +36,13 @@ func Source(file, src string) (string, error) {
 	return out, nil
 }
 
-// tok is an item together with the line it was written on, which is what
-// tells an empty line from a wrapped one.
+// tok is an item together with the lines it starts and ends on, which is
+// what tells an empty line from a wrapped one. The two differ for a raw
+// string, the only token that can hold a newline.
 type tok struct {
 	item.Item
 	line int
+	end  int
 }
 
 // tokens reads the whole stream, dropping the end of file marker.
@@ -62,7 +64,14 @@ func tokens(src string) []tok {
 			line += strings.Count(src[pos:i.Pos], "\n")
 			pos = i.Pos
 		}
-		out = append(out, tok{Item: i, line: line})
+		t := tok{Item: i, line: line, end: line}
+
+		// A raw string is the only token that can hold newlines: what it
+		// spans is not an empty line the author left.
+		if i.Is(item.RawString) {
+			t.end += strings.Count(i.Val, "\n")
+		}
+		out = append(out, t)
 	}
 
 	return out
@@ -159,7 +168,7 @@ func print(toks []tok) string {
 				out.WriteByte('\n')
 			}
 		}
-		prev = t.line
+		prev = t.end
 
 		if !t.isBreak() {
 			line = append(line, t)

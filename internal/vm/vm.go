@@ -16,6 +16,13 @@ static inline struct object get_global(struct pool *globals, size_t idx) {
 static inline void set_const(struct object *list, size_t idx, struct object o) {
 	list[idx] = o;
 }
+
+extern char *tau_module_dir;
+
+static inline void set_module_dir(char *dir) {
+	free(tau_module_dir);
+	tau_module_dir = dir;
+}
 */
 import "C"
 import (
@@ -67,6 +74,7 @@ func (s State) NumDefs() int {
 
 func New(file string, bc compiler.Bytecode) VM {
 	Consts = bc.Consts()
+	setModuleDir(file)
 	return VM{vm: C.new_vm(C.CString(file), cbytecode(bc))}
 }
 
@@ -78,9 +86,12 @@ func NewWithState(file string, bc compiler.Bytecode, state State) VM {
 	return VM{vm: C.new_vm_with_state(C.CString(file), cbytecode(bc), C.struct_state(state))}
 }
 
-func (vm VM) Run() {
-	C.vm_run(vm.vm)
+// Run executes the program and reports whether it ended in an error, so that
+// a failing script fails the command that started it.
+func (vm VM) Run() bool {
+	ok := C.vm_run(vm.vm) == 0
 	C.fflush(C.stdout)
+	return ok
 }
 
 func (vm VM) State() State {
@@ -186,6 +197,12 @@ func lookup(vmfile, taupath string) (string, error) {
 	return "", fmt.Errorf("no module named %q", taupath)
 }
 
+// setModuleDir points the plugin loader at the directory of the file about to
+// run, so that a module opening a shared object next to itself finds it.
+func setModuleDir(file string) {
+	C.set_module_dir(C.CString(filepath.Dir(file)))
+}
+
 //export vm_exec_load_module
 func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	path := C.GoString(cpath)
@@ -247,7 +264,9 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	(*State)(&vm.state).SetConsts(Consts)
 	vm.state.ndefs = C.uint32_t(bc.NDefs())
 	// The resolved path, so that the modules imported by this one are looked
-	// up next to it.
+	// up next to it, and its own directory for the plugins it opens.
+	setModuleDir(p)
+	defer setModuleDir(C.GoString(vm.file))
 	tvm := C.new_vm_with_state(C.CString(p), cbytecode(bc), vm.state)
 	defer C.vm_dispose(tvm)
 	if i := C.vm_run(tvm); i != 0 {

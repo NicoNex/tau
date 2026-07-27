@@ -73,7 +73,9 @@ func (s *SymbolTable) Define(name string) Symbol {
 	// The name is defined now: whoever used it earlier was right to.
 	delete(s.global().pending, name)
 
-	if symbol, ok := s.Store[name]; ok {
+	// A builtin is only a default: a name given to something else takes it
+	// over, the way a module called hex or a variable called len does.
+	if symbol, ok := s.Store[name]; ok && symbol.Scope != BuiltinScope {
 		return symbol
 	}
 

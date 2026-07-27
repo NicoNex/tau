@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -94,7 +95,9 @@ func ExecFileVM(f string) (err error) {
 	}
 
 	tvm := vm.New(f, bytecode)
-	tvm.Run()
+	if !tvm.Run() {
+		return errors.New("runtime error")
+	}
 	return nil
 }
 
@@ -178,11 +181,20 @@ func TestFiles(paths []string) error {
 			continue
 		}
 
-		matches, err := filepath.Glob(filepath.Join(p, "*_test.tau"))
+		// A directory stands for everything below it, the way "./..." does
+		// in Go: the tests of a module in a subdirectory are still its tests.
+		err = filepath.WalkDir(p, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !d.IsDir() && strings.HasSuffix(path, "_test.tau") {
+				files = append(files, path)
+			}
+			return nil
+		})
 		if err != nil {
 			return err
 		}
-		files = append(files, matches...)
 	}
 
 	if len(files) == 0 {

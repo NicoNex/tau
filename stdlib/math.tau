@@ -1,0 +1,82 @@
+# math - the usual functions on floats.
+#
+# Everything returns a float, whatever it was given: a division in tau does
+# the same, so nothing here comes as a surprise. The functions come from the
+# C math library through a shared object of their own; a native call brings
+# back a machine word, so a double travels as its bits and float(x, 64) reads
+# them back.
+
+m = plugin("math/libmath.so")
+
+Pi = 3.141592653589793
+E = 2.718281828459045
+Sqrt2 = 1.4142135623730951
+SqrtPi = 1.772453850905516
+Ln2 = 0.6931471805599453
+Ln10 = 2.302585092994046
+
+# MaxInt is the largest integer that fits in a tau int, MinInt the smallest.
+MaxInt = 9223372036854775807
+MinInt = -9223372036854775807 - 1
+
+# f1 wraps a one argument function of the C math library.
+f1 = fn(fun) {
+	return fn(x) { float(fun(float(x)), 64) }
+}
+
+# f2 wraps a two argument one.
+f2 = fn(fun) {
+	return fn(x, y) { float(fun(float(x), float(y)), 64) }
+}
+
+Sqrt = f1(m.m_sqrt)
+Cbrt = f1(m.m_cbrt)
+Exp = f1(m.m_exp)
+Log = f1(m.m_log)
+Log2 = f1(m.m_log2)
+Log10 = f1(m.m_log10)
+Sin = f1(m.m_sin)
+Cos = f1(m.m_cos)
+Tan = f1(m.m_tan)
+Asin = f1(m.m_asin)
+Acos = f1(m.m_acos)
+Atan = f1(m.m_atan)
+Sinh = f1(m.m_sinh)
+Cosh = f1(m.m_cosh)
+Tanh = f1(m.m_tanh)
+Floor = f1(m.m_floor)
+Ceil = f1(m.m_ceil)
+Round = f1(m.m_round)
+Trunc = f1(m.m_trunc)
+
+Pow = f2(m.m_pow)
+Atan2 = f2(m.m_atan2)
+Mod = f2(m.m_fmod)
+Hypot = f2(m.m_hypot)
+
+# Abs is the absolute value, an integer staying an integer: it is the one
+# case where going through a float would lose the largest values.
+Abs = fn(x) { if x < 0 { -x } else { x } }
+
+# Inf returns positive infinity, or negative when sign is negative.
+Inf = fn(sign) { float(m.m_inf(if sign == null { 1 } else { sign }), 64) }
+
+# NaN returns a value that is not a number, and IsNaN recognises it: it is
+# the only value that isn't equal to itself.
+NaN = fn() { float(m.m_nan(), 64) }
+IsNaN = fn(x) { int(m.m_isnan(float(x))) == 1 }
+IsInf = fn(x) { int(m.m_isinf(float(x))) == 1 }
+
+Min = fn(a, b) { if a < b { a } else { b } }
+Max = fn(a, b) { if a > b { a } else { b } }
+
+# Signum is -1, 0 or 1, following the sign of x.
+Signum = fn(x) {
+	if x > 0 {
+		return 1
+	}
+	if x < 0 {
+		return -1
+	}
+	return 0
+}

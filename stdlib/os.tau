@@ -102,16 +102,28 @@ WriteFile = fn(path, data) {
 	return n
 }
 
+# Mkdir, Remove, Rmdir and Chmod give back nothing when they worked and an
+# error when they didn't, the way Go does.
+
 Mkdir = fn(path, perm) {
 	if perm == null {
 		perm = 0755
 	}
-	return syscall.Mkdir(path, perm)
+	return nilOrError(syscall.Mkdir(path, perm))
 }
 
-Remove = fn(path) { syscall.Unlink(path) }
-Rmdir = fn(path) { syscall.Rmdir(path) }
-Chmod = fn(path, mode) { syscall.Chmod(path, mode) }
+Remove = fn(path) { nilOrError(syscall.Unlink(path)) }
+Rmdir = fn(path) { nilOrError(syscall.Rmdir(path)) }
+Chmod = fn(path, mode) { nilOrError(syscall.Chmod(path, mode)) }
+
+# nilOrError keeps an error and throws away the number a system call returns
+# when there is nothing to say.
+nilOrError = fn(x) {
+	if failed(x) {
+		return x
+	}
+	return null
+}
 
 # Exists reports whether path exists.
 Exists = fn(path) { !failed(syscall.Access(path, syscall.F_OK)) }

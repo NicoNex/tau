@@ -91,7 +91,10 @@ gc-debug:
 syscall:
 	$(MAKE) -C stdlib/syscall CC=$(CC)
 
-install: syscall
+math:
+	$(MAKE) -C stdlib/math CC=$(CC)
+
+install: syscall math
 	mkdir -p ~/.local/bin
 	mkdir -p ~/.local/lib/tau
 	cp tau ~/.local/bin/tau

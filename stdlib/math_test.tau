@@ -1,0 +1,53 @@
+testing = import("testing")
+math = import("math")
+
+# close reports whether two floats agree to within a millionth: the point of
+# these tests is the plumbing to the C library, not its last bit.
+close = fn(a, b) { math.Abs(a - b) < 0.000001 }
+
+testing.Main([
+	["roots and powers", fn(t) {
+		t.Assert(close(math.Sqrt(2), 1.4142135623730951), "Sqrt(2)")
+		t.Assert(close(math.Pow(2, 10), 1024), "Pow(2, 10)")
+		t.Assert(close(math.Cbrt(27), 3), "Cbrt(27)")
+		t.Assert(close(math.Hypot(3, 4), 5), "Hypot(3, 4)")
+	}],
+	["logarithms", fn(t) {
+		t.Assert(close(math.Log(math.E), 1), "Log(E)")
+		t.Assert(close(math.Log2(1024), 10), "Log2(1024)")
+		t.Assert(close(math.Log10(1000), 3), "Log10(1000)")
+		t.Assert(close(math.Exp(0), 1), "Exp(0)")
+	}],
+	["trigonometry", fn(t) {
+		t.Assert(close(math.Sin(0), 0), "Sin(0)")
+		t.Assert(close(math.Cos(0), 1), "Cos(0)")
+		t.Assert(close(math.Sin(math.Pi / 2), 1), "Sin(Pi/2)")
+		t.Assert(close(math.Atan2(1, 1), math.Pi / 4), "Atan2(1, 1)")
+	}],
+	["rounding", fn(t) {
+		t.AssertEq(math.Floor(3.7), 3.0)
+		t.AssertEq(math.Ceil(3.2), 4.0)
+		t.AssertEq(math.Round(3.5), 4.0)
+		t.AssertEq(math.Trunc(-3.7), -3.0)
+		t.AssertEq(math.Floor(-3.2), -4.0)
+	}],
+	["Abs keeps the kind of number it is given", fn(t) {
+		t.AssertEq(math.Abs(-5), 5)
+		t.AssertEq(math.Abs(-5.5), 5.5)
+		t.AssertEq(math.Abs(math.MinInt + 1), math.MaxInt)
+	}],
+	["the values that are not numbers", fn(t) {
+		t.AssertEq(math.IsNaN(math.NaN()), true)
+		t.AssertEq(math.IsNaN(1.0), false)
+		t.AssertEq(math.IsInf(math.Inf(1)), true)
+		t.AssertEq(math.IsInf(math.Inf(-1)), true)
+		t.AssertEq(math.Inf(-1) < 0, true)
+	}],
+	["Min, Max and Signum", fn(t) {
+		t.AssertEq(math.Min(2, 3), 2)
+		t.AssertEq(math.Max(2, 3), 3)
+		t.AssertEq(math.Signum(-4), -1)
+		t.AssertEq(math.Signum(0), 0)
+		t.AssertEq(math.Signum(4), 1)
+	}]
+])

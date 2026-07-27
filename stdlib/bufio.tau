@@ -1,0 +1,193 @@
+# bufio - buffered reading and writing.
+#
+# A reader here is what io calls a reader, anything with a Read(n): files,
+# connections, buffers. Reading a line at a time straight from a file would
+# mean one system call per byte, which is what this module is for.
+
+io = import("io")
+
+defaultSize = 4096
+
+# NewReader wraps r so that it can be read a line or a byte at a time.
+NewReader = fn(r, size) {
+	if !io.IsReader(r) {
+		return error("bufio: NewReader wants a reader, got {type(r)}")
+	}
+	if size == null || size < 1 {
+		size = defaultSize
+	}
+
+	b = new()
+	b.buf = bytes(0)
+	b.eof = false
+
+	# fill reads one more chunk from the underlying reader, and reports
+	# whether anything came in.
+	b.fill = fn() {
+		if b.eof {
+			return false
+		}
+
+		if failed(chunk = r.Read(size)) {
+			b.err = chunk
+			b.eof = true
+			return false
+		}
+		if len(chunk) == 0 {
+			b.eof = true
+			return false
+		}
+
+		b.buf = b.buf + chunk
+		return true
+	}
+
+	# Read returns up to n bytes, from the buffer first.
+	b.Read = fn(n) {
+		if n == null {
+			n = size
+		}
+		for len(b.buf) < n && b.fill() {
+		}
+
+		if n > len(b.buf) {
+			n = len(b.buf)
+		}
+		out = slice(b.buf, 0, n)
+		b.buf = slice(b.buf, n, len(b.buf))
+		return out
+	}
+
+	# ReadByte returns the next byte as an integer, or null at end of input.
+	b.ReadByte = fn() {
+		if len(b.buf) == 0 && !b.fill() {
+			return null
+		}
+
+		out = b.buf[0]
+		b.buf = slice(b.buf, 1, len(b.buf))
+		return out
+	}
+
+	# ReadLine returns the next line without its newline, or null when there
+	# is nothing left. A last line without a newline is still a line.
+	b.ReadLine = fn() {
+		for {
+			i = 0
+			for i < len(b.buf) {
+				if b.buf[i] == 10 {
+					line = slice(b.buf, 0, i)
+					b.buf = slice(b.buf, i+1, len(b.buf))
+					return string(trimCR(line))
+				}
+				++i
+			}
+
+			if !b.fill() {
+				if len(b.buf) == 0 {
+					return null
+				}
+				line = b.buf
+				b.buf = bytes(0)
+				return string(trimCR(line))
+			}
+		}
+	}
+
+	# ReadAll returns everything left.
+	b.ReadAll = fn() {
+		for b.fill() {
+		}
+		out = b.buf
+		b.buf = bytes(0)
+		return out
+	}
+
+	return b
+}
+
+# trimCR drops the carriage return a Windows line ends with.
+trimCR = fn(line) {
+	if len(line) > 0 && line[len(line)-1] == 13 {
+		return slice(line, 0, len(line)-1)
+	}
+	return line
+}
+
+# NewScanner returns something to walk the lines of r with:
+#
+#	s = bufio.NewScanner(f)
+#	for s.Scan() {
+#		println(s.Text())
+#	}
+NewScanner = fn(r) {
+	if failed(rd = NewReader(r, null)) {
+		return rd
+	}
+
+	s = new()
+	s.text = ""
+
+	# Scan reads the next line and reports whether there was one.
+	s.Scan = fn() {
+		line = rd.ReadLine()
+		if line == null {
+			return false
+		}
+		s.text = line
+		return true
+	}
+
+	s.Text = fn() { s.text }
+	s.Bytes = fn() { bytes(s.text) }
+	s.Err = fn() { rd.err }
+
+	return s
+}
+
+# NewWriter wraps w so that small writes are put together into big ones.
+# Nothing reaches w until the buffer is full or Flush is called.
+NewWriter = fn(w, size) {
+	if !io.IsWriter(w) {
+		return error("bufio: NewWriter wants a writer, got {type(w)}")
+	}
+	if size == null || size < 1 {
+		size = defaultSize
+	}
+
+	b = new()
+	b.buf = bytes(0)
+
+	b.Flush = fn() {
+		if len(b.buf) == 0 {
+			return 0
+		}
+
+		if failed(n = w.Write(b.buf)) {
+			return n
+		}
+		b.buf = bytes(0)
+		return n
+	}
+
+	b.Write = fn(data) {
+		if type(data) != "bytes" {
+			if failed(data = bytes(string(data))) {
+				return data
+			}
+		}
+
+		b.buf = b.buf + data
+		if len(b.buf) >= size {
+			if failed(err = b.Flush()) {
+				return err
+			}
+		}
+		return len(data)
+	}
+
+	b.WriteString = fn(s) { b.Write(s) }
+	b.WriteLine = fn(s) { b.Write(s + "\n") }
+
+	return b
+}

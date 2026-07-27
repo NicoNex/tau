@@ -1,0 +1,139 @@
+# path - slash separated paths.
+#
+# Paths are strings and the separator is "/", the way it is on every system
+# tau runs on. Nothing here touches the filesystem: these are string
+# operations, and a path that doesn't exist is handled just the same.
+
+strings = import("strings")
+
+Separator = "/"
+
+# split returns the parts of p between the separators, empty parts included:
+# they are what tells "/a" from "a".
+split = fn(p) {
+	out = []
+	start = 0
+
+	for i = 0; i < len(p); ++i {
+		if p[i] == Separator {
+			out = append(out, slice(p, start, i))
+			start = i + 1
+		}
+	}
+	return append(out, slice(p, start, len(p)))
+}
+
+# IsAbs reports whether p starts at the root.
+IsAbs = fn(p) { len(p) > 0 && p[0] == Separator }
+
+# Base returns the last element of p. An empty path gives ".", a path made of
+# separators gives "/".
+Base = fn(p) {
+	if p == "" {
+		return "."
+	}
+
+	# Trailing separators are not part of the name.
+	end = len(p)
+	for end > 0 && p[end-1] == Separator {
+		--end
+	}
+	if end == 0 {
+		return Separator
+	}
+
+	start = end
+	for start > 0 && p[start-1] != Separator {
+		--start
+	}
+	return slice(p, start, end)
+}
+
+# Dir returns everything but the last element of p, cleaned. A path without
+# separators gives ".".
+Dir = fn(p) {
+	i = len(p) - 1
+	for i >= 0 && p[i] != Separator {
+		--i
+	}
+	if i < 0 {
+		return "."
+	}
+	return Clean(slice(p, 0, i+1))
+}
+
+# Ext returns the extension of p, the final dot included, or an empty string
+# when the last element has none.
+Ext = fn(p) {
+	for i = len(p) - 1; i >= 0 && p[i] != Separator; --i {
+		if p[i] == "." {
+			return slice(p, i, len(p))
+		}
+	}
+	return ""
+}
+
+# Split returns the directory and the file part of p, joined back by "+".
+Split = fn(p) {
+	i = len(p) - 1
+	for i >= 0 && p[i] != Separator {
+		--i
+	}
+	return [slice(p, 0, i+1), slice(p, i+1, len(p))]
+}
+
+# Clean returns the shortest path with the same meaning: no "." elements, no
+# double separators, and ".." resolved against what comes before it.
+Clean = fn(p) {
+	if p == "" {
+		return "."
+	}
+
+	abs = IsAbs(p)
+	parts = split(p)
+	out = []
+
+	for i = 0; i < len(parts); ++i {
+		part = parts[i]
+
+		if part == "" || part == "." {
+			continue
+		}
+
+		if part == ".." {
+			# Above the root there is the root, so an absolute path simply
+			# drops it. A relative one has to keep it: it means something.
+			if len(out) > 0 && out[len(out)-1] != ".." {
+				out = slice(out, 0, len(out)-1)
+				continue
+			}
+			if abs {
+				continue
+			}
+		}
+		out = append(out, part)
+	}
+
+	res = strings.Join(out, Separator)
+	if abs {
+		return Separator + res
+	}
+	if res == "" {
+		return "."
+	}
+	return res
+}
+
+# Join joins the non empty elements with the separator and cleans the result.
+Join = fn(elems) {
+	out = []
+	for i = 0; i < len(elems); ++i {
+		if elems[i] != "" {
+			out = append(out, elems[i])
+		}
+	}
+	if len(out) == 0 {
+		return ""
+	}
+	return Clean(strings.Join(out, Separator))
+}

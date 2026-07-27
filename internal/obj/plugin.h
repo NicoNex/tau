@@ -36,12 +36,21 @@
 // Opens a plugin looking for it where the modules live, so that a library
 // shipped with the stdlib is found from any working directory. A plain name
 // (e.g. "libm.so") is left to the loader of the system.
+// The directory of the file being run, set by the runtime: a module that
+// ships a shared object next to itself is found from any working directory.
+extern char *tau_module_dir;
+
 static inline void *plugin_open(const char *path) {
 	void *handle = dlopen(path, RTLD_LAZY);
 	if (handle != NULL) return handle;
 
 	char buf[4096];
 	char *taupath = getenv("TAUPATH");
+
+	if (tau_module_dir != NULL) {
+		snprintf(buf, sizeof(buf), "%s/%s", tau_module_dir, path);
+		if ((handle = dlopen(buf, RTLD_LAZY)) != NULL) return handle;
+	}
 
 	// TAUPATH first, same order the modules are looked up in.
 	if (taupath != NULL) {

@@ -33,3 +33,187 @@ Measure = fn(f) {
 	f()
 	return Since(start)
 }
+
+# ========== Dates ==========
+#
+# Everything here is UTC. Local time needs the timezone database of the
+# system, which is a module of its own the day it is wanted.
+
+Days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+Months = ["January", "February", "March", "April", "May", "June", "July",
+	"August", "September", "October", "November", "December"]
+
+# div is the integer division that rounds towards minus infinity, the one the
+# calendar arithmetic below is written in terms of. A division in tau gives a
+# float, so the result comes back through int().
+div = fn(a, b) {
+	q = int(a / b)
+	if a % b != 0 && (a < 0) != (b < 0) {
+		--q
+	}
+	return q
+}
+
+mod = fn(a, b) { a - div(a, b) * b }
+
+# Date returns what the wall clock time sec, in seconds since the Unix epoch,
+# stands for: Year, Month (1 to 12), Day, Hour, Minute, Second, the Weekday
+# with Sunday as 0, and the YearDay starting at 1.
+#
+# The calendar arithmetic is the one Howard Hinnant wrote for chrono: days
+# are counted from the first of March so that the leap day falls at the end
+# of the year, where it does no harm.
+Date = fn(sec) {
+	days = div(sec, 86400)
+	rem = sec - days * 86400
+
+	z = days + 719468
+	era = div(z, 146097)
+	doe = z - era * 146097
+	yoe = div(doe - div(doe, 1460) + div(doe, 36524) - div(doe, 146096), 365)
+	y = yoe + era * 400
+	doy = doe - (365 * yoe + div(yoe, 4) - div(yoe, 100))
+	mp = div(5 * doy + 2, 153)
+	d = doy - div(153 * mp + 2, 5) + 1
+	m = if mp < 10 { mp + 3 } else { mp - 9 }
+	if m <= 2 {
+		++y
+	}
+
+	t = new()
+	t.Unix = sec
+	t.Year = y
+	t.Month = m
+	t.Day = d
+	t.Hour = div(rem, 3600)
+	t.Minute = mod(div(rem, 60), 60)
+	t.Second = mod(rem, 60)
+	t.Weekday = mod(days + 4, 7)
+	t.YearDay = days - daysFromCivil(y, 1, 1) + 1
+	return t
+}
+
+# daysFromCivil is the number of days between the Unix epoch and the given
+# date, the way back from Date.
+daysFromCivil = fn(y, m, d) {
+	if m <= 2 {
+		--y
+	}
+	era = div(y, 400)
+	yoe = y - era * 400
+	mp = if m > 2 { m - 3 } else { m + 9 }
+	doy = div(153 * mp + 2, 5) + d - 1
+	doe = yoe * 365 + div(yoe, 4) - div(yoe, 100) + doy
+	return era * 146097 + doe - 719468
+}
+
+# FromDate returns the seconds since the epoch of the given UTC date, the way
+# back from Date.
+FromDate = fn(year, month, day, hour, minute, second) {
+	return daysFromCivil(year, month, day) * 86400 + hour * 3600 + minute * 60 + second
+}
+
+# IsLeap reports whether the year has a 29th of February.
+IsLeap = fn(y) { y % 4 == 0 && (y % 100 != 0 || y % 400 == 0) }
+
+# pad writes n with at least width digits.
+pad = fn(n, width) {
+	s = string(n)
+	for len(s) < width {
+		s = "0" + s
+	}
+	return s
+}
+
+# Format writes t, a date from Date, in the given layout. The verbs are the
+# ones of strftime, the handful that are worth having:
+#
+#	%Y year      %m month     %d day     %j day of the year
+#	%H hour      %M minute    %S second
+#	%b month name, short      %B month name
+#	%a day name, short        %A day name
+#	%% a per cent sign
+#
+# With no layout the date is written as RFC 3339: 2006-01-02T15:04:05Z.
+Format = fn(t, layout) {
+	if layout == null {
+		layout = "%Y-%m-%dT%H:%M:%SZ"
+	}
+
+	out = ""
+	for i = 0; i < len(layout); ++i {
+		if layout[i] != "%" || i == len(layout)-1 {
+			out = out + layout[i]
+			continue
+		}
+
+		++i
+		out = out + verb(t, layout[i])
+	}
+	return out
+}
+
+# verb writes the one field of t a format verb stands for. An unknown verb is
+# left as it was written, so that a mistake shows up in the output instead of
+# disappearing.
+verb = fn(t, c) {
+	if c == "Y" { return pad(t.Year, 4) }
+	if c == "m" { return pad(t.Month, 2) }
+	if c == "d" { return pad(t.Day, 2) }
+	if c == "H" { return pad(t.Hour, 2) }
+	if c == "M" { return pad(t.Minute, 2) }
+	if c == "S" { return pad(t.Second, 2) }
+	if c == "j" { return pad(t.YearDay, 3) }
+	if c == "B" { return Months[t.Month-1] }
+	if c == "b" { return slice(Months[t.Month-1], 0, 3) }
+	if c == "A" { return Days[t.Weekday] }
+	if c == "a" { return slice(Days[t.Weekday], 0, 3) }
+	if c == "%" { return "%" }
+	return "%" + c
+}
+
+# Parse reads a date written as RFC 3339, "2006-01-02T15:04:05Z", and returns
+# the seconds since the epoch. The time part may be left out.
+Parse = fn(s) {
+	if len(s) < 10 {
+		return error("time: {s} is not a date")
+	}
+
+	num = fn(from, to) {
+		part = slice(s, from, to)
+		for i = 0; i < len(part); ++i {
+			if part[i] < "0" || part[i] > "9" {
+				return error("time: {s} is not a date")
+			}
+		}
+		return int(part)
+	}
+
+	if failed(year = num(0, 4)) {
+		return year
+	}
+	if failed(month = num(5, 7)) {
+		return month
+	}
+	if failed(day = num(8, 10)) {
+		return day
+	}
+
+	if len(s) < 19 {
+		return FromDate(year, month, day, 0, 0, 0)
+	}
+
+	if failed(hour = num(11, 13)) {
+		return hour
+	}
+	if failed(minute = num(14, 16)) {
+		return minute
+	}
+	if failed(second = num(17, 19)) {
+		return second
+	}
+	return FromDate(year, month, day, hour, minute, second)
+}
+
+# String writes the date of the wall clock time sec as RFC 3339.
+String = fn(sec) { Format(Date(sec), null) }

@@ -1,0 +1,84 @@
+testing = import("testing")
+bufio = import("bufio")
+buffer = import("buffer")
+
+# reader returns something to read s from, one chunk at a time, the way a
+# file or a connection would.
+reader = fn(s) {
+	r = new()
+	r.data = bytes(s)
+	r.Read = fn(n) {
+		if n > len(r.data) {
+			n = len(r.data)
+		}
+		out = slice(r.data, 0, n)
+		r.data = slice(r.data, n, len(r.data))
+		return out
+	}
+	return r
+}
+
+testing.Main([
+	["Scanner walks the lines", fn(t) {
+		s = bufio.NewScanner(reader("uno\ndue\ntre\n"))
+		out = []
+		for s.Scan() {
+			out = append(out, s.Text())
+		}
+		t.AssertEq(out, ["uno", "due", "tre"])
+	}],
+	["a last line without a newline is still a line", fn(t) {
+		s = bufio.NewScanner(reader("uno\ndue"))
+		out = []
+		for s.Scan() {
+			out = append(out, s.Text())
+		}
+		t.AssertEq(out, ["uno", "due"])
+	}],
+	["empty lines are lines", fn(t) {
+		s = bufio.NewScanner(reader("\n\na\n"))
+		out = []
+		for s.Scan() {
+			out = append(out, s.Text())
+		}
+		t.AssertEq(out, ["", "", "a"])
+	}],
+	["a carriage return is not part of the line", fn(t) {
+		s = bufio.NewScanner(reader("uno\r\ndue\r\n"))
+		t.Assert(s.Scan(), "first line")
+		t.AssertEq(s.Text(), "uno")
+	}],
+	["nothing to read means no lines", fn(t) {
+		s = bufio.NewScanner(reader(""))
+		t.AssertEq(s.Scan(), false)
+	}],
+	["Reader reads bytes and lines", fn(t) {
+		r = bufio.NewReader(reader("ab\ncd"), 2)
+		t.AssertEq(r.ReadByte(), 97)
+		t.AssertEq(r.ReadLine(), "b")
+		t.AssertEq(string(r.ReadAll()), "cd")
+		t.AssertEq(r.ReadByte(), null)
+	}],
+	["Writer holds what it is given until it is flushed", fn(t) {
+		b = buffer.Buffer()
+		w = bufio.NewWriter(b, 1024)
+
+		w.WriteString("uno ")
+		w.WriteString("due")
+		t.AssertEq(b.String(), "")
+
+		w.Flush()
+		t.AssertEq(b.String(), "uno due")
+	}],
+	["a full buffer writes on its own", fn(t) {
+		b = buffer.Buffer()
+		w = bufio.NewWriter(b, 4)
+
+		w.WriteString("12345")
+		t.AssertEq(b.String(), "12345")
+	}],
+	["a reader is what it is asked to be", fn(t) {
+		t.AssertError(bufio.NewReader(42, null))
+		t.AssertError(bufio.NewWriter("not a writer", null))
+	}]
+])

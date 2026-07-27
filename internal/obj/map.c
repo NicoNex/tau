@@ -229,11 +229,11 @@ struct object new_map() {
 	return (struct object) {
 		.data.map = calloc(1, sizeof(struct map_node)),
 		.type = obj_map,
-		.marked = MARKPTR()
+		.gc = gc_header_alloc()
 	};
 }
 
 void mark_map_obj(struct object m) {
-	*m.marked |= GC_MARK;
+	m.gc->mark |= GC_MARK;
 	mark_map_children(m.data.map->root);
 }

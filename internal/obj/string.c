@@ -13,8 +13,8 @@
 #endif
 
 void dispose_string_obj(struct object o) {
-	// Free everything if it's not a slice (marked parent bit is set to NULL).
-	if (o.data.str->m_parent == NULL) {
+	// A slice doesn't own the buffer, its owner frees it.
+	if (o.data.str->owner == NULL) {
 		free(o.data.str->str);
 	}
 	free(o.data.str);
@@ -28,31 +28,31 @@ struct object new_string_obj(char *str, size_t len) {
 	struct string *s = malloc(sizeof(struct string));
 	s->str = str;
 	s->len = len;
-	s->m_parent = NULL;
+	s->owner = NULL;
 
 	return (struct object) {
 		.data.str = s,
 		.type = obj_string,
-		.marked = MARKPTR(),
+		.gc = gc_header_alloc(),
 	};
 }
 
 void mark_string_obj(struct object s) {
-	*s.marked |= GC_MARK;
-	if (s.data.str->m_parent != NULL) {
-		*s.data.str->m_parent |= GC_MARK;
+	s.gc->mark |= GC_MARK;
+	if (s.data.str->owner != NULL) {
+		s.data.str->owner->mark |= GC_MARK;
 	}
 }
 
-struct object new_string_slice(char *str, size_t len, uint32_t *m_parent) {
+struct object new_string_slice(char *str, size_t len, struct gc_header *owner) {
 	struct string *s = malloc(sizeof(struct string));
 	s->str = str;
 	s->len = len;
-	s->m_parent = m_parent;
+	s->owner = owner;
 
 	return (struct object) {
 		.data.str = s,
 		.type = obj_string,
-		.marked = MARKPTR(),
+		.gc = gc_header_alloc(),
 	};
 }

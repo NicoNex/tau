@@ -57,8 +57,9 @@ static __thread int nfree_headers = 0;
 	#define MAX_FREE_HEADERS 1024
 #endif
 
-// Header of a new object: mark word and heap node in a single allocation.
-uint32_t *gc_mark_alloc(void) {
+// Header of a new object: the state of the collector and the node of the
+// heap in a single allocation.
+struct gc_header *gc_header_alloc(void) {
 	struct gc_header *h = free_headers;
 
 	if (h != NULL) {
@@ -69,7 +70,7 @@ uint32_t *gc_mark_alloc(void) {
 	}
 	h->mark = 0;
 
-	return &h->mark;
+	return h;
 }
 
 static void gc_mark_recycle(struct gc_header *h) {
@@ -226,11 +227,11 @@ void gc_safepoint(void) {
 // Takes ownership of the object. Objects that are already tracked (e.g. one
 // received from a pipe and returned by a builtin) are ignored.
 void heap_add(struct object obj) {
-	if (obj.marked == NULL || (*obj.marked & GC_TRACKED)) return;
-	*obj.marked |= GC_TRACKED;
+	if (obj.gc == NULL || (obj.gc->mark & GC_TRACKED)) return;
+	obj.gc->mark |= GC_TRACKED;
 
-	// The node was allocated together with the mark word, no allocation here.
-	struct gc_header *node = (struct gc_header *) obj.marked;
+	// The header is the node, it was allocated with the object.
+	struct gc_header *node = obj.gc;
 	node->obj = obj;
 
 	// Fast path: with a single registered VM only its own thread allocates and

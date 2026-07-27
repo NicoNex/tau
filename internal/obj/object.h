@@ -6,23 +6,23 @@
 #include "../vm/thrd.h"
 #include "../tauerr/bookmark.h"
 
-#define MARKPTR() gc_mark_alloc()
-
-// Layout of the word pointed by object.marked:
+// Layout of gc_header.mark:
 //
 //   bit  0    GC_MARK: reachable, set by the mark phase, cleared by the sweep.
 //   bit  1    GC_TRACKED: already in the heap, prevents adding it twice.
 //   bits 2..  epoch of the last visit of the mark phase.
 //
 // The mark bit alone can't say whether an object was already traversed: a
-// slice sets the mark of its parent through m_parent before the parent itself
-// is visited. The epoch is what stops the traversal of cycles, and unlike a
-// "visited" bit it needs no cleanup for the objects that aren't in the heap.
+// slice marks the header of its owner before the owner itself is visited.
+// The epoch is what stops the traversal of cycles, and unlike a "visited"
+// bit it needs no cleanup for the objects that aren't in the heap.
 #define GC_MARK        1
 #define GC_TRACKED     2
 #define GC_EPOCH_SHIFT 2
 
 extern uint32_t gc_epoch;
+
+struct gc_header;
 
 enum obj_type {
 	obj_null,
@@ -66,19 +66,21 @@ struct list {
 	struct object *list;
 	size_t len;
 	size_t cap;
-	uint32_t *m_parent;
+	// Set when this list is a slice: the header of the object that owns the
+	// underlying array, kept alive as long as the slice is.
+	struct gc_header *owner;
 };
 
 struct string {
 	char *str;
 	size_t len;
-	uint32_t *m_parent;
+	struct gc_header *owner;
 };
 
 struct bytes {
 	uint8_t *bytes;
 	size_t len;
-	uint32_t *m_parent;
+	struct gc_header *owner;
 };
 
 struct pipe {
@@ -111,21 +113,22 @@ union data {
 
 struct object {
 	union data data;
-	uint32_t *marked;
+	// What the collector knows about this object, NULL for the values it
+	// doesn't look after (integers, booleans, builtins).
+	struct gc_header *gc;
 	enum obj_type type;
 };
 
-// Every collectable object owns one of these: the word object.marked points
-// to is its first field, so the collector gets the node of an object from its
-// mark pointer with a cast, and the object needs a single allocation for both
-// its mark and its slot in the heap.
+// Every collectable object owns one of these: it holds the state the
+// collector keeps about the object and doubles as its node in the heap, so
+// an object costs a single allocation for both.
 struct gc_header {
 	uint32_t mark;
 	struct gc_header *next;
 	struct object obj;
 };
 
-uint32_t *gc_mark_alloc(void);
+struct gc_header *gc_header_alloc(void);
 
 struct key_hash {
 	uint64_t type;
@@ -172,14 +175,14 @@ char *float_str(struct object o);
 
 // String object.
 struct object new_string_obj(char *str, size_t len);
-struct object new_string_slice(char *str, size_t len, uint32_t *m_parent);
+struct object new_string_slice(char *str, size_t len, struct gc_header *owner);
 char *string_str(struct object o);
 void mark_string_obj(struct object s);
 void dispose_string_obj(struct object o);
 
 // Bytes object.
 struct object new_bytes_obj(uint8_t *bytes, size_t len);
-struct object new_bytes_slice(uint8_t *bytes, size_t len, uint32_t *m_parent);
+struct object new_bytes_slice(uint8_t *bytes, size_t len, struct gc_header *owner);
 char *bytes_str(struct object o);
 void mark_bytes_obj(struct object o);
 void dispose_bytes_obj(struct object o);
@@ -194,7 +197,7 @@ void dispose_error_obj(struct object o);
 struct object make_list(size_t cap);
 struct object new_list_obj(struct object *list, size_t len);
 struct object new_list_obj_data(struct object *list, size_t len, size_t cap);
-struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent);
+struct object new_list_slice(struct object *list, size_t len, struct gc_header *owner);
 char *list_str(struct object o);
 void mark_list_obj(struct object l);
 void dispose_list_obj(struct object o);

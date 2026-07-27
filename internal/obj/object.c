@@ -129,7 +129,7 @@ struct object new_object() {
 	return (struct object) {
 		.data.obj = calloc(1, sizeof(struct object_node *)),
 		.type = obj_object,
-		.marked = MARKPTR(),
+		.gc = gc_header_alloc(),
 	};
 }
 
@@ -161,6 +161,6 @@ struct object object_keys(struct object o) {
 }
 
 void mark_object_obj(struct object o) {
-	*o.marked |= GC_MARK;
+	o.gc->mark |= GC_MARK;
 	mark_object_children(*o.data.obj);
 }

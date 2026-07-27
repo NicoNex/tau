@@ -3,8 +3,8 @@
 #include "object.h"
 
 void dispose_list_obj(struct object o) {
-	// Free everything if it's not a slice (marked parent bit is set to NULL).
-	if (o.data.list->m_parent == NULL) {
+	// A slice doesn't own the buffer, its owner frees it.
+	if (o.data.list->owner == NULL) {
 		free(o.data.list->list);
 	}
 	free(o.data.list);
@@ -37,9 +37,9 @@ char *list_str(struct object o) {
 }
 
 void mark_list_obj(struct object l) {
-	*l.marked |= GC_MARK;
-	if (l.data.list->m_parent != NULL) {
-		*l.data.list->m_parent |= GC_MARK;
+	l.gc->mark |= GC_MARK;
+	if (l.data.list->owner != NULL) {
+		l.data.list->owner->mark |= GC_MARK;
 	}
 	for (uint32_t i = 0; i < l.data.list->len; i++) {
 		mark_obj(l.data.list->list[i]);
@@ -51,12 +51,12 @@ struct object make_list(size_t cap) {
 	l->list = calloc(cap, sizeof(struct object));
 	l->len = 0;
 	l->cap = cap;
-	l->m_parent = NULL;
+	l->owner = NULL;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = MARKPTR()
+		.gc = gc_header_alloc()
 	};
 }
 
@@ -65,12 +65,12 @@ struct object new_list_obj(struct object *list, size_t len) {
 	l->list = list;
 	l->len = len;
 	l->cap = len;
-	l->m_parent = NULL;
+	l->owner = NULL;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = MARKPTR()
+		.gc = gc_header_alloc()
 	};
 }
 
@@ -79,26 +79,26 @@ struct object new_list_obj_data(struct object *list, size_t len, size_t cap) {
 	l->list = list;
 	l->len = len;
 	l->cap = cap;
-	l->m_parent = NULL;
+	l->owner = NULL;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = MARKPTR()
+		.gc = gc_header_alloc()
 	};
 }
 
-struct object new_list_slice(struct object *list, size_t len, uint32_t *m_parent) {
+struct object new_list_slice(struct object *list, size_t len, struct gc_header *owner) {
 	struct list *l = malloc(sizeof(struct list));
 	l->list = list;
 	l->len = len;
 	l->cap = len;
-	l->m_parent = m_parent;
+	l->owner = owner;
 
 	return (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.marked = MARKPTR(),
+		.gc = gc_header_alloc(),
 	};
 }
 

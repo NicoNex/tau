@@ -38,6 +38,6 @@ inline struct object new_function_obj(uint8_t *insts, size_t len, uint32_t num_l
 	return (struct object) {
 		.data.fn = new_function(insts, len, num_locals, num_params, bmarks, bklen),
 		.type = obj_function,
-		.marked = MARKPTR(),
+		.gc = gc_header_alloc(),
 	};
 }

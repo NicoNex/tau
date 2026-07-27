@@ -21,7 +21,7 @@ struct object new_error_obj(char *str, size_t len) {
 	return (struct object) {
 		.data.str = s,
 		.type = obj_error,
-		.marked = MARKPTR(),
+		.gc = gc_header_alloc(),
 	};
 }
 

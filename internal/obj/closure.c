@@ -17,7 +17,7 @@ char *closure_str(struct object o) {
 }
 
 void mark_closure_obj(struct object c) {
-	*c.marked |= GC_MARK;
+	c.gc->mark |= GC_MARK;
 	for (uint32_t i = 0; i < c.data.cl->num_free; i++) {
 		mark_obj(c.data.cl->free[i]);
 	}
@@ -32,6 +32,6 @@ struct object new_closure_obj(struct function *fn, struct object *free, size_t n
 	return (struct object) {
 		.data.cl = cl,
 		.type = obj_closure,
-		.marked = MARKPTR(),
+		.gc = gc_header_alloc(),
 	};
 }

@@ -4,8 +4,8 @@
 #include "object.h"
 
 void dispose_bytes_obj(struct object o) {
-	// Free everything if it's not a slice (marked parent bit is set to NULL).
-	if (o.data.bytes->m_parent == NULL) {
+	// A slice doesn't own the buffer, its owner frees it.
+	if (o.data.bytes->owner == NULL) {
 		free(o.data.bytes->bytes);
 	}
 	free(o.data.bytes);
@@ -32,31 +32,31 @@ struct object new_bytes_obj(uint8_t *bytes, size_t len) {
 	struct bytes *b = malloc(sizeof(struct bytes));
 	b->bytes = bytes;
 	b->len = len;
-	b->m_parent = NULL;
+	b->owner = NULL;
 
 	return (struct object) {
 		.data.bytes = b,
 		.type = obj_bytes,
-		.marked = MARKPTR(),
+		.gc = gc_header_alloc(),
 	};
 }
 
 void mark_bytes_obj(struct object b) {
-	*b.marked |= GC_MARK;
-	if (b.data.bytes->m_parent != NULL) {
-		*b.data.bytes->m_parent |= GC_MARK;
+	b.gc->mark |= GC_MARK;
+	if (b.data.bytes->owner != NULL) {
+		b.data.bytes->owner->mark |= GC_MARK;
 	}
 }
 
-struct object new_bytes_slice(uint8_t *bytes, size_t len, uint32_t *m_parent) {
+struct object new_bytes_slice(uint8_t *bytes, size_t len, struct gc_header *owner) {
 	struct bytes *b = malloc(sizeof(struct bytes));
 	b->bytes = bytes;
 	b->len = len;
-	b->m_parent = m_parent;
+	b->owner = owner;
 
 	return (struct object) {
 		.data.bytes = b,
 		.type = obj_bytes,
-		.marked = MARKPTR(),
+		.gc = gc_header_alloc(),
 	};
 }

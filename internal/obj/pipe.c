@@ -49,7 +49,7 @@ void mark_pipe_obj(struct object pipe) {
 	for (uint32_t i = 0; i < p->len; i++) {
 		mark_obj(p->buf[(p->head + i) % p->cap]);
 	}
-	*pipe.marked |= GC_MARK;
+	pipe.gc->mark |= GC_MARK;
 }
 
 int pipe_send(struct object pipe, struct object o) {
@@ -136,7 +136,7 @@ struct object new_pipe() {
 	return (struct object) {
 		.data.pipe = pipe,
 		.type = obj_pipe,
-		.marked = MARKPTR()
+		.gc = gc_header_alloc()
 	};
 }
 
@@ -156,6 +156,6 @@ struct object new_buffered_pipe(size_t size) {
 	return (struct object) {
 		.data.pipe = pipe,
 		.type = obj_pipe,
-		.marked = MARKPTR()
+		.gc = gc_header_alloc()
 	};
 }

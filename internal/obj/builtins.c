@@ -11,7 +11,7 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 	return (struct object) {
 		.data.builtin = builtin,
 		.type = obj_builtin,
-		.marked = NULL,
+		.gc = NULL,
 	};
 }
 
@@ -284,7 +284,7 @@ static struct object append_b(struct object *args, size_t len) {
 	if (old->cap - old->len >= len - 1) {
 		struct object ret = new_list_obj_data(old->list, old->len, old->cap);
 		struct list *new = ret.data.list;
-		old->m_parent = ret.marked;
+		old->owner = ret.gc;
 
 		for (size_t i = 1; i < len; i++) {
 			new->list[new->len++] = args[i];
@@ -342,7 +342,7 @@ static struct object plugin_b(struct object *args, size_t len) {
 	return (struct object) {
 		.data.handle = handle,
 		.type = obj_native,
-		.marked = MARKPTR()
+		.gc = gc_header_alloc()
 	};
 }
 
@@ -521,10 +521,10 @@ static struct object slice_b(struct object *args, size_t len) {
 		} else if (start == end) {
 			return new_list_obj(NULL, 0);
 		}
-		// If the parent is a slice, propagate its marked parent flag for the gc,
-		// otherwise use the default marked flag.
-		uint32_t *m_parent = args[0].data.list->m_parent != NULL ? args[0].data.list->m_parent : args[0].marked;
-		return new_list_slice(&args[0].data.list->list[start], end-start, m_parent);
+		// A slice of a slice points at the owner of the buffer, not at the
+		// slice it was cut from.
+		struct gc_header *owner = args[0].data.list->owner != NULL ? args[0].data.list->owner : args[0].gc;
+		return new_list_slice(&args[0].data.list->list[start], end-start, owner);
 	}
 
 	case obj_string: {
@@ -533,10 +533,10 @@ static struct object slice_b(struct object *args, size_t len) {
 		} else if (start == end) {
 			return new_string_obj(strdup(""), 0);
 		}
-		// If the parent is a slice, propagate its marked parent flag for the gc,
-		// otherwise use the default marked flag.
-		uint32_t *m_parent = args[0].data.str->m_parent != NULL ? args[0].data.str->m_parent : args[0].marked;
-		return new_string_slice(&args[0].data.str->str[start], end-start, m_parent);
+		// A slice of a slice points at the owner of the buffer, not at the
+		// slice it was cut from.
+		struct gc_header *owner = args[0].data.str->owner != NULL ? args[0].data.str->owner : args[0].gc;
+		return new_string_slice(&args[0].data.str->str[start], end-start, owner);
 	}
 	case obj_bytes: {
 		if (end > args[0].data.bytes->len) {
@@ -544,10 +544,10 @@ static struct object slice_b(struct object *args, size_t len) {
 		} else if (start == end) {
 			return new_bytes_obj(NULL, 0);
 		}
-		// If the parent is a slice, propagate its marked parent flag for the gc,
-		// otherwise use the default marked flag.
-		uint32_t *m_parent = args[0].data.bytes->m_parent != NULL ? args[0].data.bytes->m_parent : args[0].marked;
-		return new_bytes_slice(&args[0].data.bytes->bytes[start], end-start, m_parent);
+		// A slice of a slice points at the owner of the buffer, not at the
+		// slice it was cut from.
+		struct gc_header *owner = args[0].data.bytes->owner != NULL ? args[0].data.bytes->owner : args[0].gc;
+		return new_bytes_slice(&args[0].data.bytes->bytes[start], end-start, owner);
 	}
 	default:
 		return errorf("slice: first argument must be a list or string, got %s instead", otype_str(args[0].type));
@@ -605,7 +605,7 @@ static struct object bytes_b(struct object *args, size_t len) {
 		return new_bytes_obj(calloc(arg.data.i, sizeof(uint8_t)), arg.data.i);
 	}
 	case obj_string:
-		return new_bytes_slice((uint8_t *) arg.data.str->str, arg.data.str->len, arg.marked);
+		return new_bytes_slice((uint8_t *) arg.data.str->str, arg.data.str->len, arg.gc);
 	case obj_list: {
 		size_t len = arg.data.list->len;
 		struct object *list = arg.data.list->list;

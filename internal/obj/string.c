@@ -15,9 +15,9 @@
 void dispose_string_obj(struct object o) {
 	// Free everything if it's not a slice (marked parent bit is set to NULL).
 	if (o.data.str->m_parent == NULL) {
-		free(o.marked);
 		free(o.data.str->str);
 	}
+	free(o.marked);
 	free(o.data.str);
 }
 
@@ -39,9 +39,9 @@ struct object new_string_obj(char *str, size_t len) {
 }
 
 void mark_string_obj(struct object s) {
-	*s.marked = 1;
+	*s.marked |= GC_MARK;
 	if (s.data.str->m_parent != NULL) {
-		*s.data.str->m_parent = 1;
+		*s.data.str->m_parent |= GC_MARK;
 	}
 }
 

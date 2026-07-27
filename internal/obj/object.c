@@ -113,6 +113,6 @@ struct object object_to_module(struct object o) {
 }
 
 void mark_object_obj(struct object o) {
-	*o.marked = 1;
+	*o.marked |= GC_MARK;
 	mark_object_children(*o.data.obj);
 }

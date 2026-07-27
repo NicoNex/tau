@@ -3,7 +3,8 @@
 #include "object.h"
 
 void dispose_closure_obj(struct object o) {
-	dispose_function_data(o.data.cl->fn);
+	// The function belongs to the constants pool and is shared by every
+	// closure built from it, only the closure itself is freed here.
 	free(o.marked);
 	free(o.data.cl->free);
 	free(o.data.cl);
@@ -17,7 +18,7 @@ char *closure_str(struct object o) {
 }
 
 void mark_closure_obj(struct object c) {
-	*c.marked = 1;
+	*c.marked |= GC_MARK;
 	for (uint32_t i = 0; i < c.data.cl->num_free; i++) {
 		mark_obj(c.data.cl->free[i]);
 	}

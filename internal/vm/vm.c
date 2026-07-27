@@ -25,9 +25,9 @@
 #define vm_stack_peek(vm) (vm->stack[vm->sp-1])
 
 #ifndef GC_DEBUG
-	#define vm_heap_add(vm, o) heap_add(&vm->state.heap, o)
+	#define vm_heap_add(vm, o) heap_add(o)
 #else
-	#define vm_heap_add(vm, o) printf("adding type %s to heap\n", otype_str(o.type)); heap_add(&vm->state.heap, o)
+	#define vm_heap_add(vm, o) printf("adding type %s to heap\n", otype_str(o.type)); heap_add(o)
 #endif
 
 #ifndef DEBUG
@@ -42,8 +42,6 @@
 #define M_ASSERT(o1, o2, t) (ASSERT(o1, t) && ASSERT(o2, t))
 #define M_ASSERT2(o1, o2, t1, t2) (ASSERT2(o1, t1, t2) && ASSERT2(o2, t1, t2))
 
-static inline void gc(struct vm * restrict vm);
-
 static inline struct frame new_frame(struct object cl, uint32_t base_ptr) {
 	return (struct frame) {
 		.cl = cl,
@@ -55,8 +53,10 @@ static inline struct frame new_frame(struct object cl, uint32_t base_ptr) {
 
 inline struct state new_state() {
 	return (struct state) {
-		.heap = new_heap(HEAP_TRESHOLD),
-		.globals = new_pool(1000),
+		// The globals pool is shared with the tau routines, so it's allocated
+		// once with its final size: a realloc would pull the list from under
+		// the other threads.
+		.globals = new_pool(GLOBAL_SIZE),
 		.consts = {0},
 		.ndefs = 0
 	};
@@ -64,11 +64,12 @@ inline struct state new_state() {
 
 inline void state_dispose(struct state s) {
 	free(s.consts.list);
-	heap_dispose(&s.heap);
+	heap_dispose();
 	pool_dispose(s.globals);
 }
 
 struct vm *new_vm(char *file, struct bytecode bc) {
+	gc_init();
 	struct vm *vm = calloc(1, sizeof(struct vm));
 	vm->file = file;
 	vm->state = new_state();
@@ -86,6 +87,7 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 }
 
 struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state) {
+	gc_init();
 	struct vm *vm = calloc(1, sizeof(struct vm));
 	vm->file = file;
 	vm->state = state;
@@ -261,7 +263,7 @@ static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, 
 	vm_stack_push(vm, cl);
 
 	vm_heap_add(vm, cl);
-	gc(vm);
+	gc();
 }
 
 static inline void vm_push_list(struct vm * restrict vm, uint32_t start, uint32_t end) {
@@ -275,7 +277,7 @@ static inline void vm_push_list(struct vm * restrict vm, uint32_t start, uint32_
 	struct object lst = new_list_obj(list, len);
 	vm_stack_push(vm, lst);
 	vm_heap_add(vm, lst);
-	gc(vm);
+	gc();
 }
 
 static inline void vm_push_map(struct vm * restrict vm, uint32_t start, uint32_t end) {
@@ -301,7 +303,7 @@ static inline void vm_push_map(struct vm * restrict vm, uint32_t start, uint32_t
 	vm->sp -= end - start;
 	vm_stack_push(vm, map);
 	vm_heap_add(vm, map);
-	gc(vm);
+	gc();
 }
 
 static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_idx, uint32_t num_args) {
@@ -340,7 +342,7 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 	struct object res = new_string_obj(ret, len);
 	vm_stack_push(vm, res);
 	vm_heap_add(vm, res);
-	gc(vm);
+	gc();
 }
 
 static inline double to_double(struct object * restrict o) {
@@ -387,7 +389,7 @@ static inline void vm_exec_add(struct vm * restrict vm) {
 		struct object res = new_string_obj(str, slen);
 		vm_stack_push(vm, res);
 		vm_heap_add(vm, res);
-		gc(vm);
+		gc();
 	} else {
 		unsupported_operator_error(vm, "+", left, right);
 	}
@@ -695,7 +697,7 @@ static inline void vm_call_builtin(struct vm * restrict vm, builtin fn, size_t n
 	vm_stack_push(vm, res);
 	if (res.type > obj_builtin) {
 		vm_heap_add(vm, res);
-		gc(vm);
+		gc();
 	}
 }
 
@@ -752,7 +754,12 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 	}
 
 	void *return_value = malloc(sizeof(&ffi_type_pointer));
+	// A native call can block for an arbitrary amount of time (sockets, IO):
+	// park so that it doesn't hold back a collection. The arguments stay
+	// reachable from the stack of this VM, which nothing is mutating.
+	gc_park();
 	ffi_call(&cif, n->data.handle, return_value, arg_values);
+	gc_unpark();
 
 	struct object res = (struct object) {
 		.data.handle = return_value,
@@ -761,7 +768,7 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 	};
 	vm_stack_push(vm, res);
 	vm_heap_add(vm, res);
-	gc(vm);
+	gc();
 }
 
 static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
@@ -784,21 +791,12 @@ int vm_run(struct vm * restrict vm);
 static int run_and_cleanup(void *vmptr) {
 	struct vm *vm = vmptr;
 
-	// Save initial stack pointer to know which objects were shared
-	uint32_t initial_sp = vm->sp;
-
 	int ret = vm_run(vm);
 	fflush(stdout);
 
-	// Release shared objects after running
-	// (they were retained in vm_exec_concurrent_call)
-	for (uint32_t i = 0; i < initial_sp; i++) {
-		if (vm->stack[i].type > obj_builtin) {
-			release_obj(vm->stack[i]);
-		}
-	}
-
-	heap_dispose(&vm->state.heap);
+	// The heap is global: whatever this VM allocated and is still reachable
+	// from somewhere else (a pipe, the globals) survives.
+	gc_unregister(vm);
 	vm_dispose(vm);
 	return ret;
 }
@@ -807,20 +805,15 @@ struct builtin_call_data {
 	builtin fn;
 	struct object *args;
 	size_t numargs;
+	void *roots;
 };
 
 static int call_builtin_and_cleanup(void *data) {
 	struct builtin_call_data *d = data;
 
 	d->fn(d->args, d->numargs);
+	gc_remove_roots(d->roots);
 	fflush(stdout);
-
-	// Release shared objects after running
-	for (size_t i = 0; i < d->numargs; i++) {
-		if (d->args[i].type > obj_builtin) {
-			release_obj(d->args[i]);
-		}
-	}
 
 	free(d->args);
 	free(d);
@@ -833,35 +826,22 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 
 	switch (o->type) {
 	case obj_closure: {
-		struct closure *cl = o->data.cl;
-
-		// Calculate the exact amount of stack space we need:
-		// - num_args for the arguments
-		// - num_locals for local variables (initialized to null)
-		// - 1 for the closure itself
-		uint32_t num_locals = cl->fn->num_locals;
-		uint32_t stack_needed = num_args + num_locals + 1;
-
 		struct vm *tvm = calloc(1, sizeof(struct vm));
 		tvm->file = strdup(vm->file);
-		tvm->state.consts = vm->state.consts;  // Read-only, safe to share
-		tvm->state.globals = vm->state.globals;  // Shared with mutex protection
-		tvm->state.heap = new_heap(HEAP_TRESHOLD);
+		tvm->state.consts = vm->state.consts;    // Read-only, safe to share.
+		tvm->state.globals = vm->state.globals;  // Shared, never reallocated.
 
 		// Only copy the closure and its arguments to the new VM's stack
 		// Stack layout: [closure, arg0, arg1, ..., argN-1]
 		memcpy(tvm->stack, &vm->stack[vm->sp-1-num_args], (num_args + 1) * sizeof(struct object));
 		tvm->sp = num_args + 1;
 
-		// Retain all shared objects to prevent parent VM from freeing them
-		for (uint32_t i = 0; i < tvm->sp; i++) {
-			if (tvm->stack[i].type > obj_builtin) {
-				retain_obj(tvm->stack[i]);
-			}
-		}
-
 		vm_call_closure(tvm, o, num_args);
+		// Registered here and not in the new thread: until the thread starts
+		// running, the objects on its stack are reachable only from here.
+		gc_register(tvm);
 		if (thrd_create(&thread, run_and_cleanup, tvm) != thrd_success) {
+			gc_unregister(tvm);
 			vm_errorf(vm, "failed to create thread");
 		}
 		break;
@@ -873,15 +853,10 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 		d->args = malloc(sizeof(struct object) * num_args);
 		d->numargs = num_args;
 		memcpy(d->args, &vm->stack[vm->sp-num_args], num_args * sizeof(struct object));
-
-		// Retain all shared arguments to prevent parent VM from freeing them
-		for (uint32_t i = 0; i < num_args; i++) {
-			if (d->args[i].type > obj_builtin) {
-				retain_obj(d->args[i]);
-			}
-		}
+		d->roots = gc_add_roots(d->args, num_args);
 
 		if (thrd_create(&thread, call_builtin_and_cleanup, d) != thrd_success) {
+			gc_remove_roots(d->roots);
 			vm_errorf(vm, "failed to create thread");
 		}
 		break;
@@ -909,94 +884,6 @@ struct object vm_last_popped_stack_elem(struct vm * restrict vm) {
 	return vm->stack[vm->sp];
 }
 
-static inline void vm_mark_stack(struct vm * restrict vm) {
-	for (int32_t i = vm->sp - 1; i >= 0; i--) {
-		if (vm->stack[i].type > obj_builtin) {
-			mark_obj(vm->stack[i]);
-		}
-	}
-}
-
-static inline void vm_mark_consts(struct vm * restrict vm) {
-	struct object *consts = vm->state.consts.list;
-	size_t len = vm->state.consts.len;
-
-	for (size_t i = 0; i < len; i++) {
-		if (consts[i].type > obj_builtin) {
-			mark_obj(consts[i]);
-		}
-	}
-}
-
-static inline void vm_mark_globals(struct vm * restrict vm) {
-	struct object *globals = vm->state.globals->list;
-	size_t len = vm->state.globals->len;
-
-	for (uint32_t i = 0; i < len; i++) {
-		if (globals[i].type > obj_builtin) {
-			mark_obj(globals[i]);
-		}
-	}
-}
-
-static inline void gc(struct vm * restrict vm) {
-	struct heap *heap = &vm->state.heap;
-
-#ifndef GC_DEBUG
-	if (heap->len < heap->treshold) {
-		return;
-	}
-#else
-	printf("heap size before: %lu\n", heap->len);
-#endif
-
-	// Concurrently traverse the stack, constants and globals and mark all reachable objects.
-	#pragma omp parallel default(none) shared(vm)
-	#pragma omp single
-	{
-		#pragma omp task
-		vm_mark_stack(vm);
-
-		#pragma omp task
-		vm_mark_consts(vm);
-
-		#pragma omp task
-		vm_mark_globals(vm);
-
-		#pragma omp taskwait
-	}
-
-	// Traverse all heap objects and free the unmarked ones.
-	// Only free if refcount is 0 (not shared with other VMs)
-	register struct heap_node **prev = &heap->root;
-	for (register struct heap_node *n = heap->root; n != NULL; n = n->next) {
-		struct object o = n->obj;
-
-		// Check if marked OR has non-zero refcount (shared with other VMs)
-		if (*o.marked > 0) {
-			// Reset mark bit but preserve refcount
-			// marked value format: high bits = refcount, low bit = mark
-			// For simplicity, just decrement by 1 if odd (marked)
-			if (*o.marked & 1) {
-				*o.marked -= 1;
-			}
-			prev = &(*prev)->next;
-			continue;
-		}
-
-		*prev = n->next;
-		heap->len--;
-		#pragma omp task shared(n, o)
-		{
-			free(n);
-			free_obj(o);
-		}
-	}
-
-#ifdef GC_DEBUG
-	printf("heap size after: %lu\n", heap->len);
-#endif
-}
 
 /*
  * The following comment is taken from CPython's source:
@@ -1037,8 +924,29 @@ static inline void gc(struct vm * restrict vm) {
  * -fno-crossjumping).
  */
 
-// TODO: maybe return a char *.
+static int vm_loop(struct vm * restrict vm);
+
+// Registers the VM as a GC root set and runs it.
 int vm_run(struct vm * restrict vm) {
+	// The VM of a tau routine is registered by whoever spawned it.
+	int owned = vm->gc_node == NULL;
+	if (owned) gc_register(vm);
+
+	void *prev = gc_activate(vm);
+	int ret = vm_loop(vm);
+
+	if (owned) {
+		gc_unregister(vm);
+	} else {
+		gc_park();
+	}
+	gc_restore(prev);
+
+	return ret;
+}
+
+// TODO: maybe return a char *.
+static int vm_loop(struct vm * restrict vm) {
 #include "jump_table.h"
 
 	// Used by vm_errorf to stop the execution of the VM without exiting.
@@ -1204,6 +1112,7 @@ int vm_run(struct vm * restrict vm) {
 
 	TARGET_CALL: {
 		uint8_t num_args = read_uint8(frame->ip++);
+		if (gc_wanted) gc_safepoint();
 		vm_exec_call(vm, num_args);
 		frame = vm_current_frame(vm);
 		DISPATCH();
@@ -1232,12 +1141,16 @@ int vm_run(struct vm * restrict vm) {
 	TARGET_JUMP: {
 		uint16_t pos = read_uint16(frame->ip);
 		frame->ip = &frame->start[pos];
+		// Safepoint: a loop that doesn't allocate would otherwise never let
+		// another VM collect.
+		if (gc_wanted) gc_safepoint();
 		DISPATCH();
 	}
 
 	TARGET_JUMP_NOT_TRUTHY: {
 		uint16_t pos = read_uint16(frame->ip);
 		frame->ip += 2;
+		if (gc_wanted) gc_safepoint();
 
 		struct object *cond = &vm_stack_pop(vm);
 		if (!is_truthy(cond)) {

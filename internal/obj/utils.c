@@ -4,6 +4,13 @@
 #include "object.h"
 #include "plugin.h"
 
+// Weak fallbacks for the collector hooks: the real ones live in ../vm/heap.c
+// and take over whenever the VM is linked in. Without them a program that
+// only links the obj package (the compiler tests) wouldn't build.
+__attribute__((weak)) uint32_t gc_epoch = 1;
+__attribute__((weak)) void gc_park(void) {}
+__attribute__((weak)) void gc_unpark(void) {}
+
 char *otype_str(enum obj_type t) {
 	static char *strings[] = {
 		"null",
@@ -69,7 +76,12 @@ void print_obj(struct object o) {
 }
 
 inline void mark_obj(struct object o) {
-	if (o.type > obj_builtin) {
+	// Objects already visited in this cycle are skipped, otherwise a cycle
+	// (an object holding a closure that captured the object itself, a list
+	// containing itself...) would recur forever.
+	if (o.type > obj_builtin && o.marked != NULL && (*o.marked >> GC_EPOCH_SHIFT) != gc_epoch) {
+		*o.marked = (*o.marked & (GC_MARK | GC_TRACKED)) | (gc_epoch << GC_EPOCH_SHIFT);
+
 		switch (o.type) {
 		case obj_object:
 			mark_object_obj(o);
@@ -93,69 +105,7 @@ inline void mark_obj(struct object o) {
 			mark_pipe_obj(o);
 			break;
 		default:
-			*o.marked = 1;
-			break;
-		}
-	}
-}
-
-// Increment reference count for shared objects
-// Call this when sharing an object with another VM
-void retain_obj(struct object o) {
-	if (o.type > obj_builtin && o.marked != NULL) {
-		__sync_fetch_and_add(o.marked, 1);
-
-		// Recursively retain nested objects
-		switch (o.type) {
-		case obj_list:
-			if (o.data.list != NULL) {
-				for (size_t i = 0; i < o.data.list->len; i++) {
-					retain_obj(o.data.list->list[i]);
-				}
-			}
-			break;
-		case obj_closure:
-			if (o.data.cl != NULL) {
-				for (size_t i = 0; i < o.data.cl->num_free; i++) {
-					retain_obj(o.data.cl->free[i]);
-				}
-			}
-			break;
-		case obj_map:
-			// Map children are retained during mark phase
-			break;
-		default:
-			break;
-		}
-	}
-}
-
-// Decrement reference count for shared objects
-// Call this when a VM is done with a shared object
-void release_obj(struct object o) {
-	if (o.type > obj_builtin && o.marked != NULL) {
-		__sync_fetch_and_sub(o.marked, 1);
-
-		// Recursively release nested objects
-		switch (o.type) {
-		case obj_list:
-			if (o.data.list != NULL) {
-				for (size_t i = 0; i < o.data.list->len; i++) {
-					release_obj(o.data.list->list[i]);
-				}
-			}
-			break;
-		case obj_closure:
-			if (o.data.cl != NULL) {
-				for (size_t i = 0; i < o.data.cl->num_free; i++) {
-					release_obj(o.data.cl->free[i]);
-				}
-			}
-			break;
-		case obj_map:
-			// Map children are released during cleanup
-			break;
-		default:
+			*o.marked |= GC_MARK;
 			break;
 		}
 	}

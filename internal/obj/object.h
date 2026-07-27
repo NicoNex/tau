@@ -8,6 +8,22 @@
 
 #define MARKPTR() calloc(1, sizeof(uint32_t))
 
+// Layout of the word pointed by object.marked:
+//
+//   bit  0    GC_MARK: reachable, set by the mark phase, cleared by the sweep.
+//   bit  1    GC_TRACKED: already in the heap, prevents adding it twice.
+//   bits 2..  epoch of the last visit of the mark phase.
+//
+// The mark bit alone can't say whether an object was already traversed: a
+// slice sets the mark of its parent through m_parent before the parent itself
+// is visited. The epoch is what stops the traversal of cycles, and unlike a
+// "visited" bit it needs no cleanup for the objects that aren't in the heap.
+#define GC_MARK        1
+#define GC_TRACKED     2
+#define GC_EPOCH_SHIFT 2
+
+extern uint32_t gc_epoch;
+
 enum obj_type {
 	obj_null,
 	obj_boolean,
@@ -238,7 +254,10 @@ char *object_str(struct object o);
 void print_obj(struct object o);
 void mark_obj(struct object o);
 void free_obj(struct object o);
-void retain_obj(struct object o);  // Increment refcount for shared objects
-void release_obj(struct object o); // Decrement refcount for shared objects
+
+// Garbage collector hooks, implemented in ../vm/heap.c.
+// Park before blocking so the collector doesn't wait for this thread.
+void gc_park(void);
+void gc_unpark(void);
 uint64_t fnv64a(char *s);
 uint32_t is_truthy(struct object * restrict o);

@@ -35,7 +35,6 @@ struct pool {
 };
 
 struct state {
-	struct heap heap;
 	struct pool *globals;
 	struct pool consts;
 	uint32_t ndefs;
@@ -48,6 +47,7 @@ struct vm {
 	uint32_t sp;
 	uint32_t frame_idx;
 	char *file;
+	void *gc_node;
 	jmp_buf env;
 };
 
@@ -70,7 +70,22 @@ void vm_dispose(struct vm *vm);
 void state_dispose(struct state s);
 void set_exit();
 
-// Heap object.
-struct heap new_heap(int64_t treshold);
-void heap_add(struct heap *h, struct object obj);
-void heap_dispose(struct heap *h);
+// Garbage collector.
+// The heap is global and shared by every VM (the main one and the tau routines).
+// Collection is stop-the-world: the collector waits for all the other VMs to
+// reach a safepoint before marking and sweeping.
+extern volatile int gc_wanted;
+
+void gc_init(void);
+void gc_register(struct vm *vm);   // Makes the VM a root, initially parked.
+void gc_unregister(struct vm *vm);
+void *gc_activate(struct vm *vm);  // Called by the thread that runs the VM, returns the previous one.
+void gc_restore(void *prev);       // Restores the VM active before gc_activate.
+void *gc_add_roots(struct object *objs, size_t len);
+void gc_remove_roots(void *handle);
+void gc_park(void);                // Before blocking (pipes, native calls, IO).
+void gc_unpark(void);              // After blocking.
+void gc_safepoint(void);           // Cheap check, parks only if a GC is pending.
+void heap_add(struct object obj);
+void heap_dispose(void);
+void gc(void);

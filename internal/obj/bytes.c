@@ -5,10 +5,10 @@
 
 void dispose_bytes_obj(struct object o) {
 	// Free everything if it's not a slice (marked parent bit is set to NULL).
-	if (o.data.str->m_parent == NULL) {
-		free(o.marked);
+	if (o.data.bytes->m_parent == NULL) {
 		free(o.data.bytes->bytes);
 	}
+	free(o.marked);
 	free(o.data.bytes);
 }
 
@@ -43,9 +43,9 @@ struct object new_bytes_obj(uint8_t *bytes, size_t len) {
 }
 
 void mark_bytes_obj(struct object b) {
-	*b.marked = 1;
+	*b.marked |= GC_MARK;
 	if (b.data.bytes->m_parent != NULL) {
-		*b.data.bytes->m_parent = 1;
+		*b.data.bytes->m_parent |= GC_MARK;
 	}
 }
 

@@ -202,6 +202,6 @@ struct object new_map() {
 }
 
 void mark_map_obj(struct object m) {
-	*m.marked = 1;
+	*m.marked |= GC_MARK;
 	mark_map_children(m.data.map->root);
 }

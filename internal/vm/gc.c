@@ -29,7 +29,22 @@ struct root_node {
 	struct root_node *next;
 };
 
-static struct heap heap = {.root = NULL, .len = 0, .treshold = HEAP_TRESHOLD};
+// The heap is cut into one segment per thread. A thread only ever pushes
+// onto its own, so allocating takes no lock at all; the collector, which
+// runs with the world stopped, is the only one that walks them all.
+static struct heap *segments = NULL;
+static __thread struct heap *segment = NULL;
+
+// How many objects live in the heap, and how many may be allocated before
+// the next collection. Both are only written with the world stopped.
+static size_t heap_len = 0;
+static int64_t heap_treshold = HEAP_TRESHOLD;
+
+// How many objects this thread may still allocate before it is worth asking
+// for a collection. Counting down a thread local number is all the fast path
+// of an allocation can afford: everything exact needs the lock, and the lock
+// is what a collection is for.
+static __thread int64_t budget = HEAP_TRESHOLD;
 static mtx_t mu;
 static cnd_t cnd;
 static struct vm_node *vms = NULL;
@@ -224,6 +239,25 @@ void gc_safepoint(void) {
 	gc_unpark();
 }
 
+// The segment of this thread, made on first use. Only the list of segments
+// is shared, and only while a segment is being added to it.
+static struct heap *heap_segment(void) {
+	if (segment != NULL) return segment;
+
+	struct heap *s = malloc(sizeof(struct heap));
+	s->root = NULL;
+	s->len = 0;
+	s->treshold = 0;
+
+	gc_lock();
+	s->next = segments;
+	segments = s;
+	mtx_unlock(&mu);
+
+	segment = s;
+	return s;
+}
+
 // Takes ownership of the object. Objects that are already tracked (e.g. one
 // received from a pipe and returned by a builtin) are ignored.
 void heap_add(struct object obj) {
@@ -234,21 +268,11 @@ void heap_add(struct object obj) {
 	struct gc_header *node = obj.gc;
 	node->obj = obj;
 
-	// Fast path: with a single registered VM only its own thread allocates and
-	// only it can spawn a second one, so there is nobody to synchronise with.
-	// Threads running a `tau builtin()` never get here, they don't own a heap.
-	if (nvms <= 1) {
-		node->next = heap.root;
-		heap.root = node;
-		heap.len++;
-		return;
-	}
-
-	gc_lock();
-	node->next = heap.root;
-	heap.root = node;
-	heap.len++;
-	mtx_unlock(&mu);
+	struct heap *s = heap_segment();
+	node->next = s->root;
+	s->root = node;
+	s->len++;
+	budget--;
 }
 
 static void mark_vm(struct vm *vm) {
@@ -272,26 +296,42 @@ static void mark_vm(struct vm *vm) {
 	}
 }
 
-// Frees the unmarked objects and clears the mark of the surviving ones.
-// Must be called with the world stopped.
+// Frees the unmarked objects of every segment and clears the mark of the
+// surviving ones. Must be called with the world stopped, which is what makes
+// it safe to walk segments other threads own.
 static void sweep(void) {
-	struct gc_header **prev = &heap.root;
-	struct gc_header *n = heap.root;
+	heap_len = 0;
 
-	while (n != NULL) {
-		struct gc_header *next = n->next;
+	for (struct heap *s = segments; s != NULL; s = s->next) {
+		struct gc_header **prev = &s->root;
+		struct gc_header *n = s->root;
 
-		if (n->mark & GC_MARK) {
-			n->mark &= ~GC_MARK;
-			prev = &n->next;
-		} else {
-			*prev = next;
-			heap.len--;
-			free_obj(n->obj);
-			gc_mark_recycle(n);
+		while (n != NULL) {
+			struct gc_header *next = n->next;
+
+			if (n->mark & GC_MARK) {
+				n->mark &= ~GC_MARK;
+				prev = &n->next;
+			} else {
+				*prev = next;
+				s->len--;
+				free_obj(n->obj);
+				gc_mark_recycle(n);
+			}
+			n = next;
 		}
-		n = next;
+
+		heap_len += s->len;
 	}
+}
+
+// The share of the room left that one thread may fill on its own before it
+// asks whether a collection is due.
+static int64_t gc_budget(void) {
+	int nthreads = nvms > 0 ? nvms : 1;
+	int64_t left = (heap_treshold - (int64_t) heap_len) / nthreads;
+
+	return left > HEAP_TRESHOLD ? left : HEAP_TRESHOLD;
 }
 
 void gc(void) {
@@ -299,17 +339,26 @@ void gc(void) {
 		gc_safepoint();
 		return;
 	}
-	// Racy read, worst case the collection happens one allocation later.
-	if (heap.len < heap.treshold) return;
+
+	if (budget > 0) return;
 
 	gc_lock();
-	if (heap.len < heap.treshold) {
+
+	// The real size of the heap, garbage included: every segment knows how
+	// much it holds, and there are as many segments as there are threads.
+	size_t total = 0;
+	for (struct heap *s = segments; s != NULL; s = s->next) {
+		total += s->len;
+	}
+
+	if ((int64_t) total < heap_treshold) {
+		budget = gc_budget();
 		mtx_unlock(&mu);
 		return;
 	}
 
 #ifdef GC_DEBUG
-	printf("heap size before: %lu\n", heap.len);
+	printf("heap size before: %lu\n", heap_len);
 #endif
 
 	gc_wanted = 1;
@@ -334,26 +383,39 @@ void gc(void) {
 	// Grows with the live set and always leaves room for HEAP_TRESHOLD new
 	// objects, otherwise a program with few live objects and lots of garbage
 	// would collect at every single allocation burst.
-	heap.treshold = heap.len * 2 + HEAP_TRESHOLD;
+	// The room left for new objects grows with the number of threads: every
+	// one of them allocates, and every collection stops all of them, so the
+	// more there are the less often it is worth stopping them.
+	heap_treshold = heap_len * 2 + HEAP_TRESHOLD * (nvms > 0 ? nvms : 1);
+	budget = gc_budget();
 	gc_wanted = 0;
 	cnd_broadcast(&cnd);
 	mtx_unlock(&mu);
 
 #ifdef GC_DEBUG
-	printf("heap size after: %lu\n", heap.len);
+	printf("heap size after: %lu\n", heap_len);
 #endif
 }
 
 void heap_dispose(void) {
 	gc_lock();
-	for (struct gc_header *n = heap.root; n != NULL;) {
-		struct gc_header *tmp = n->next;
-		free_obj(n->obj);
-		free(n);
-		n = tmp;
+	for (struct heap *s = segments; s != NULL;) {
+		struct heap *nexts = s->next;
+
+		for (struct gc_header *n = s->root; n != NULL;) {
+			struct gc_header *tmp = n->next;
+			free_obj(n->obj);
+			free(n);
+			n = tmp;
+		}
+		free(s);
+		s = nexts;
 	}
-	heap.root = NULL;
-	heap.len = 0;
-	heap.treshold = HEAP_TRESHOLD;
+
+	segments = NULL;
+	segment = NULL;
+	heap_len = 0;
+	heap_treshold = HEAP_TRESHOLD;
+	budget = HEAP_TRESHOLD;
 	mtx_unlock(&mu);
 }

@@ -1,153 +1,160 @@
+// Command tau-lsp is the language server for Tau. It speaks LSP over stdio:
+// Content-Length framed JSON-RPC 2.0 on stdin and stdout, which is all any
+// editor asks for. The analysis behind it is the compiler's own lexer,
+// parser and formatter, so what the server reports is what the compiler
+// would report and nothing has to be kept in sync by hand.
 package main
 
 import (
-	"context"
+	"bufio"
+	"encoding/json"
+	"errors"
+	"flag"
+	"fmt"
 	"io"
 	"log"
 	"os"
-
-	"go.lsp.dev/jsonrpc2"
-	"go.lsp.dev/protocol"
-
-	"github.com/NicoNex/tau/internal/parser"
-	"github.com/NicoNex/tau/internal/tauerr"
+	"strconv"
+	"strings"
 )
 
-// Server represents the LSP server.
-type Server struct {
-	jsonrpc2.Conn
+// JSON-RPC error codes used by this server.
+const (
+	errParse          = -32700
+	errInvalidRequest = -32600
+	errMethodNotFound = -32601
+	errInternal       = -32603
+	errServerNotInit  = -32002
+)
+
+type request struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id,omitempty"`
+	Method  string          `json:"method"`
+	Params  json.RawMessage `json:"params,omitempty"`
 }
 
-// Initialize the server and set its capabilities.
-func (s *Server) Initialize(ctx context.Context, params *protocol.InitializeParams) (*protocol.InitializeResult, error) {
-	log.Println("Initializing Tau Language Server...")
-
-	return &protocol.InitializeResult{
-		Capabilities: protocol.ServerCapabilities{
-			TextDocumentSync: &protocol.TextDocumentSyncOptions{
-				Change:    protocol.TextDocumentSyncKindIncremental,
-				OpenClose: true,
-			},
-			CompletionProvider: &protocol.CompletionOptions{
-				TriggerCharacters: []string{"."},
-			},
-			SemanticTokensProvider: &protocol.SemanticTokensLegend{
-				TokenTypes: []protocol.SemanticTokenTypes{
-					protocol.SemanticTokenKeyword,
-					protocol.SemanticTokenVariable,
-					protocol.SemanticTokenFunction,
-					protocol.SemanticTokenString,
-					protocol.SemanticTokenNumber,
-					protocol.SemanticTokenOperator,
-					protocol.SemanticTokenComment,
-					protocol.SemanticTokenParameter,
-				},
-				TokenModifiers: []protocol.SemanticTokenModifiers{
-					protocol.SemanticTokenModifierDeclaration,
-				},
-			},
-		},
-	}, nil
+type response struct {
+	JSONRPC string          `json:"jsonrpc"`
+	ID      json.RawMessage `json:"id"`
+	Result  any             `json:"result"`
+	Error   *responseError  `json:"error,omitempty"`
 }
 
-// Handle document open events.
-func (s *Server) DidOpen(ctx context.Context, params *protocol.DidOpenTextDocumentParams) error {
-	log.Printf("Document opened: %s", params.TextDocument.URI)
-	// Perform validation on the opened document
-	s.validateTextDocument(ctx, params.TextDocument.URI, params.TextDocument.Text)
-	return nil
+type responseError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
 }
 
-// Handle document change events.
-func (s *Server) DidChange(ctx context.Context, params *protocol.DidChangeTextDocumentParams) error {
-	log.Printf("Document changed: %s", params.TextDocument.URI)
-	// Perform validation on the changed document
-	for _, change := range params.ContentChanges {
-		s.validateTextDocument(ctx, params.TextDocument.URI, change.Text)
-	}
-	return nil
+type notification struct {
+	JSONRPC string `json:"jsonrpc"`
+	Method  string `json:"method"`
+	Params  any    `json:"params"`
 }
 
-// validateTextDocument parses the document and sends diagnostics to the client.
-func (s *Server) validateTextDocument(ctx context.Context, uri protocol.DocumentURI, text string) {
-	// Call your existing parser (replace with your actual parser function)
-	_, errs := parser.Parse("file", text)
+// conn is the framed JSON-RPC transport.
+type conn struct {
+	in  *bufio.Reader
+	out *bufio.Writer
+}
 
-	var diagnostics []protocol.Diagnostic
-	for _, perr := range errs {
-		err, ok := perr.(tauerr.TauErr)
+// read returns the body of the next message. A frame without a usable
+// Content-Length is not something we can resynchronise from, so it ends the
+// stream rather than leaving the reader at an unknown offset.
+func (c *conn) read() ([]byte, error) {
+	length := -1
+
+	for {
+		line, err := c.in.ReadString('\n')
+		if err != nil {
+			return nil, err
+		}
+		line = strings.TrimRight(line, "\r\n")
+		if line == "" {
+			break
+		}
+
+		name, value, ok := strings.Cut(line, ":")
 		if !ok {
 			continue
 		}
-
-		diagnostic := protocol.Diagnostic{
-			Range: protocol.Range{
-				Start: protocol.Position{
-					Line:      uint32(err.Line - 1), // LSP is zero-based
-					Character: uint32(err.Column),
-				},
-				End: protocol.Position{
-					Line:      uint32(err.Line - 1), // LSP is zero-based
-					Character: uint32(err.Column),
-				},
-			},
-			Severity: protocol.DiagnosticSeverityError,
-			Source:   "Tau Language Server",
-			Message:  err.Message,
+		if strings.EqualFold(strings.TrimSpace(name), "Content-Length") {
+			n, err := strconv.Atoi(strings.TrimSpace(value))
+			if err != nil {
+				return nil, fmt.Errorf("bad Content-Length %q", value)
+			}
+			length = n
 		}
-		diagnostics = append(diagnostics, diagnostic)
 	}
 
-	// Publish diagnostics to the client
-	params := protocol.PublishDiagnosticsParams{
-		URI:         uri,
-		Diagnostics: diagnostics,
+	if length < 0 {
+		return nil, errors.New("message without Content-Length")
+	}
+	if length == 0 {
+		return []byte{}, nil
 	}
 
-	err := s.Conn.Notify(
-		ctx,
-		protocol.MethodTextDocumentPublishDiagnostics,
-		params,
-	)
+	body := make([]byte, length)
+	if _, err := io.ReadFull(c.in, body); err != nil {
+		return nil, err
+	}
+	return body, nil
+}
+
+func (c *conn) write(v any) {
+	data, err := json.Marshal(v)
 	if err != nil {
-		log.Println("Failed to publish diagnostics:", err)
+		log.Printf("tau-lsp: marshal: %v", err)
+		return
 	}
+	fmt.Fprintf(c.out, "Content-Length: %d\r\n\r\n", len(data))
+	c.out.Write(data)
+	c.out.Flush()
 }
 
-// Handle completion requests (optional example).
-func (s *Server) Completion(ctx context.Context, params *protocol.CompletionParams) (*protocol.CompletionList, error) {
-	items := []protocol.CompletionItem{
-		// {
-		// 	Label:      "if",
-		// 	Kind:       protocol.CompletionItemKindKeyword,
-		// 	InsertText: protocol.StringPtr("if "),
-		// },
-		// {
-		// 	Label:      "for",
-		// 	Kind:       protocol.CompletionItemKindKeyword,
-		// 	InsertText: protocol.StringPtr("for "),
-		// },
-		// Add more completion items as needed
-	}
-
-	return &protocol.CompletionList{
-		IsIncomplete: false,
-		Items:        items,
-	}, nil
+func (c *conn) reply(id json.RawMessage, result any) {
+	c.write(response{JSONRPC: "2.0", ID: id, Result: result})
 }
 
-type stdio struct {
-	io.ReadCloser
-	io.Writer
+func (c *conn) replyErr(id json.RawMessage, code int, msg string) {
+	c.write(response{JSONRPC: "2.0", ID: id, Error: &responseError{Code: code, Message: msg}})
+}
+
+func (c *conn) notify(method string, params any) {
+	c.write(notification{JSONRPC: "2.0", Method: method, Params: params})
+}
+
+// isRequest tells a request, which must be answered, from a notification,
+// which must not. A null id is a notification too.
+func isRequest(id json.RawMessage) bool {
+	s := strings.TrimSpace(string(id))
+	return s != "" && s != "null"
 }
 
 func main() {
-	stream := jsonrpc2.NewStream(stdio{
-		ReadCloser: os.Stdin,
-		Writer:     os.Stdout,
+	logfile := flag.String("log", "", "write the server log to this file")
+	flag.Parse()
+
+	log.SetFlags(log.Ltime)
+	if *logfile != "" {
+		f, err := os.OpenFile(*logfile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0644)
+		if err != nil {
+			log.Fatalf("tau-lsp: %v", err)
+		}
+		defer f.Close()
+		log.SetOutput(f)
+	} else {
+		// Never stdout: that channel belongs to the protocol.
+		log.SetOutput(io.Discard)
+	}
+
+	s := newServer(&conn{
+		in:  bufio.NewReader(os.Stdin),
+		out: bufio.NewWriter(os.Stdout),
 	})
 
-	conn := jsonrpc2.NewConn(stream)
-	protocol.ServerDispatcher(conn, nil)
-	<-conn.Done()
+	if err := s.run(); err != nil && err != io.EOF {
+		log.Printf("tau-lsp: %v", err)
+		os.Exit(1)
+	}
 }

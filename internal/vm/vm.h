@@ -17,10 +17,12 @@ struct frame {
 	uint32_t base_ptr;
 };
 
+// One segment of the heap, owned by the thread that allocated into it.
 struct heap {
 	struct gc_header *root;
 	size_t len;
 	int64_t treshold;
+	struct heap *next;
 };
 
 struct pool {

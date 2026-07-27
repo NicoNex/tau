@@ -34,7 +34,7 @@ ifneq ($(GCC),)
     CC = $(GCC)
 endif
 
-.PHONY: all tau libffi plugins syscall math install uninstall clean fmt profile test run
+.PHONY: all tau tau-lsp libffi plugins syscall math install uninstall clean fmt profile test run
 
 # Where install puts things. PREFIX=/usr/local make install for a system wide
 # one.
@@ -99,6 +99,11 @@ PLUGINS = syscall math
 plugins:
 	for p in $(PLUGINS); do $(MAKE) -C stdlib/$$p CC=$(CC) || exit 1; done
 
+# The language server, which speaks LSP over stdin and stdout and uses the
+# parser and the formatter of this repo.
+tau-lsp:
+	go build -o $(DIR)/tau-lsp ./cmd/tau-lsp
+
 syscall:
 	$(MAKE) -C stdlib/syscall CC=$(CC)
 
@@ -119,7 +124,7 @@ uninstall:
 	rm -rf $(PREFIX)/lib/tau
 
 clean:
-	rm -f tau tau.exe profile
+	rm -f tau tau.exe tau-lsp profile
 	for p in $(PLUGINS); do $(MAKE) -C stdlib/$$p clean; done
 	find . -name '*.tauc' -delete
 
@@ -132,7 +137,7 @@ profile:
 
 # The Go tests first, then the ones written in tau.
 test: tau plugins
-	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go test ./internal/...
+	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go test ./internal/... ./cmd/...
 	TAUPATH=$(DIR)/stdlib ./tau test stdlib
 
 run: all

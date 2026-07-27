@@ -325,9 +325,11 @@ static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_id
 		sub_len += len;
 	}
 
-	uint32_t len = fmt_len + sub_len - num_args + 1;
-	char *ret = malloc(sizeof(char) * len);
-	ret[len-1] = '\0';
+	// One placeholder byte per substitution goes away, and one more byte
+	// holds the NUL, which is not part of the string.
+	uint32_t len = fmt_len + sub_len - num_args;
+	char *ret = malloc(sizeof(char) * (len + 1));
+	ret[len] = '\0';
 	uint32_t retidx = 0;
 	uint32_t subidx = 0;
 

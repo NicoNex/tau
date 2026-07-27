@@ -141,7 +141,7 @@ Write = fn(fd, buf, count) {
 }
 
 Lseek = fn(fd, offset, whence) {
-	result = int(sys.sys_lseek(fd, offset, whence))
+	result = int(sys.sys_lseek(fd, offset, whence), 64)
 	if result < 0 {
 		return error("lseek failed: errno {Errno()}")
 	}
@@ -338,13 +338,13 @@ Timeval = fn(ms) {
 # ========== Time ==========
 
 # TimeUnix returns the wall clock time in seconds since the Unix epoch.
-TimeUnix = fn() { int(sys.sys_time_unix()) }
+TimeUnix = fn() { int(sys.sys_time_unix(), 64) }
 
 # TimeMillis returns the wall clock time in milliseconds.
-TimeMillis = fn() { int(sys.sys_time_ms()) }
+TimeMillis = fn() { int(sys.sys_time_ms(), 64) }
 
 # TimeMono returns a monotonic timestamp in milliseconds.
-TimeMono = fn() { int(sys.sys_time_mono_ms()) }
+TimeMono = fn() { int(sys.sys_time_mono_ms(), 64) }
 
 # SleepMillis pauses the current tau routine for ms milliseconds.
 SleepMillis = fn(ms) { sys.sys_sleep_ms(ms) }

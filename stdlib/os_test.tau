@@ -1,0 +1,37 @@
+testing = import("testing")
+os = import("os")
+
+path = "/tmp/tau_os_test.txt"
+
+testing.Main([
+	["write, read, remove", fn(t) {
+		t.AssertEq(os.WriteFile(path, "hello file\n"), 11)
+		t.AssertEq(os.Exists(path), true)
+		t.AssertEq(os.ReadFileString(path), "hello file\n")
+		os.Remove(path)
+		t.AssertEq(os.Exists(path), false)
+	}],
+	["Read takes a chunk at a time", fn(t) {
+		os.WriteFile(path, "hello file")
+		f = os.Open(path, os.O_RDONLY, 0)
+		t.AssertEq(string(f.Read(5)), "hello")
+		t.AssertEq(string(f.Read(5)), " file")
+		t.AssertEq(len(f.Read(5)), 0)
+		f.Close()
+		os.Remove(path)
+	}],
+	["a roundtrip of 200k", fn(t) {
+		big = ""
+		for i = 0; i < 20000; ++i {
+			big = big + "0123456789"
+		}
+		os.WriteFile(path, big)
+		t.AssertEq(len(os.ReadFileString(path)), 200000)
+		os.Remove(path)
+	}],
+	["what isn't there is an error", fn(t) {
+		t.AssertError(os.Open("/nope/zzz", os.O_RDONLY, 0))
+		t.AssertError(os.ReadFile("/nope/zzz"))
+		t.AssertEq(os.Exists("/nope/zzz"), false)
+	}]
+])

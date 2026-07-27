@@ -1,0 +1,25 @@
+testing = import("testing")
+time = import("time")
+
+testing.Main([
+	["the clocks agree on the era", fn(t) {
+		t.AssertEq(time.Unix() > 1700000000, true)
+		t.AssertEq(time.Now() > 1700000000000, true)
+		t.AssertEq(time.Mono() > 0, true)
+	}],
+	["Sleep waits, Since measures", fn(t) {
+		start = time.Mono()
+		time.Sleep(80)
+		elapsed = time.Since(start)
+
+		t.Assert(elapsed >= 75, "slept {elapsed}ms, expected at least 75")
+		t.Assert(elapsed < 2000, "slept {elapsed}ms, far too long")
+	}],
+	["Measure", fn(t) {
+		t.Assert(time.Measure(fn() { time.Sleep(50) }) >= 45, "measured too little")
+	}],
+	["the units", fn(t) {
+		t.AssertEq(time.Second, 1000)
+		t.AssertEq(time.Minute, 60000)
+	}]
+])

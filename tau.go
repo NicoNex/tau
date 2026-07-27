@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"runtime"
+	"sort"
 	"strings"
 
 	"github.com/NicoNex/tau/internal/ast"
@@ -127,4 +129,62 @@ func Parse(src string) (ast.Node, error) {
 	}
 
 	return tree, nil
+}
+
+// TestFiles runs every *_test.tau in the given paths, a directory standing
+// for the test files it holds, and reports how many of them failed. Each file
+// runs in its own process the way `go test` does with its packages, so a test
+// that exits or crashes takes down only itself.
+func TestFiles(paths []string) error {
+	if len(paths) == 0 {
+		paths = []string{"."}
+	}
+
+	var files []string
+	for _, p := range paths {
+		info, err := os.Stat(p)
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			files = append(files, p)
+			continue
+		}
+
+		matches, err := filepath.Glob(filepath.Join(p, "*_test.tau"))
+		if err != nil {
+			return err
+		}
+		files = append(files, matches...)
+	}
+
+	if len(files) == 0 {
+		return errors.New("no test files found")
+	}
+	sort.Strings(files)
+
+	self, err := os.Executable()
+	if err != nil {
+		self = os.Args[0]
+	}
+
+	var failed int
+	for _, f := range files {
+		fmt.Printf("=== %s\n", f)
+
+		cmd := exec.Command(self, f)
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+		if err := cmd.Run(); err != nil {
+			failed++
+		}
+	}
+
+	fmt.Println()
+	if failed > 0 {
+		return fmt.Errorf("%d of %d test files failed", failed, len(files))
+	}
+	fmt.Printf("ok      %d test files passed\n", len(files))
+	return nil
 }

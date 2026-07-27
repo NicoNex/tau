@@ -1,0 +1,28 @@
+testing = import("testing")
+maps = import("maps")
+
+testing.Main([
+	["Has tells a missing key from a null value", fn(t) {
+		m = {"a": 1, "b": 2}
+		t.AssertEq(maps.Has(m, "a"), true)
+		t.AssertEq(maps.Has(m, "z"), false)
+		t.AssertEq(maps.Get(m, "z", 42), 42)
+		t.AssertEq(maps.Get(m, "a", 42), 1)
+	}],
+	["Keys, Values and Len", fn(t) {
+		m = {"a": 1}
+		t.AssertEq(maps.Keys(m), ["a"])
+		t.AssertEq(maps.Values(m), [1])
+		t.AssertEq(maps.Len(m), 1)
+		t.AssertEq(maps.Len({}), 0)
+	}],
+	["Merge, the second wins", fn(t) {
+		t.AssertEq(maps.Merge({"a": 1, "b": 2}, {"b": 9}), {"a": 1, "b": 9})
+	}],
+	["works on objects too", fn(t) {
+		o = new()
+		o.name = "rex"
+		t.AssertEq(maps.Has(o, "name"), true)
+		t.AssertEq(maps.Get(o, "age", 0), 0)
+	}]
+])

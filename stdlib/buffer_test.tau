@@ -1,0 +1,39 @@
+testing = import("testing")
+buffer = import("buffer")
+
+testing.Main([
+	["Builder joins the pieces once", fn(t) {
+		b = buffer.Builder()
+		for i = 0; i < 5; ++i {
+			b.Write("x{i}")
+		}
+		t.AssertEq(b.String(), "x0x1x2x3x4")
+		t.AssertEq(b.Len(), 10)
+
+		b.Reset()
+		t.AssertEq(b.String(), "")
+		t.AssertEq(b.Len(), 0)
+	}],
+	["Builder stays linear", fn(t) {
+		b = buffer.Builder()
+		for i = 0; i < 20000; ++i {
+			b.Write("0123456789")
+		}
+		t.AssertEq(len(b.String()), 200000)
+	}],
+	["Buffer reads back what was written", fn(t) {
+		b = buffer.Buffer()
+		b.Write("hello ")
+		b.Write(bytes("world"))
+		t.AssertEq(b.Len(), 11)
+		t.AssertEq(string(b.Read(5)), "hello")
+		t.AssertEq(b.String(), " world")
+		t.AssertEq(b.Len(), 6)
+	}],
+	["Buffer at the end returns nothing", fn(t) {
+		b = buffer.Buffer()
+		b.Write("ab")
+		b.Read(null)
+		t.AssertEq(len(b.Read(null)), 0)
+	}]
+])

@@ -96,12 +96,15 @@ install: syscall
 	mkdir -p ~/.local/lib/tau
 	cp tau ~/.local/bin/tau
 	cp -r stdlib/* ~/.local/lib/tau
+	rm -f ~/.local/lib/tau/*_test.tau
 
 profile:
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go build profile.go
 
-test:
-	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DDEBUG -DGC_DEBUG" CGO_LDFLAGS="$(LDFLAGS)" go test ./...
+# The Go tests, then the stdlib ones and the ones about the language itself.
+test: tau
+	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go test ./internal/...
+	TAUPATH=$(DIR)/stdlib ./tau test stdlib
 
 run: all
 	./tau

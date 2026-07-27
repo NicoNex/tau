@@ -298,6 +298,13 @@ parser = fn(pattern) {
 				p.next()
 				n.lazy = true
 			}
+
+			# a** means nothing, Go rejects it too.
+			c = p.peek()
+			if c == "*" || c == "+" || c == "?" {
+				return error("regexp: double repetition")
+			}
+
 			atom = n
 		}
 	}

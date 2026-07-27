@@ -31,7 +31,10 @@ func (i Identifier) Compile(c *compiler.Compiler) (position int, err error) {
 	if symbol, ok := c.Resolve(i.name); ok {
 		return c.LoadSymbol(symbol), nil
 	}
-	return 0, c.UnresolvedError(i.name, i.pos)
+
+	// The name may be defined further down the file: reserve a global for it
+	// and check at the end of the compilation that it showed up.
+	return c.LoadSymbol(c.DefineForward(i.name, i.pos)), nil
 }
 
 func (i Identifier) IsConstExpression() bool {

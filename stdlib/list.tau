@@ -103,11 +103,13 @@ Join = fn(xs, sep) {
 	return out
 }
 
-swap = fn(xs, i, j) {
-	tmp = xs[i]
-	xs[i] = xs[j]
-	xs[j] = tmp
-	return xs
+# Sort returns the elements ordered by less(a, b), which must be true when a
+# comes first. Pass null to order with the < operator.
+Sort = fn(xs, less) {
+	if less == null {
+		less = fn(a, b) { a < b }
+	}
+	return quicksort(Copy(xs), 0, len(xs) - 1, less)
 }
 
 quicksort = fn(xs, lo, hi, less) {
@@ -137,11 +139,9 @@ quicksort = fn(xs, lo, hi, less) {
 	return quicksort(xs, i + 1, hi, less)
 }
 
-# Sort returns the elements ordered by less(a, b), which must be true when a
-# comes first. Pass null to order with the < operator.
-Sort = fn(xs, less) {
-	if less == null {
-		less = fn(a, b) { a < b }
-	}
-	return quicksort(Copy(xs), 0, len(xs) - 1, less)
+swap = fn(xs, i, j) {
+	tmp = xs[i]
+	xs[i] = xs[j]
+	xs[j] = tmp
+	return xs
 }

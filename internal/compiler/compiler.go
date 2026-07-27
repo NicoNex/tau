@@ -249,7 +249,17 @@ func (c *Compiler) NewError(pos int, s string, a ...any) error {
 func (c *Compiler) Compile(node Compilable) error {
 	_, err := node.Compile(c)
 	c.Emit(code.OpHalt)
-	return err
+
+	if err != nil {
+		return err
+	}
+
+	// Names used but never defined anywhere in the file: forward references
+	// are allowed, typos are not.
+	if name, pos, ok := c.Pending(); ok {
+		return c.UnresolvedError(name, pos)
+	}
+	return nil
 }
 
 func (c *Compiler) SetFileInfo(name, content string) {

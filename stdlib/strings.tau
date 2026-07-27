@@ -1,3 +1,5 @@
+buffer = import("buffer")
+
 spaces = "\t\n\v\f\r "
 
 Contains = fn(str, sub) {
@@ -25,7 +27,7 @@ Count = fn(str, sub) {
 	total = 0
 
 	maxAttempts = len(str) - len(sub)
-	for i = 0; i < maxAttempts; ++i {
+	for i = 0; i <= maxAttempts; ++i {
 		if sub == slice(str, i, i + len(sub)) {
 			++total
 		}
@@ -98,22 +100,26 @@ IndexAny = fn(str, chars) {
 }
 
 Join = fn(arr, sep) {
-	str = ""
+	b = buffer.Builder()
+
 	for i = 0; i < len(arr); ++i {
 		if type(arr[i]) != "string" {
 			return error("array element at index {i} is not a string")
 		}
 
-		str += if i < len(arr) - 1 { arr[i] + sep } else { arr[i] }
+		if i > 0 {
+			b.Write(sep)
+		}
+		b.Write(arr[i])
 	}
 
-	return str
+	return b.String()
 }
 
 LastIndex = fn(str, sub) {
-	for i = len(str); i >= 0; --i {
-		if sub == slice(str, i - len(sub), i) {
-			return i - len(sub)
+	for i = len(str) - len(sub); i >= 0; --i {
+		if sub == slice(str, i, i + len(sub)) {
+			return i
 		}
 	}
 
@@ -124,7 +130,7 @@ LastIndexAny = fn(str, chars) {
 	index = -1
 	for i = 0; i < len(chars); ++i {
 		tmp = LastIndex(str, chars[i])
-		if tmp != -1 && tmp > index || index == -1 {
+		if tmp > index {
 			index = tmp
 		}
 	}
@@ -133,21 +139,23 @@ LastIndexAny = fn(str, chars) {
 }
 
 Repeat = fn(str, n) {
-	ret = ""
+	b = buffer.Builder()
+
 	for i = 0; i < n; ++i {
-		ret += str
+		b.Write(str)
 	}
 
-	return ret
+	return b.String()
 }
 
 Reverse = fn(str) {
-	ret = ""
+	b = buffer.Builder()
+
 	for i = len(str) - 1; i >= 0; --i {
-		ret += str[i]
+		b.Write(str[i])
 	}
 
-	return ret
+	return b.String()
 }
 
 SplitAfterN = fn(str, sep, n) {
@@ -172,11 +180,10 @@ SplitN = fn(str, sep, n) {
 		return error("split: empty separator")
 	}
 
+	# Empty pieces are kept, "a,,b" splits into three.
 	ret = []
 	for (idx = Index(str, sep)) != -1 && n != 0 {
-		if idx > 0 {
-			ret = append(ret, slice(str, 0, idx))
-		}
+		ret = append(ret, slice(str, 0, idx))
 		str = slice(str, idx + len(sep), len(str))
 		--n
 	}
@@ -186,14 +193,26 @@ SplitN = fn(str, sep, n) {
 
 Split = fn(str, sep) { SplitN(str, sep, -1) }
 
+# Fields splits around runs of whitespace, dropping the empty pieces.
 Fields = fn(str) {
 	ret = []
-	for (i = IndexAny(str, spaces)) != -1 {
-		ret = append(ret, slice(str, 0, i))
-		str = slice(str, i + 1, len(str))
+	field = ""
+
+	for i = 0; i < len(str); ++i {
+		if Contains(spaces, str[i]) {
+			if len(field) > 0 {
+				ret = append(ret, field)
+				field = ""
+			}
+		} else {
+			field = field + str[i]
+		}
 	}
 
-	return append(ret, str)
+	if len(field) > 0 {
+		ret = append(ret, field)
+	}
+	return ret
 }
 
 TrimPrefix = fn(str, pre) {

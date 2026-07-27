@@ -41,6 +41,16 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 	switch left := a.l.(type) {
 	case Identifier:
 		symbol := c.Define(left.String())
+
+		// A function takes the name it is assigned to, so that a call to
+		// itself resolves to the closure being defined. Without it a local
+		// recursive function would capture the value the name had before the
+		// assignment, which is null.
+		if fn, ok := a.r.(Function); ok && fn.Name == "" {
+			fn.Name = left.String()
+			a.r = fn
+		}
+
 		if position, err = a.r.Compile(c); err != nil {
 			return
 		}

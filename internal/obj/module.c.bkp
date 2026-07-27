@@ -1,0 +1,100 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include <string.h>
+#include "object.h"
+#include "../vm/vm.h"
+
+static inline struct object _module_get(struct object_node * restrict n, uint64_t key) {
+	if (n == NULL) {
+		return null_obj;
+	}
+
+	if (key == n->key) {
+		return n->val;
+	} else if (key < n->key) {
+		return _module_get(n->l, key);
+	} else {
+		return _module_get(n->r, key);
+	}
+}
+
+static inline void _module_set(struct object_node **n, uint64_t key, char *name, struct object val) {
+	if (*n == NULL) {
+		*n = malloc(sizeof(struct object_node));
+		(*n)->name = strdup(name);
+		(*n)->key = key;
+		(*n)->val = val;
+		(*n)->l = NULL;
+		(*n)->r = NULL;
+		return;
+	}
+
+	uint64_t cur = (*n)->key;
+	if (key == cur) {
+		(*n)->val = val;
+	} else if (key < cur) {
+		_module_set(&(*n)->l, key, name, val);
+	} else {
+		_module_set(&(*n)->r, key, name, val);
+	}
+}
+
+static void mark_module_children(struct object_node * restrict n) {
+	if (n != NULL) {
+		mark_obj(n->val);
+		mark_module_children(n->l);
+		mark_module_children(n->r);
+	}
+}
+
+static inline void _module_dispose(struct object_node * restrict n) {
+	if (n != NULL) {
+		if (n->l != NULL) _module_dispose(n->l);
+		if (n->r != NULL) _module_dispose(n->r);
+		free(n->name);
+		free(n);
+	}
+}
+
+struct object new_module(struct pool *globals) {
+	struct module *mod = malloc(sizeof(struct module));
+	mod->exports = calloc(1, sizeof(struct object_node *));
+	mod->globals = globals;
+
+	return (struct object) {
+		.data.mod = mod,
+		.type = obj_module,
+		.marked = MARKPTR(),
+	};
+}
+
+struct object module_get(struct object mod, char *name) {
+	return _module_get(*mod.data.mod->exports, fnv64a(name));
+}
+
+struct object module_set(struct object mod, char *name, struct object val) {
+	_module_set(mod.data.mod->exports, fnv64a(name), name, val);
+	return val;
+}
+
+void mark_module_obj(struct object m) {
+	*m.marked = 1;
+	mark_module_children(*m.data.mod->exports);
+	// Note: We don't mark globals here because they're managed by the VM's heap
+}
+
+char *module_str(struct object mod) {
+	char *str = malloc(sizeof(char) * 64);
+	str[63] = '\0';
+	sprintf(str, "object[%p]", *mod.data.mod->exports);
+	return str;
+}
+
+void dispose_module_obj(struct object mod) {
+	_module_dispose(*mod.data.mod->exports);
+	free(mod.data.mod->exports);
+	// Free the module's globals pool
+	pool_dispose(mod.data.mod->globals);
+	free(mod.marked);
+	free(mod.data.mod);
+}

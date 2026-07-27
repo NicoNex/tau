@@ -292,6 +292,34 @@ int64_t sys_sockaddr_ip(const void *buf, void *out, int64_t outlen) {
     return len;
 }
 
+// Writes a native int32 into buf, for the calls that want a pointer to one
+// (the addrlen of accept, the value of setsockopt).
+int64_t sys_int32(void *buf, int64_t v) {
+    int32_t n = (int32_t)v;
+
+    memcpy(buf, &n, sizeof(n));
+    return sizeof(n);
+}
+
+int64_t sys_int32_size() {
+    return sizeof(int32_t);
+}
+
+// Writes a struct timeval of ms milliseconds into buf.
+int64_t sys_timeval(void *buf, int64_t ms) {
+    struct timeval tv;
+
+    tv.tv_sec = ms / 1000;
+    tv.tv_usec = (ms % 1000) * 1000;
+    memcpy(buf, &tv, sizeof(tv));
+
+    return sizeof(tv);
+}
+
+int64_t sys_timeval_size() {
+    return sizeof(struct timeval);
+}
+
 // ========== Time ==========
 
 int64_t sys_time_unix() {

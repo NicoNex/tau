@@ -1,9 +1,9 @@
 # http.tau - HTTP client and server library for Tau (inspired by Go's net/http)
 # Provides high-level HTTP primitives matching Go's net/http library API
 
-os = import("stdlib/os")
-net = import("stdlib/net.tau")
-strings = import("stdlib/strings.tau")
+os = import("os")
+net = import("net")
+strings = import("strings")
 
 # HTTP status codes (exported constants)
 StatusOK = 200
@@ -553,7 +553,7 @@ NewServer = fn(addr, handler) {
 # ListenAndServe listens on the TCP network address and serves requests (like Go's http.ListenAndServe)
 ListenAndServe = fn(addr, handler) {
 	if handler == null {
-		handler = defaultServeMux
+		handler = DefaultServeMux
 	}
 
 	server = NewServer(addr, handler)

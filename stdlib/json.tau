@@ -186,6 +186,12 @@ Parser = fn(src) {
 		} else if expVal < 0 {
 			n = n / Pow10(-expVal)
 		}
+
+		# A number written without a fraction or an exponent comes back as an
+		# integer, so that decoding and encoding again gives the same text.
+		if fracDiv == 1.0 && expVal == 0 {
+			return int(n)
+		}
 		n
 	}
 

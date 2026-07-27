@@ -363,15 +363,6 @@ static inline void unsupported_prefix_operator_error(struct vm * restrict vm, ch
 	vm_errorf(vm, "unsupported operator '%s' for type %s", op, otype_str(o->type));
 }
 
-#if defined(_WIN32) || defined(WIN32)
-	char *stpcpy(char *restrict dst, const char *restrict src) {
-		char *p = mempcpy(dst, src, strlen(src));
-		*p = '\0';
-
-		return p;
-	}
-#endif
-
 static inline void vm_exec_add(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);
 	struct object *left = &vm_stack_peek(vm);
@@ -384,10 +375,16 @@ static inline void vm_exec_add(struct vm * restrict vm) {
 		left->data.f = l + r;
 		left->type = obj_float;
 	} else if (M_ASSERT(left, right, obj_string)) {
-		size_t slen = left->data.str->len + right->data.str->len;
+		// By length and not up to the NUL: a slice has none of its own, and
+		// copying past it would both give the wrong result and overrun.
+		size_t llen = left->data.str->len;
+		size_t rlen = right->data.str->len;
+		size_t slen = llen + rlen;
 		char *str = malloc(sizeof(char) * (slen + 1));
-		char *p = stpcpy(stpcpy(str, left->data.str->str), right->data.str->str);
-		*p = '\0';
+
+		memcpy(str, left->data.str->str, llen);
+		memcpy(str + llen, right->data.str->str, rlen);
+		str[slen] = '\0';
 		vm_stack_pop_ignore(vm);
 		struct object res = new_string_obj(str, slen);
 		vm_stack_push(vm, res);
@@ -527,6 +524,17 @@ static inline void vm_exec_bw_rshift(struct vm * restrict vm) {
 	left->data.i >>= right->data.i;
 }
 
+// Orders two strings by their content, honouring the length instead of
+// looking for a NUL that a slice doesn't have.
+static inline int str_compare(struct string *l, struct string *r) {
+	size_t min = l->len < r->len ? l->len : r->len;
+	int cmp = memcmp(l->str, r->str, min);
+
+	if (cmp != 0) return cmp;
+	if (l->len == r->len) return 0;
+	return l->len < r->len ? -1 : 1;
+}
+
 static inline void vm_exec_eq(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);
 	struct object *left = &vm_stack_peek(vm);
@@ -540,7 +548,9 @@ static inline void vm_exec_eq(struct vm * restrict vm) {
 		}
 		size_t lenl = left->data.str->len;
 		size_t lenr = right->data.str->len;
-		*left = (lenl == lenr) ? parse_bool(strcmp(l, r) == 0) : false_obj;
+		// memcmp and not strcmp: a slice ends where its length says, not at
+		// the NUL of the string it was cut from.
+		*left = (lenl == lenr) ? parse_bool(memcmp(l, r, lenl) == 0) : false_obj;
 	} else if (M_ASSERT2(left, right, obj_integer, obj_float)) {
 		*left = parse_bool(to_double(left) == to_double(right));
 	} else if (left->type == right->type) {
@@ -563,7 +573,7 @@ static inline void vm_exec_not_eq(struct vm * restrict vm) {
 		}
 		size_t lenl = left->data.str->len;
 		size_t lenr = right->data.str->len;
-		*left = (lenl == lenr) ? parse_bool(strcmp(l, r) != 0) : true_obj;
+		*left = (lenl == lenr) ? parse_bool(memcmp(l, r, lenl) != 0) : true_obj;
 	} else if (M_ASSERT2(left, right, obj_integer, obj_float)) {
 		*left = parse_bool(to_double(left) != to_double(right));
 	} else if (left->type == right->type) {
@@ -586,10 +596,8 @@ static inline void vm_exec_greater_than(struct vm * restrict vm) {
 		left->data.i = l > r;
 		left->type = obj_boolean;
 	} else if (M_ASSERT(left, right, obj_string)) {
-		char *l = left->data.str->str;
-		char *r = right->data.str->str;
 		vm_stack_pop_ignore(vm);
-		vm_stack_push(vm, parse_bool(strcmp(l, r) > 0));
+		vm_stack_push(vm, parse_bool(str_compare(left->data.str, right->data.str) > 0));
 	} else {
 		unsupported_operator_error(vm, ">", left, right);
 	}
@@ -608,12 +616,10 @@ static inline void vm_exec_greater_than_eq(struct vm * restrict vm) {
 		left->data.i = l >= r;
 		left->type = obj_boolean;
 	} else if (M_ASSERT(left, right, obj_string)) {
-		char *l = left->data.str->str;
-		char *r = right->data.str->str;
 		vm_stack_pop_ignore(vm);
-		vm_stack_push(vm, parse_bool(strcmp(l, r) >= 0));
+		vm_stack_push(vm, parse_bool(str_compare(left->data.str, right->data.str) >= 0));
 	} else {
-		unsupported_operator_error(vm, ">", left, right);
+		unsupported_operator_error(vm, ">=", left, right);
 	}
 }
 
@@ -711,6 +717,11 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 	ffi_cif cif;
 	ffi_type *arg_types[numargs];
 	void *arg_values[numargs];
+	// A C function reads a string up to its NUL: a slice doesn't have one, so
+	// it travels as a copy that lives until the call returns.
+	char *copies[numargs];
+	char *strings[numargs];
+	size_t ncopies = 0;
 
 	// Convert Tau types to C types.
 	for (int64_t i = numargs - 1; i >= 0; i--) {
@@ -728,10 +739,19 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 			arg_values[i] = &o->data.f;
 			break;
 
-		case obj_string:
+		case obj_string: {
+			struct string *str = o->data.str;
+
+			strings[i] = str->str;
+			if (str->str[str->len] != '\0') {
+				strings[i] = strndup(str->str, str->len);
+				copies[ncopies++] = strings[i];
+			}
+
 			arg_types[i] = &ffi_type_pointer;
-			arg_values[i] = &o->data.str->str;
+			arg_values[i] = &strings[i];
 			break;
+		}
 
 		case obj_bytes:
 			arg_types[i] = &ffi_type_pointer;
@@ -767,6 +787,10 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 	gc_park();
 	ffi_call(&cif, n->data.handle, &return_value, arg_values);
 	gc_unpark();
+
+	for (size_t i = 0; i < ncopies; i++) {
+		free(copies[i]);
+	}
 
 	// The result is the returned word itself, not a pointer to a buffer
 	// holding it: there is nothing to free and nothing for the collector to

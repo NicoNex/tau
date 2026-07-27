@@ -2,6 +2,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #if !defined(_WIN32) && !defined(WIN32)
 	#include <dlfcn.h>
@@ -39,13 +40,31 @@ static inline void *plugin_open(const char *path) {
 	void *handle = dlopen(path, RTLD_LAZY);
 	if (handle != NULL) return handle;
 
-	const char *home = getenv("HOME");
 	char buf[4096];
+	char *taupath = getenv("TAUPATH");
 
+	// TAUPATH first, same order the modules are looked up in.
+	if (taupath != NULL) {
+		char *dirs = strdup(taupath);
+
+		for (char *dir = strtok(dirs, ":"); dir != NULL; dir = strtok(NULL, ":")) {
+			snprintf(buf, sizeof(buf), "%s/%s", dir, path);
+			if ((handle = dlopen(buf, RTLD_LAZY)) != NULL) {
+				free(dirs);
+				return handle;
+			}
+		}
+		free(dirs);
+	}
+
+	const char *home = getenv("HOME");
 	if (home != NULL) {
 		snprintf(buf, sizeof(buf), "%s/.local/lib/tau/%s", home, path);
 		if ((handle = dlopen(buf, RTLD_LAZY)) != NULL) return handle;
 	}
+
+	snprintf(buf, sizeof(buf), "/usr/local/lib/tau/%s", path);
+	if ((handle = dlopen(buf, RTLD_LAZY)) != NULL) return handle;
 
 	snprintf(buf, sizeof(buf), "/lib/tau/%s", path);
 	return dlopen(buf, RTLD_LAZY);

@@ -21,20 +21,58 @@ type SymbolTable struct {
 	Store       map[string]Symbol
 	FreeSymbols []Symbol
 	NumDefs     int
+	// Names used before their definition, with the position of their first
+	// use for the error message. They are cleared as the definitions show up.
+	pending map[string]int
 }
 
 func NewSymbolTable() *SymbolTable {
-	return &SymbolTable{Store: make(map[string]Symbol)}
+	return &SymbolTable{Store: make(map[string]Symbol), pending: make(map[string]int)}
 }
 
 func NewEnclosedSymbolTable(outer *SymbolTable) *SymbolTable {
 	return &SymbolTable{
-		outer: outer,
-		Store: make(map[string]Symbol),
+		outer:   outer,
+		Store:   make(map[string]Symbol),
+		pending: make(map[string]int),
 	}
 }
 
+// global returns the outermost table, the one holding the global names.
+func (s *SymbolTable) global() *SymbolTable {
+	for s.outer != nil {
+		s = s.outer
+	}
+	return s
+}
+
+// DefineForward reserves a global for a name used before its definition, so
+// that functions can call each other whatever their order in the file.
+func (s *SymbolTable) DefineForward(name string, pos int) Symbol {
+	g := s.global()
+
+	// Already known, either defined or reserved by an earlier use.
+	if symbol, ok := g.Store[name]; ok {
+		return symbol
+	}
+
+	symbol := g.Define(name)
+	g.pending[name] = pos
+	return symbol
+}
+
+// Pending returns a name still unresolved and the position of its first use.
+func (s *SymbolTable) Pending() (string, int, bool) {
+	for name, pos := range s.global().pending {
+		return name, pos, true
+	}
+	return "", 0, false
+}
+
 func (s *SymbolTable) Define(name string) Symbol {
+	// The name is defined now: whoever used it earlier was right to.
+	delete(s.global().pending, name)
+
 	if symbol, ok := s.Store[name]; ok {
 		return symbol
 	}

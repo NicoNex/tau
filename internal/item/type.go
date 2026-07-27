@@ -52,6 +52,7 @@ const (
 	Colon
 	Semicolon
 	NewLine
+	Comment
 
 	LParen
 	RParen
@@ -125,6 +126,7 @@ var typemap = map[Type]string{
 	Colon:     ":",
 	Semicolon: ";",
 	NewLine:   "new line",
+	Comment:   "comment",
 
 	LParen: "(",
 	RParen: ")",

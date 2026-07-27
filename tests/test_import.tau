@@ -6,15 +6,15 @@ print("\n")
 # Try to access Listen
 print("Trying to access net.Listen:\n")
 if net.Listen != null {
-    print("net.Listen exists\n")
+	print("net.Listen exists\n")
 } else {
-    print("net.Listen is null\n")
+	print("net.Listen is null\n")
 }
 
 # Check what's in net
 print("Keys in net:\n")
 k = keys(net)
 for i = 0; i < len(k); i += 1 {
-    print(k[i])
-    print("\n")
+	print(k[i])
+	print("\n")
 }

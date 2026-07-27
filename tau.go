@@ -15,6 +15,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/ast"
 	"github.com/NicoNex/tau/internal/compiler"
+	"github.com/NicoNex/tau/internal/format"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
 )
@@ -232,5 +233,66 @@ func TestFiles(paths []string) error {
 // with list only the names of the ones that differ are printed, otherwise the
 // formatted source goes to standard output.
 func FormatFiles(paths []string, write, list bool) error {
-	return errors.New("fmt: not implemented yet")
+	var files []string
+
+	for _, p := range paths {
+		info, err := os.Stat(p)
+		if err != nil {
+			return err
+		}
+
+		if !info.IsDir() {
+			files = append(files, p)
+			continue
+		}
+
+		err = filepath.WalkDir(p, func(path string, d fs.DirEntry, err error) error {
+			if err != nil {
+				return err
+			}
+			if !d.IsDir() && filepath.Ext(path) == ".tau" {
+				files = append(files, path)
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	sort.Strings(files)
+
+	var failed int
+	for _, f := range files {
+		src, err := os.ReadFile(f)
+		if err != nil {
+			return err
+		}
+
+		out, err := format.Source(f, string(src))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "%s: %v\n", f, err)
+			failed++
+			continue
+		}
+
+		switch {
+		case out == string(src):
+		case list:
+			fmt.Println(f)
+		case write:
+			if err := os.WriteFile(f, []byte(out), 0644); err != nil {
+				return err
+			}
+			fmt.Println(f)
+		}
+
+		if !write && !list {
+			fmt.Print(out)
+		}
+	}
+
+	if failed > 0 {
+		return fmt.Errorf("%d of %d files could not be formatted", failed, len(files))
+	}
+	return nil
 }

@@ -2,45 +2,45 @@ testing = import("testing")
 path = import("path")
 
 testing.Main([
-	["Base", fn(t) {
-		t.AssertEq(path.Base("/a/b/c.tau"), "c.tau")
-		t.AssertEq(path.Base("c.tau"), "c.tau")
-		t.AssertEq(path.Base("/a/b/"), "b")
-		t.AssertEq(path.Base("/"), "/")
-		t.AssertEq(path.Base(""), ".")
-	}],
-	["Dir", fn(t) {
-		t.AssertEq(path.Dir("/a/b/c.tau"), "/a/b")
-		t.AssertEq(path.Dir("c.tau"), ".")
-		t.AssertEq(path.Dir("/c.tau"), "/")
-		t.AssertEq(path.Dir("a/b/c"), "a/b")
-	}],
-	["Ext", fn(t) {
-		t.AssertEq(path.Ext("/a/b.tau"), ".tau")
-		t.AssertEq(path.Ext("/a/b"), "")
-		t.AssertEq(path.Ext("/a.d/b"), "")
-		t.AssertEq(path.Ext("a.tar.gz"), ".gz")
-	}],
-	["Clean", fn(t) {
-		t.AssertEq(path.Clean("/a/b/../c//d/./"), "/a/c/d")
-		t.AssertEq(path.Clean("a/../.."), "..")
-		t.AssertEq(path.Clean("/.."), "/")
-		t.AssertEq(path.Clean(""), ".")
-		t.AssertEq(path.Clean("./a"), "a")
-	}],
-	["Join", fn(t) {
-		t.AssertEq(path.Join(["a", "b", "c"]), "a/b/c")
-		t.AssertEq(path.Join(["a", "", "b"]), "a/b")
-		t.AssertEq(path.Join(["a", "../b"]), "b")
-		t.AssertEq(path.Join([]), "")
-		t.AssertEq(path.Join(["/", "a"]), "/a")
-	}],
-	["Split", fn(t) {
-		t.AssertEq(path.Split("/a/b.tau"), ["/a/", "b.tau"])
-		t.AssertEq(path.Split("b.tau"), ["", "b.tau"])
-	}],
-	["IsAbs", fn(t) {
-		t.AssertEq(path.IsAbs("/a"), true)
-		t.AssertEq(path.IsAbs("a"), false)
-	}]
-])
+		["Base", fn(t) {
+				t.AssertEq(path.Base("/a/b/c.tau"), "c.tau")
+				t.AssertEq(path.Base("c.tau"), "c.tau")
+				t.AssertEq(path.Base("/a/b/"), "b")
+				t.AssertEq(path.Base("/"), "/")
+				t.AssertEq(path.Base(""), ".")
+			}],
+		["Dir", fn(t) {
+				t.AssertEq(path.Dir("/a/b/c.tau"), "/a/b")
+				t.AssertEq(path.Dir("c.tau"), ".")
+				t.AssertEq(path.Dir("/c.tau"), "/")
+				t.AssertEq(path.Dir("a/b/c"), "a/b")
+			}],
+		["Ext", fn(t) {
+				t.AssertEq(path.Ext("/a/b.tau"), ".tau")
+				t.AssertEq(path.Ext("/a/b"), "")
+				t.AssertEq(path.Ext("/a.d/b"), "")
+				t.AssertEq(path.Ext("a.tar.gz"), ".gz")
+			}],
+		["Clean", fn(t) {
+				t.AssertEq(path.Clean("/a/b/../c//d/./"), "/a/c/d")
+				t.AssertEq(path.Clean("a/../.."), "..")
+				t.AssertEq(path.Clean("/.."), "/")
+				t.AssertEq(path.Clean(""), ".")
+				t.AssertEq(path.Clean("./a"), "a")
+			}],
+		["Join", fn(t) {
+				t.AssertEq(path.Join(["a", "b", "c"]), "a/b/c")
+				t.AssertEq(path.Join(["a", "", "b"]), "a/b")
+				t.AssertEq(path.Join(["a", "../b"]), "b")
+				t.AssertEq(path.Join([]), "")
+				t.AssertEq(path.Join(["/", "a"]), "/a")
+			}],
+		["Split", fn(t) {
+				t.AssertEq(path.Split("/a/b.tau"), ["/a/", "b.tau"])
+				t.AssertEq(path.Split("b.tau"), ["", "b.tau"])
+			}],
+		["IsAbs", fn(t) {
+				t.AssertEq(path.IsAbs("/a"), true)
+				t.AssertEq(path.IsAbs("a"), false)
+			}]
+	])

@@ -2,6 +2,6 @@
 privateVar = "I am private"
 
 PublicFunc = fn() {
-    # This should capture privateVar in its closure
-    return privateVar
+	# This should capture privateVar in its closure
+	return privateVar
 }

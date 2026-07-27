@@ -142,7 +142,7 @@ Format = fn(t, layout) {
 
 	out = ""
 	for i = 0; i < len(layout); ++i {
-		if layout[i] != "%" || i == len(layout)-1 {
+		if layout[i] != "%" || i == len(layout) - 1 {
 			out = out + layout[i]
 			continue
 		}
@@ -164,8 +164,8 @@ verb = fn(t, c) {
 	if c == "M" { return pad(t.Minute, 2) }
 	if c == "S" { return pad(t.Second, 2) }
 	if c == "j" { return pad(t.YearDay, 3) }
-	if c == "B" { return Months[t.Month-1] }
-	if c == "b" { return slice(Months[t.Month-1], 0, 3) }
+	if c == "B" { return Months[t.Month - 1] }
+	if c == "b" { return slice(Months[t.Month - 1], 0, 3) }
 	if c == "A" { return Days[t.Weekday] }
 	if c == "a" { return slice(Days[t.Weekday], 0, 3) }
 	if c == "%" { return "%" }

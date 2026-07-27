@@ -2,70 +2,70 @@ testing = import("testing")
 time = import("time")
 
 testing.Main([
-	["the clocks agree on the era", fn(t) {
-		t.AssertEq(time.Unix() > 1700000000, true)
-		t.AssertEq(time.Now() > 1700000000000, true)
-		t.AssertEq(time.Mono() > 0, true)
-	}],
-	["Sleep waits, Since measures", fn(t) {
-		start = time.Mono()
-		time.Sleep(80)
-		elapsed = time.Since(start)
+		["the clocks agree on the era", fn(t) {
+				t.AssertEq(time.Unix() > 1700000000, true)
+				t.AssertEq(time.Now() > 1700000000000, true)
+				t.AssertEq(time.Mono() > 0, true)
+			}],
+		["Sleep waits, Since measures", fn(t) {
+				start = time.Mono()
+				time.Sleep(80)
+				elapsed = time.Since(start)
 
-		t.Assert(elapsed >= 75, "slept {elapsed}ms, expected at least 75")
-		t.Assert(elapsed < 2000, "slept {elapsed}ms, far too long")
-	}],
-	["Measure", fn(t) {
-		t.Assert(time.Measure(fn() { time.Sleep(50) }) >= 45, "measured too little")
-	}],
-	["the units", fn(t) {
-		t.AssertEq(time.Second, 1000)
-		t.AssertEq(time.Minute, 60000)
-	}],
-	["Date takes a wall clock time apart", fn(t) {
-		d = time.Date(1700000000)
-		t.AssertEq([d.Year, d.Month, d.Day], [2023, 11, 14])
-		t.AssertEq([d.Hour, d.Minute, d.Second], [22, 13, 20])
-		t.AssertEq(d.Weekday, 2)
-		t.AssertEq(d.YearDay, 318)
+				t.Assert(elapsed >= 75, "slept {elapsed}ms, expected at least 75")
+				t.Assert(elapsed < 2000, "slept {elapsed}ms, far too long")
+			}],
+		["Measure", fn(t) {
+				t.Assert(time.Measure(fn() { time.Sleep(50) }) >= 45, "measured too little")
+			}],
+		["the units", fn(t) {
+				t.AssertEq(time.Second, 1000)
+				t.AssertEq(time.Minute, 60000)
+			}],
+		["Date takes a wall clock time apart", fn(t) {
+				d = time.Date(1700000000)
+				t.AssertEq([d.Year, d.Month, d.Day], [2023, 11, 14])
+				t.AssertEq([d.Hour, d.Minute, d.Second], [22, 13, 20])
+				t.AssertEq(d.Weekday, 2)
+				t.AssertEq(d.YearDay, 318)
 
-		e = time.Date(0)
-		t.AssertEq([e.Year, e.Month, e.Day, e.Weekday], [1970, 1, 1, 4])
-	}],
-	["dates before the epoch count backwards", fn(t) {
-		d = time.Date(-1)
-		t.AssertEq([d.Year, d.Month, d.Day], [1969, 12, 31])
-		t.AssertEq([d.Hour, d.Minute, d.Second], [23, 59, 59])
-	}],
-	["Unix and Date are the way back from each other", fn(t) {
-		secs = [0, 1, 951782400, 1700000000, -86400, 2147483647]
-		for i = 0; i < len(secs); ++i {
-			d = time.Date(secs[i])
-			t.AssertEq(time.FromDate(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second), secs[i])
-		}
-	}],
-	["the leap day is where it belongs", fn(t) {
-		d = time.Date(time.FromDate(2000, 2, 29, 0, 0, 0))
-		t.AssertEq([d.Year, d.Month, d.Day], [2000, 2, 29])
+				e = time.Date(0)
+				t.AssertEq([e.Year, e.Month, e.Day, e.Weekday], [1970, 1, 1, 4])
+			}],
+		["dates before the epoch count backwards", fn(t) {
+				d = time.Date(-1)
+				t.AssertEq([d.Year, d.Month, d.Day], [1969, 12, 31])
+				t.AssertEq([d.Hour, d.Minute, d.Second], [23, 59, 59])
+			}],
+		["Unix and Date are the way back from each other", fn(t) {
+				secs = [0, 1, 951782400, 1700000000, -86400, 2147483647]
+				for i = 0; i < len(secs); ++i {
+					d = time.Date(secs[i])
+					t.AssertEq(time.FromDate(d.Year, d.Month, d.Day, d.Hour, d.Minute, d.Second), secs[i])
+				}
+			}],
+		["the leap day is where it belongs", fn(t) {
+				d = time.Date(time.FromDate(2000, 2, 29, 0, 0, 0))
+				t.AssertEq([d.Year, d.Month, d.Day], [2000, 2, 29])
 
-		t.AssertEq(time.IsLeap(2000), true)
-		t.AssertEq(time.IsLeap(1900), false)
-		t.AssertEq(time.IsLeap(2024), true)
-		t.AssertEq(time.IsLeap(2023), false)
-	}],
-	["Format", fn(t) {
-		d = time.Date(1700000000)
-		t.AssertEq(time.Format(d, null), "2023-11-14T22:13:20Z")
-		t.AssertEq(time.Format(d, "%d/%m/%Y"), "14/11/2023")
-		t.AssertEq(time.Format(d, "%A %b %j"), "Tuesday Nov 318")
-		t.AssertEq(time.Format(d, "100%%"), "100%")
-		t.AssertEq(time.String(0), "1970-01-01T00:00:00Z")
-	}],
-	["Parse reads back what Format wrote", fn(t) {
-		t.AssertEq(time.Parse("2023-11-14T22:13:20Z"), 1700000000)
-		t.AssertEq(time.Parse("1970-01-01T00:00:00Z"), 0)
-		t.AssertEq(time.Parse("2000-02-29"), 951782400)
-		t.AssertError(time.Parse("nope"))
-		t.AssertError(time.Parse("20xx-01-01"))
-	}]
-])
+				t.AssertEq(time.IsLeap(2000), true)
+				t.AssertEq(time.IsLeap(1900), false)
+				t.AssertEq(time.IsLeap(2024), true)
+				t.AssertEq(time.IsLeap(2023), false)
+			}],
+		["Format", fn(t) {
+				d = time.Date(1700000000)
+				t.AssertEq(time.Format(d, null), "2023-11-14T22:13:20Z")
+				t.AssertEq(time.Format(d, "%d/%m/%Y"), "14/11/2023")
+				t.AssertEq(time.Format(d, "%A %b %j"), "Tuesday Nov 318")
+				t.AssertEq(time.Format(d, "100%%"), "100%")
+				t.AssertEq(time.String(0), "1970-01-01T00:00:00Z")
+			}],
+		["Parse reads back what Format wrote", fn(t) {
+				t.AssertEq(time.Parse("2023-11-14T22:13:20Z"), 1700000000)
+				t.AssertEq(time.Parse("1970-01-01T00:00:00Z"), 0)
+				t.AssertEq(time.Parse("2000-02-29"), 951782400)
+				t.AssertError(time.Parse("nope"))
+				t.AssertError(time.Parse("20xx-01-01"))
+			}]
+	])

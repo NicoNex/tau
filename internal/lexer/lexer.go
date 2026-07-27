@@ -409,7 +409,10 @@ func lexExpression(l *lexer) stateFn {
 		}
 
 	case r == '#':
+		// The comment is a token of its own: the parser skips it, the
+		// formatter keeps it where it was written.
 		l.acceptUntil('\n')
+		l.emit(item.Comment)
 		l.ignoreSpaces()
 
 	case r == eof:

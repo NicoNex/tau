@@ -38,18 +38,18 @@ O_NONBLOCK = 0x0800
 O_SYNC = 0x1000
 
 # File permissions
-S_IRWXU = 0x01C0  # User: rwx
-S_IRUSR = 0x0100  # User: r--
-S_IWUSR = 0x0080  # User: -w-
-S_IXUSR = 0x0040  # User: --x
-S_IRWXG = 0x0038  # Group: rwx
-S_IRGRP = 0x0020  # Group: r--
-S_IWGRP = 0x0010  # Group: -w-
-S_IXGRP = 0x0008  # Group: --x
-S_IRWXO = 0x0007  # Other: rwx
-S_IROTH = 0x0004  # Other: r--
-S_IWOTH = 0x0002  # Other: -w-
-S_IXOTH = 0x0001  # Other: --x
+S_IRWXU = 0x01C0 # User: rwx
+S_IRUSR = 0x0100 # User: r--
+S_IWUSR = 0x0080 # User: -w-
+S_IXUSR = 0x0040 # User: --x
+S_IRWXG = 0x0038 # Group: rwx
+S_IRGRP = 0x0020 # Group: r--
+S_IWGRP = 0x0010 # Group: -w-
+S_IXGRP = 0x0008 # Group: --x
+S_IRWXO = 0x0007 # Other: rwx
+S_IROTH = 0x0004 # Other: r--
+S_IWOTH = 0x0002 # Other: -w-
+S_IXOTH = 0x0001 # Other: --x
 
 # lseek() whence
 SEEK_SET = 0
@@ -57,22 +57,22 @@ SEEK_CUR = 1
 SEEK_END = 2
 
 # access() mode
-F_OK = 0  # Test for existence
-X_OK = 1  # Test for execute permission
-W_OK = 2  # Test for write permission
-R_OK = 4  # Test for read permission
+F_OK = 0 # Test for existence
+X_OK = 1 # Test for execute permission
+W_OK = 2 # Test for write permission
+R_OK = 4 # Test for read permission
 
 # ========== Network Constants ==========
 
 # Address families
-AF_INET = 2       # IPv4
-AF_INET6 = 10     # IPv6
-AF_UNIX = 1       # Unix domain sockets
+AF_INET = 2 # IPv4
+AF_INET6 = 10 # IPv6
+AF_UNIX = 1 # Unix domain sockets
 
 # Socket types
-SOCK_STREAM = 1   # TCP
-SOCK_DGRAM = 2    # UDP
-SOCK_RAW = 3      # Raw socket
+SOCK_STREAM = 1 # TCP
+SOCK_DGRAM = 2 # UDP
+SOCK_RAW = 3 # Raw socket
 
 # Protocols
 IPPROTO_IP = 0

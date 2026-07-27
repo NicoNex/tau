@@ -35,7 +35,7 @@ Base = fn(p) {
 
 	# Trailing separators are not part of the name.
 	end = len(p)
-	for end > 0 && p[end-1] == Separator {
+	for end > 0 && p[end - 1] == Separator {
 		--end
 	}
 	if end == 0 {
@@ -43,7 +43,7 @@ Base = fn(p) {
 	}
 
 	start = end
-	for start > 0 && p[start-1] != Separator {
+	for start > 0 && p[start - 1] != Separator {
 		--start
 	}
 	return slice(p, start, end)
@@ -59,7 +59,7 @@ Dir = fn(p) {
 	if i < 0 {
 		return "."
 	}
-	return Clean(slice(p, 0, i+1))
+	return Clean(slice(p, 0, i + 1))
 }
 
 # Ext returns the extension of p, the final dot included, or an empty string
@@ -79,7 +79,7 @@ Split = fn(p) {
 	for i >= 0 && p[i] != Separator {
 		--i
 	}
-	return [slice(p, 0, i+1), slice(p, i+1, len(p))]
+	return [slice(p, 0, i + 1), slice(p, i + 1, len(p))]
 }
 
 # Clean returns the shortest path with the same meaning: no "." elements, no
@@ -103,8 +103,8 @@ Clean = fn(p) {
 		if part == ".." {
 			# Above the root there is the root, so an absolute path simply
 			# drops it. A relative one has to keep it: it means something.
-			if len(out) > 0 && out[len(out)-1] != ".." {
-				out = slice(out, 0, len(out)-1)
+			if len(out) > 0 && out[len(out) - 1] != ".." {
+				out = slice(out, 0, len(out) - 1)
 				continue
 			}
 			if abs {

@@ -12,7 +12,7 @@ print(type(net.libc))
 print("\n")
 
 if net.libc == null {
-    print("net.libc is null!\n")
+	print("net.libc is null!\n")
 } else {
-    print("net.libc exists\n")
+	print("net.libc exists\n")
 }

@@ -77,7 +77,7 @@ NewReader = fn(r, size) {
 			for i < len(b.buf) {
 				if b.buf[i] == 10 {
 					line = slice(b.buf, 0, i)
-					b.buf = slice(b.buf, i+1, len(b.buf))
+					b.buf = slice(b.buf, i + 1, len(b.buf))
 					return string(trimCR(line))
 				}
 				++i
@@ -108,8 +108,8 @@ NewReader = fn(r, size) {
 
 # trimCR drops the carriage return a Windows line ends with.
 trimCR = fn(line) {
-	if len(line) > 0 && line[len(line)-1] == 13 {
-		return slice(line, 0, len(line)-1)
+	if len(line) > 0 && line[len(line) - 1] == 13 {
+		return slice(line, 0, len(line) - 1)
 	}
 	return line
 }

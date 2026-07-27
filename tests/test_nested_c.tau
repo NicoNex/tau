@@ -16,7 +16,7 @@ print(resultA)
 print("\n")
 
 if resultB == "Secret from B" && resultA == "Secret from A" {
-    print("SUCCESS: All nested closures work correctly!\n")
+	print("SUCCESS: All nested closures work correctly!\n")
 } else {
-    print("FAILED: Closures not preserved correctly\n")
+	print("FAILED: Closures not preserved correctly\n")
 }

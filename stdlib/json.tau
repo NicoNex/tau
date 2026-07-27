@@ -11,7 +11,7 @@ spaces = "\t\n\v\f\r "
 # --- tiny char helpers (avoid external deps) ---
 containsChar = fn(set, ch) {
 	for i = 0; i < len(set); ++i {
-		if slice(set, i, i+1) == ch {
+		if slice(set, i, i + 1) == ch {
 			return true
 		}
 	}
@@ -87,26 +87,26 @@ Parser = fn(src) {
 					buf += "\""
 				} else if esc == "\\" {
 					buf += "\\"
-				} else if esc == "/"  {
+				} else if esc == "/" {
 					buf += "/"
-				} else if esc == "b"  {
+				} else if esc == "b" {
 					buf += "\b"
-				} else if esc == "f"  {
+				} else if esc == "f" {
 					buf += "\f"
-				} else if esc == "n"  {
+				} else if esc == "n" {
 					buf += "\n"
-				} else if esc == "r"  {
+				} else if esc == "r" {
 					buf += "\r"
-				} else if esc == "t"  {
+				} else if esc == "t" {
 					buf += "\t"
 				} else if esc == "u" {
 					# keep \uXXXX verbatim
-					if !(p.i+3 < p.n) {
+					if !(p.i + 3 < p.n) {
 						return p.errorf("invalid \\u escape")
 					}
 
-					h0 = p.s[p.i]; h1 = p.s[p.i+1]
-					h2 = p.s[p.i+2]; h3 = p.s[p.i+3]
+					h0 = p.s[p.i]; h1 = p.s[p.i + 1]
+					h2 = p.s[p.i + 2]; h3 = p.s[p.i + 3]
 
 					if !isHex(h0) || !isHex(h1) || !isHex(h2) || !isHex(h3) {
 						return p.errorf("invalid hex in \\u escape")
@@ -171,12 +171,12 @@ Parser = fn(src) {
 
 	p.matchWord = fn(w) {
 		for k = 0; k < len(w); ++k {
-			if !(p.i + k < p.n) || p.s[p.i+k] != w[k] {
+			if !(p.i + k < p.n) || p.s[p.i + k] != w[k] {
 				return false
 			}
 		}
 		p.i = p.i + len(w)
-		p.col = p.col + len(w)   # approximate (ignores newlines; literals don't have)
+		p.col = p.col + len(w) # approximate (ignores newlines; literals don't have)
 		true
 	}
 
@@ -219,7 +219,7 @@ Parser = fn(src) {
 	p.parseObject = fn() {
 		if failed(_ = p.expectChar(`{`)) { return _ }
 
-		obj = {}  # Tau map
+		obj = {} # Tau map
 
 		p.skipSpace()
 		if p.inBounds() && p.peek() == "}" { p.advance(1); return obj }
@@ -311,7 +311,7 @@ escapeJSONString = fn(s) {
 		}
 
 		# escapes / control chars
-		if ch == "\""      {
+		if ch == "\"" {
 			buf += "\\\""
 		} else if ch == "\\" {
 			buf += "\\\\"
@@ -330,7 +330,7 @@ escapeJSONString = fn(s) {
 			n = bytes(ch)[0]
 			digits = "0123456789abcdef"
 			hi = n / 16
-			lo = n - hi*16
+			lo = n - hi * 16
 			buf += "\\u00" + digits[hi] + digits[lo]
 		}
 	}
@@ -385,7 +385,6 @@ encodeJSON = fn(x) {
 		error("json encode error: unsupported type " + t)
 	}
 }
-
 
 # Encode ANY Tau value (map/list/primitive) as JSON string
 Marshal = fn(v) { encodeJSON(v) }

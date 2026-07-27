@@ -7,12 +7,12 @@ print(a.SimpleVar)
 print("\n")
 
 GetSimpleVar = fn() {
-    print("In GetSimpleVar:\n")
-    print("a = ")
-    print(a)
-    print("\n")
-    print("a.SimpleVar = ")
-    print(a.SimpleVar)
-    print("\n")
-    return a.SimpleVar
+	print("In GetSimpleVar:\n")
+	print("a = ")
+	print(a)
+	print("\n")
+	print("a.SimpleVar = ")
+	print(a.SimpleVar)
+	print("\n")
+	return a.SimpleVar
 }

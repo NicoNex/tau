@@ -9,11 +9,11 @@ print(type(a.PublicFunc))
 print("\n")
 
 if a.PublicFunc == null {
-    print("a.PublicFunc is null!\n")
+	print("a.PublicFunc is null!\n")
 } else {
-    print("a.PublicFunc exists, calling it...\n")
-    result = a.PublicFunc()
-    print("Result: ")
-    print(result)
-    print("\n")
+	print("a.PublicFunc exists, calling it...\n")
+	result = a.PublicFunc()
+	print("Result: ")
+	print(result)
+	print("\n")
 }

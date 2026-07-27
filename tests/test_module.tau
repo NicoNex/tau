@@ -5,8 +5,8 @@ print(type(libc))
 print("\n")
 
 testFunc = fn() {
-    print("Inside testFunc, libc type: ")
-    print(type(libc))
-    print("\n")
-    return libc
+	print("Inside testFunc, libc type: ")
+	print(type(libc))
+	print("\n")
+	return libc
 }

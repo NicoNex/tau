@@ -11,10 +11,10 @@ print("\n")
 # Try to actually call it
 result = net.Listen("tcp", ":8080")
 if failed(result) {
-    print("Failed: ")
-    print(result)
-    print("\n")
+	print("Failed: ")
+	print(result)
+	print("\n")
 } else {
-    print("Success! Listener created\n")
-    result.Close()
+	print("Success! Listener created\n")
+	result.Close()
 }

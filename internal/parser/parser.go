@@ -87,8 +87,8 @@ var precedences = map[item.Type]int{
 
 func newParser(file, input string, items <-chan item.Item) *Parser {
 	p := &Parser{
-		cur:           <-items,
-		peek:          <-items,
+		cur:           nextCode(items),
+		peek:          nextCode(items),
 		items:         items,
 		file:          file,
 		input:         input,
@@ -170,7 +170,17 @@ func (p *Parser) isInsideLoop() bool {
 
 func (p *Parser) next() {
 	p.cur = p.peek
-	p.peek = <-p.items
+	p.peek = nextCode(p.items)
+}
+
+// nextCode is the next item that isn't a comment: comments are there for
+// whoever reads the file, the parser has nothing to do with them.
+func nextCode(items <-chan item.Item) item.Item {
+	for {
+		if i := <-items; !i.Is(item.Comment) {
+			return i
+		}
+	}
 }
 
 func (p *Parser) errors() []error {

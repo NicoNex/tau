@@ -127,7 +127,7 @@ parser = fn(pattern) {
 				c = escapeChar(esc)
 			}
 
-			if p.peek() == "-" && p.i + 1 < len(p.src) && p.src[p.i+1] != "]" {
+			if p.peek() == "-" && p.i + 1 < len(p.src) && p.src[p.i + 1] != "]" {
 				p.next()
 				hi = p.next()
 				if hi == "\\" && !p.done() {
@@ -192,7 +192,7 @@ parser = fn(pattern) {
 
 		if c == "(" {
 			capturing = true
-			if p.peek() == "?" && p.i + 1 < len(p.src) && p.src[p.i+1] == ":" {
+			if p.peek() == "?" && p.i + 1 < len(p.src) && p.src[p.i + 1] == ":" {
 				p.next()
 				p.next()
 				capturing = false
@@ -569,7 +569,7 @@ assertHolds = fn(kind, text, pos) {
 		return pos == len(text)
 	}
 
-	before = pos > 0 && isWord(text[pos-1])
+	before = pos > 0 && isWord(text[pos - 1])
 	after = pos < len(text) && isWord(text[pos])
 
 	if kind == aWordB {
@@ -735,7 +735,7 @@ makeRegexp = fn(pattern, tree, ngroups) {
 			if caps[i] == -1 {
 				out = append(out, null)
 			} else {
-				out = append(out, slice(s, caps[i], caps[i+1]))
+				out = append(out, slice(s, caps[i], caps[i + 1]))
 			}
 		}
 		return out

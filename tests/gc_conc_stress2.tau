@@ -6,7 +6,7 @@ worker = fn(p, id) {
 		m = {"id": id, "i": i, "s": "payload-{id}-{i}"}
 		acc = append(acc, m)
 		if i % 50 == 0 {
-			send(p, acc[len(acc)-1])
+			send(p, acc[len(acc) - 1])
 		}
 	}
 	send(p, "DONE-{id}")

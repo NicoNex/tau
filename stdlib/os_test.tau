@@ -4,81 +4,81 @@ os = import("os")
 path = "/tmp/tau_os_test.txt"
 
 testing.Main([
-	["write, read, remove", fn(t) {
-		t.AssertEq(os.WriteFile(path, "hello file\n"), 11)
-		t.AssertEq(os.Exists(path), true)
-		t.AssertEq(os.ReadFileString(path), "hello file\n")
-		os.Remove(path)
-		t.AssertEq(os.Exists(path), false)
-	}],
-	["Read takes a chunk at a time", fn(t) {
-		os.WriteFile(path, "hello file")
-		f = os.Open(path, os.O_RDONLY, 0)
-		t.AssertEq(string(f.Read(5)), "hello")
-		t.AssertEq(string(f.Read(5)), " file")
-		t.AssertEq(len(f.Read(5)), 0)
-		f.Close()
-		os.Remove(path)
-	}],
-	["a roundtrip of 200k", fn(t) {
-		big = ""
-		for i = 0; i < 20000; ++i {
-			big = big + "0123456789"
-		}
-		os.WriteFile(path, big)
-		t.AssertEq(len(os.ReadFileString(path)), 200000)
-		os.Remove(path)
-	}],
-	["what isn't there is an error", fn(t) {
-		t.AssertError(os.Open("/nope/zzz", os.O_RDONLY, 0))
-		t.AssertError(os.ReadFile("/nope/zzz"))
-		t.AssertEq(os.Exists("/nope/zzz"), false)
-	}],
-	["Args starts with the program itself", fn(t) {
-		t.Assert(len(os.Args) > 0, "no arguments at all")
-		t.AssertEq(os.Args[0], "stdlib/os_test.tau")
-	}],
-	["the environment", fn(t) {
-		os.Setenv("TAU_TEST_VAR", "hello")
-		t.AssertEq(os.Getenv("TAU_TEST_VAR"), "hello")
-		t.AssertEq(os.LookupEnv("TAU_TEST_VAR"), ["hello", true])
+		["write, read, remove", fn(t) {
+				t.AssertEq(os.WriteFile(path, "hello file\n"), 11)
+				t.AssertEq(os.Exists(path), true)
+				t.AssertEq(os.ReadFileString(path), "hello file\n")
+				os.Remove(path)
+				t.AssertEq(os.Exists(path), false)
+			}],
+		["Read takes a chunk at a time", fn(t) {
+				os.WriteFile(path, "hello file")
+				f = os.Open(path, os.O_RDONLY, 0)
+				t.AssertEq(string(f.Read(5)), "hello")
+				t.AssertEq(string(f.Read(5)), " file")
+				t.AssertEq(len(f.Read(5)), 0)
+				f.Close()
+				os.Remove(path)
+			}],
+		["a roundtrip of 200k", fn(t) {
+				big = ""
+				for i = 0; i < 20000; ++i {
+					big = big + "0123456789"
+				}
+				os.WriteFile(path, big)
+				t.AssertEq(len(os.ReadFileString(path)), 200000)
+				os.Remove(path)
+			}],
+		["what isn't there is an error", fn(t) {
+				t.AssertError(os.Open("/nope/zzz", os.O_RDONLY, 0))
+				t.AssertError(os.ReadFile("/nope/zzz"))
+				t.AssertEq(os.Exists("/nope/zzz"), false)
+			}],
+		["Args starts with the program itself", fn(t) {
+				t.Assert(len(os.Args) > 0, "no arguments at all")
+				t.AssertEq(os.Args[0], "stdlib/os_test.tau")
+			}],
+		["the environment", fn(t) {
+				os.Setenv("TAU_TEST_VAR", "hello")
+				t.AssertEq(os.Getenv("TAU_TEST_VAR"), "hello")
+				t.AssertEq(os.LookupEnv("TAU_TEST_VAR"), ["hello", true])
 
-		os.Unsetenv("TAU_TEST_VAR")
-		t.AssertEq(os.Getenv("TAU_TEST_VAR"), "")
-		t.AssertEq(os.LookupEnv("TAU_TEST_VAR"), ["", false])
-	}],
-	["Stat", fn(t) {
-		os.WriteFile(path, "0123456789")
-		st = os.Stat(path)
+				os.Unsetenv("TAU_TEST_VAR")
+				t.AssertEq(os.Getenv("TAU_TEST_VAR"), "")
+				t.AssertEq(os.LookupEnv("TAU_TEST_VAR"), ["", false])
+			}],
+		["Stat", fn(t) {
+				os.WriteFile(path, "0123456789")
+				st = os.Stat(path)
 
-		t.AssertEq(st.Size, 10)
-		t.AssertEq(st.IsDir, false)
-		t.Assert(st.ModTime > 1700000000, "modified in the past")
-		os.Remove(path)
+				t.AssertEq(st.Size, 10)
+				t.AssertEq(st.IsDir, false)
+				t.Assert(st.ModTime > 1700000000, "modified in the past")
+				os.Remove(path)
 
-		t.AssertError(os.Stat("/nope/zzz"))
-	}],
-	["directories", fn(t) {
-		dir = os.TempDir() + "/tau_test_dir/a/b"
-		t.AssertEq(os.MkdirAll(dir, null), null)
-		t.AssertEq(os.IsDir(dir), true)
+				t.AssertError(os.Stat("/nope/zzz"))
+			}],
+		["directories", fn(t) {
+				dir = os.TempDir() + "/tau_test_dir/a/b"
+				t.AssertEq(os.MkdirAll(dir, null), null)
+				t.AssertEq(os.IsDir(dir), true)
 
-		os.WriteFile(dir + "/two", "2")
-		os.WriteFile(dir + "/one", "1")
-		t.AssertEq(os.ReadDir(dir), ["one", "two"])
+				os.WriteFile(dir + "/two", "2")
+				os.WriteFile(dir + "/one", "1")
+				t.AssertEq(os.ReadDir(dir), ["one", "two"])
 
-		os.Rename(dir + "/one", dir + "/three")
-		t.AssertEq(os.ReadDir(dir), ["three", "two"])
+				os.Rename(dir + "/one", dir + "/three")
+				t.AssertEq(os.ReadDir(dir), ["three", "two"])
 
-		t.AssertEq(os.RemoveAll(os.TempDir() + "/tau_test_dir"), null)
-		t.AssertEq(os.Exists(os.TempDir() + "/tau_test_dir"), false)
-	}],
-	["Getwd and Chdir", fn(t) {
-		wd = os.Getwd()
-		t.Assert(len(wd) > 0, "no working directory")
+				t.AssertEq(os.RemoveAll(os.TempDir() + "/tau_test_dir"), null)
+				t.AssertEq(os.Exists(os.TempDir() + "/tau_test_dir"), false)
+			}],
+		["Getwd and Chdir", fn(t) {
+				wd = os.Getwd()
+				t.Assert(len(wd) > 0, "no working directory")
 
-		t.AssertEq(os.Chdir("/"), null)
-		t.AssertEq(os.Getwd(), "/")
-		os.Chdir(wd)
-	}]
-])
+				t.AssertEq(os.Chdir("/"), null)
+				t.AssertEq(os.Getwd(), "/")
+				os.Chdir(wd)
+			}]
+	])

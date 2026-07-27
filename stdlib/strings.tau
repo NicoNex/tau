@@ -224,10 +224,10 @@ TrimPrefix = fn(str, pre) {
 }
 
 TrimSuffix = fn(str, sub) {
-	return if len(sub) > len(str) || sub != slice(str, len(str)-len(sub), len(str)) {
+	return if len(sub) > len(str) || sub != slice(str, len(str) - len(sub), len(str)) {
 		str
 	} else {
-		slice(str, 0, len(str)-len(sub))
+		slice(str, 0, len(str) - len(sub))
 	}
 }
 
@@ -244,7 +244,7 @@ Replace = fn(str, old, new, n) {
 			break
 		}
 		ret += slice(str, 0, idx) + new
-		str = slice(str, idx+len(old), len(str))
+		str = slice(str, idx + len(old), len(str))
 	}
 
 	return ret + str
@@ -311,7 +311,7 @@ TrimLeft = fn(str, cutset) {
 
 TrimRight = fn(str, cutset) {
 	for stop = len(str); stop > 0; --stop {
-		if !Contains(cutset, str[stop-1]) {
+		if !Contains(cutset, str[stop - 1]) {
 			break
 		}
 	}

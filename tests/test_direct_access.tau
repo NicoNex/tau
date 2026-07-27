@@ -12,7 +12,7 @@ print("\n")
 
 # Through a function that captures it
 f = fn() {
-    return a.SimpleVar
+	return a.SimpleVar
 }
 
 print("Through closure: f() = ")

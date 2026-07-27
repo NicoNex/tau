@@ -248,10 +248,10 @@ sorted = fn(l) {
 		v = l[i]
 		j = i - 1
 		for j >= 0 && l[j] > v {
-			l[j+1] = l[j]
+			l[j + 1] = l[j]
 			--j
 		}
-		l[j+1] = v
+		l[j + 1] = v
 	}
 	return l
 }

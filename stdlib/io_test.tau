@@ -4,54 +4,54 @@ os = import("os")
 buffer = import("buffer")
 
 testing.Main([
-	["IsReader and IsWriter", fn(t) {
-		b = buffer.Buffer()
-		t.AssertEq(io.IsReader(b), true)
-		t.AssertEq(io.IsWriter(b), true)
-		t.AssertEq(io.IsReader(42), false)
-		t.AssertEq(io.IsWriter("x"), false)
-	}],
-	["ReadAll and ReadFull", fn(t) {
-		b = buffer.Buffer()
-		b.Write("hello io")
-		t.AssertEq(string(io.ReadAll(b)), "hello io")
+		["IsReader and IsWriter", fn(t) {
+				b = buffer.Buffer()
+				t.AssertEq(io.IsReader(b), true)
+				t.AssertEq(io.IsWriter(b), true)
+				t.AssertEq(io.IsReader(42), false)
+				t.AssertEq(io.IsWriter("x"), false)
+			}],
+		["ReadAll and ReadFull", fn(t) {
+				b = buffer.Buffer()
+				b.Write("hello io")
+				t.AssertEq(string(io.ReadAll(b)), "hello io")
 
-		b2 = buffer.Buffer()
-		b2.Write("abcdefghij")
-		t.AssertEq(string(io.ReadFull(b2, 4)), "abcd")
-		t.AssertEq(b2.Len(), 6)
-	}],
-	["Copy moves a file into a buffer", fn(t) {
-		path = "/tmp/tau_io_test.txt"
-		os.WriteFile(path, "copied through io\n")
+				b2 = buffer.Buffer()
+				b2.Write("abcdefghij")
+				t.AssertEq(string(io.ReadFull(b2, 4)), "abcd")
+				t.AssertEq(b2.Len(), 6)
+			}],
+		["Copy moves a file into a buffer", fn(t) {
+				path = "/tmp/tau_io_test.txt"
+				os.WriteFile(path, "copied through io\n")
 
-		f = os.Open(path, os.O_RDONLY, 0)
-		dst = buffer.Buffer()
-		n = io.Copy(dst, f)
-		f.Close()
-		os.Remove(path)
+				f = os.Open(path, os.O_RDONLY, 0)
+				dst = buffer.Buffer()
+				n = io.Copy(dst, f)
+				f.Close()
+				os.Remove(path)
 
-		t.AssertEq(n, 18)
-		t.AssertEq(dst.String(), "copied through io\n")
-	}],
-	["a big one survives the trip", fn(t) {
-		path = "/tmp/tau_io_test_big.txt"
-		big = ""
-		for i = 0; i < 20000; ++i {
-			big = big + "0123456789"
-		}
-		os.WriteFile(path, big)
+				t.AssertEq(n, 18)
+				t.AssertEq(dst.String(), "copied through io\n")
+			}],
+		["a big one survives the trip", fn(t) {
+				path = "/tmp/tau_io_test_big.txt"
+				big = ""
+				for i = 0; i < 20000; ++i {
+					big = big + "0123456789"
+				}
+				os.WriteFile(path, big)
 
-		f = os.Open(path, os.O_RDONLY, 0)
-		data = io.ReadAll(f)
-		f.Close()
-		os.Remove(path)
+				f = os.Open(path, os.O_RDONLY, 0)
+				data = io.ReadAll(f)
+				f.Close()
+				os.Remove(path)
 
-		t.AssertEq(len(data), 200000)
-	}],
-	["the wrong thing gives an error", fn(t) {
-		t.AssertError(io.Copy(42, buffer.Buffer()))
-		t.AssertError(io.ReadAll("nope"))
-		t.AssertError(io.WriteString(7, "x"))
-	}]
-])
+				t.AssertEq(len(data), 200000)
+			}],
+		["the wrong thing gives an error", fn(t) {
+				t.AssertError(io.Copy(42, buffer.Buffer()))
+				t.AssertError(io.ReadAll("nope"))
+				t.AssertError(io.WriteString(7, "x"))
+			}]
+	])

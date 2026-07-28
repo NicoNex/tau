@@ -319,8 +319,17 @@ static void mark_vm(struct vm *vm) {
 			mark_obj(globals->list[i]);
 		}
 	}
-	for (size_t i = 0; i < vm->state.consts.len; i++) {
-		mark_obj(vm->state.consts.list[i]);
+	for (size_t i = 0; i < vm->state.consts->len; i++) {
+		mark_obj(vm->state.consts->list[i]);
+	}
+
+	// An imported module is reachable from every program that imported it,
+	// whatever its globals hold now.
+	struct modtab *mods = vm->state.mods;
+	if (mods != NULL) {
+		for (size_t i = 0; i < mods->len; i++) {
+			mark_obj(mods->list[i].mod);
+		}
 	}
 }
 

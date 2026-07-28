@@ -26,7 +26,6 @@ func REPL() error {
 		fmt.Println(err)
 		return fmt.Errorf("error opening terminal: %w", err)
 	}
-	vm.TermState = initState
 	defer term.Restore(int(os.Stdin.Fd()), initState)
 
 	t := term.NewTerminal(os.Stdin, ">>> ")
@@ -54,7 +53,7 @@ func REPL() error {
 			continue
 		}
 
-		c := compiler.NewWithState(symbols, &vm.Consts)
+		c := compiler.NewWithState(symbols, state.NumConsts())
 		c.SetFileInfo("<stdin>", input)
 		if err := c.Compile(res); err != nil {
 			fmt.Fprintln(t, err)
@@ -143,7 +142,7 @@ func SimpleREPL() {
 			continue
 		}
 
-		c := compiler.NewWithState(symbols, &vm.Consts)
+		c := compiler.NewWithState(symbols, state.NumConsts())
 		c.SetFileInfo("<stdin>", input)
 		if err := c.Compile(res); err != nil {
 			fmt.Println(err)

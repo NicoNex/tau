@@ -34,9 +34,36 @@ struct pool {
 	size_t len;
 };
 
+// A module that has been imported, kept under the path it was found at so
+// that importing it twice runs it once.
+struct module {
+	char *path;
+	struct object mod;
+};
+
+// ponytail: a linear scan, a program imports tens of modules and not
+// thousands. A map if that ever stops being true.
+struct modtab {
+	struct module *list;
+	size_t len;
+	size_t cap;
+};
+
+struct modtab *new_modtab(void);
+int modtab_get(struct modtab *m, const char *path, struct object *out);
+void modtab_put(struct modtab *m, const char *path, struct object mod);
+void modtab_dispose(struct modtab *m);
+
 struct state {
 	struct pool *globals;
-	struct pool consts;
+	// A pointer and not a value: every VM of a program shares this pool, and
+	// an import appends to it. Two copies of the struct would mean one of them
+	// keeps the address the other has just reallocated away.
+	struct pool *consts;
+	// The modules this program has already imported. Shared with the tau
+	// routines like the rest of the state, and walked by the collector: a
+	// module holds the objects a program reaches through it.
+	struct modtab *mods;
 	uint32_t ndefs;
 };
 
@@ -56,6 +83,7 @@ struct pool *new_pool(size_t cap);
 struct pool *poolcpy(struct pool *p);
 void pool_append(struct pool *p, struct object o);
 void pool_insert(struct pool *p, size_t idx, struct object o);
+void pool_extend(struct pool *p, struct object *list, size_t len);
 void pool_dispose(struct pool *p);
 
 // VM object.

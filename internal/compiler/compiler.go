@@ -33,7 +33,12 @@ type CompilationScope struct {
 }
 
 type Compiler struct {
-	constants   *[]obj.Object
+	constants []obj.Object
+	// Where the constants of this unit will land in the pool of the program
+	// that runs them. A unit compiled on top of a running program (an import,
+	// a REPL line) brings only its own constants, appended to the ones already
+	// there, so the indices its bytecode carries have to be absolute.
+	constBase   int
 	scopes      []CompilationScope
 	scopeIndex  int
 	fileName    string
@@ -57,19 +62,20 @@ func New() *Compiler {
 	return &Compiler{
 		SymbolTable: st,
 		scopes:      []CompilationScope{{}},
-		constants:   &[]obj.Object{},
 	}
 }
 
-func NewWithState(s *SymbolTable, constants *[]obj.Object) *Compiler {
+// NewWithState continues a program that is already running: numConsts is how
+// many constants it has, so that the ones compiled here follow them.
+func NewWithState(s *SymbolTable, numConsts int) *Compiler {
 	return &Compiler{
 		SymbolTable: s,
 		scopes:      []CompilationScope{{}},
-		constants:   constants,
+		constBase:   numConsts,
 	}
 }
 
-func NewImport(numDefs int, constants *[]obj.Object) *Compiler {
+func NewImport(numDefs, numConsts int) *Compiler {
 	var st = NewSymbolTable()
 
 	st.NumDefs = numDefs
@@ -80,13 +86,13 @@ func NewImport(numDefs int, constants *[]obj.Object) *Compiler {
 	return &Compiler{
 		SymbolTable: st,
 		scopes:      []CompilationScope{{}},
-		constants:   constants,
+		constBase:   numConsts,
 	}
 }
 
 func (c *Compiler) AddConstant(o obj.Object) int {
-	*c.constants = append(*c.constants, o)
-	return len(*c.constants) - 1
+	c.constants = append(c.constants, o)
+	return c.constBase + len(c.constants) - 1
 }
 
 func (c *Compiler) AddInstruction(ins []byte) int {
@@ -287,15 +293,15 @@ func (c *Compiler) LoadSymbol(s Symbol) int {
 func (c *Compiler) Bytecode() Bytecode {
 	b := Bytecode{
 		len:     C.uint32_t(len(c.scopes[c.scopeIndex].instructions)),
-		nconsts: C.uint32_t(len(*c.constants)),
+		nconsts: C.uint32_t(len(c.constants)),
 		bklen:   C.uint32_t(len(c.scopes[c.scopeIndex].bookmarks)),
 		ndefs:   C.uint32_t(c.NumDefs),
 	}
 	if len(c.scopes[c.scopeIndex].instructions) > 0 {
 		b.insts = (*C.uchar)(unsafe.Pointer(&c.scopes[c.scopeIndex].instructions[0]))
 	}
-	if len(*c.constants) > 0 {
-		b.consts = (*C.struct_object)(unsafe.Pointer(&(*c.constants)[0]))
+	if len(c.constants) > 0 {
+		b.consts = (*C.struct_object)(unsafe.Pointer(&c.constants[0]))
 	}
 	if len(c.scopes[c.scopeIndex].bookmarks) > 0 {
 		b.bookmarks = (*C.struct_bookmark)(unsafe.Pointer(&c.scopes[c.scopeIndex].bookmarks[0]))
@@ -327,24 +333,6 @@ func (b Bytecode) Encode() []byte {
 
 func (b Bytecode) Insts() code.Instructions {
 	return C.GoBytes(unsafe.Pointer(b.insts), C.int(b.len))
-}
-
-func (b Bytecode) CConsts() *obj.Object {
-	return (*obj.Object)(unsafe.Pointer(b.consts))
-}
-
-func (b Bytecode) Consts() []obj.Object {
-	if b.NConsts() == 0 {
-		return []obj.Object{}
-	}
-
-	var ret = make([]obj.Object, b.NConsts())
-	cconsts := (*[1 << 28]obj.Object)(unsafe.Pointer(b.consts))[:b.NConsts():b.NConsts()]
-
-	for i := 0; i < int(b.NConsts()); i++ {
-		ret[i] = cconsts[i]
-	}
-	return ret
 }
 
 func (b Bytecode) Len() uint {

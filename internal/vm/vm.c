@@ -58,7 +58,8 @@ inline struct state new_state() {
 		// once with its final size: a realloc would pull the list from under
 		// the other threads.
 		.globals = new_pool(GLOBAL_SIZE),
-		.consts = {0},
+		.consts = new_pool(0),
+		.mods = new_modtab(),
 		.ndefs = 0
 	};
 }
@@ -72,6 +73,8 @@ inline void state_dispose(struct state s) {
 	// joined and may well still be running. Freeing it here would pull the
 	// objects out from under them. The process ending is what gives it back.
 	pool_dispose(s.globals);
+	pool_dispose(s.consts);
+	modtab_dispose(s.mods);
 }
 
 struct vm *new_vm(char *file, struct bytecode bc) {
@@ -82,11 +85,7 @@ struct vm *new_vm(char *file, struct bytecode bc) {
 	// The globals this program defines: an imported module gets its own
 	// globals right after these ones.
 	vm->state.ndefs = bc.ndefs;
-	vm->state.consts = (struct pool) {
-		.list = bc.consts,
-		.len = bc.nconsts,
-		.cap = bc.nconsts
-	};
+	pool_extend(vm->state.consts, bc.consts, bc.nconsts);
 
 	struct function *fn = new_function(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
 	struct object cl = new_closure_obj(fn, NULL, 0);
@@ -101,6 +100,10 @@ struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state)
 	vm->file = file;
 	vm->state = state;
 	vm->state.ndefs = bc.ndefs;
+	// The constants of this unit go at the end of the pool the program already
+	// has: an import and a REPL line are compiled knowing where their own
+	// constants will land, so the indices in their bytecode are absolute.
+	pool_extend(vm->state.consts, bc.consts, bc.nconsts);
 
 	struct function *fn = new_function(bc.insts, bc.len, 0, 0, bc.bookmarks, bc.bklen);
 	struct object cl = new_closure_obj(fn, NULL, 0);
@@ -256,7 +259,7 @@ static inline void vm_exec_define(struct vm * restrict vm) {
 }
 
 static inline void vm_push_closure(struct vm * restrict vm, uint32_t const_idx, uint32_t num_free) {
-	struct object fn = vm->state.consts.list[const_idx];
+	struct object fn = vm->state.consts->list[const_idx];
 
 	if (fn.type != obj_function) {
 		vm_errorf(vm, "not a function %s", object_str(fn));
@@ -316,7 +319,7 @@ static inline void vm_push_map(struct vm * restrict vm, uint32_t start, uint32_t
 }
 
 static inline void vm_push_interpolated(struct vm * restrict vm, uint32_t str_idx, uint32_t num_args) {
-	struct object o = vm->state.consts.list[str_idx];
+	struct object o = vm->state.consts->list[str_idx];
 	char *str = o.data.str->str;
 	size_t fmt_len = o.data.str->len;
 	char *subs[num_args];
@@ -896,7 +899,8 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 	case obj_closure: {
 		struct vm *tvm = calloc(1, sizeof(struct vm));
 		tvm->file = strdup(vm->file);
-		tvm->state.consts = vm->state.consts;    // Read-only, safe to share.
+		tvm->state.consts = vm->state.consts;    // The same pool, shared.
+		tvm->state.mods = vm->state.mods;
 		tvm->state.globals = vm->state.globals;  // Shared, never reallocated.
 
 		// Only copy the closure and its arguments to the new VM's stack
@@ -1049,7 +1053,7 @@ static int vm_loop(struct vm * restrict vm) {
 	TARGET_CONST: {
 		uint16_t idx = read_uint16(frame->ip);
 		frame->ip += 2;
-		vm_stack_push(vm, vm->state.consts.list[idx]);
+		vm_stack_push(vm, vm->state.consts->list[idx]);
 		DISPATCH();
 	}
 
@@ -1316,6 +1320,28 @@ static int vm_loop(struct vm * restrict vm) {
 		return 0;
 }
 
+#if !defined(_WIN32) && !defined(WIN32)
+	#include <termios.h>
+	#include <unistd.h>
+
+// The terminal as it was before anything touched it. The REPL puts it in raw
+// mode, and the exit builtin calls exit() straight from a tau program, which
+// runs no Go deferred call and would leave the shell in raw mode. Saved and
+// put back on this side, so that nothing of the terminal has to cross over.
+static struct termios term_state;
+static int term_saved = 0;
+
+static void restore_term(void) {
+	if (term_saved) tcsetattr(STDIN_FILENO, TCSANOW, &term_state);
+}
+
 void set_exit() {
+	term_saved = tcgetattr(STDIN_FILENO, &term_state) == 0;
 	atexit(restore_term);
 }
+#else
+// ponytail: on Windows raw mode is a console mode and not a termios, and the
+// REPL already puts it back on the way out. Only exit() from a tau program
+// gets away with it there.
+void set_exit() {}
+#endif

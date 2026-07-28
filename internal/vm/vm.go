@@ -36,7 +36,6 @@ import (
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/obj"
 	"github.com/NicoNex/tau/internal/parser"
-	"golang.org/x/term"
 )
 
 type VM struct {
@@ -48,12 +47,6 @@ type (
 	Bookmark C.struct_bookmark
 )
 
-var (
-	Consts    []obj.Object
-	importTab = make(map[string]C.struct_object)
-	TermState *term.State
-)
-
 func NewState() State {
 	return State(C.new_state())
 }
@@ -62,10 +55,10 @@ func (s State) Free() {
 	C.state_dispose(C.struct_state(s))
 }
 
-func (s *State) SetConsts(consts []obj.Object) {
-	s.consts.list = (*C.struct_object)(unsafe.Pointer(&consts[0]))
-	s.consts.len = C.size_t(len(consts))
-	s.consts.cap = C.size_t(len(consts))
+// NumConsts is how many constants the program has so far, which is where the
+// ones of the next unit compiled on top of it will start.
+func (s State) NumConsts() int {
+	return int(s.consts.len)
 }
 
 func (s State) NumDefs() int {
@@ -73,16 +66,11 @@ func (s State) NumDefs() int {
 }
 
 func New(file string, bc compiler.Bytecode) VM {
-	Consts = bc.Consts()
 	setModuleDir(file)
 	return VM{vm: C.new_vm(C.CString(file), cbytecode(bc))}
 }
 
 func NewWithState(file string, bc compiler.Bytecode, state State) VM {
-	Consts = bc.Consts()
-	if len(Consts) > 0 {
-		state.SetConsts(Consts)
-	}
 	return VM{vm: C.new_vm_with_state(C.CString(file), cbytecode(bc), C.struct_state(state))}
 }
 
@@ -229,7 +217,10 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 
 	// Already imported: push the module and carry on, a non zero result would
 	// stop the VM.
-	if mod, ok := importTab[p]; ok {
+	cp := C.CString(p)
+	defer C.free(unsafe.Pointer(cp))
+	var mod C.struct_object
+	if C.modtab_get(vm.state.mods, cp, &mod) != 0 {
 		vm.stack[vm.sp] = mod
 		vm.sp++
 		return 0
@@ -253,7 +244,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 		return 1
 	}
 
-	c := compiler.NewImport(int(vm.state.ndefs), &Consts)
+	c := compiler.NewImport(int(vm.state.ndefs), int(vm.state.consts.len))
 	c.SetFileInfo(p, string(b))
 	if err := c.Compile(tree); err != nil {
 		C.go_vm_errorf(vm, C.CString(err.Error()))
@@ -261,7 +252,6 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	}
 
 	bc := c.Bytecode()
-	(*State)(&vm.state).SetConsts(Consts)
 	vm.state.ndefs = C.uint32_t(bc.NDefs())
 	// The resolved path, so that the modules imported by this one are looked
 	// up next to it, and its own directory for the plugins it opens.
@@ -275,7 +265,7 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	}
 	vm.state = tvm.state
 
-	mod := C.new_object()
+	mod = C.new_object()
 	for name, sym := range c.Store {
 		if sym.Scope == compiler.GlobalScope {
 			o := C.get_global(vm.state.globals, C.size_t(sym.Index))
@@ -290,17 +280,10 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 		}
 	}
 
-	importTab[p] = mod
+	C.modtab_put(vm.state.mods, cp, mod)
 	vm.stack[vm.sp] = mod
 	vm.sp++
 	return 0
-}
-
-//export restore_term
-func restore_term() {
-	if TermState != nil {
-		term.Restore(int(os.Stdin.Fd()), TermState)
-	}
 }
 
 func init() {

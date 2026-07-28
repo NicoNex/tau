@@ -1,0 +1,373 @@
+# net_examples.tau - Practical examples using the net.tau library
+
+import("stdlib/net.tau")
+
+# Example 1: Simple Echo Server
+echoServer = fn() {
+	server = ListenTCP(3000, null)
+	if failed(server) {
+		return server
+	}
+
+	print("Echo server listening on port 3000")
+
+	for {
+		client = server.Accept()
+		if failed(client) {
+			continue
+		}
+
+		# Handle client (simple blocking version)
+		for {
+			data = client.RecvString(1024)
+			if failed(data) || len(data) == 0 {
+				break
+			}
+
+			client.Send("ECHO: {data}")
+		}
+
+		client.Close()
+	}
+}
+
+# Example 2: Simple Chat Client
+chatClient = fn(nickname) {
+	conn = DialTCP("127.0.0.1", 3000)
+	if failed(conn) {
+		print("Cannot connect to server")
+		return conn
+	}
+
+	print("Connected! Type messages to send:")
+
+	# In a real implementation, you'd need concurrent reads/writes
+	# This is a simplified version
+
+	# Send nickname
+	conn.Send("NICK {nickname}\n")
+
+	# Send a few messages
+	messages = ["Hello everyone!", "How are you?", "Goodbye!"]
+
+	for i = 0; i < len(messages); ++i {
+		conn.Send("{messages[i]}\n")
+
+		# Receive response
+		response = conn.RecvString(1024)
+		if !failed(response) {
+			print(response)
+		}
+	}
+
+	conn.Close()
+}
+
+# Example 3: REST API Server
+apiServer = fn() {
+	server = ListenTCP(8080, null)
+	if failed(server) {
+		print("Failed to start server")
+		return server
+	}
+
+	print("API Server listening on http://localhost:8080")
+
+	# Simple API handler
+	handler = fn(req) {
+		print("{req.Method} {req.Path}")
+
+		# Route handling
+		if req.Path == "/api/hello" {
+			body = '{"message": "Hello from Tau API!"}'
+			status = "200 OK"
+		} else if req.Path == "/api/time" {
+			# Would need time library for actual time
+			body = '{"time": "2024-01-01T12:00:00Z"}'
+			status = "200 OK"
+		} else if req.Path == "/api/status" {
+			body = '{"status": "running", "version": "1.0"}'
+			status = "200 OK"
+		} else {
+			body = '{"error": "Not Found"}'
+			status = "404 Not Found"
+		}
+
+		response = "HTTP/1.1 {status}\r\n"
+		response += "Content-Type: application/json\r\n"
+		response += "Content-Length: {len(body)}\r\n"
+		response += "Access-Control-Allow-Origin: *\r\n"
+		response += "Connection: close\r\n"
+		response += "\r\n"
+		response += body
+
+		return response
+	}
+
+	# Handle requests
+	for {
+		client = server.Accept()
+		if failed(client) {
+			continue
+		}
+
+		HTTPServe(client, handler)
+	}
+}
+
+# Example 4: Port Scanner
+portScan = fn(host, startPort, endPort) {
+	print("Scanning {host} ports {startPort}-{endPort}")
+
+	openPorts = []
+
+	for port = startPort; port <= endPort; ++port {
+		sock = Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+
+		if !failed(sock) {
+			# Try to connect
+			result = sock.Connect(host, port)
+
+			if !failed(result) {
+				print("Port {port} is OPEN")
+				openPorts = append(openPorts, port)
+			}
+
+			sock.Close()
+		}
+	}
+
+	print("\nScan complete. Open ports: {openPorts}")
+	return openPorts
+}
+
+# Example 5: UDP Broadcast Sender
+udpBroadcast = fn(message, port) {
+	sock = Socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+	if failed(sock) {
+		return sock
+	}
+
+	# Enable broadcast
+	sock.SetSockOpt(SOL_SOCKET, SO_BROADCAST, 1)
+
+	# Send broadcast
+	result = sock.SendTo(message, "255.255.255.255", port)
+
+	if failed(result) {
+		print("Broadcast failed: {result}")
+	} else {
+		print("Broadcast sent: {message}")
+	}
+
+	sock.Close()
+}
+
+# Example 6: Simple File Server
+fileServer = fn(rootPath) {
+	import("stdlib/os.tau")
+	import("stdlib/strings.tau")
+
+	server = ListenTCP(8000, null)
+	if failed(server) {
+		print("Failed to start file server")
+		return server
+	}
+
+	print("File server listening on http://localhost:8000")
+	print("Serving files from: {rootPath}")
+
+	handler = fn(req) {
+		# Get requested file path
+		path = req.Path
+
+		if path == "/" {
+			path = "/index.html"
+		}
+
+		# Security: prevent directory traversal
+		if Contains(path, "..") {
+			body = "403 Forbidden"
+			status = "403 Forbidden"
+		} else {
+			filepath = "{rootPath}{path}"
+
+			# Try to read file
+			content = ReadFile(filepath)
+
+			if failed(content) {
+				body = "404 Not Found"
+				status = "404 Not Found"
+			} else {
+				body = string(content)
+				status = "200 OK"
+			}
+		}
+
+		response = "HTTP/1.1 {status}\r\n"
+		response += "Content-Type: text/html\r\n"
+		response += "Content-Length: {len(body)}\r\n"
+		response += "Connection: close\r\n"
+		response += "\r\n"
+		response += body
+
+		return response
+	}
+
+	for {
+		client = server.Accept()
+		if !failed(client) {
+			HTTPServe(client, handler)
+		}
+	}
+}
+
+# Example 7: Proxy Server
+proxyServer = fn(listenPort, targetHost, targetPort) {
+	server = ListenTCP(listenPort, null)
+	if failed(server) {
+		print("Failed to start proxy server")
+		return server
+	}
+
+	print("Proxy server listening on port {listenPort}")
+	print("Forwarding to {targetHost}:{targetPort}")
+
+	for {
+		client = server.Accept()
+		if failed(client) {
+			continue
+		}
+
+		# Connect to target
+		target = DialTCP(targetHost, targetPort)
+		if failed(target) {
+			client.Close()
+			continue
+		}
+
+		# Receive from client
+		data = client.Recv(4096)
+		if !failed(data) && len(data) > 0 {
+			# Forward to target
+			target.Send(data)
+
+			# Receive response from target
+			response = target.Recv(4096)
+			if !failed(response) && len(response) > 0 {
+				# Send back to client
+				client.Send(response)
+			}
+		}
+
+		target.Close()
+		client.Close()
+	}
+}
+
+# Example 8: Simple DNS Lookup
+dnsLookup = fn(hostname) {
+	print("Looking up: {hostname}")
+
+	result = LookupHost(hostname)
+
+	if failed(result) {
+		print("DNS lookup failed: {result}")
+	} else {
+		print("Resolved to: {result}")
+	}
+
+	return result
+}
+
+# Example 9: Network Speed Test
+speedTest = fn(host, port, dataSize) {
+	# Connect
+	sock = DialTCP(host, port)
+	if failed(sock) {
+		return sock
+	}
+
+	# Prepare test data
+	data = []
+	for i = 0; i < dataSize; ++i {
+		data = append(data, 65)  # 'A'
+	}
+
+	print("Sending {dataSize} bytes...")
+
+	# Send data
+	sent = sock.Send(bytes(data))
+
+	if failed(sent) {
+		print("Send failed: {sent}")
+	} else {
+		print("Sent {sent} bytes successfully")
+	}
+
+	sock.Close()
+}
+
+# Example 10: Health Check Monitor
+healthCheck = fn(services) {
+	print("Health Check Monitor")
+	print("====================")
+
+	for i = 0; i < len(services); ++i {
+		service = services[i]
+		name = service.name
+		host = service.host
+		port = service.port
+
+		# Try to connect
+		sock = Socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)
+
+		if !failed(sock) {
+			result = sock.Connect(host, port)
+
+			if !failed(result) {
+				print("[OK] {name} ({host}:{port}) is UP")
+			} else {
+				print("[FAIL] {name} ({host}:{port}) is DOWN")
+			}
+
+			sock.Close()
+		}
+	}
+}
+
+# Run examples
+print("Tau Network Library - Practical Examples")
+print("=========================================\n")
+
+# Test network utilities
+print("Testing SplitHostPort:")
+result = SplitHostPort("example.com:8080")
+if !failed(result) {
+	print("  Host: {result.Host}, Port: {result.Port}")
+}
+
+print("\nTesting JoinHostPort:")
+addr = JoinHostPort("192.168.1.1", 3000)
+print("  {addr}")
+
+print("\nUncomment the example you want to run in the code")
+
+# Uncomment to run specific examples:
+# echoServer()
+# chatClient("Alice")
+# apiServer()
+# portScan("127.0.0.1", 20, 100)
+# udpBroadcast("Hello Network!", 9999)
+# fileServer("/home/user/public")
+# proxyServer(8080, "example.com", 80)
+# dnsLookup("example.com")
+# speedTest("127.0.0.1", 3000, 1024)
+
+# Health check example
+services = [
+	new(name="Web Server", host="127.0.0.1", port=8080),
+	new(name="API Server", host="127.0.0.1", port=3000),
+	new(name="Database", host="127.0.0.1", port=5432)
+]
+# healthCheck(services)

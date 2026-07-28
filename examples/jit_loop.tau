@@ -1,0 +1,14 @@
+#!/usr/bin/env tau
+
+# Single function with lots of computation in a loop
+# This should benefit from JIT since there's only one function call
+
+heavy_compute = fn() {
+    total = 0
+    for i = 0; i < 50000000; i = i + 1 {
+        total = total + i * 2 + 100
+    }
+    total
+}
+
+println(heavy_compute())

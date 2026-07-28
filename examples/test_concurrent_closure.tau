@@ -1,0 +1,38 @@
+#!/usr/bin/env tau
+
+# Test concurrent execution with closures and free variables
+# This verifies that only necessary data is copied to spawned VMs
+
+make_worker = fn(base_value) {
+    # This creates a closure that captures base_value
+    return fn(multiplier, result_pipe) {
+        result = base_value * multiplier
+        for i = 0; i < 100; i = i + 1 {
+            result = result + 1
+        }
+        send(result_pipe, result)
+    }
+}
+
+p = pipe(3)
+
+# Create workers with different base values
+worker1 = make_worker(10)
+worker2 = make_worker(20)
+worker3 = make_worker(30)
+
+# Spawn concurrent workers
+tau worker1(100, p)  # Should compute 10 * 100 + 100 = 1100
+tau worker2(100, p)  # Should compute 20 * 100 + 100 = 2100
+tau worker3(100, p)  # Should compute 30 * 100 + 100 = 3100
+
+# Collect results
+total = 0
+for i = 0; i < 3; i = i + 1 {
+    result = recv(p)
+    println("Received result:", result)
+    total = total + result
+}
+
+println("Total:", total)
+println("Expected: 6300 (1100 + 2100 + 3100)")

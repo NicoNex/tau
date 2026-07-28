@@ -34,6 +34,13 @@ struct root_node {
 // runs with the world stopped, is the only one that walks them all.
 static struct heap *segments = NULL;
 static __thread struct heap *segment = NULL;
+// Segments whose thread has ended. The objects they hold are still live as far
+// as anybody else can tell, so the segment stays in `segments` and keeps being
+// swept; what is free is the right to write into it, and the next thread that
+// needs one takes it from here instead of making a new one. Without this the
+// list of segments would grow by one for every tau routine ever started, and
+// every collection walks that list.
+static struct heap *free_segments = NULL;
 
 // How many objects live in the heap, and how many may be allocated before
 // the next collection. Both are only written with the world stopped.
@@ -49,11 +56,11 @@ static mtx_t mu;
 static cnd_t cnd;
 static struct vm_node *vms = NULL;
 static struct root_node *roots = NULL;
-static volatile int nvms = 0;
+static int nvms = 0;
 static int nparked = 0;
 static int initialised = 0;
 
-volatile int gc_wanted = 0;
+int gc_wanted = 0;
 // Bumped at every collection, tells apart the objects visited by the current
 // mark phase from the ones visited by the previous ones.
 uint32_t gc_epoch = 1;
@@ -121,7 +128,7 @@ void gc_init(void) {
 // so that a thread waiting for the mutex can never stall the collector.
 static void gc_lock(void) {
 	mtx_lock(&mu);
-	while (gc_wanted) {
+	while (gc_pending()) {
 		if (self != NULL && !self->parked) {
 			self->parked = 1;
 			nparked++;
@@ -234,28 +241,49 @@ void gc_unpark(void) {
 }
 
 void gc_safepoint(void) {
-	if (!gc_wanted || self == NULL) return;
+	if (!gc_pending() || self == NULL) return;
 	gc_park();
 	gc_unpark();
 }
 
-// The segment of this thread, made on first use. Only the list of segments
-// is shared, and only while a segment is being added to it.
+// The segment of this thread, taken over from a thread that ended or made on
+// first use. Only the lists are shared, and only while a segment moves between
+// them.
 static struct heap *heap_segment(void) {
 	if (segment != NULL) return segment;
 
-	struct heap *s = malloc(sizeof(struct heap));
-	s->root = NULL;
-	s->len = 0;
-	s->treshold = 0;
-
 	gc_lock();
-	s->next = segments;
-	segments = s;
+	struct heap *s = free_segments;
+	if (s != NULL) {
+		free_segments = s->free_next;
+		s->free_next = NULL;
+	} else {
+		s = malloc(sizeof(struct heap));
+		s->root = NULL;
+		s->len = 0;
+		s->treshold = 0;
+		s->free_next = NULL;
+		s->next = segments;
+		segments = s;
+	}
 	mtx_unlock(&mu);
 
 	segment = s;
 	return s;
+}
+
+// Called by a thread that is about to end: whatever it allocated stays on the
+// heap and stays reachable from wherever it is used, only the segment itself
+// goes back to the pool for the next thread.
+void gc_release_segment(void) {
+	if (segment == NULL) return;
+
+	gc_lock();
+	segment->free_next = free_segments;
+	free_segments = segment;
+	mtx_unlock(&mu);
+
+	segment = NULL;
 }
 
 // Takes ownership of the object. Objects that are already tracked (e.g. one
@@ -335,7 +363,7 @@ static int64_t gc_budget(void) {
 }
 
 void gc(void) {
-	if (gc_wanted) {
+	if (gc_pending()) {
 		gc_safepoint();
 		return;
 	}
@@ -361,7 +389,7 @@ void gc(void) {
 	printf("heap size before: %lu\n", heap_len);
 #endif
 
-	gc_wanted = 1;
+	gc_set_wanted(1);
 	while (nparked < nvms - 1) {
 		cnd_wait(&cnd, &mu);
 	}
@@ -388,34 +416,11 @@ void gc(void) {
 	// more there are the less often it is worth stopping them.
 	heap_treshold = heap_len * 2 + HEAP_TRESHOLD * (nvms > 0 ? nvms : 1);
 	budget = gc_budget();
-	gc_wanted = 0;
+	gc_set_wanted(0);
 	cnd_broadcast(&cnd);
 	mtx_unlock(&mu);
 
 #ifdef GC_DEBUG
 	printf("heap size after: %lu\n", heap_len);
 #endif
-}
-
-void heap_dispose(void) {
-	gc_lock();
-	for (struct heap *s = segments; s != NULL;) {
-		struct heap *nexts = s->next;
-
-		for (struct gc_header *n = s->root; n != NULL;) {
-			struct gc_header *tmp = n->next;
-			free_obj(n->obj);
-			free(n);
-			n = tmp;
-		}
-		free(s);
-		s = nexts;
-	}
-
-	segments = NULL;
-	segment = NULL;
-	heap_len = 0;
-	heap_treshold = HEAP_TRESHOLD;
-	budget = HEAP_TRESHOLD;
-	mtx_unlock(&mu);
 }

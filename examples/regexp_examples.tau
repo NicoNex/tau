@@ -1,0 +1,339 @@
+# regexp_examples.tau - Examples using the regexp.tau library
+
+regexp = import("stdlib/regexp.tau")
+
+# Example 1: Simple pattern matching
+simpleMatch = fn() {
+	print("Example 1: Simple Pattern Matching")
+	print("===================================")
+
+	# Compile a regex
+	re = regexp.Compile("hello")
+	if failed(re) {
+		print("Error: {re}")
+		return
+	}
+
+	# Test strings
+	tests = ["hello", "hello world", "world", "HELLO"]
+
+	for i = 0; i < len(tests); ++i {
+		test = tests[i]
+		if re.MatchString(test) {
+			print("'{test}' matches")
+		} else {
+			print("'{test}' does NOT match")
+		}
+	}
+
+	print("")
+}
+
+# Example 2: Using MatchString directly
+directMatch = fn() {
+	print("Example 2: Direct Matching")
+	print("==========================")
+
+	pattern = "tau"
+	texts = ["tau programming", "golang", "taurine", "TAU"]
+
+	for i = 0; i < len(texts); ++i {
+		text = texts[i]
+		if regexp.MatchString(pattern, text) {
+			print("'{text}' contains '{pattern}'")
+		} else {
+			print("'{text}' does NOT contain '{pattern}'")
+		}
+	}
+
+	print("")
+}
+
+# Example 3: Wildcard matching with .
+wildcardMatch = fn() {
+	print("Example 3: Wildcard Matching (.)")
+	print("=================================")
+
+	# . matches any character
+	re = regexp.MustCompile("h.llo")
+
+	tests = ["hello", "hallo", "hullo", "h llo", "hllo", "helllo"]
+
+	for i = 0; i < len(tests); ++i {
+		test = tests[i]
+		if re.MatchString(test) {
+			print("'{test}' matches h.llo")
+		} else {
+			print("'{test}' does NOT match h.llo")
+		}
+	}
+
+	print("")
+}
+
+# Example 4: Repetition with * (zero or more)
+zeroOrMore = fn() {
+	print("Example 4: Zero or More (*)")
+	print("===========================")
+
+	re = regexp.MustCompile("ab*c")
+
+	tests = ["ac", "abc", "abbc", "abbbc", "abcd", "bc"]
+
+	for i = 0; i < len(tests); ++i {
+		test = tests[i]
+		if re.MatchString(test) {
+			print("'{test}' matches ab*c")
+		} else {
+			print("'{test}' does NOT match ab*c")
+		}
+	}
+
+	print("")
+}
+
+# Example 5: One or more with +
+oneOrMore = fn() {
+	print("Example 5: One or More (+)")
+	print("==========================")
+
+	re = regexp.MustCompile("ab+c")
+
+	tests = ["ac", "abc", "abbc", "abbbc", "bc"]
+
+	for i = 0; i < len(tests); ++i {
+		test = tests[i]
+		if re.MatchString(test) {
+			print("'{test}' matches ab+c")
+		} else {
+			print("'{test}' does NOT match ab+c")
+		}
+	}
+
+	print("")
+}
+
+# Example 6: Optional with ?
+optionalMatch = fn() {
+	print("Example 6: Optional (?)")
+	print("=======================")
+
+	re = regexp.MustCompile("colou?r")
+
+	tests = ["color", "colour", "colouur", "colr"]
+
+	for i = 0; i < len(tests); ++i {
+		test = tests[i]
+		if re.MatchString(test) {
+			print("'{test}' matches colou?r")
+		} else {
+			print("'{test}' does NOT match colou?r")
+		}
+	}
+
+	print("")
+}
+
+# Example 7: Alternation with |
+alternation = fn() {
+	print("Example 7: Alternation (|)")
+	print("==========================")
+
+	re = regexp.MustCompile("cat|dog")
+
+	tests = ["cat", "dog", "bird", "cats", "dogs"]
+
+	for i = 0; i < len(tests); ++i {
+		test = tests[i]
+		if re.MatchString(test) {
+			print("'{test}' matches cat|dog")
+		} else {
+			print("'{test}' does NOT match cat|dog")
+		}
+	}
+
+	print("")
+}
+
+# Example 8: Grouping with parentheses
+grouping = fn() {
+	print("Example 8: Grouping ()")
+	print("======================")
+
+	re = regexp.MustCompile("(ab)+")
+
+	tests = ["ab", "abab", "ababab", "abc", "a", "b"]
+
+	for i = 0; i < len(tests); ++i {
+		test = tests[i]
+		if re.MatchString(test) {
+			print("'{test}' matches (ab)+")
+		} else {
+			print("'{test}' does NOT match (ab)+")
+		}
+	}
+
+	print("")
+}
+
+# Example 9: Escaped characters
+escapedChars = fn() {
+	print("Example 9: Escaped Characters")
+	print("==============================")
+
+	# Match literal dot
+	re = regexp.MustCompile("a\\.b")
+
+	tests = ["a.b", "a_b", "axb", "a..b"]
+
+	for i = 0; i < len(tests); ++i {
+		test = tests[i]
+		if re.MatchString(test) {
+			print("'{test}' matches a\\.b")
+		} else {
+			print("'{test}' does NOT match a\\.b")
+		}
+	}
+
+	print("")
+}
+
+# Example 10: FindString
+findString = fn() {
+	print("Example 10: Finding Matches")
+	print("===========================")
+
+	re = regexp.MustCompile("\\d+")
+
+	text = "I have 42 apples and 17 oranges"
+
+	match = re.FindString(text)
+	if match != null {
+		print("First number found: {match}")
+	} else {
+		print("No match found")
+	}
+
+	print("")
+}
+
+# Example 11: Email validation pattern
+emailValidation = fn() {
+	print("Example 11: Email Pattern Matching")
+	print("===================================")
+
+	# Simplified email pattern
+	re = regexp.MustCompile(".+@.+\\..+")
+
+	emails = [
+		"user@example.com",
+		"test@test.org",
+		"invalid.email",
+		"@example.com",
+		"user@domain"
+	]
+
+	for i = 0; i < len(emails); ++i {
+		email = emails[i]
+		if re.MatchString(email) {
+			print("'{email}' is valid")
+		} else {
+			print("'{email}' is INVALID")
+		}
+	}
+
+	print("")
+}
+
+# Example 12: QuoteMeta for literal matching
+quoteMeta = fn() {
+	print("Example 12: QuoteMeta")
+	print("=====================")
+
+	text = "How much is $5.99?"
+
+	# Quote meta characters
+	quoted = regexp.QuoteMeta(text)
+	print("Original: {text}")
+	print("Quoted:   {quoted}")
+
+	# Now it can be used as a literal pattern
+	re = regexp.MustCompile(quoted)
+	if re.MatchString(text) {
+		print("Exact match found!")
+	}
+
+	print("")
+}
+
+# Example 13: Pattern for validating usernames
+usernameValidation = fn() {
+	print("Example 13: Username Validation")
+	print("================================")
+
+	# Username: letters and digits only, 3+ chars
+	re = regexp.MustCompile("[a-z0-9]+")
+
+	usernames = ["alice", "bob123", "charlie_", "user@name", "ab"]
+
+	for i = 0; i < len(usernames); ++i {
+		username = usernames[i]
+		if re.MatchString(username) && len(username) >= 3 {
+			print("'{username}' is valid")
+		} else {
+			print("'{username}' is INVALID")
+		}
+	}
+
+	print("")
+}
+
+# Example 14: Pattern matching for URLs
+urlPattern = fn() {
+	print("Example 14: URL Pattern Matching")
+	print("=================================")
+
+	# Simple URL pattern
+	re = regexp.MustCompile("https?://.+")
+
+	urls = [
+		"http://example.com",
+		"https://example.com",
+		"ftp://example.com",
+		"example.com",
+		"http://"
+	]
+
+	for i = 0; i < len(urls); ++i {
+		url = urls[i]
+		if re.MatchString(url) {
+			print("'{url}' is a valid URL")
+		} else {
+			print("'{url}' is NOT a valid URL")
+		}
+	}
+
+	print("")
+}
+
+# Main
+print("Tau Regular Expression Library - Examples")
+print("==========================================\n")
+
+# Run all examples
+simpleMatch()
+directMatch()
+wildcardMatch()
+zeroOrMore()
+oneOrMore()
+optionalMatch()
+alternation()
+grouping()
+escapedChars()
+# findString()  # Uncomment when FindString is working properly
+emailValidation()
+quoteMeta()
+usernameValidation()
+urlPattern()
+
+print("All examples completed!")

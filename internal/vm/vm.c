@@ -67,7 +67,10 @@ inline void state_dispose(struct state s) {
 	// The constants are not freed: they belong to the compiler, which is
 	// written in Go, and freeing memory this side did not allocate is how a
 	// heap gets corrupted.
-	heap_dispose();
+	//
+	// Neither is the heap: it is shared with the tau routines, which are never
+	// joined and may well still be running. Freeing it here would pull the
+	// objects out from under them. The process ending is what gives it back.
 	pool_dispose(s.globals);
 }
 
@@ -856,6 +859,7 @@ static int run_and_cleanup(void *vmptr) {
 	// The heap is global: whatever this VM allocated and is still reachable
 	// from somewhere else (a pipe, the globals) survives.
 	gc_unregister(vm);
+	gc_release_segment();
 	gc_flush_headers();
 	vm_dispose(vm);
 	return ret;
@@ -874,6 +878,10 @@ static int call_builtin_and_cleanup(void *data) {
 	d->fn(d->args, d->numargs);
 	gc_remove_roots(d->roots);
 	fflush(stdout);
+
+	// A builtin allocates too, and this thread is about to end.
+	gc_release_segment();
+	gc_flush_headers();
 
 	free(d->args);
 	free(d);
@@ -904,6 +912,11 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 			gc_unregister(tvm);
 			vm_errorf(vm, "failed to create thread");
 		}
+		// Nobody ever joins a tau routine, so the thread has to be told that
+		// its remains are of no interest: a thread that is neither joined nor
+		// detached keeps its stack and its descriptor until the process ends,
+		// and a program that starts a few thousand of them runs out of them.
+		thrd_detach(thread);
 		break;
 	}
 
@@ -919,12 +932,22 @@ static inline void vm_exec_concurrent_call(struct vm * restrict vm, uint32_t num
 			gc_remove_roots(d->roots);
 			vm_errorf(vm, "failed to create thread");
 		}
+		thrd_detach(thread);
 		break;
 	}
 
 	default:
 		vm_errorf(vm, "calling non-function: got type %s", otype_str(o->type));
 	}
+
+	// Drop the closure and its arguments and leave null in their place: a call
+	// is an expression, and the statement it belongs to pops exactly one value.
+	// Without this every `tau f(x)` would leave its arguments behind, and a
+	// loop that starts routines would walk the stack pointer off the end of the
+	// stack. It is done only once the routine can be reached from its own VM,
+	// so the objects are never unreachable in between.
+	vm->sp -= num_args + 1;
+	vm_stack_push(vm, null_obj);
 }
 
 static inline void vm_exec_return(struct vm * restrict vm) {
@@ -1174,7 +1197,7 @@ static int vm_loop(struct vm * restrict vm) {
 
 	TARGET_CALL: {
 		uint8_t num_args = read_uint8(frame->ip++);
-		if (gc_wanted) gc_safepoint();
+		if (gc_pending()) gc_safepoint();
 		vm_exec_call(vm, num_args);
 		frame = vm_current_frame(vm);
 		DISPATCH();
@@ -1205,14 +1228,14 @@ static int vm_loop(struct vm * restrict vm) {
 		frame->ip = &frame->start[pos];
 		// Safepoint: a loop that doesn't allocate would otherwise never let
 		// another VM collect.
-		if (gc_wanted) gc_safepoint();
+		if (gc_pending()) gc_safepoint();
 		DISPATCH();
 	}
 
 	TARGET_JUMP_NOT_TRUTHY: {
 		uint16_t pos = read_uint16(frame->ip);
 		frame->ip += 2;
-		if (gc_wanted) gc_safepoint();
+		if (gc_pending()) gc_safepoint();
 
 		struct object *cond = &vm_stack_pop(vm);
 		if (!is_truthy(cond)) {

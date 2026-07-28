@@ -1,0 +1,398 @@
+# http_examples.tau - Examples using the http.tau library (Go-style HTTP patterns)
+
+import("stdlib/http.tau")
+import("stdlib/strings.tau")
+
+# Example 1: Simple HTTP server with HandleFunc (like Go's http.HandleFunc)
+# Go equivalent:
+#   http.HandleFunc("/", handler)
+#   http.ListenAndServe(":8080", nil)
+simpleServer = fn() {
+	print("Example 1: Simple HTTP Server")
+	print("==============================")
+
+	# Register handler for root path
+	HandleFunc("/", fn(w, req) {
+		print("Request: {req.Method} {req.URL}")
+
+		w.Header()["content-type"] = "text/plain"
+		w.Write("Hello from Tau HTTP Server!\n")
+		w.Write("Path: {req.URL}\n")
+		w.Write("Method: {req.Method}\n")
+	})
+
+	# Start server
+	print("Starting server on :8080")
+	print("Visit http://localhost:8080")
+	ListenAndServe(":8080", null)
+}
+
+# Example 2: HTTP server with multiple routes using ServeMux
+# Go equivalent:
+#   mux := http.NewServeMux()
+#   mux.HandleFunc("/", homeHandler)
+#   mux.HandleFunc("/api/", apiHandler)
+serverWithRoutes = fn() {
+	print("Example 2: HTTP Server with Multiple Routes")
+	print("============================================")
+
+	# Create new ServeMux
+	mux = NewServeMux()
+
+	# Home page handler
+	mux.HandleFunc("/", fn(w, req) {
+		print("Home: {req.Method} {req.URL}")
+
+		w.Header()["content-type"] = "text/html"
+		html = "<html><body>"
+		html += "<h1>Welcome to Tau HTTP Server</h1>"
+		html += "<ul>"
+		html += "<li><a href='/'>Home</a></li>"
+		html += "<li><a href='/about'>About</a></li>"
+		html += "<li><a href='/api/status'>API Status</a></li>"
+		html += "</ul>"
+		html += "</body></html>"
+
+		w.Write(html)
+	})
+
+	# About page handler
+	mux.HandleFunc("/about", fn(w, req) {
+		print("About: {req.Method} {req.URL}")
+
+		w.Header()["content-type"] = "text/html"
+		w.Write("<html><body><h1>About</h1><p>Tau HTTP Server v1.0</p></body></html>")
+	})
+
+	# API handler
+	mux.HandleFunc("/api/", fn(w, req) {
+		print("API: {req.Method} {req.URL}")
+
+		w.Header()["content-type"] = "application/json"
+
+		if req.URL == "/api/status" {
+			w.Write('{"status":"ok","version":"1.0"}')
+		} else if req.URL == "/api/time" {
+			w.Write('{"time":"2024-01-01T12:00:00Z"}')
+		} else {
+			w.WriteHeader(StatusNotFound)
+			w.Write('{"error":"not found"}')
+		}
+	})
+
+	# 404 handler for unknown routes
+	mux.HandleFunc("/404", NotFoundHandler())
+
+	print("Starting server on :8080")
+	ListenAndServe(":8080", mux)
+}
+
+# Example 3: HTTP client making GET requests (like Go's http.Get)
+# Go equivalent:
+#   resp, err := http.Get("http://example.com")
+clientGet = fn() {
+	print("Example 3: HTTP Client GET Request")
+	print("===================================")
+
+	# Simple GET request
+	print("Fetching http://example.com:80/")
+
+	resp = Get("http://example.com:80/")
+
+	if failed(resp) {
+		print("Error: {resp}")
+		return resp
+	}
+
+	print("Status: {resp.Status}")
+	print("Status Code: {resp.StatusCode}")
+	print("Body length: {len(resp.Body)} bytes")
+	print("\nFirst 500 characters:")
+	print(slice(resp.Body, 0, if len(resp.Body) > 500 { 500 } else { len(resp.Body) }))
+}
+
+# Example 4: HTTP client with custom request (like Go's http.Client)
+# Go equivalent:
+#   client := &http.Client{}
+#   req, _ := http.NewRequest("GET", url, nil)
+#   resp, _ := client.Do(req)
+clientCustom = fn() {
+	print("Example 4: HTTP Client with Custom Request")
+	print("==========================================")
+
+	# Create client
+	client = NewClient()
+
+	# Create custom request
+	req = NewRequest("GET", "http://example.com:80/", null)
+	req.Header["user-agent"] = "TauHTTP/1.0"
+
+	print("Sending custom request...")
+
+	# Send request
+	resp = client.Do(req)
+
+	if failed(resp) {
+		print("Error: {resp}")
+		return resp
+	}
+
+	print("Status: {resp.StatusCode}")
+	print("Response received successfully")
+}
+
+# Example 5: POST request with JSON body
+# Go equivalent:
+#   resp, err := http.Post(url, "application/json", body)
+clientPost = fn() {
+	print("Example 5: HTTP Client POST Request")
+	print("====================================")
+
+	# JSON body
+	jsonBody = '{"name":"John","email":"john@example.com"}'
+
+	print("Posting to http://httpbin.org:80/post")
+
+	resp = Post("http://httpbin.org:80/post", "application/json", jsonBody)
+
+	if failed(resp) {
+		print("Error: {resp}")
+		return resp
+	}
+
+	print("Status: {resp.StatusCode}")
+	print("Response body:")
+	print(resp.Body)
+}
+
+# Example 6: REST API server
+# Go equivalent: Full REST API with different methods
+restAPIServer = fn() {
+	print("Example 6: REST API Server")
+	print("==========================")
+
+	mux = NewServeMux()
+
+	# In-memory data store
+	users = []
+
+	# GET /api/users - List all users
+	mux.HandleFunc("/api/users", fn(w, req) {
+		if req.Method == MethodGet {
+			w.Header()["content-type"] = "application/json"
+
+			# Build JSON array (simplified)
+			json = "["
+			for i = 0; i < len(users); ++i {
+				if i > 0 {
+					json += ","
+				}
+				json += '{"id":{i},"name":"{users[i]}"}'
+			}
+			json += "]"
+
+			w.Write(json)
+		} else if req.Method == MethodPost {
+			# Add new user
+			users = append(users, "NewUser{len(users)}")
+
+			w.WriteHeader(StatusCreated)
+			w.Header()["content-type"] = "application/json"
+			w.Write('{"message":"user created","id":{len(users)-1}}')
+		} else {
+			w.WriteHeader(StatusMethodNotAllowed)
+			w.Write("Method not allowed")
+		}
+	})
+
+	# GET /api/users/:id - Get specific user
+	mux.HandleFunc("/api/user/", fn(w, req) {
+		w.Header()["content-type"] = "application/json"
+
+		# Extract ID from path (simplified)
+		if len(users) > 0 {
+			w.Write('{"id":0,"name":"{users[0]}"}')
+		} else {
+			w.WriteHeader(StatusNotFound)
+			w.Write('{"error":"user not found"}')
+		}
+	})
+
+	# Health check endpoint
+	mux.HandleFunc("/health", fn(w, req) {
+		w.Header()["content-type"] = "application/json"
+		w.Write('{"status":"healthy"}')
+	})
+
+	print("REST API server starting on :8080")
+	print("Endpoints:")
+	print("  GET  /api/users")
+	print("  POST /api/users")
+	print("  GET  /api/user/:id")
+	print("  GET  /health")
+
+	ListenAndServe(":8080", mux)
+}
+
+# Example 7: Static file server
+# Go equivalent:
+#   http.Handle("/static/", http.FileServer(http.Dir("./public")))
+staticFileServer = fn() {
+	print("Example 7: Static File Server")
+	print("==============================")
+
+	mux = NewServeMux()
+
+	# Serve static files
+	mux.Handle("/static/", FileServer("./public"))
+
+	# Home page
+	mux.HandleFunc("/", fn(w, req) {
+		w.Header()["content-type"] = "text/html"
+		html = "<html><body>"
+		html += "<h1>Static File Server</h1>"
+		html += "<p>Try <a href='/static/index.html'>/static/index.html</a></p>"
+		html += "</body></html>"
+		w.Write(html)
+	})
+
+	print("Static file server starting on :8080")
+	print("Serving files from ./public")
+
+	ListenAndServe(":8080", mux)
+}
+
+# Example 8: Middleware pattern (like Go's middleware)
+loggingMiddleware = fn(next) {
+	return fn(w, req) {
+		print("[{req.Method}] {req.URL}")
+
+		# Call next handler
+		next(w, req)
+
+		print("[{req.Method}] {req.URL} - completed")
+	}
+}
+
+serverWithMiddleware = fn() {
+	print("Example 8: HTTP Server with Middleware")
+	print("=======================================")
+
+	mux = NewServeMux()
+
+	# Wrap handlers with middleware
+	homeHandler = fn(w, req) {
+		w.Write("Home page")
+	}
+
+	apiHandler = fn(w, req) {
+		w.Header()["content-type"] = "application/json"
+		w.Write('{"status":"ok"}')
+	}
+
+	mux.Handle("/", loggingMiddleware(homeHandler))
+	mux.Handle("/api", loggingMiddleware(apiHandler))
+
+	print("Server with middleware starting on :8080")
+	ListenAndServe(":8080", mux)
+}
+
+# Example 9: Custom server with configuration
+# Go equivalent:
+#   server := &http.Server{Addr: ":8080", Handler: mux}
+#   server.ListenAndServe()
+customServer = fn() {
+	print("Example 9: Custom HTTP Server")
+	print("==============================")
+
+	mux = NewServeMux()
+
+	mux.HandleFunc("/", fn(w, req) {
+		w.Write("Custom Server")
+	})
+
+	# Create custom server
+	server = NewServer(":8888", mux)
+
+	print("Custom server starting on :8888")
+
+	# Start server
+	server.ListenAndServe()
+}
+
+# Example 10: Error handling and status codes
+errorHandlingServer = fn() {
+	print("Example 10: Error Handling Server")
+	print("==================================")
+
+	mux = NewServeMux()
+
+	mux.HandleFunc("/ok", fn(w, req) {
+		w.WriteHeader(StatusOK)
+		w.Write("200 OK")
+	})
+
+	mux.HandleFunc("/created", fn(w, req) {
+		w.WriteHeader(StatusCreated)
+		w.Write("201 Created")
+	})
+
+	mux.HandleFunc("/badrequest", fn(w, req) {
+		Error(w, "400 Bad Request", StatusBadRequest)
+	})
+
+	mux.HandleFunc("/notfound", fn(w, req) {
+		Error(w, "404 Not Found", StatusNotFound)
+	})
+
+	mux.HandleFunc("/error", fn(w, req) {
+		Error(w, "500 Internal Server Error", StatusInternalServerError)
+	})
+
+	mux.HandleFunc("/redirect", fn(w, req) {
+		Redirect(w, req, "/ok", StatusFound)
+	})
+
+	print("Error handling server starting on :8080")
+	print("Try different endpoints:")
+	print("  /ok - 200 OK")
+	print("  /created - 201 Created")
+	print("  /badrequest - 400 Bad Request")
+	print("  /notfound - 404 Not Found")
+	print("  /error - 500 Internal Server Error")
+	print("  /redirect - 302 Redirect")
+
+	ListenAndServe(":8080", mux)
+}
+
+# Main - Choose which example to run
+print("Tau HTTP Library - Examples")
+print("============================\n")
+
+print("Available examples:")
+print("1. Simple HTTP server")
+print("2. HTTP server with multiple routes")
+print("3. HTTP client GET request")
+print("4. HTTP client with custom request")
+print("5. HTTP client POST request")
+print("6. REST API server")
+print("7. Static file server")
+print("8. Server with middleware")
+print("9. Custom server configuration")
+print("10. Error handling and status codes")
+
+print("\nUncomment the example you want to run:\n")
+
+# Uncomment one of these to run:
+# simpleServer()
+# serverWithRoutes()
+# clientGet()
+# clientCustom()
+# clientPost()
+# restAPIServer()
+# staticFileServer()
+# serverWithMiddleware()
+# customServer()
+# errorHandlingServer()
+
+print("Example code ready. Uncomment an example to run it.")

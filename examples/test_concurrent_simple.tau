@@ -1,0 +1,31 @@
+#!/usr/bin/env tau
+
+# Test concurrent access with simple reads/writes
+# This shows that individual operations are protected
+
+results = []
+
+simple_worker = fn(id, result_pipe) {
+    # Each worker just adds its result to the global list
+    # This is a single write operation (protected)
+    results = append(results, id * 1000)
+    send(result_pipe, true)
+}
+
+p = pipe(3)
+
+tau simple_worker(1, p)
+tau simple_worker(2, p)
+tau simple_worker(3, p)
+
+# Wait for completion
+for i = 0; i < 3; i = i + 1 {
+    recv(p)
+}
+
+println("Results:", results)
+println("Length:", len(results))
+println("")
+println("Note: Individual reads and writes are protected.")
+println("But read-modify-write sequences can still race.")
+println("This is expected behavior for mutex-based protection.")

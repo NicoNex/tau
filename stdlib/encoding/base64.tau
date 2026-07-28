@@ -1,0 +1,122 @@
+# base64 - the encoding of RFC 4648.
+#
+# EncodeToString uses the standard alphabet and pads with "=", which is what
+# most things expect. URLEncodeToString uses "-" and "_" instead of "+" and
+# "/", for what travels inside a URL or a filename.
+
+stdAlphabet = bytes("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/")
+urlAlphabet = bytes("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_")
+
+pad = 61
+
+# EncodedLen is how long the encoding of n bytes is, padding included.
+EncodedLen = fn(n) { ((n + 2) - (n + 2) % 3) / 3 * 4 }
+
+# encode is the encoder both alphabets go through.
+encode = fn(data, alphabet, padded) {
+	if type(data) != "bytes" {
+		if failed(data = bytes(string(data))) {
+			return data
+		}
+	}
+
+	out = []
+	i = 0
+
+	# Three bytes at a time become four digits of six bits each.
+	for i + 3 <= len(data) {
+		n = data[i] << 16 | data[i + 1] << 8 | data[i + 2]
+		out = append(out,
+			alphabet[n >> 18 & 0x3f],
+			alphabet[n >> 12 & 0x3f],
+			alphabet[n >> 6 & 0x3f],
+			alphabet[n & 0x3f])
+		i = i + 3
+	}
+
+	# What is left is one or two bytes, the missing bits counting as zero.
+	rest = len(data) - i
+	if rest == 1 {
+		n = data[i] << 16
+		out = append(out, alphabet[n >> 18 & 0x3f], alphabet[n >> 12 & 0x3f])
+		if padded {
+			out = append(out, pad, pad)
+		}
+	} else if rest == 2 {
+		n = data[i] << 16 | data[i + 1] << 8
+		out = append(out, alphabet[n >> 18 & 0x3f], alphabet[n >> 12 & 0x3f], alphabet[n >> 6 & 0x3f])
+		if padded {
+			out = append(out, pad)
+		}
+	}
+
+	return string(bytes(out))
+}
+
+# values maps a digit to the six bits it stands for. Both alphabets share the
+# first 62 digits, so one table serves them both.
+value = fn(c) {
+	if c >= 65 && c <= 90 {
+		return c - 65
+	}
+	if c >= 97 && c <= 122 {
+		return c - 71
+	}
+	if c >= 48 && c <= 57 {
+		return c + 4
+	}
+	if c == 43 || c == 45 {
+		return 62
+	}
+	if c == 47 || c == 95 {
+		return 63
+	}
+	return -1
+}
+
+# EncodeToString returns the base64 form of data, a string or bytes.
+EncodeToString = fn(data) { encode(data, stdAlphabet, true) }
+
+# URLEncodeToString is EncodeToString with the URL safe alphabet and no
+# padding, the form a token or a filename is written in.
+URLEncodeToString = fn(data) { encode(data, urlAlphabet, false) }
+
+# DecodeString returns the bytes s stands for. Both alphabets are understood
+# and the padding is optional, since it carries nothing the length doesn't.
+DecodeString = fn(s) {
+	if type(s) != "bytes" {
+		if failed(s = bytes(string(s))) {
+			return s
+		}
+	}
+
+	out = []
+	n = 0
+	bits = 0
+
+	for i = 0; i < len(s); ++i {
+		c = s[i]
+
+		# Padding and the newlines a long encoding is broken with carry
+		# nothing.
+		if c == pad || c == 10 || c == 13 {
+			continue
+		}
+
+		v = value(c)
+		if v < 0 {
+			return error("base64: invalid character at index {i}")
+		}
+
+		n = n << 6 | v
+		bits = bits + 6
+
+		# Every time six more bits make a whole byte, out gets one.
+		if bits >= 8 {
+			bits = bits - 8
+			out = append(out, n >> bits & 0xff)
+		}
+	}
+
+	return bytes(out)
+}

@@ -4,34 +4,34 @@
 	#include <threads.h>
 #elif __has_include(<pthread.h>)
 	#include <pthread.h>
+	#include <stdlib.h>
 
-	#ifdef __clang__
-		struct warg {
-			int (*fn)(void *);
-			void *arg;
-		};
+	// The function to run and its argument, handed to the new thread. It has
+	// to outlive the call to pthread_create: the thread may well start after
+	// the caller has returned, so it cannot live on the caller's stack.
+	struct warg {
+		int (*fn)(void *);
+		void *arg;
+	};
 
-		static void *wrapper(void *arg) {
-			struct warg *a = arg;
-			a->fn(a->arg);
-			return NULL;
-		}
-	#endif
+	static inline void *thrd_wrapper(void *p) {
+		struct warg a = *(struct warg *) p;
+		free(p);
+		return (void *) (intptr_t) a.fn(a.arg);
+	}
 
 	// Thread
 	#define thrd_t pthread_t
 	#define thrd_success 0
-	#ifdef __clang__
-		#define thrd_create(thrd, _fn, _arg) ({ \
-			struct warg a = (struct warg) {.fn = (_fn), .arg = (_arg)}; \
-			pthread_create((thrd), NULL, wrapper, &a); \
-		})
-	#else
-		#define thrd_create(thrd, fn, arg) ({ \
-			void *wrapper(void *a) { return (void *)(intptr_t)fn(a); } \
-			pthread_create((thrd), NULL, wrapper, (arg)); \
-		})
-	#endif
+	#define thrd_create(thrd, _fn, _arg) ({ \
+		struct warg *a = malloc(sizeof(struct warg)); \
+		a->fn = (_fn); \
+		a->arg = (_arg); \
+		int rc = pthread_create((thrd), NULL, thrd_wrapper, a); \
+		if (rc != 0) free(a); \
+		rc; \
+	})
+	#define thrd_detach pthread_detach
 
 	// Mutex
 	#define mtx_t pthread_mutex_t
@@ -56,6 +56,7 @@
 	#define thrd_t HANDLE
 	#define thrd_success 0
 	#define thrd_create(thrd, fn, arg) ((*(thrd) = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)(fn), (arg), 0, NULL)) == NULL)
+	#define thrd_detach(thrd) CloseHandle(thrd)
 
 	// Mutex
 	#define mtx_t CRITICAL_SECTION

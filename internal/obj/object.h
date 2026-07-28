@@ -91,6 +91,12 @@ struct pipe {
 	uint32_t tail;
 	uint32_t is_buffered;
 	uint32_t is_closed;
+	// How many values went in and how many came out since the pipe was made.
+	// An unbuffered send waits for the count of received values to pass the
+	// one it got when it put its own value in: that, and not the room left in
+	// the buffer, is what tells a sender its value has been taken.
+	uint64_t sent;
+	uint64_t recvd;
 	mtx_t mu;
 	cnd_t not_empty;
 	cnd_t not_full;

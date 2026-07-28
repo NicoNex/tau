@@ -1,0 +1,28 @@
+testing = import("testing")
+hex = import("encoding/hex")
+
+testing.Main([
+		["EncodeToString", fn(t) {
+				t.AssertEq(hex.EncodeToString("Hello, tau!"), "48656c6c6f2c2074617521")
+				t.AssertEq(hex.EncodeToString(""), "")
+				t.AssertEq(hex.EncodeToString(bytes([0, 15, 16, 255])), "000f10ff")
+			}],
+		["DecodeString", fn(t) {
+				t.AssertEq(string(hex.DecodeString("48656c6c6f")), "Hello")
+				t.AssertEq(hex.DecodeString("000F10FF"), bytes([0, 15, 16, 255]))
+				t.AssertEq(hex.DecodeString(""), bytes(0))
+			}],
+		["a roundtrip gives back what went in", fn(t) {
+				b = bytes([0, 1, 127, 128, 254, 255])
+				t.AssertEq(hex.DecodeString(hex.EncodeToString(b)), b)
+			}],
+		["broken input is an error", fn(t) {
+				t.AssertError(hex.DecodeString("abc"))
+				t.AssertError(hex.DecodeString("zz"))
+			}],
+		["lengths", fn(t) {
+				t.AssertEq(hex.EncodedLen(4), 8)
+				t.AssertEq(hex.DecodedLen(8), 4)
+				t.AssertEq(hex.DecodedLen(7), 3)
+			}]
+	])

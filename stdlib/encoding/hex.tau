@@ -1,0 +1,71 @@
+# hex - hexadecimal encoding.
+#
+# EncodeToString turns bytes into the string of their hexadecimal digits, two
+# per byte, and DecodeString reads that string back.
+
+# The digits as bytes: indexing a string gives a string, indexing bytes gives
+# the number, which is what goes into the output.
+digits = bytes("0123456789abcdef")
+
+# value returns the number a hexadecimal digit stands for, or -1.
+value = fn(c) {
+	if c >= 48 && c <= 57 {
+		return c - 48
+	}
+	if c >= 97 && c <= 102 {
+		return c - 87
+	}
+	if c >= 65 && c <= 70 {
+		return c - 55
+	}
+	return -1
+}
+
+# EncodedLen is how long the encoding of n bytes is.
+EncodedLen = fn(n) { n * 2 }
+
+# DecodedLen is how many bytes n hexadecimal digits stand for.
+DecodedLen = fn(n) { (n - n % 2) >> 1 }
+
+# EncodeToString returns the hexadecimal form of data, a string or bytes.
+EncodeToString = fn(data) {
+	if type(data) != "bytes" {
+		if failed(data = bytes(string(data))) {
+			return data
+		}
+	}
+
+	# A list of numbers turned into bytes at the end: bytes are read only,
+	# and growing a string one digit at a time would copy it every time.
+	out = []
+	for i = 0; i < len(data); ++i {
+		b = data[i]
+		out = append(out, digits[b >> 4], digits[b & 0x0f])
+	}
+	return string(bytes(out))
+}
+
+# DecodeString returns the bytes the hexadecimal string s stands for.
+DecodeString = fn(s) {
+	if type(s) != "bytes" {
+		if failed(s = bytes(string(s))) {
+			return s
+		}
+	}
+
+	if len(s) % 2 != 0 {
+		return error("hex: odd length string")
+	}
+
+	out = []
+	for i = 0; i < len(s); i = i + 2 {
+		hi = value(s[i])
+		lo = value(s[i + 1])
+
+		if hi < 0 || lo < 0 {
+			return error("hex: invalid byte at index {i}")
+		}
+		out = append(out, hi << 4 | lo)
+	}
+	return bytes(out)
+}

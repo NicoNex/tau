@@ -1,0 +1,16 @@
+#!/usr/bin/env tau
+
+# Simple computation-heavy function
+compute = fn(n) {
+    result = n * 2 + 100
+    result = result * 3 - 50
+    result = result * 4 + 200
+    result
+}
+
+# Call it many times to trigger JIT
+total = 0
+for i = 0; i < 5000000; i = i + 1 {
+    total = total + compute(i)
+}
+println(total)

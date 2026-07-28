@@ -1,0 +1,16 @@
+#!/usr/bin/env tau
+
+# Compute sum of squares - ideal for JIT
+# Lots of arithmetic in a tight loop, minimal function calls
+
+sum_of_squares = fn(n) {
+    sum = 0
+    for i = 0; i < n; i = i + 1 {
+        sum = sum + i * i
+    }
+    sum
+}
+
+# Run it with a large number to see the difference
+result = sum_of_squares(10000000)
+println(result)

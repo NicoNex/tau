@@ -1,0 +1,52 @@
+NewStream = fn() {
+	stream = new()
+	stream.calls = []
+
+	apply = fn(func) {
+		stream.calls = append(stream.calls, func)
+		stream
+	}
+
+	stream.Map = fn(mapFn) {
+		apply(fn(item) { mapFn(item); true })
+	}
+	stream.Filter = fn(filterFn) {
+		apply(fn(item) { filterFn(item) })
+	}
+	stream.ForEach = fn(eachFn) {
+		apply(fn (item) { eachFn(item); true })
+	}
+
+	stream.Start = fn(items) {
+		list = []
+
+		for i = 0; i < len(items); ++i {
+			item = items[i]
+
+			for j = 0; j < len(stream.calls); ++j {
+				if !stream.calls[j](item) {
+					break
+				}
+				list = append(list, item)
+			}
+			return list
+		}
+	}
+
+	return stream
+}
+
+main = fn() {
+	array = [1, 2, 3, 4]
+
+	stream = NewStream().
+		Filter(fn(item) { item%2 == 0}).
+		ForEach(println).
+		Map(fn(item) { item * 3})
+
+	println("START:", array)
+	println("STREAM:", stream.Start(array))
+	println("ARRAY:", array)
+}
+
+main()

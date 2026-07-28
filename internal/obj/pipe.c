@@ -13,12 +13,15 @@ static void pipe_lock(struct pipe *p) {
 
 int pipe_close(struct object pipe) {
 	struct pipe *p = pipe.data.pipe;
+
+	// is_closed is only ever looked at with the mutex held: a check outside it
+	// races with the thread that closes, and the answer would be stale by the
+	// time the lock is taken anyway.
+	pipe_lock(p);
 	if (p->is_closed) {
+		mtx_unlock(&p->mu);
 		return 0;
 	}
-
-	pipe_lock(p);
-	// Set the flag to indicate that the pipe is closed.
 	p->is_closed = 1;
 	// Unblock all the threads waiting on the pipe.
 	cnd_broadcast(&p->not_empty);
@@ -54,41 +57,39 @@ void mark_pipe_obj(struct object pipe) {
 
 int pipe_send(struct object pipe, struct object o) {
 	struct pipe *p = pipe.data.pipe;
+
+	pipe_lock(p);
+	// Wait for room. Both kinds of pipe block here: an unbuffered one holds a
+	// single value, a buffered one as many as it was made with. Neither grows,
+	// a pipe that grows is a queue and never makes a sender wait.
+	while (p->len == p->cap && !p->is_closed) {
+		gc_park();
+		cnd_wait(&p->not_full, &p->mu);
+		gc_unpark();
+	}
 	if (p->is_closed) {
+		mtx_unlock(&p->mu);
 		return 0;
 	}
 
-	pipe_lock(p);
-	if (p->is_buffered) {
-		while (p->len == p->cap && !p->is_closed) {
+	p->buf[p->tail] = o;
+	p->tail = (p->tail + 1) % p->cap;
+	p->len++;
+	uint64_t ticket = p->sent++;
+	cnd_signal(&p->not_empty);
+
+	// An unbuffered send is a rendezvous: it is done when a receiver has taken
+	// the value, not when the value has been put down. Waiting for the buffer
+	// to have room again would not do, another sender could take that room
+	// first and this one would wait for a receiver that already came.
+	if (!p->is_buffered) {
+		while (p->recvd <= ticket && !p->is_closed) {
 			gc_park();
 			cnd_wait(&p->not_full, &p->mu);
 			gc_unpark();
 		}
-		if (p->is_closed) {
-			mtx_unlock(&p->mu);
-			return 0;
-		}
-	} else {
-		if (p->len == p->cap) {
-			// Grow unwrapping the ring, a plain realloc would scramble it.
-			size_t cap = p->cap * 2;
-			struct object *buf = malloc(cap * sizeof(struct object));
-
-			for (size_t i = 0; i < p->len; i++) {
-				buf[i] = p->buf[(p->head + i) % p->cap];
-			}
-			free(p->buf);
-			p->buf = buf;
-			p->cap = cap;
-			p->head = 0;
-			p->tail = p->len;
-		}
 	}
-	p->buf[p->tail] = o;
-	p->tail = (p->tail + 1) % p->cap;
-	p->len++;
-	cnd_signal(&p->not_empty);
+
 	mtx_unlock(&p->mu);
 	return 1;
 }
@@ -114,21 +115,25 @@ struct object pipe_recv(struct object pipe) {
 	struct object val = p->buf[p->head];
 	p->head = (p->head + 1) % p->cap;
 	p->len--;
-	cnd_signal(&p->not_full);
+	p->recvd++;
+	// Broadcast, not signal: on not_full wait both the senders that want room
+	// and the unbuffered ones that want their value taken, and only the right
+	// one can tell that it is its turn.
+	cnd_broadcast(&p->not_full);
 	mtx_unlock(&p->mu);
 
 	return val;
 }
 
-struct object new_pipe() {
-	struct pipe *pipe = malloc(sizeof(struct pipe));
-	pipe->buf = calloc(1, sizeof(struct object));
-	pipe->cap = 1;
-	pipe->len = 0;
-	pipe->head = 0;
-	pipe->tail = 0;
-	pipe->is_buffered = 0;
-	pipe->is_closed = 0;
+// An unbuffered pipe is one slot deep and hands the value over directly, a
+// buffered one holds as many values as it was asked for. The only difference
+// between the two is whether a sender waits for a receiver.
+static struct object pipe_new(size_t cap, uint32_t is_buffered) {
+	struct pipe *pipe = calloc(1, sizeof(struct pipe));
+
+	pipe->buf = calloc(cap, sizeof(struct object));
+	pipe->cap = cap;
+	pipe->is_buffered = is_buffered;
 	mtx_init(&pipe->mu, mtx_plain);
 	cnd_init(&pipe->not_empty);
 	cnd_init(&pipe->not_full);
@@ -140,22 +145,10 @@ struct object new_pipe() {
 	};
 }
 
-struct object new_buffered_pipe(size_t size) {
-	struct pipe *pipe = malloc(sizeof(struct pipe));
-	pipe->buf = calloc(size, sizeof(struct object));
-	pipe->cap = size;
-	pipe->len = 0;
-	pipe->head = 0;
-	pipe->tail = 0;
-	pipe->is_buffered = 1;
-	pipe->is_closed = 0;
-	mtx_init(&pipe->mu, mtx_plain);
-	cnd_init(&pipe->not_empty);
-	cnd_init(&pipe->not_full);
+struct object new_pipe() {
+	return pipe_new(1, 0);
+}
 
-	return (struct object) {
-		.data.pipe = pipe,
-		.type = obj_pipe,
-		.gc = gc_header_alloc()
-	};
+struct object new_buffered_pipe(size_t size) {
+	return pipe_new(size > 0 ? size : 1, 1);
 }

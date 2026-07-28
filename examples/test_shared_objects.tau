@@ -1,0 +1,49 @@
+#!/usr/bin/env tau
+
+# Test shared objects between parent and child VMs
+# This should reveal use-after-free bugs if not handled properly
+
+make_large_list = fn() {
+    result = []
+    for i = 0; i < 100; i = i + 1 {
+        result = append(result, i)
+    }
+    return result
+}
+
+# Create a large list on parent heap
+shared_list = make_large_list()
+
+process_list = fn(lst, id, result_pipe) {
+    # Child VM receives the list and processes it
+    # The list is allocated on parent's heap
+    sum = 0
+    for i = 0; i < len(lst); i = i + 1 {
+        sum = sum + lst[i]
+    }
+    send(result_pipe, sum)
+    println("Worker", id, "computed sum:", sum)
+}
+
+p = pipe(3)
+
+# Spawn multiple workers that all share the same list
+tau process_list(shared_list, 1, p)
+tau process_list(shared_list, 2, p)
+tau process_list(shared_list, 3, p)
+
+# Force GC in parent by creating lots of garbage
+println("Creating garbage in parent VM to trigger GC...")
+for i = 0; i < 1000; i = i + 1 {
+    garbage = make_large_list()
+}
+
+# Collect results (this will fail if shared_list was freed)
+total = 0
+for i = 0; i < 3; i = i + 1 {
+    result = recv(p)
+    total = total + result
+}
+
+println("Total sum:", total)
+println("Expected: 14850 (4950 * 3)")

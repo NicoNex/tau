@@ -1,0 +1,37 @@
+testing = import("testing")
+base64 = import("encoding/base64")
+
+testing.Main([
+		["the test vectors of RFC 4648", fn(t) {
+				t.AssertEq(base64.EncodeToString(""), "")
+				t.AssertEq(base64.EncodeToString("f"), "Zg==")
+				t.AssertEq(base64.EncodeToString("fo"), "Zm8=")
+				t.AssertEq(base64.EncodeToString("foo"), "Zm9v")
+				t.AssertEq(base64.EncodeToString("foob"), "Zm9vYg==")
+				t.AssertEq(base64.EncodeToString("fooba"), "Zm9vYmE=")
+				t.AssertEq(base64.EncodeToString("foobar"), "Zm9vYmFy")
+			}],
+		["DecodeString reads them back", fn(t) {
+				t.AssertEq(string(base64.DecodeString("Zg==")), "f")
+				t.AssertEq(string(base64.DecodeString("Zm9vYmFy")), "foobar")
+
+				# The padding carries nothing the length doesn't say.
+				t.AssertEq(string(base64.DecodeString("Zm8")), "fo")
+			}],
+		["the URL alphabet", fn(t) {
+				b = bytes([251, 255, 190])
+				t.AssertEq(base64.EncodeToString(b), "+/++")
+				t.AssertEq(base64.URLEncodeToString(b), "-_--")
+				t.AssertEq(base64.DecodeString("-_--"), b)
+			}],
+		["a roundtrip gives back what went in", fn(t) {
+				b = bytes([0, 1, 127, 128, 254, 255, 42])
+				t.AssertEq(base64.DecodeString(base64.EncodeToString(b)), b)
+			}],
+		["broken input is an error", fn(t) {
+				t.AssertError(base64.DecodeString("a*b"))
+			}],
+		["newlines inside the encoding are ignored", fn(t) {
+				t.AssertEq(string(base64.DecodeString("Zm9v\nYmFy")), "foobar")
+			}]
+	])

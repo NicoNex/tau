@@ -17,12 +17,15 @@ struct frame {
 	uint32_t base_ptr;
 };
 
-// One segment of the heap, owned by the thread that allocated into it.
+// One segment of the heap, owned by the thread that allocated into it. `next`
+// links every segment there is, `free_next` only the ones no thread owns
+// anymore and that the next thread to come may take over.
 struct heap {
 	struct gc_header *root;
 	size_t len;
 	int64_t treshold;
 	struct heap *next;
+	struct heap *free_next;
 };
 
 struct pool {
@@ -71,7 +74,15 @@ void set_exit();
 // The heap is global and shared by every VM (the main one and the tau routines).
 // Collection is stop-the-world: the collector waits for all the other VMs to
 // reach a safepoint before marking and sweeping.
-extern volatile int gc_wanted;
+// Raised by the thread that is about to collect, read by every other one at
+// its safepoints. Touched by more than one thread at a time, so it is read and
+// written with the atomic builtins: `volatile` orders nothing and says nothing
+// to the compiler about other threads. Relaxed is enough, what a reader needs
+// to see is only whether it has to park, and the parking itself goes through
+// the heap mutex, which is what orders everything else.
+extern int gc_wanted;
+#define gc_pending() __atomic_load_n(&gc_wanted, __ATOMIC_RELAXED)
+#define gc_set_wanted(v) __atomic_store_n(&gc_wanted, (v), __ATOMIC_RELAXED)
 
 void gc_init(void);
 void gc_register(struct vm *vm);   // Makes the VM a root, initially parked.
@@ -84,6 +95,6 @@ void gc_park(void);                // Before blocking (pipes, native calls, IO).
 void gc_unpark(void);              // After blocking.
 void gc_safepoint(void);           // Cheap check, parks only if a GC is pending.
 void gc_flush_headers(void);       // Frees the object headers this thread kept for reuse.
+void gc_release_segment(void);     // Gives this thread's heap segment to the next one that needs it.
 void heap_add(struct object obj);
-void heap_dispose(void);
 void gc(void);

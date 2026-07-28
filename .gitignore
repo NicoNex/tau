@@ -5,28 +5,19 @@
 *.prof
 *.py
 *.so
-*.prof
-*.tau
 
-# The test suite is part of the repo.
-!/tests/*.tau
+# Scratch scripts at the repo root. Everything under tests/, stdlib/ and
+# examples/ is part of the repo.
+/*.tau
 
 /.vscode
-**/.DS_store
+**/.DS_Store
 
 /tau
 /cmd/tau/tau
-#!/examples/*.tau
-
-# The test suite is part of the repo.
-!/tests/*.tau
-!/stdlib/*.tau
-
-# The test suite is part of the repo.
-!/tests/*.tau
+/tau-lsp
+/cmd/tau-lsp/tau-lsp
+/bins
 internal/obj/libffi
 internal/vm/bdwgc
 profile
-/bins
-/tau-lsp
-/cmd/tau-lsp/tau-lsp

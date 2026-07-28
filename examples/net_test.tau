@@ -1,0 +1,250 @@
+# net_test.tau - Examples and tests for the net.tau library
+
+import("stdlib/net.tau")
+
+# Test 1: Basic TCP Server
+testTCPServer = fn() {
+	print("Starting TCP server on port 8080...")
+
+	server = ListenTCP(8080, null)
+	if failed(server) {
+		print("Failed to create server: {server}")
+		return server
+	}
+
+	print("Server listening on port 8080")
+	print("Waiting for connection...")
+
+	client = server.Accept()
+	if failed(client) {
+		print("Failed to accept connection: {client}")
+		server.Close()
+		return client
+	}
+
+	print("Client connected!")
+
+	# Send welcome message
+	client.Send("Welcome to Tau TCP Server!\n")
+
+	# Echo server - receive and echo back
+	for {
+		data = client.RecvString(1024)
+		if failed(data) {
+			print("Error receiving: {data}")
+			break
+		}
+
+		if len(data) == 0 {
+			print("Client disconnected")
+			break
+		}
+
+		print("Received: {data}")
+		client.Send("Echo: {data}")
+	}
+
+	client.Close()
+	server.Close()
+	print("Server closed")
+}
+
+# Test 2: Basic TCP Client
+testTCPClient = fn() {
+	print("Connecting to localhost:8080...")
+
+	sock = DialTCP("127.0.0.1", 8080)
+	if failed(sock) {
+		print("Failed to connect: {sock}")
+		return sock
+	}
+
+	print("Connected!")
+
+	# Receive welcome message
+	welcome = sock.RecvString(1024)
+	if !failed(welcome) {
+		print(welcome)
+	}
+
+	# Send test messages
+	messages = ["Hello", "World", "From", "Tau"]
+
+	for i = 0; i < len(messages); ++i {
+		msg = messages[i]
+		print("Sending: {msg}")
+
+		sock.Send("{msg}\n")
+
+		response = sock.RecvString(1024)
+		if !failed(response) {
+			print("Response: {response}")
+		}
+	}
+
+	sock.Close()
+	print("Client closed")
+}
+
+# Test 3: UDP Server
+testUDPServer = fn() {
+	print("Starting UDP server on port 9090...")
+
+	sock = ListenUDP(9090, null)
+	if failed(sock) {
+		print("Failed to create UDP server: {sock}")
+		return sock
+	}
+
+	print("UDP server listening on port 9090")
+
+	# Receive 5 messages
+	for i = 0; i < 5; ++i {
+		data = sock.RecvFrom(1024)
+		if failed(data) {
+			print("Error receiving: {data}")
+			break
+		}
+
+		print("Received UDP message: {string(data)}")
+	}
+
+	sock.Close()
+	print("UDP server closed")
+}
+
+# Test 4: UDP Client
+testUDPClient = fn() {
+	print("Creating UDP client...")
+
+	sock = Socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)
+	if failed(sock) {
+		print("Failed to create socket: {sock}")
+		return sock
+	}
+
+	# Send messages to UDP server
+	messages = ["UDP", "Test", "From", "Tau", "Client"]
+
+	for i = 0; i < len(messages); ++i {
+		msg = messages[i]
+		print("Sending UDP: {msg}")
+
+		result = sock.SendTo("{msg}\n", "127.0.0.1", 9090)
+		if failed(result) {
+			print("Failed to send: {result}")
+		}
+	}
+
+	sock.Close()
+	print("UDP client closed")
+}
+
+# Test 5: Simple HTTP Server
+testHTTPServer = fn() {
+	print("Starting HTTP server on port 8888...")
+
+	server = ListenTCP(8888, null)
+	if failed(server) {
+		print("Failed to create server: {server}")
+		return server
+	}
+
+	print("HTTP server listening on http://localhost:8888")
+
+	# Handle requests
+	for i = 0; i < 3; ++i {  # Handle 3 requests then exit
+		client = server.Accept()
+		if failed(client) {
+			print("Failed to accept: {client}")
+			continue
+		}
+
+		# Simple request handler
+		handler = fn(req) {
+			print("Request: {req.Method} {req.Path}")
+
+			if req.Path == "/" {
+				body = "Hello from Tau HTTP Server!"
+			} else if req.Path == "/about" {
+				body = "This is a Tau web server"
+			} else {
+				body = "404 Not Found"
+			}
+
+			response = "HTTP/1.1 200 OK\r\n"
+			response += "Content-Type: text/plain\r\n"
+			response += "Content-Length: {len(body)}\r\n"
+			response += "Connection: close\r\n"
+			response += "\r\n"
+			response += body
+
+			return response
+		}
+
+		HTTPServe(client, handler)
+	}
+
+	server.Close()
+	print("HTTP server closed")
+}
+
+# Test 6: Simple HTTP Client
+testHTTPClient = fn() {
+	print("Testing HTTP GET request...")
+
+	response = HTTPGet("http://example.com:80/")
+	if failed(response) {
+		print("HTTP request failed: {response}")
+		return response
+	}
+
+	print("Response received:")
+	print(response)
+}
+
+# Test 7: Network utilities
+testNetUtils = fn() {
+	print("\nTesting network utilities:")
+
+	# Test SplitHostPort
+	hp = SplitHostPort("localhost:8080")
+	if !failed(hp) {
+		print("Host: {hp.Host}, Port: {hp.Port}")
+	}
+
+	# Test JoinHostPort
+	addr = JoinHostPort("127.0.0.1", 9000)
+	print("Address: {addr}")
+
+	# Test ParseIP
+	ip = ParseIP("192.168.1.1")
+	if !failed(ip) {
+		print("Parsed IP: {ip}")
+	}
+}
+
+# Main test runner
+print("Tau Network Library Test Suite")
+print("================================\n")
+
+print("Available tests:")
+print("1. TCP Server (run this first in one terminal)")
+print("2. TCP Client (run this in another terminal)")
+print("3. UDP Server (run this first in one terminal)")
+print("4. UDP Client (run this in another terminal)")
+print("5. HTTP Server")
+print("6. HTTP Client")
+print("7. Network Utilities")
+print("\nUncomment the test you want to run:\n")
+
+# Uncomment one of these to run a test:
+# testTCPServer()
+# testTCPClient()
+# testUDPServer()
+# testUDPClient()
+# testHTTPServer()
+# testHTTPClient()
+testNetUtils()
+
+print("\nTest completed!")

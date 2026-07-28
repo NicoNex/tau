@@ -155,11 +155,10 @@ This is obtained by the use of four builtins `pipe`, `send`, `recv` `close`.
 - `recv` is used to receive values from the pipe.
 - `close` closes the pipe.
 
-Pipes can be buffered or unbuffered. Buffered pipes make the tau-routine sleep once `send` is called until at least one value is read from the pipe.
+Pipes can be buffered or unbuffered. On an unbuffered pipe `send` hands the value directly to a receiver: the tau-routine that sends sleeps until another one calls `recv`. A buffered pipe holds as many values as it was created with, so `send` returns right away and only sleeps once the buffer is full.
 Once `recv` is called on an empty pipe it will cause the tau-routine to sleep until a new value is sent to the pipe.
-`send` is used to send values to the pipe.
-`close` closes the pipe thus allowing it to be garbage collected. 
-Calling `recv` on a closed pipe will return `null`.
+`close` closes the pipe thus allowing it to be garbage collected.
+The values already in a closed pipe are still delivered; once there are none left `recv` returns `null`.
 
 ```py
 listen = fn(p) {

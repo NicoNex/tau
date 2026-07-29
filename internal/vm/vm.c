@@ -723,7 +723,16 @@ static inline void vm_call_closure(struct vm * restrict vm, struct object *cl, s
 
 	struct frame frame = new_frame(*cl, vm->sp-numargs);
 	vm_push_frame(vm, frame);
-	vm->sp = frame.base_ptr + cl->data.cl->fn->num_locals;
+
+	// The locals that are not arguments start as null. Their slots hold
+	// whatever the stack left there, so a read before the first assignment
+	// would hand the program a stale object, and the collector would mark it
+	// as live because it sits below sp.
+	uint32_t num_locals = cl->data.cl->fn->num_locals;
+	for (uint32_t i = numargs; i < num_locals; i++) {
+		vm->stack[frame.base_ptr + i] = null_obj;
+	}
+	vm->sp = frame.base_ptr + num_locals;
 }
 
 static inline void vm_call_builtin(struct vm * restrict vm, builtin fn, size_t numargs) {

@@ -75,7 +75,13 @@ func (s *SymbolTable) Define(name string) Symbol {
 
 	// A builtin is only a default: a name given to something else takes it
 	// over, the way a module called hex or a variable called len does.
-	if symbol, ok := s.Store[name]; ok && symbol.Scope != BuiltinScope {
+	//
+	// A captured name is only a default too. A closure reads what it takes
+	// from the function around it but writing to that name makes a local of
+	// its own, which shadows it from here on. The value it starts from is
+	// whatever was read on the right of the assignment, which was compiled
+	// while the name still meant the captured one.
+	if symbol, ok := s.Store[name]; ok && symbol.Scope != BuiltinScope && symbol.Scope != FreeScope {
 		return symbol
 	}
 

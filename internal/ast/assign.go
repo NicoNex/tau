@@ -40,20 +40,25 @@ func (a Assign) Compile(c *compiler.Compiler) (position int, err error) {
 
 	switch left := a.l.(type) {
 	case Identifier:
-		symbol := c.Define(left.String())
+		name := left.String()
 
 		// A function takes the name it is assigned to, so that a call to
 		// itself resolves to the closure being defined. Without it a local
 		// recursive function would capture the value the name had before the
 		// assignment, which is null.
 		if fn, ok := a.r.(Function); ok && fn.Name == "" {
-			fn.Name = left.String()
+			fn.Name = name
 			a.r = fn
 		}
 
+		// The right side is compiled before the name is defined, so that what
+		// it reads is what the name meant until now and not the slot this
+		// assignment is about to make.
 		if position, err = a.r.Compile(c); err != nil {
 			return
 		}
+
+		symbol := c.Define(name)
 
 		if symbol.Scope == compiler.GlobalScope {
 			position = c.Emit(code.OpSetGlobal, symbol.Index)

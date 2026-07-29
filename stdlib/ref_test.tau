@@ -1,0 +1,70 @@
+testing = import("testing")
+ref = import("ref")
+
+counter = fn() {
+	n = ref.New(0)
+	return fn() {
+		n.v = n.v + 1
+		return n.v
+	}
+}
+
+pair = fn() {
+	n = ref.New(0)
+	inc = fn() { n.v = n.v + 1 }
+	get = fn() { return n.v }
+	return [inc, get]
+}
+
+shadow = fn() {
+	n = 10
+	return fn() {
+		# This does not write to the n above: it makes a local starting from
+		# what that n held, which is what the right side read.
+		n = n + 1
+		return n
+	}
+}
+
+testing.Main([
+		["a cell keeps what a closure writes into it", fn(t) {
+				next = counter()
+				t.AssertEq(next(), 1)
+				t.AssertEq(next(), 2)
+				t.AssertEq(next(), 3)
+			}],
+
+		["two closures made together share the cell", fn(t) {
+				p = pair()
+				inc = p[0]
+				get = p[1]
+
+				t.AssertEq(get(), 0)
+				inc()
+				inc()
+				t.AssertEq(get(), 2)
+			}],
+
+		["cells made apart are apart", fn(t) {
+				a = counter()
+				b = counter()
+
+				t.AssertEq(a(), 1)
+				t.AssertEq(a(), 2)
+				t.AssertEq(b(), 1)
+			}],
+
+		["a cell holds anything", fn(t) {
+				c = ref.New([1, 2])
+				t.AssertEq(c.v, [1, 2])
+				c.v = "now a string"
+				t.AssertEq(c.v, "now a string")
+			}],
+
+		["assigning to a captured name shadows it, starting from its value", fn(t) {
+				f = shadow()
+				t.AssertEq(f(), 11)
+				# The n outside never moved, so every call starts over.
+				t.AssertEq(f(), 11)
+			}]
+	])

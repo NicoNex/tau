@@ -1,0 +1,31 @@
+# ref - a cell holding a value that a closure has to change.
+#
+# A closure reads the variables of the function around it, but it cannot write
+# to them: assigning to one of those names makes a local of its own, which
+# starts from the value read on the right of the assignment and shadows the
+# name from there on. So this counts to three and then stops counting:
+#
+#	mk = fn() {
+#		n = 0
+#		return fn() { n = n + 1; return n }   # always 1
+#	}
+#
+# What a closure can change is the inside of something it captured, because
+# the name keeps meaning the same thing. A cell is that something:
+#
+#	mk = fn() {
+#		n = ref.New(0)
+#		return fn() { n.v = n.v + 1; return n.v }   # 1, 2, 3, ...
+#	}
+#
+# Two closures made in the same place share the cell, so one can write what
+# the other reads. That also means a cell handed to a tau routine is shared
+# with it and nothing guards it: for values that travel between routines use
+# a pipe, which is what pipes are for.
+
+# New returns a cell holding v, readable and writable as its field .v.
+New = fn(v) {
+	c = new()
+	c.v = v
+	return c
+}

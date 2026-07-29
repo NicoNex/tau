@@ -63,6 +63,32 @@ fib = fn(n) {
 println(fib(40))
 ```
 
+##### What a function sees around it
+A function reads the names of the function around it and the global ones. What
+it cannot do is write to them: assigning to one of those names makes a local of
+its own, starting from the value that was read on the right of the assignment,
+and shadowing the name from there on.
+```py
+mk = fn() {
+	n = 0
+	return fn() { n = n + 1; return n }
+}
+next = mk()
+println(next(), next())  # 1 1, the n outside never moves
+```
+A closure can change what is *inside* something it captured, because the name
+goes on meaning the same thing. That is what the `ref` module is for:
+```py
+ref = import("ref")
+
+mk = fn() {
+	n = ref.New(0)
+	return fn() { n.v = n.v + 1; return n.v }
+}
+next = mk()
+println(next(), next())  # 1 2
+```
+
 #### Noteworthy features
 The return value can be implicit:
 ```js

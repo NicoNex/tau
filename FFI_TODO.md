@@ -68,18 +68,43 @@ the builtin opens exactly the path it was handed, and trying the candidates -
 is `ffi.Open`, in tau, where adding a case means editing a file rather than
 rebuilding the interpreter.
 
-**In C, the primitives.** They take numbers and pointers, never notation, so
-there is nothing to learn and nothing to spell wrong:
+**In C, the primitives.** Two, the same number there are today, and they take
+numbers and pointers rather than notation, so there is nothing to learn and
+nothing to spell wrong:
 
 ```
-dlopen_b(path)             -> handle or error, with the message from dlerror
-dlsym_b(handle, name)      -> pointer or error
-dlclose_b(handle)          -> null or error
-native(fn, ret, [args])    -> a prepared call, types given as integer codes
-memread(ptr, off, n)       -> bytes copied out of a pointer
-memwrite(ptr, off, bytes)  -> bytes written into a pointer
-memalloc(n) / memfree(ptr) -> malloc and free, for what C has to own
+dlopen(path)             -> a handle, or an error saying what dlerror said.
+                            Opens the path it was given and looks nowhere else.
+native(fn, ret, [args])  -> a prepared call, the types given as integer codes.
 ```
+
+Everything else the FFI needs is already C, and we are in the business of
+calling C. Memory is `malloc`, `free` and `memcpy` from the C library;
+`dlsym` and `dlclose` are in the C library as well, and the dot operator on a
+handle is the raw `dlsym` that bootstraps the rest. Which means no builtin for
+any of it. Checked, and this runs today:
+
+```tau
+libc = plugin("libc.so.6")
+
+malloc = native(libc.malloc, "void *malloc(size_t n)")
+free   = native(libc.free, "void free(void *p)")
+memcpy = native(libc.memcpy, "void *memcpy(void *dst, const void *src, size_t n)")
+
+p = malloc(8)
+memcpy(p, "abcdefg", 8)      # a tau string into memory C owns
+println(string(bytes(p, 7))) # abcdefg
+memcpy(p, bytes([65, 66, 67]), 3)
+println(string(bytes(p, 3))) # ABC
+free(p)
+
+dlsym = native(libc.dlsym, "void *dlsym(void *handle, const char *name)")
+println(type(dlsym(null, "strlen")))  # native
+```
+
+So `ffi.Alloc`, `ffi.Free`, `ffi.Write` and `lib.Close` are tau functions over
+C functions, not new primitives. Reading stays `bytes(ptr, n)`, which is a
+shape of a builtin that already exists.
 
 **In tau, everything a person types.** `stdlib/ffi.tau`:
 
@@ -118,10 +143,10 @@ lib.Close()             dlclose now rather than whenever the collector runs.
 ffi.Signature(text)     the parse on its own: [ret_code, [arg_codes]], so that
                         a generator can build one without going through text.
 ffi.Alloc(n)            memory C owns, freed by ffi.Free, not by the collector.
-ffi.Free(ptr)
-ffi.Read(ptr, n)        bytes out of a pointer, ffi.ReadAt(ptr, off, n)
-ffi.Write(ptr, data)    bytes into one, ffi.WriteAt(ptr, off, data)
-ffi.String(ptr)         a C string read up to its NUL.
+ffi.Free(ptr)           Both are malloc and free of the C library, wrapped.
+ffi.Read(ptr, n)        bytes out of a pointer, which is bytes(ptr, n).
+ffi.Write(ptr, data)    bytes into one, which is memcpy.
+ffi.String(ptr)         a C string read up to its NUL, which is strlen and a read.
 ffi.Int8 … ffi.UInt64, ffi.Float32, ffi.Float64, ffi.Pointer, ffi.String_, ffi.Void
                         the type codes, for building a signature by hand.
 ```
@@ -142,21 +167,22 @@ a struct helper is a separate question, not part of this change.
 3. `internal/obj/builtins.c:361` — `native_b` takes `(fn, ret_code, [arg_codes])`:
    an integer and a list of integers, no string anywhere. Validate the codes and
    say which one is wrong.
-4. `internal/obj/builtins.c:336` — `plugin_b` becomes `dlopen_b` and keeps
-   `plugin_open`. It already reports what `dlerror` said; what it should also
-   say is which paths it tried, since the message today is the one from the
-   last directory. Add `dlsym_b` and `dlclose_b`; `dlclose_b` has to mark the
-   handle closed so that the collector does not close it a second time.
-5. `internal/vm/vm.c:223` — the `dlsym` in `vm_exec_dot` stays, since
-   `lib.symbol` is how the untyped call is written today and the stdlib uses
-   it. It is what `dlsym_b` calls anyway.
-6. New builtins for memory: `memread`, `memwrite`, `memalloc`, `memfree`.
-   `bytes(ptr, n)` stays as it is, it is the one shape that already reads well.
-   Every one of them checks for a null pointer and returns an error rather than
-   dying.
-7. `internal/obj/object.go` — add the new names to `Builtins`, **at the end of
-   the array**: the index of a builtin is what a compiled `.tauc` holds, so
-   inserting one anywhere else invalidates every bundle ever built.
+4. `internal/obj/builtins.c:336` — `plugin_b` becomes `dlopen_b`: `dlopen` of
+   the path it was handed and nothing else. `plugin_open` and its search path
+   move to `ffi.Open`, so `internal/obj/plugin.h` loses forty lines and keeps
+   only the Windows shims. It must also accept `null` for the handle of the
+   program itself, which is what makes `dlsym` reachable without a builtin
+   for it.
+5. `internal/vm/vm.c:223` — the `dlsym` in `vm_exec_dot` stays as it is. It is
+   how a symbol is read today, it is what the untyped call uses, and it is the
+   one primitive that lets everything else — `dlsym` itself, `dlclose`,
+   `malloc` — be reached as ordinary C functions.
+6. No builtins for memory. `malloc`, `free` and `memcpy` come from the C
+   library through the FFI, and reading stays `bytes(ptr, n)`.
+7. `internal/obj/object.go` — `plugin` becomes `dlopen` in `Builtins`. Change
+   the name **in place**, and add nothing before it: the index of a builtin is
+   what a compiled `.tauc` holds, so moving one invalidates every bundle ever
+   built.
 
 ### The tau side
 

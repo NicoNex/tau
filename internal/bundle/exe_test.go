@@ -1,4 +1,4 @@
-package tau
+package bundle
 
 import (
 	"bytes"
@@ -13,7 +13,7 @@ func appended(interp, payload []byte) []byte {
 
 	buf.Write(interp)
 	buf.Write(payload)
-	buf.Write(execMagic)
+	buf.Write(ExecMagic)
 	binary.Write(&buf, binary.BigEndian, uint64(len(payload)))
 	return buf.Bytes()
 }
@@ -23,7 +23,7 @@ func TestPayloadAt(t *testing.T) {
 	payload := []byte("this stands for the bundle")
 	file := appended(interp, payload)
 
-	start, length, ok := payloadAt(file[len(file)-execTrailerLen:], int64(len(file)))
+	start, length, ok := PayloadAt(file[len(file)-TrailerLen:], int64(len(file)))
 	if !ok {
 		t.Fatal("a file with a bundle appended reported none")
 	}
@@ -40,7 +40,7 @@ func TestPayloadAtWithoutOne(t *testing.T) {
 	// mistaken for one carrying a program.
 	plain := []byte("an interpreter and nothing after it")
 
-	if _, _, ok := payloadAt(plain[len(plain)-execTrailerLen:], int64(len(plain))); ok {
+	if _, _, ok := PayloadAt(plain[len(plain)-TrailerLen:], int64(len(plain))); ok {
 		t.Fatal("a plain interpreter reported a bundle")
 	}
 }
@@ -52,13 +52,13 @@ func TestPayloadAtRefusesNonsense(t *testing.T) {
 	// A length longer than the file itself would send the reader before its
 	// start: it has to be refused rather than trusted.
 	binary.BigEndian.PutUint64(file[len(file)-8:], uint64(len(file)+1))
-	if _, _, ok := payloadAt(file[len(file)-execTrailerLen:], int64(len(file))); ok {
+	if _, _, ok := PayloadAt(file[len(file)-TrailerLen:], int64(len(file))); ok {
 		t.Fatal("a length past the start of the file was accepted")
 	}
 
 	// And a length of zero says there is nothing there.
 	binary.BigEndian.PutUint64(file[len(file)-8:], 0)
-	if _, _, ok := payloadAt(file[len(file)-execTrailerLen:], int64(len(file))); ok {
+	if _, _, ok := PayloadAt(file[len(file)-TrailerLen:], int64(len(file))); ok {
 		t.Fatal("an empty bundle was accepted")
 	}
 }
@@ -71,13 +71,13 @@ func TestBundleIsStrippedBeforeAppending(t *testing.T) {
 	once := appended(interp, []byte("the first program"))
 	twice := appended(once, []byte("the second program"))
 
-	end, _, ok := payloadAt(twice[len(twice)-execTrailerLen:], int64(len(twice)))
+	end, _, ok := PayloadAt(twice[len(twice)-TrailerLen:], int64(len(twice)))
 	if !ok {
 		t.Fatal("the outer bundle was not found")
 	}
 	stripped := twice[:end]
 
-	end, _, ok = payloadAt(stripped[len(stripped)-execTrailerLen:], int64(len(stripped)))
+	end, _, ok = PayloadAt(stripped[len(stripped)-TrailerLen:], int64(len(stripped)))
 	if !ok {
 		t.Fatal("the inner bundle was not found")
 	}

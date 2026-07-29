@@ -23,9 +23,16 @@ the shared objects it uses included.
 tau bundle -o myapp main.tau
 ./myapp
 ```
+The modules travel compiled, so a bundled program starts without a parser and
+without a compiler and the executable is built on a runtime that carries
+neither: only the VM, the objects and the bytecode decoder. That runtime is
+`tau-rt`, which `make install` puts next to the standard library. An `import`
+of a path worked out at run time cannot be bundled and is refused there, since
+there is no compiler left to answer it.
+
 `tau build` is the lighter option for machines that already have tau: it writes
-a `.tauc` carrying the same program and its dependencies, without the
-interpreter in front of it.
+a `.tauc` carrying the same program and its dependencies, without the runtime
+in front of it.
 
 On macOS the executable has to be signed before it will start, because
 appending to one invalidates the signature it came with:

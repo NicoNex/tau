@@ -3,12 +3,12 @@ package tau
 import (
 	"bytes"
 	"encoding/gob"
-	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
 
+	bundlepkg "github.com/NicoNex/tau/internal/bundle"
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
@@ -17,31 +17,6 @@ import (
 // bundleMagic marks a '.tauc' file that carries its dependencies with it. A
 // plain bytecode file doesn't have it, so both kinds can be told apart and
 // keep working.
-var bundleMagic = []byte("TAUB\x02")
-
-// A bundle is a compiled program together with everything it needs at run
-// time: every module it imports, already compiled, and the shared objects
-// those modules load. Running one touches nothing else on the filesystem and
-// asks nothing of the parser or the compiler.
-type bundle struct {
-	Bytecode []byte
-	// The modules in the order they have to be loaded, dependencies first. A
-	// module is compiled knowing how many globals and constants come before
-	// it, so its indices are absolute and only hold if it is loaded in the
-	// place it was compiled for.
-	Order   []string
-	Modules map[string]moduleCode
-	Plugins map[string][]byte
-}
-
-// A module as it travels: its bytecode, and where in the globals its exported
-// names ended up. The names are what the symbol table used to answer at run
-// time, which is the last thing an import needed the compiler for.
-type moduleCode struct {
-	Bytecode []byte
-	Exports  map[string]int
-}
-
 // importRe and pluginRe find the dependencies of a module.
 //
 // ponytail: a regexp over the source rather than a walk over the AST, because
@@ -60,9 +35,9 @@ func Bundle(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	b := bundle{
+	b := bundlepkg.Bundle{
 		Bytecode: bc.Encode(),
-		Modules:  map[string]moduleCode{},
+		Modules:  map[string]bundlepkg.ModuleCode{},
 		Plugins:  map[string][]byte{},
 	}
 
@@ -74,12 +49,12 @@ func Bundle(path string) ([]byte, error) {
 	// The program owns the globals and the constants that come first, and the
 	// modules take what follows in the order they are collected.
 	st := &bundleState{ndefs: int(bc.NDefs()), nconsts: int(bc.NConsts())}
-	if err := b.collect(st, path, string(src)); err != nil {
+	if err := collectInto(&b, st, path, string(src)); err != nil {
 		return nil, err
 	}
 
 	var buf bytes.Buffer
-	buf.Write(bundleMagic)
+	buf.Write(bundlepkg.Magic)
 	if err := gob.NewEncoder(&buf).Encode(b); err != nil {
 		return nil, err
 	}
@@ -97,9 +72,9 @@ type bundleState struct {
 // it reaches and stores the plugins they open. A module goes into the bundle
 // after the ones it imports, because that is the order they will be loaded in
 // and the order they were compiled for.
-func (b *bundle) collect(st *bundleState, file, src string) error {
+func collectInto(b *bundlepkg.Bundle, st *bundleState, file, src string) error {
 	for _, m := range pluginRe.FindAllStringSubmatch(src, -1) {
-		if err := b.addPlugin(file, m[1]); err != nil {
+		if err := addPlugin(b, file, m[1]); err != nil {
 			return err
 		}
 	}
@@ -122,7 +97,7 @@ func (b *bundle) collect(st *bundleState, file, src string) error {
 
 		// Its own imports first: a module that runs before what it imports
 		// would not find it.
-		if err := b.collect(st, p, string(mod)); err != nil {
+		if err := collectInto(b, st, p, string(mod)); err != nil {
 			return err
 		}
 		// The walk may have reached this one from somewhere else meanwhile.
@@ -143,16 +118,16 @@ func (b *bundle) collect(st *bundleState, file, src string) error {
 
 // compileModule compiles one module for the place it will hold in the program,
 // and notes where its exported names land.
-func compileModule(st *bundleState, path, src string) (moduleCode, error) {
+func compileModule(st *bundleState, path, src string) (bundlepkg.ModuleCode, error) {
 	tree, errs := parser.Parse(path, src)
 	if len(errs) > 0 {
-		return moduleCode{}, fmt.Errorf("build: %v", errs[0])
+		return bundlepkg.ModuleCode{}, fmt.Errorf("build: %v", errs[0])
 	}
 
 	c := compiler.NewImport(st.ndefs, st.nconsts)
 	c.SetFileInfo(path, src)
 	if err := c.Compile(tree); err != nil {
-		return moduleCode{}, err
+		return bundlepkg.ModuleCode{}, err
 	}
 
 	bc := c.Bytecode()
@@ -165,12 +140,12 @@ func compileModule(st *bundleState, path, src string) (moduleCode, error) {
 
 	st.ndefs = int(bc.NDefs())
 	st.nconsts += int(bc.NConsts())
-	return moduleCode{Bytecode: bc.Encode(), Exports: exports}, nil
+	return bundlepkg.ModuleCode{Bytecode: bc.Encode(), Exports: exports}, nil
 }
 
 // addPlugin stores the shared object a module opens, looked up the same way
 // the runtime looks it up.
-func (b bundle) addPlugin(file, name string) error {
+func addPlugin(b *bundlepkg.Bundle, file, name string) error {
 	if _, done := b.Plugins[name]; done {
 		return nil
 	}
@@ -186,60 +161,3 @@ func (b bundle) addPlugin(file, name string) error {
 	return fmt.Errorf("build: no plugin named %q, opened by %s", name, file)
 }
 
-// bundledModules hands the runtime what it needs of each module: the bundle
-// keeps its own type so that its shape can change without the runtime caring.
-func bundledModules(mods map[string]moduleCode) map[string]vm.BundledModule {
-	out := make(map[string]vm.BundledModule, len(mods))
-
-	for name, m := range mods {
-		out[name] = vm.BundledModule{Bytecode: m.Bytecode, Exports: m.Exports}
-	}
-	return out
-}
-
-// IsBundle reports whether b holds a bundle rather than plain bytecode.
-func IsBundle(b []byte) bool {
-	return bytes.HasPrefix(b, bundleMagic)
-}
-
-// openBundle unpacks a bundle: its modules go to the importer, its plugins to
-// a directory the loader is pointed at, and the bytecode comes back ready to
-// run. The returned function removes what was written.
-func openBundle(raw []byte) (compiler.Bytecode, func(), error) {
-	var b bundle
-
-	if err := gob.NewDecoder(bytes.NewReader(raw[len(bundleMagic):])).Decode(&b); err != nil {
-		return compiler.Bytecode{}, nil, errors.New("not a valid tau bundle")
-	}
-	vm.SetBundledModules(b.Order, bundledModules(b.Modules))
-
-	clean := func() {}
-	if len(b.Plugins) > 0 {
-		dir, err := os.MkdirTemp("", "tau-plugins")
-		if err != nil {
-			return compiler.Bytecode{}, nil, err
-		}
-		clean = func() { os.RemoveAll(dir) }
-
-		for name, so := range b.Plugins {
-			dst := filepath.Join(dir, name)
-			if err := os.MkdirAll(filepath.Dir(dst), 0755); err != nil {
-				clean()
-				return compiler.Bytecode{}, nil, err
-			}
-			// Executable: it is about to be dlopen'd.
-			if err := os.WriteFile(dst, so, 0755); err != nil {
-				clean()
-				return compiler.Bytecode{}, nil, err
-			}
-		}
-
-		taupath := dir
-		if old := os.Getenv("TAUPATH"); old != "" {
-			taupath += string(filepath.ListSeparator) + old
-		}
-		os.Setenv("TAUPATH", taupath)
-	}
-
-	return compiler.DecodeBytecode(b.Bytecode), clean, nil
-}

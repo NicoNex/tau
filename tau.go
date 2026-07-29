@@ -10,10 +10,10 @@ import (
 	"path/filepath"
 	"runtime"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/NicoNex/tau/internal/ast"
+	bundlepkg "github.com/NicoNex/tau/internal/bundle"
 	"github.com/NicoNex/tau/internal/compiler"
 	"github.com/NicoNex/tau/internal/format"
 	"github.com/NicoNex/tau/internal/parser"
@@ -77,10 +77,10 @@ func ExecFileVM(f string) (err error) {
 	if filepath.Ext(f) == ".tauc" {
 		raw := readFile(f)
 
-		if IsBundle(raw) {
+		if bundlepkg.Is(raw) {
 			var clean func()
 
-			if bytecode, clean, err = openBundle(raw); err != nil {
+			if bytecode, clean, err = bundlepkg.Open(raw); err != nil {
 				fmt.Println(err)
 				return err
 			}
@@ -98,35 +98,18 @@ func ExecFileVM(f string) (err error) {
 	return runBytecode(f, bytecode)
 }
 
-// runBytecode runs a compiled program, named after the file it came from so
-// that a runtime error can say where it happened. The modules that came with
-// it, if any, are loaded into the same state first.
+// runBytecode runs a compiled program and reports what went wrong on the way
+// out, the way the command line expects.
 func runBytecode(name string, bytecode compiler.Bytecode) error {
-	tvm := vm.New(name, bytecode)
-
-	if err := tvm.LoadBundled(); err != nil {
+	if err := bundlepkg.Run(name, bytecode); err != nil {
 		fmt.Println(err)
 		return err
-	}
-	if !tvm.Run() {
-		return errors.New("runtime error")
 	}
 	return nil
 }
 
-// SetArgs hands the command line to the program about to run, which reads it
-// back as os.Args. It travels in the environment rather than as a builtin so
-// that the language keeps its small set of globals: the os module is the only
-// one that knows these variables exist, and it clears them once read.
-//
-// ponytail: one variable per argument because an argument may hold anything
-// but a NUL, so no single separator would be safe to join them with.
-func SetArgs(args []string) {
-	os.Setenv("TAU_ARGC", strconv.Itoa(len(args)))
-	for i, a := range args {
-		os.Setenv(fmt.Sprintf("TAU_ARG%d", i), a)
-	}
-}
+// SetArgs hands the command line to the program about to run.
+func SetArgs(args []string) { vm.SetArgs(args) }
 
 // CompileFiles compiles each file into a self contained '.tauc' bundle. With
 // out empty each bundle is written next to its source.

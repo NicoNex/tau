@@ -1,6 +1,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdlib.h>
 #include <setjmp.h>
 #include "../obj/object.h"
 #include "../compiler/bytecode.h"
@@ -111,6 +112,24 @@ void set_exit();
 extern int gc_wanted;
 #define gc_pending() __atomic_load_n(&gc_wanted, __ATOMIC_RELAXED)
 #define gc_set_wanted(v) __atomic_store_n(&gc_wanted, (v), __ATOMIC_RELAXED)
+
+// Small things the Go side reaches for. They live here and not in the preamble
+// of one file because more than one file needs them, and a cgo preamble is
+// only visible to the file it is written in.
+static inline struct object get_global(struct pool *globals, size_t idx) {
+	return globals->list[idx];
+}
+
+static inline void set_const(struct object *list, size_t idx, struct object o) {
+	list[idx] = o;
+}
+
+extern char *tau_module_dir;
+
+static inline void set_module_dir(char *dir) {
+	free(tau_module_dir);
+	tau_module_dir = dir;
+}
 
 void gc_init(void);
 void gc_register(struct vm *vm);   // Makes the VM a root, initially parked.

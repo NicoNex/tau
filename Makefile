@@ -23,13 +23,15 @@ ifneq ($(GCC),)
     CC = $(GCC)
 endif
 
-.PHONY: all tau tau-lsp libffi plugins syscall math install uninstall clean fmt profile test run
+
+
+.PHONY: all tau tau-rt tau-lsp libffi plugins syscall math install uninstall clean fmt profile test run
 
 # Where install puts things. PREFIX=/usr/local make install for a system wide
 # one.
 PREFIX ?= $(HOME)/.local
 
-all: libffi plugins tau
+all: libffi plugins tau tau-rt
 
 libffi:
 	if [ ! -d libffi ] || [ $$(ls -1q libffi | wc -l) -eq 0 ]; then \
@@ -59,6 +61,17 @@ tau:
 	CGO_CFLAGS="$(CFLAGS)" \
 	CGO_LDFLAGS="$(LDFLAGS)" \
 	go build -o $(DIR)/tau
+
+# The runtime a bundled program is built on: the VM and the objects, without
+# the lexer, the parser, the syntax tree and the compiler, which a program that
+# travels compiled never asks for. `tau bundle` appends to this rather than to
+# the interpreter, and the executables it writes are smaller for it.
+tau-rt:
+	cd cmd/tau-rt && \
+	CC=$(CC) \
+	CGO_CFLAGS="$(CFLAGS)" \
+	CGO_LDFLAGS="$(LDFLAGS)" \
+	go build -tags taurt -o $(DIR)/tau-rt
 
 tau-windows:
 	cd cmd/tau && \
@@ -101,9 +114,10 @@ math:
 
 # The tests live next to what they test, so they are dropped after the copy
 # rather than avoided during it, subdirectories included.
-install: tau plugins
+install: tau tau-rt plugins
 	mkdir -p $(PREFIX)/bin $(PREFIX)/lib/tau
 	cp tau $(PREFIX)/bin/tau
+	cp tau-rt $(PREFIX)/lib/tau/tau-rt
 	cp -r stdlib/. $(PREFIX)/lib/tau
 	find $(PREFIX)/lib/tau -name '*_test.tau' -delete
 	find $(PREFIX)/lib/tau \( -name 'Makefile' -o -name '*.c' \) -delete

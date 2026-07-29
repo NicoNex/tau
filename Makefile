@@ -35,13 +35,21 @@ endif
 
 .PHONY: all tau tau-rt tau-lsp libffi plugins syscall math install uninstall clean fmt profile test run
 
-# Where install puts things. PREFIX=/usr/local make install for a system wide
-# one.
+# Where install puts things: the binary in PREFIX/bin and everything it opens
+# at runtime in PREFIX/lib/tau. The default is the user's own prefix, no root
+# needed; PREFIX=/usr/local make install for a system wide one.
 PREFIX ?= $(HOME)/.local
 
 all: libffi plugins tau tau-rt
 
-libffi:
+# The static library everything links against. Building it means autoreconf
+# and configure, minutes of work, so it is a file target: once it is there
+# nothing runs again until it is deleted.
+LIBFFI_A = $(DIR)/internal/obj/libffi/lib/libffi.a
+
+libffi: $(LIBFFI_A)
+
+$(LIBFFI_A):
 	if [ ! -d libffi ] || [ $$(ls -1q libffi | wc -l) -eq 0 ]; then \
 	    git submodule init; \
 	    git submodule update --recursive; \
@@ -124,14 +132,22 @@ math:
 	$(MAKE) -C stdlib/math CC=$(CC)
 
 # The tests live next to what they test, so they are dropped after the copy
-# rather than avoided during it, subdirectories included.
-install: tau tau-rt plugins
+# rather than avoided during it, subdirectories included. libffi comes first
+# because the interpreter is linked against it.
+install: libffi plugins tau tau-rt
+	# The library directory goes first, so that a module dropped from the
+	# stdlib doesn't stay installed forever.
+	rm -rf $(PREFIX)/lib/tau
 	mkdir -p $(PREFIX)/bin $(PREFIX)/lib/tau
 	cp tau $(PREFIX)/bin/tau
 	cp tau-rt $(PREFIX)/lib/tau/tau-rt
 	cp -r stdlib/. $(PREFIX)/lib/tau
 	find $(PREFIX)/lib/tau -name '*_test.tau' -delete
 	find $(PREFIX)/lib/tau \( -name 'Makefile' -o -name '*.c' \) -delete
+	@echo
+	@echo "tau        $(PREFIX)/bin/tau"
+	@echo "stdlib     $(PREFIX)/lib/tau"
+	@command -v tau >/dev/null || echo "note: $(PREFIX)/bin is not in your PATH"
 
 uninstall:
 	rm -f $(PREFIX)/bin/tau

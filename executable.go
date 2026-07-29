@@ -33,7 +33,14 @@ func runtimeStub() (string, bool) {
 
 	var dirs []string
 	if self, err := os.Executable(); err == nil {
-		dirs = append(dirs, filepath.Dir(self))
+		// Next to the interpreter, and in the lib directory beside its bin
+		// one: that is where make install puts it, PREFIX/bin/tau and
+		// PREFIX/lib/tau/tau-rt.
+		dir := filepath.Dir(self)
+		dirs = append(dirs, dir, filepath.Join(dir, "..", "lib", "tau"))
+	}
+	if home, err := os.UserHomeDir(); err == nil {
+		dirs = append(dirs, filepath.Join(home, ".local", "lib", "tau"))
 	}
 	dirs = append(dirs, "/usr/local/lib/tau", "/lib/tau")
 

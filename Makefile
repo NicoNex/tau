@@ -33,7 +33,7 @@ endif
 
 
 
-.PHONY: all tau tau-rt tau-lsp libffi plugins syscall math install uninstall clean fmt profile test run
+.PHONY: all tau tau-rt tau-lsp libffi plugins syscall install uninstall clean fmt profile test run
 
 # Where install puts things: the binary in PREFIX/bin and everything it opens
 # at runtime in PREFIX/lib/tau. The default is the user's own prefix, no root
@@ -115,7 +115,7 @@ gc-debug:
 
 # The shared objects the stdlib opens with plugin(). One directory each,
 # added here when a new one shows up.
-PLUGINS = syscall math runtime
+PLUGINS = syscall runtime
 
 plugins:
 	for p in $(PLUGINS); do $(MAKE) -C stdlib/$$p CC=$(CC) || exit 1; done
@@ -127,9 +127,6 @@ tau-lsp:
 
 syscall:
 	$(MAKE) -C stdlib/syscall CC=$(CC)
-
-math:
-	$(MAKE) -C stdlib/math CC=$(CC)
 
 # The tests live next to what they test, so they are dropped after the copy
 # rather than avoided during it, subdirectories included. libffi comes first

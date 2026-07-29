@@ -1,12 +1,18 @@
 # math - the usual functions on floats.
 #
 # Everything returns a float, whatever it was given, so an integer handed to
-# one of these comes back as a float and stays one through the arithmetic
-# that follows. The functions come from the C math library through a shared
-# object of their own; a native call brings back a machine word, so a double
-# travels as its bits and float(x, 64) reads them back.
+# one of these comes back as a float and stays one through the arithmetic that
+# follows.
+#
+# The functions are the ones of the C math library, called with their real
+# signatures through the ffi module: no shared object of our own in between,
+# since the interpreter is already linked against libm and dlopen(null) is the
+# handle of the program itself.
 
-m = dlopen("math/libmath.so")
+ffi = import("ffi")
+
+# The C library the program was linked against.
+libm = dlopen(null)
 
 Pi = 3.141592653589793
 E = 2.718281828459045
@@ -19,53 +25,88 @@ Ln10 = 2.302585092994046
 MaxInt = 9223372036854775807
 MinInt = -9223372036854775807 - 1
 
-# f1 wraps a one argument function of the C math library.
+# The functions themselves, taken from the library by their declarations.
+c = ffi.Bind(libm, [
+		"double sqrt(double)",
+		"double cbrt(double)",
+		"double exp(double)",
+		"double log(double)",
+		"double log2(double)",
+		"double log10(double)",
+		"double sin(double)",
+		"double cos(double)",
+		"double tan(double)",
+		"double asin(double)",
+		"double acos(double)",
+		"double atan(double)",
+		"double sinh(double)",
+		"double cosh(double)",
+		"double tanh(double)",
+		"double floor(double)",
+		"double ceil(double)",
+		"double round(double)",
+		"double trunc(double)",
+		"double pow(double, double)",
+		"double atan2(double, double)",
+		"double fmod(double, double)",
+		"double hypot(double, double)",
+		"int isnan(double)",
+		"int isinf(double)"
+	])
+
+# f1 and f2 take whatever they are given as a float, so that Sqrt(2) works as
+# well as Sqrt(2.0).
 f1 = fn(fun) {
-	return fn(x) { float(fun(float(x)), 64) }
+	return fn(x) { fun(float(x)) }
 }
 
-# f2 wraps a two argument one.
 f2 = fn(fun) {
-	return fn(x, y) { float(fun(float(x), float(y)), 64) }
+	return fn(x, y) { fun(float(x), float(y)) }
 }
 
-Sqrt = f1(m.m_sqrt)
-Cbrt = f1(m.m_cbrt)
-Exp = f1(m.m_exp)
-Log = f1(m.m_log)
-Log2 = f1(m.m_log2)
-Log10 = f1(m.m_log10)
-Sin = f1(m.m_sin)
-Cos = f1(m.m_cos)
-Tan = f1(m.m_tan)
-Asin = f1(m.m_asin)
-Acos = f1(m.m_acos)
-Atan = f1(m.m_atan)
-Sinh = f1(m.m_sinh)
-Cosh = f1(m.m_cosh)
-Tanh = f1(m.m_tanh)
-Floor = f1(m.m_floor)
-Ceil = f1(m.m_ceil)
-Round = f1(m.m_round)
-Trunc = f1(m.m_trunc)
+Sqrt = f1(c.sqrt)
+Cbrt = f1(c.cbrt)
+Exp = f1(c.exp)
+Log = f1(c.log)
+Log2 = f1(c.log2)
+Log10 = f1(c.log10)
+Sin = f1(c.sin)
+Cos = f1(c.cos)
+Tan = f1(c.tan)
+Asin = f1(c.asin)
+Acos = f1(c.acos)
+Atan = f1(c.atan)
+Sinh = f1(c.sinh)
+Cosh = f1(c.cosh)
+Tanh = f1(c.tanh)
+Floor = f1(c.floor)
+Ceil = f1(c.ceil)
+Round = f1(c.round)
+Trunc = f1(c.trunc)
 
-Pow = f2(m.m_pow)
-Atan2 = f2(m.m_atan2)
-Mod = f2(m.m_fmod)
-Hypot = f2(m.m_hypot)
+Pow = f2(c.pow)
+Atan2 = f2(c.atan2)
+Mod = f2(c.fmod)
+Hypot = f2(c.hypot)
 
-# Abs is the absolute value, an integer staying an integer: it is the one
-# case where going through a float would lose the largest values.
+# Abs is the absolute value, an integer staying an integer: it is the one case
+# where going through a float would lose the largest values.
 Abs = fn(x) { if x < 0 { -x } else { x } }
 
-# Inf returns positive infinity, or negative when sign is negative.
-Inf = fn(sign) { float(m.m_inf(if sign == null { 1 } else { sign }), 64) }
+# Inf returns positive infinity, or negative when sign is negative. A division
+# is how a float says it, and there is no function to ask for one.
+Inf = fn(sign) {
+	if sign != null && sign < 0 {
+		return -1.0 / 0.0
+	}
+	return 1.0 / 0.0
+}
 
-# NaN returns a value that is not a number, and IsNaN recognises it: it is
-# the only value that isn't equal to itself.
-NaN = fn() { float(m.m_nan(), 64) }
-IsNaN = fn(x) { int(m.m_isnan(float(x))) == 1 }
-IsInf = fn(x) { int(m.m_isinf(float(x))) == 1 }
+# NaN returns a value that is not a number, and IsNaN is how to recognise one:
+# != does not follow IEEE here, so x != x is not the test it is in C.
+NaN = fn() { 0.0 / 0.0 }
+IsNaN = fn(x) { c.isnan(float(x)) != 0 }
+IsInf = fn(x) { c.isinf(float(x)) != 0 }
 
 Min = fn(a, b) { if a < b { a } else { b } }
 Max = fn(a, b) { if a > b { a } else { b } }

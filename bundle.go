@@ -191,7 +191,10 @@ func compileModule(st *bundleState, path, src string) (bundlepkg.ModuleCode, err
 }
 
 // addPlugin stores the shared object a module opens, looked up the same way
-// the runtime looks it up.
+// the runtime looks it up. A name that is not found is left alone rather than
+// refused: a program is allowed to open a library of the system, libm or libc
+// or one the machine it runs on has installed, and those are not ours to carry
+// - the loader on the other side finds them, and says so itself if it cannot.
 func addPlugin(b *bundlepkg.Bundle, file, name string) error {
 	if _, done := b.Plugins[name]; done {
 		return nil
@@ -205,5 +208,5 @@ func addPlugin(b *bundlepkg.Bundle, file, name string) error {
 		}
 	}
 
-	return fmt.Errorf("build: no plugin named %q, opened by %s", name, file)
+	return nil
 }

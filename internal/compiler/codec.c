@@ -186,9 +186,18 @@ static inline struct object *decode_objects(struct reader *r, size_t len) {
 		case obj_integer:
 			objs[i] = new_integer_obj(read_uint64(r));
 			break;
-		case obj_float:
-			objs[i] = new_float_obj(read_uint64(r));
+		case obj_float: {
+			// The bits as they were written, not the number they spell: the
+			// encoder writes the word of the union, so reading it as an
+			// integer and handing it to new_float_obj would turn 2.0 into
+			// 4.6e18, which is what its bit pattern says as an integer.
+			uint64_t bits = read_uint64(r);
+			double d;
+
+			memcpy(&d, &bits, sizeof(d));
+			objs[i] = new_float_obj(d);
 			break;
+		}
 		case obj_string: {
 			uint32_t len = read_uint32(r);
 			objs[i] = new_string_obj(read_string(r, len), len);

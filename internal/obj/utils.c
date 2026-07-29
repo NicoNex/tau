@@ -150,7 +150,13 @@ void free_obj(struct object o) {
 		dispose_bytes_obj(o);
 		return;
 	case obj_native:
-		dlclose(o.data.handle);
+		// The handle of a shared object, which is not closed here. A function
+		// prepared from one of its symbols keeps only the address, so
+		// unloading the library under it turns the next call into a jump into
+		// memory that is no longer code - and that is what happened, silently
+		// and whenever a collection landed in the wrong place. A library
+		// stays mapped for as long as the program runs; whoever really wants
+		// it gone can call dlclose, which is a C function like any other.
 		return;
 	case obj_native_fn:
 		dispose_native_obj(o);

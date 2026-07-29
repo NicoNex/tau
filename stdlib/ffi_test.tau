@@ -164,6 +164,22 @@ testing.Main([
 				t.AssertError(e)
 				t.AssertEq(strings.Contains(string(e), "tried"), true)
 			}],
+		["a bound function outlives the handle it came from", fn(t) {
+				if !have {
+					t.Skip("build it with `make -C tests/ffi`")
+					return null
+				}
+
+				# Nothing holds the handle after Bind returns, so a collection
+				# used to unload the library and the next call jumped into
+				# memory that was no longer code.
+				b = ffi.Bind("../tests/ffi/libffitest.so", ["double t_add_d(double, double)"])
+				junk = []
+				for i = 0; i < 20000; ++i {
+					junk = append(junk, "allocation number {i}")
+				}
+				t.AssertEq(b.t_add_d(1.5, 2.25), 3.75)
+			}],
 		["memory C owns", fn(t) {
 				p = ffi.Alloc(32)
 				t.AssertEq(type(p), "native")

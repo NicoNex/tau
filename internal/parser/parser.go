@@ -152,6 +152,10 @@ func newParser(file, input string, items <-chan item.Item) *Parser {
 	p.registerInfix(item.LParen, p.parseCall)
 	p.registerInfix(item.LBracket, p.parseIndex)
 	p.registerInfix(item.Dot, p.parseDot)
+	// ++ and -- are both prefix and postfix: which one applies is decided by
+	// whether there is an expression to their left already.
+	p.registerInfix(item.PlusPlus, p.parsePostfixPlusPlus)
+	p.registerInfix(item.MinusMinus, p.parsePostfixMinusMinus)
 
 	return p
 }
@@ -460,6 +464,16 @@ func (p *Parser) parseMinusMinus() ast.Node {
 	pos := p.cur.Pos
 	p.next()
 	return ast.NewMinusMinus(p.parseExpr(Prefix), pos)
+}
+
+// The postfix forms take no operand of their own: the current item is the
+// operator itself, and what it applies to has already been parsed.
+func (p *Parser) parsePostfixPlusPlus(left ast.Node) ast.Node {
+	return ast.NewPostfixPlusPlus(left, p.cur.Pos)
+}
+
+func (p *Parser) parsePostfixMinusMinus(left ast.Node) ast.Node {
+	return ast.NewPostfixMinusMinus(left, p.cur.Pos)
 }
 
 func (p *Parser) parseFor() ast.Node {

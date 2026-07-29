@@ -253,10 +253,15 @@ func space(prev, cur tok, before []tok, block bool) bool {
 	case prev.Is(item.Semicolon):
 		return true
 
-	// ++ and -- stick to what they count.
-	case cur.Is(item.PlusPlus) || cur.Is(item.MinusMinus),
-		prev.Is(item.PlusPlus) || prev.Is(item.MinusMinus):
-		return false
+	// ++ and -- stick to what they count, on the side they count it: "i++"
+	// and "++i", never "i ++" or "++ i". Which side that is depends on
+	// whether there is a value for them to take, so "a + ++b" keeps its
+	// space and "i++ + 1" keeps its own.
+	case cur.Is(item.PlusPlus) || cur.Is(item.MinusMinus):
+		return !value(prev)
+
+	case prev.Is(item.PlusPlus) || prev.Is(item.MinusMinus):
+		return len(before) > 1 && value(before[len(before)-2])
 
 	// A sign is part of the number it is in front of: nothing between them,
 	// while the space before it is whatever the token before wants.

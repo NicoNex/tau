@@ -335,6 +335,15 @@ for len(lst) > 0 {
 }
 ```
 
+`++` and `--` come in both forms and behave as they do in C: written in front of
+what they count they give back the new value, written after it they give back
+the old one. Either way the variable ends up changed by one.
+```python
+i = 5
+println(i++)  # 5, and i is now 6
+println(++i)  # 7, and i is now 7
+```
+
 #### Objects
 When you invoke the `new()` builtin function, it creates a fresh, empty object. You can then add properties to this object using the dot notation.  
 The constructor is essentially a standard function that fills up this empty object with properties and values before it is returned.

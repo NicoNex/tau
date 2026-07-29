@@ -1,0 +1,83 @@
+testing = import("testing")
+
+# The prefix forms evaluate to the new value, the postfix ones to the old, the
+# way C does it. Both change the variable by one either way.
+
+sum_to = fn(n) {
+	t = 0
+	for i = 0; i < n; i++ {
+		t = t + i
+	}
+	return t
+}
+
+count_to = fn(n) {
+	c = 0
+	for i = 0; i < n; ++i {
+		c++
+	}
+	return c
+}
+
+pair = fn(a, b) { [a, b] }
+
+testing.Main([
+		["a postfix ++ evaluates to the old value", fn(t) {
+				i = 5
+				t.AssertEq(i++, 5)
+				t.AssertEq(i, 6)
+		}],
+
+		["a prefix ++ evaluates to the new value", fn(t) {
+				i = 5
+				t.AssertEq(++i, 6)
+				t.AssertEq(i, 6)
+		}],
+
+		["a postfix -- evaluates to the old value", fn(t) {
+				i = 5
+				t.AssertEq(i--, 5)
+				t.AssertEq(i, 4)
+		}],
+
+		["a prefix -- evaluates to the new value", fn(t) {
+				i = 5
+				t.AssertEq(--i, 4)
+				t.AssertEq(i, 4)
+		}],
+
+		["they work on list elements and object fields", fn(t) {
+				l = [10, 20]
+				t.AssertEq(l[0]++, 10)
+				t.AssertEq(l[0], 11)
+
+				o = new()
+				o.x = 7
+				t.AssertEq(o.x++, 7)
+				t.AssertEq(o.x, 8)
+				t.AssertEq(--o.x, 7)
+		}],
+
+		["they compose with the operators around them", fn(t) {
+				p = 1
+				t.AssertEq(p++ + 10, 11)
+				t.AssertEq(p, 2)
+
+				q = 1
+				t.AssertEq(++q + 10, 12)
+				t.AssertEq(q, 2)
+
+				# Left to right, one increment each.
+				z = 0
+				t.AssertEq(pair(z++, z++), [0, 1])
+				t.AssertEq(z, 2)
+		}],
+
+		["a postfix leaves the stack as it found it", fn(t) {
+				# The stack is 2048 slots deep: an expression that forgot to
+				# drop a value would run off the end well before this many
+				# turns, whether it is used as a statement or as a for clause.
+				t.AssertEq(sum_to(100000), 4999950000)
+				t.AssertEq(count_to(100000), 100000)
+		}]
+])

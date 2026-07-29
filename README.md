@@ -1,88 +1,203 @@
 # τ
 
-Tau is a dynamically-typed open-source concurrent programming language designed to be minimal, fast and efficient.
+Tau is a dynamically typed, interpreted programming language. It is small on
+purpose: a handful of keywords, one way to build an object, errors that are
+ordinary values, and concurrency that looks like Go's. The interpreter is
+written in Go around a virtual machine and an object representation written in
+C; the standard library is written in tau itself, under [stdlib](stdlib), which
+is the best place to read the language as it is actually used.
 
-## Installation
-In order to install Tau, you'll need [Go](https://golang.org/) and [GCC](https://gcc.gnu.org/).  
-Clone the repo with 
+- [Installing](#installing)
+- [The tools](#the-tools)
+- [A tour of the language](#a-tour-of-the-language)
+- [The elegant bits](#the-elegant-bits)
+- [Errors](#errors)
+- [Modules](#modules)
+- [Concurrency](#concurrency)
+- [C libraries](#c-libraries)
+- [Shipping a program](#shipping-a-program)
+- [The standard library](#the-standard-library)
+- [Builtin functions](#builtin-functions)
+
+## Installing
+
+You need [Go](https://golang.org/) and a C compiler. libffi is a submodule, so
+clone with it.
+
 ```bash
 git clone --recurse-submodules https://github.com/NicoNex/tau
 cd tau
-sudo make install
+make install
 ```
 
-You can try it out in the terminal by simply running `tau`.
-For additional info run `tau --help`.
+`make` alone builds `tau`, the small C runtime `tau-rt` and the shared objects
+the standard library opens; `make install` copies them into a prefix. The
+default prefix is `$HOME/.local`, which needs no root: the binary goes in
+`~/.local/bin` and the standard library in `~/.local/lib/tau`. For a system
+wide install pass the prefix:
 
-## Shipping a program
-`tau bundle` writes a program and everything it imports into a single
-executable: a copy of the interpreter with the program appended to it. The
-result runs where tau is not installed and needs nothing else, the modules and
-the shared objects it uses included.
 ```bash
-tau bundle -o myapp main.tau
-./myapp
+sudo make install PREFIX=/usr/local
 ```
-The modules travel compiled, so a bundled program starts without a parser and
-without a compiler. The executable is built on `tau-rt`, a runtime written in C
-that carries the VM, the objects and the bytecode decoder and nothing else, so
-a bundled program weighs a few hundred kilobytes rather than a few megabytes
-and starts in about two milliseconds. `make install` puts it next to the
-standard library.
 
-An `import` of a path worked out at run time cannot be bundled and is refused
-there: it was never in the source for the bundler to find, and there is no
-compiler left to answer it.
+`make uninstall` removes both. `make test` runs the Go tests and then the tau
+ones. `make fmt` formats the tau sources in the tree. `make tau-lsp` builds the
+language server, which speaks LSP over stdin and stdout.
 
-`tau build` is the lighter option for machines that already have tau: it writes
-a `.tauc` carrying the same program and its dependencies, without the runtime
-in front of it.
+A module is looked up, in order, in the directories of `TAUPATH` (separated
+like `PATH`), next to the file that imports it, then in `~/.local/lib/tau`,
+`/usr/local/lib/tau` and `/lib/tau`. That is how a checkout runs against its
+own standard library without installing anything:
 
-On macOS the executable has to be signed before it will start, because
-appending to one invalidates the signature it came with:
 ```bash
-codesign -s - myapp
+TAUPATH=$PWD/stdlib ./tau myprogram.tau
 ```
 
-## Syntax
+## The tools
 
-### Hello World
-_We all start from here..._
-```python
-println("Hello World")
+Everything is one binary.
+
+```
+tau                     start the REPL
+tau FILE [ARGS]         run a file, shorthand for tau run
+tau run FILE [ARGS]     the same, explicitly
+tau build FILE...       compile to '.tauc' bytecode
+tau bundle -o app FILE  compile into a standalone executable
+tau test [PATH...]      run the '*_test.tau' files found in PATH
+tau fmt [-w|-l] PATH... format sources in the canonical style
+tau version             print the version
+tau help COMMAND        help for one command
 ```
 
-### Examples
+`tau version` prints what `git describe` said when the binary was built, so a
+release is a tag and nothing else, and a tree between two tags says so:
 
-#### File
-As every interpreter Tau supports files either by passing the path to the interpreter or by using the shebang.
+```
+$ tau version
+Tau v2.0.15-53-g5b05dc5 on Linux
+```
+
+A file can also carry a shebang and run on its own:
 
 ```python
-#!/path/to/tau
+#!/usr/bin/env tau
 
 println("hello world")
 ```
 
+The REPL is multiline: a block keeps reading until it is closed.
+
 ```
-$ tau helloworld.tau
-hello world
+Tau v2.0.15-53-g5b05dc5 on Linux
+>>> repeat = fn(n, func) {
+...     for i = 0; i < n; ++i {
+...         func(i)
+...     }
+... }
+...
+>>> repeat(3, fn(i) { println("hello #{i}") })
+hello #0
+hello #1
+hello #2
+>>>
 ```
 
-#### if-else blocks
-```py
-myVar = 10
+## A tour of the language
 
-if myVar > 10 {
-	println("more than 10")
-} else if myVar == 10 {
-	println("it's exactly 10")
-} else {
-	println(myVar)
-}
+### Values
+
+The types are `int`, `float`, `string`, `bool`, `null`, `list`, `map`,
+`object`, `bytes`, `closure`, `error` and `pipe`. `type(x)` gives the name of
+one as a string.
+
+Integers can be written in base 10, 16, 2 and 8, and underscores may be used
+anywhere inside a number to group digits. Division always produces a float;
+`int()` truncates.
+
+```python
+# numbers
+println(255, 0xff, 0b1111_1111, 0o377, 1_000_000)
+println(2.5, 1.5e3, 7 / 2, 7 % 2, int(7 / 2))
+
+# strings
+name = "tau"
+println("hello, {name}", "the answer is {6 * 7}")
+println(`a raw string: {name} and \n stay as they are`)
+
+# lists, maps, objects
+xs = [1, "two", 3.0]
+kv = {"a": 1, 2: true}
+o = new()
+o.field = "value"
+println(xs[1], kv["a"], o.field, len(xs), keys(kv))
 ```
 
-#### Declaring a function
-```py
+```
+255 255 255 255 1000000
+2.5 1500 3.5 1 3
+hello, tau the answer is 42
+a raw string: {name} and \n stay as they are
+two 1 value 3 [2, a]
+```
+
+Anything between braces inside a double quoted string is an expression, and its
+value is put in the string. A string in backticks is raw: braces and
+backslashes are the characters they look like. Since a nested string closes the
+one it sits in, quote it: `"{if hot { \"warm\" } else { \"cold\" }}"`.
+
+Comments start with `#` and run to the end of the line. A newline ends a
+statement; `;` does the same in the middle of a line.
+
+### Operators
+
+```
+=  +=  -=  *=  /=  %=  &=  |=  ^=  <<=  >>=
+||  &&  !
+==  !=  <  >  <=  >=
++  -  *  /  %
+&  |  ^  ~  <<  >>
+++  --
+```
+
+From loosest to tightest, the levels are: assignment, `||`, `&&`, `|` and `^`,
+`&`, `==` and `!=`, the comparisons, `<<` and `>>`, `+` and `-`, `*` `/` `%`,
+the prefix operators, calls, indexing, and `.` last. Note that the shifts bind
+*less* tightly than the arithmetic, unlike C: `1 << 2 + 3` is `32`.
+
+`==` on two lists or two maps compares identity, not contents; for a structural
+comparison use `cmp.Equal` from the standard library.
+
+### Control flow
+
+`for` has three shapes and no other: an empty one that never stops, one
+expression that is the condition, three that are the C header.
+
+```python
+for { break }                 # forever
+for i < 10 { i++ }            # while
+for i = 0; i < 10; i++ { }    # the usual
+```
+
+`break` and `continue` do what they look like.
+
+`++` and `--` come in both forms and behave as they do in C: written in front
+of what they count they give back the new value, written after it they give
+back the old one. Either way the variable ends up changed by one.
+
+```python
+i = 5
+println(i++)  # 5, and i is now 6
+println(++i)  # 7, and i is now 7
+```
+
+### Functions
+
+A function is a value written with `fn`. The last expression of a body is its
+result, so `return` is only needed to leave early.
+
+```python
+add = fn(x, y) { x + y }
+
 fib = fn(n) {
 	if n < 2 {
 		return n
@@ -90,15 +205,21 @@ fib = fn(n) {
 	fib(n-1) + fib(n-2)
 }
 
-println(fib(40))
+println(add(9, 1), fib(20))
 ```
 
-##### What a function sees around it
+```
+10 6765
+```
+
+#### What a function sees around it
+
 A function reads the names of the function around it and the global ones. What
 it cannot do is write to them: assigning to one of those names makes a local of
 its own, starting from the value that was read on the right of the assignment,
 and shadowing the name from there on.
-```py
+
+```python
 mk = fn() {
 	n = 0
 	return fn() { n = n + 1; return n }
@@ -106,9 +227,11 @@ mk = fn() {
 next = mk()
 println(next(), next())  # 1 1, the n outside never moves
 ```
+
 A closure can change what is *inside* something it captured, because the name
 goes on meaning the same thing. That is what the `ref` module is for:
-```py
+
+```python
 ref = import("ref")
 
 mk = fn() {
@@ -119,114 +242,228 @@ next = mk()
 println(next(), next())  # 1 2
 ```
 
-#### Noteworthy features
-The return value can be implicit:
-```js
-add = fn(x, y) { x + y }
-sum = add(9, 1)
+## The elegant bits
 
-println(sum)
-```
-```
->>> 10
-```
+### Objects without `self`
 
-Also you can inline the if expressions:
-```rust
-a = 0
-b = 1
+`new()` returns an empty object; a constructor is an ordinary function that
+fills one in and returns it. Methods are functions stored in its fields, and
+they reach the object the same way they reach anything else: by closing over
+the variable that holds it.
 
-minimum = if a < b { a } else { b }
-```
+```python
+newQueue = fn() {
+	q = new()
+	q.items = []
 
-The semicolon character `;` is implicit on a newline but can be used to separate multiple expressions on a single line.
-```js
-printData = fn(a, b, c) { println(a); println(b); println(c) }
-```
-
-Functions are first-class and treated as any other data type.
-```py
-min = fn(a, b) { if a < b { a } else { b } }
-
-var1 = 1
-var2 = 2
-
-m = min(var1, var2)
-println(m)
-```
-```
->>> 1
-```
-
-##### Error handling
-```py
-# errtest.tau
-
-div = fn(n, d) {
-	if d == 0 {
-		return error("zero division error")
+	q.Push = fn(x) { q.items = append(q.items, x); return q }
+	q.Pop = fn() {
+		if len(q.items) == 0 { return error("empty queue") }
+		x = q.items[0]
+		q.items = slice(q.items, 1, len(q.items))
+		return x
 	}
-	n / d
+	q.Len = fn() { len(q.items) }
+
+	return q
 }
 
-if failed(result1 = div(16, 2)) {
-	exit(result1)
+q = newQueue()
+q.Push("a").Push("b")
+println(q.Len(), q.Pop(), q.Pop(), q.Pop())
+
+pop = q.Pop            # a method is just a value
+println(type(pop), failed(pop()))
+```
+
+```
+2 a b empty queue
+closure true
+```
+
+There is no `self` and no `this` because there is nothing for them to do. The
+receiver is `q`, a normal local of the constructor, and a method mentions it
+the way it mentions any other captured variable. That buys three things:
+
+- one concept instead of two. Closures already exist; a receiver keyword would
+  be a second, parallel way of getting at the same value.
+- no implicit binding to get wrong. `pop = q.Pop` still works, because `q` was
+  captured when the function was made, not looked up from whatever the call
+  happened to be written against.
+- methods are values like any other. They can be passed, stored, wrapped, or
+  replaced after the fact: `q.Pop = fn() { ... }` and every caller sees the new
+  one.
+
+The standard library is built this way throughout: `newT` in
+[stdlib/testing.tau](stdlib/testing.tau) builds the `t` a test case is given,
+`newFile` in [stdlib/os.tau](stdlib/os.tau) wraps a file descriptor, `New` in
+[stdlib/rand.tau](stdlib/rand.tau) holds the state of a generator.
+
+### Assignment is an expression, and so is `if`
+
+Both give back a value, which is what makes the error idiom below read the way
+it does.
+
+```python
+n = 7
+kind = if n % 2 == 0 { "even" } else { "odd" }
+println(kind)
+
+println(total = 20 + 22)
+```
+
+```
+odd
+42
+```
+
+An `if` with no `else` that doesn't run gives `null`.
+
+## Errors
+
+An error is a value, made with `error(msg)`, tested with `failed(x)`. Nothing
+is thrown, nothing unwinds: a function that failed returns the error, and the
+caller decides.
+
+Because assignment is an expression, the call and the test on its result are
+one line, which is the shape most of the standard library is written in:
+
+```python
+strconv = import("strconv")
+
+parse = fn(s) {
+	if failed(n = strconv.Atoi(s)) {
+		return error("not a number: {s}")
+	}
+	return n * 2
 }
-println("the result of 16 / 2 is {result1}")
 
-if failed(result2 = div(32, 0)) {
-	exit(result2)
-}
-println("the result of 32 / 0 is {result2}")
-```
-```
-$ tau errtest.tau
-the result of 16 / 2 is 8
-error: zero division error
-$
+println(parse("21"))
+println(parse("x"))
 ```
 
-##### Beautiful error messages
-```py
-# errtest.tau
+```
+42
+not a number: x
+```
 
+`exit(err)` ends the program printing the error and returning non zero.
+
+A mistake the VM catches itself stops the program with the line it happened on:
+
+```python
 increment = fn(n) {
 	return n + 1
 }
 
 increment("this will raise a runtime error")
 ```
+
 ```
-error in file errtest.tau at line 4:
+error in file errtest.tau at line 2:
     return n + 1
              ^
 unsupported operator '+' for types string and int
+runtime error
 ```
 
-#### Concurrency
-Tau supports go-style concurrency. 
-This is obtained by the use of four builtins `pipe`, `send`, `recv` `close`. 
-- `pipe` creates a new FIFO pipe and optionally you can pass an integer to it to create a buffered pipe.
-- `send` is used to send values to the pipe.
-- `recv` is used to receive values from the pipe.
-- `close` closes the pipe.
+## Modules
 
-Pipes can be buffered or unbuffered. On an unbuffered pipe `send` hands the value directly to a receiver: the tau-routine that sends sleeps until another one calls `recv`. A buffered pipe holds as many values as it was created with, so `send` returns right away and only sleeps once the buffer is full.
-Once `recv` is called on an empty pipe it will cause the tau-routine to sleep until a new value is sent to the pipe.
-`close` closes the pipe thus allowing it to be garbage collected.
-The values already in a closed pipe are still delivered; once there are none left `recv` returns `null`.
+`import("name")` loads a file once and gives back an object. There is no export
+list: the names that start with a capital letter are the ones that end up in
+that object, everything else stays private to the module. A path with slashes
+reaches into a directory, as in `import("crypto/sha256")`.
 
-The `runtime` module says how many cores the program may run on, which is the
-number to size a pool of tau-routines with:
-```py
-runtime = import("runtime")
+```python
+# greeting.tau
+prefix = "hello"
 
-for i = 0; i < runtime.NumCPU(); i++ {
-	tau worker(i, jobs, results)
+Greet = fn(name) { "{prefix}, {name}" }
+
+newGreeter = fn(prefix) {
+	g = new()
+	g.prefix = prefix
+	g.Greet = fn(name) { "{g.prefix}, {name}" }
+	return g
 }
+
+Formal = newGreeter("good evening")
 ```
 
-```py
+```python
+# main.tau
+greeting = import("greeting")
+
+println(greeting.Greet("world"))
+println(greeting.Formal.Greet("world"))
+println(keys(greeting))
+```
+
+```
+hello, world
+good evening, world
+[Greet, Formal]
+```
+
+A module being a plain object is worth saying out loud: it is the same thing
+`new()` makes, so it can be passed to a function, kept in a list, or have its
+fields read with `keys`. `prefix` and `newGreeter` are not in it, and neither
+is the `prefix` field of `Formal`, but the exported `Greet` closes over both
+and works anyway.
+
+Importing a file twice gives the same module: the table is keyed on the
+absolute path, so two spellings of one file still run it once. A cycle is an
+error rather than a crash.
+
+### Tests
+
+`tau test` runs every `*_test.tau` in the paths it is given, each in its own
+process. A test file hands its cases to `testing.Main`:
+
+```python
+# double_test.tau
+testing = import("testing")
+
+double = fn(x) { x * 2 }
+
+testing.Main([
+	["double", fn(t) {
+		t.AssertEq(double(21), 42)
+	}],
+	["double of zero", fn(t) {
+		t.AssertEq(double(0), 1)
+	}]
+])
+```
+
+```
+$ tau test double_test.tau
+=== double_test.tau
+--- PASS: double (0ms)
+--- FAIL: double of zero (0ms)
+        got 0, want 1
+FAIL    1 failed, 1 passed of 2 (0ms)
+
+1 of 1 test files failed
+```
+
+## Concurrency
+
+`tau f(x)` runs a call in a tau-routine of its own. Values move between them
+through pipes, built with `pipe()` and handled by `send`, `recv` and `close`.
+
+Pipes can be buffered or unbuffered. On an unbuffered pipe `send` hands the
+value directly to a receiver: the tau-routine that sends sleeps until another
+one calls `recv`. A buffered pipe holds as many values as it was created with,
+so `send` returns right away and only sleeps once the buffer is full. `recv` on
+an empty pipe sleeps until something is sent. `close` closes the pipe, allowing
+it to be garbage collected; the values already in it are still delivered, and
+once there are none left `recv` returns `null`.
+
+That last rule is what makes a receiving loop a one-liner: `for val = recv(p)`
+assigns, tests, and stops when the pipe is drained and closed.
+
+```python
 listen = fn(p) {
 	for val = recv(p) {
 		println(val)
@@ -240,296 +477,286 @@ tau listen(p)
 send(p, "hello")
 send(p, "world")
 send(p, 123)
-send(p, "this is a test")
 close(p)
 ```
 
-##### REPL
-Tau also comes with a multiline REPL:
 ```
-Tau v2.0.0 on Linux
->>> repeat = fn(n, func) {
-...     for i = 0; i < n; ++i {
-...         func(i)
-...     }
-... }
-... 
->>> repeat(5, fn(i) {
-...     println("Hello #{i}")
-... })
-... 
-Hello #0
-Hello #1
-Hello #2
-Hello #3
-Hello #4
->>>
+hello
+world
+123
+bye bye...
 ```
 
-### Data types
-Tau is a dynamically-typed programming language and it supports the following primitive types:
+The `runtime` module says how many cores the program may run on, which is the
+number to size a pool of workers with:
 
-#### Integer
-```py
-myVar = 10
-```
-
-#### Float
-```py
-myVar = 2.5
-```
-
-#### String
 ```python
-myString = "My string here"
-```
-Tau also supports strings interpolation.
-```py
-temp = 25
-myString = "The temperature is { if temp > 20 { \"hot\" } else { \"cold\" } }"
-println(myString)
-```
-```
->>> The temperature is hot
-```
-For raw strings use the backtick instead of double quotes.
-```py
-s = `this is a raw string\n {}`
-println(s)
-```
-```
->>> this is a raw string\n {}
-```
+runtime = import("runtime")
 
-#### Boolean
-```js
-t = true
-f = false
-```
-
-#### Function
-```py
-pow = fn(base, exponent) {
-	if exponent > 0 {
-		return base * pow(base, exponent-1)
+work = fn(id, jobs, out) {
+	for j = recv(jobs) {
+		send(out, j * j)
 	}
-	1 # You could optionally write 'return 1', but in this case the return is implicit.
-}
-```
-
-#### Builtin Functions
-
-Tau has an assortment of useful builtin functions that operate on many data types:
-
-- `len(x)` -- Returns the length of the given object `x` which could be a String, List, Map or Bytes.
-- `println(s)` -- Prints the String `s` to the terminal (standard out) along with a new-line.
-- `print(s)` -- Same as `println()` but without a new-line.
-- `input(prompt)` -- Asks for input from the user by reading from the terminal (standard in) with an optional prompt.
-- `string(x)` -- Converts the object `x` to a String.
-- `error(s)` -- Constructs a new error with the contents of the String `s`.
-- `type(x)` -- Returns the type of the object `x`.
-- `int(x)` -- Converts the object `x` to an Integer.
-- `float(x)` -- Converts the object `x` to a Float.
-- `exit([code | message, code])` -- Terminates the program with the optional exit code and/or message.
-- `append(xs, x)` -- Appends the object `x` to the List `xs` and returns the new List.
-- `new` -- Constructs a new empty object.
-- `failed(f)` -- Calls the Function `f` and returns true if an error occurred.
-- `plugin(path)` -- Loads the Plugin at the given path.
-- `pipe` -- Creates a new pipe for sending/receiving messages to/from coroutines.
-- `send(p, x)` -- Sends the object `x` to the pipe `p`.
-- `recv(p)` -- Reads from the pipe `p` and returns the next object sent to it.
-- `close(p)` -- Closes the pipe `p`.
-- `hex(x)` -- Returns a hexadecimal representation of `x`.
-- `oct(x)` -- Returns an octal representation of `x`.
-- `bin(x)` -- Returns a binary representation of `x`.
-- `slice(x, start, end)` -- Returns a slice of `x` from `start` to `end` which could be a String, List or Bytes.
-- `keys(x)` -- Returns a List of keys of the Map `x`.
-- `delete(xs, x)` -- Deletes the key `x` from the Map `xs`.
-- `bytes(x)` -- Converts the String `x` to Bytes.
-
-#### List
-```js
-empty = []
-stuff = ["Hello World", 1, 2, 3, true]
-```
-
-You can append to a list with the `append()` builtin:
-
-```js
-xs =[]
-xs = append(xs, 1)
-```
-
-Lists can be indexed using the indexing operator `[n]`:
-
-```js
-xs = [1, 2, 3]
-xs[1]
-```
-
-#### Map
-```js
-empty = {}
-stuff = {"Hello": "World", 123: true}
-```
-
-Keys can be added using the set operator `[key] = value`:
-
-```js
-kv = {}
-k["foo"] = "bar"
-```
-
-Keys can be accessed using the get operator `[key]`:
-
-```js
-kv = ["foo": "bar"}
-kv["foo"]
-```
-
-#### Loop
-```python
-for i = 0; i < 10; ++i {
-	println("hello world", i)
 }
 
-lst = [0, 1, 2, 3, 4]
-
-println(lst)
-for len(lst) > 0 {
-	println(lst = slice(lst, 1, len(lst)))
+jobs = pipe(8)
+out = pipe(8)
+for i = 0; i < runtime.NumCPU(); i++ {
+	tau work(i, jobs, out)
 }
-```
+for i = 1; i <= 6; i++ { send(jobs, i) }
+close(jobs)
 
-`++` and `--` come in both forms and behave as they do in C: written in front of
-what they count they give back the new value, written after it they give back
-the old one. Either way the variable ends up changed by one.
-```python
-i = 5
-println(i++)  # 5, and i is now 6
-println(++i)  # 7, and i is now 7
-```
-
-#### Objects
-When you invoke the `new()` builtin function, it creates a fresh, empty object. You can then add properties to this object using the dot notation.  
-The constructor is essentially a standard function that fills up this empty object with properties and values before it is returned.
-```python
-Dog = fn(name, age) {
-	dog = new()
-
-	dog.name = name
-	dog.age = age
-
-	dog.humanage = fn() {
-		dog.age * 7
-	}
-
-	return dog
-}
-
-snuffles = Dog("Snuffles", 8)
-println(snuffles.humanage())
-```
-```
->>> 56
-```
-
-#### Modules
-##### Import
-When importing a module only the fields whose name start with an upper-case character will be exported.
-Same thing applies for exported objects, in the example `Snuffles` is exported but the field `id` won't be visible ouside the module.
-```python
-# import_test.tau
-
-data = 123
-
-printData = fn() {
-	println(data)
-}
-
-printText = fn() {
-	println("example text")
-}
-
-TestPrint = fn() {
-	printData()
-	printText()
-}
-
-dog = fn(name, age) {
-	d = new()
-	d.Name = name
-	d.Age = age
-	d.id = 123
-
-	d.ID = fn() {
-		d.id
-	}
-
-	return d
-}
-
-Snuffles = dog("Mr Snuffles", 5)
-
-```
-
-```python
-it = import("import_test")
-
-it.TestPrint()
-
-println(it.Snuffles.Name)
-println(it.Snuffles.Age)
-println(it.Snuffles.ID())
+squares = []
+for i = 0; i < 6; i++ { squares = append(squares, recv(out)) }
+close(out)
+println(squares)
 ```
 
 ```
->>> 123
->>> example text
->>> Mr Snuffles
->>> 5
->>> 456
+[1, 9, 16, 4, 25, 36]
 ```
 
-##### Plugin
-Tau plugin system makes it possible to import and use C shared libraries in Tau seamlessly.
-To run your C code in Tau just compile it with:
+The results come back in whatever order the workers finished in, which is a
+different one on every run.
+
+## C libraries
+
+`plugin(path)` opens a shared object; its symbols are read off the returned
+value with the dot.
+
 ```bash
-gcc -shared -o mylib.so -fPIC mylib.c
+gcc -shared -o vec.so -fPIC vec.c
 ```
-then you can import it in Tau with the `plugin` builtin function.
-```python
-myplugin = plugin("path/to/myplugin.so")
-```
-###### Example
-C code:
+
+Without help the VM has to guess the argument types from the tau values it was
+given, and can only ever bring back a machine word. `native(fn, "ret(args)")`
+says what the function really looks like, one letter per C type, and from then
+on the arguments travel as those types and the result comes back as a tau
+value.
+
 ```c
-#include <stdio.h>
+// vec.c
+double dot(double a, double b) { return a * b; }
 
-void hello() {
-	puts("Hello World!");
+const char *greet(const char *name) {
+	static char buf[64];
+	snprintf(buf, sizeof buf, "hello, %s", name);
+	return buf;
 }
 
-int add(int a, int b) {
-	return a + b;
-}
-
-int sub(int a, int b) {
-	return a - b;
+void *fill(int n) {
+	char *p = malloc(n);
+	memset(p, 'x', n);
+	return p;
 }
 ```
 
-Tau code:
 ```python
-myplugin = plugin("mylib.so")
+lib = plugin("./vec.so")
 
-myplugin.hello()
-println("The sum is", int(myplugin.add(3, 2)))
-println("The difference is", int(myplugin.sub(3, 2)))
+dot = native(lib.dot, "d(dd)")
+greet = native(lib.greet, "z(z)")
+fill = native(lib.fill, "p(i)")
+
+println(dot(1.5, 4))
+println(greet("tau"))
+println(string(bytes(fill(4), 4)))
+println(lib.dot(1.5, 4))       # the same call, untyped
 ```
-Output:
+
 ```
->>> Hello World!
->>> The sum is 5
->>> The difference is 1
+6
+hello, tau
+xxxx
+<native>
 ```
+
+The letters, lowercase signed and uppercase the unsigned of the same width:
+
+| letter | C type | letter | C type |
+|---|---|---|---|
+| `v` | void, as a result only | `f` | float |
+| `b` | bool | `d` | double |
+| `c` `C` | int8, uint8 | `p` | pointer, kept as a native value |
+| `s` `S` | int16, uint16 | `z` | `char *`, as a tau string |
+| `i` `I` | int32, uint32 | | |
+| `l` `L` | int64, uint64 | | |
+
+The call is prepared once, when `native` is given the signature, not on every
+call. `native` passes an error through untouched, so a failed symbol lookup
+says so instead of turning into a nonsense pointer.
+
+A pointer that came back from C is read with `bytes(ptr, n)`, which copies `n`
+bytes out of it: that is how a returned buffer, or a struct, is brought into
+tau. `bytes(n)` on its own allocates an empty buffer of `n` bytes, the way
+`make([]byte, n)` does in Go. For a word whose width is known, `int(x, bits)`
+sign-extends the right number of them.
+
+The standard library uses all of this: [stdlib/syscall](stdlib/syscall),
+[stdlib/math](stdlib/math) and [stdlib/runtime](stdlib/runtime) are small C
+shared objects opened with `plugin` and described with `native`.
+
+## Shipping a program
+
+`tau bundle` writes a program and everything it imports into a single
+executable: a copy of the runtime with the program appended to it. The result
+runs where tau is not installed and needs nothing else, the modules and the
+shared objects it uses included.
+
+```bash
+$ tau bundle -o hello main.tau
+$ ./hello
+hello, world
+```
+
+The modules travel compiled, so a bundled program starts without a parser and
+without a compiler. The executable is built on `tau-rt`, a runtime written in C
+that carries the VM, the objects and the bytecode decoder and nothing else, so
+a bundled program weighs a few hundred kilobytes rather than a few megabytes
+and starts in about two milliseconds. `make install` puts `tau-rt` next to the
+standard library, in `PREFIX/lib/tau`, which is where `tau bundle` looks for
+it.
+
+An `import` of a path worked out at run time cannot be bundled and is refused
+there: it was never in the source for the bundler to find, and there is no
+compiler left to answer it.
+
+`tau build` is the lighter option for machines that already have tau: it writes
+a `.tauc` carrying the same program and its dependencies, without the runtime
+in front of it.
+
+On macOS the executable has to be signed before it will start, because
+appending to one invalidates the signature it came with:
+
+```bash
+codesign -s - myapp
+```
+
+## The standard library
+
+All of it is under [stdlib](stdlib) and all of it is readable tau. Each file
+starts with a comment saying what it is for.
+
+| module | |
+|---|---|
+| `buffer` | growing buffers of text and bytes |
+| `bufio` | buffered reading and writing |
+| `cmp` | comparison and ordering of values, `Equal` and `Compare` |
+| `crypto/hmac` | the keyed hash of RFC 2104, over SHA-256 |
+| `crypto/sha256` | the hash of FIPS 180-4 |
+| `csv` | comma separated values, the way RFC 4180 writes them |
+| `encoding/base64` | the encoding of RFC 4648 |
+| `encoding/hex` | hexadecimal encoding |
+| `errno` | the numbers `errno` takes |
+| `errors` | errors as values: `New`, `Wrap`, `Is`, `Message` |
+| `exec` | running other programs |
+| `flag` | command line flags |
+| `http` | HTTP/1.1 client and server, in the shape of Go's net/http |
+| `io` | moving bytes between streams |
+| `json` | JSON, parsed and written |
+| `list` | operations on lists |
+| `log` | messages with a date on them |
+| `maps` | operations on maps and objects |
+| `math` | the usual functions on floats |
+| `net` | TCP and UDP sockets, in the shape of Go's net package |
+| `os` | files, environment, working directory, `os.Args` |
+| `path` | slash separated paths |
+| `rand` | pseudo random numbers, and `Crypto` for the ones that matter |
+| `ref` | a cell holding a value that a closure has to change |
+| `regexp` | regular expressions, in the shape of Go's regexp package |
+| `runtime` | what the program can know about the machine it runs on |
+| `strconv` | conversions between strings and numbers |
+| `strings` | operations on strings |
+| `syscall` | the system calls underneath the rest |
+| `testing` | the test runner `tau test` uses |
+| `time` | clocks and pauses |
+| `utf8` | text as code points |
+
+`http` and `net` have their own documents: [HTTP_README.md](HTTP_README.md) and
+[NET_README.md](NET_README.md).
+
+A taste of a few of them:
+
+```python
+log = import("log")
+rand = import("rand")
+utf8 = import("utf8")
+csv = import("csv")
+sha256 = import("crypto/sha256")
+exec = import("exec")
+
+log.Print("started")
+r = rand.New(1)                       # seeded, so the sequence repeats
+println(r.Intn(100), r.Intn(100))
+println(utf8.RuneCount("caffè"), len("caffè"), utf8.Runes("naïve"))
+println(csv.Parse("a,b\n\"c,d\",e", ","))
+println(sha256.Hex("abc"))
+println(exec.Output(["echo", "hi"]))
+```
+
+```
+2026/07/29 11:10:59 started
+11 56
+5 6 [110, 97, 239, 118, 101]
+[[a, b], [c,d, e]]
+ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad
+hi
+```
+
+And the flags of a program, which read like Go's:
+
+```python
+flag = import("flag")
+strings = import("strings")
+
+n = flag.Int("n", 1, "how many times")
+name = flag.String("name", "world", "who to greet")
+loud = flag.Bool("loud", false, "shout")
+
+rest = flag.Parse()
+for i = 0; i < n.Value; i++ {
+	msg = "hello, {name.Value}"
+	println(if loud.Value { strings.ToUpper(msg) } else { msg })
+}
+println("rest:", rest)
+```
+
+```
+$ tau greet.tau -n 2 -name tau -loud extra
+HELLO, TAU
+HELLO, TAU
+rest: [extra]
+```
+
+## Builtin functions
+
+These are always in scope, no import needed.
+
+- `len(x)` -- the length of a String, List, Map or Bytes.
+- `println(...)` -- print the arguments separated by a space, with a newline.
+- `print(...)` -- the same without the newline.
+- `input([prompt])` -- read a line from standard input, after an optional prompt.
+- `string(x)` -- convert `x` to a String.
+- `error(s)` -- build an error carrying the message `s`.
+- `type(x)` -- the name of the type of `x`, as a String.
+- `int(x[, bits])` -- convert `x` to an Integer; on a native value `bits` says
+  how many of its bits are meaningful (8, 16, 32 or 64).
+- `float(x)` -- convert `x` to a Float.
+- `exit([code | message[, code]])` -- end the program, with an optional message
+  and exit code.
+- `append(xs, ...)` -- a new List with the arguments added at the end.
+- `new()` -- a fresh empty object.
+- `failed(x)` -- true if `x` is an error.
+- `plugin(path)` -- open a C shared object.
+- `native(fn, sig)` -- give a C function a signature, see [C libraries](#c-libraries).
+- `pipe([n])` -- a new pipe, unbuffered or holding `n` values.
+- `send(p, x)` -- send `x` to the pipe `p`.
+- `recv(p)` -- take the next value out of the pipe `p`.
+- `close(p)` -- close the pipe `p`.
+- `hex(x)`, `oct(x)`, `bin(x)` -- the base 16, 8 and 2 spellings of `x`.
+- `slice(x, start, end)` -- part of a String, List or Bytes.
+- `keys(x)` -- the keys of a Map, or the field names of an object, as a List.
+- `delete(m, k)` -- remove the key `k` from the Map `m`.
+- `bytes(x)` -- Bytes from a String, a List of integers, or an empty buffer of
+  `x` bytes; `bytes(ptr, n)` copies `n` bytes from a native pointer.

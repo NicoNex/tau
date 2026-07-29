@@ -198,20 +198,58 @@ same three lines, not because they are primitives.
     have to be read off `stdlib/syscall/syscall.c` one at a time. Optional:
     layer 1 keeps working, so this is cleanup and not migration.
 
+### Every place the name is written
+
+The rename is not two lines in `object.go`: `plugin` is written in the source
+of the standard library, of the tests, of the examples, of the documentation
+and of the three editor vocabularies that colour it. All of it moves in the
+same commit as the builtin, or the tree is left saying two different things.
+
+11. **The calls.** Every one of them becomes `dlopen`:
+    - `stdlib/math.tau:9`, `stdlib/runtime.tau:7`, `stdlib/syscall.tau:7` and
+      the comment above it at `:5`;
+    - `tests/ffi_test.tau:5`, `tests/test_plugin.tau:2`, `tests/test_module.tau:2`;
+    - `examples/plugins.tau:1`, and the directory `examples/plugin/` it opens,
+      which can keep its name or become `examples/clib/` — it is a directory,
+      not a call.
+12. **The lists of builtin names**, which is where a rename is forgotten and
+    then shows up as a word that stops being coloured:
+    - `internal/obj/object.go`, `Builtins` — renamed in place, see above;
+    - `cmd/tau-lsp/builtins.go:27` — the entry and its one line description,
+      plus a new one for `cfunc`;
+    - `~/Documenti/tree-sitter-tau/queries/highlights.scm:61` — the
+      `@function.builtin` alternation, and the same file copied into
+      `~/Documenti/tau-zed/languages/tau/`, which needs the grammar rev bumped
+      in `extension.toml` to ship;
+    - `~/Documenti/tau-website/build.py:31` — the `BUILTINS` set the site
+      highlights with.
+13. **The prose.** `README.md:546`, `:580`, `:630`, `:783` (the builtin list),
+    and on the site `src/index.md` (the "C without a wrapper" card, which still
+    shows the letter signature as well), `src/tooling.md` and
+    `samples/ffi_native.tau`.
+14. **The internal vocabulary**, which is a decision rather than a rename. The
+    bundle format carries what it calls plugins: `internal/bundle/codec.go`,
+    `internal/bundle/bundle.go`, `internal/vm/vm.go`, `internal/rt/rt.c` (14
+    mentions) and `internal/obj/utils.c`. None of it is user facing, and a
+    shared object packed inside a bundle is a plugin of that bundle in a way it
+    never was of the language, so the honest move is to leave the format alone
+    and rename only what the language shows: `internal/obj/plugin.h` to `dl.h`
+    and `plugin_open` to `dl_open`.
+
 ### Everything else
 
-11. `bundle.go:26` — `pluginRe` looks for `plugin("...")` in the source to
+15. `bundle.go:26` — `pluginRe` looks for `plugin("...")` in the source to
     decide which shared objects a bundle carries. It has to look for
     `dlopen("...")` instead, and it has to change in the same commit as the
     builtin or every bundled program stops finding its library. Layer 2 adds
     nothing to look for, since it opens nothing of its own. The other thing to
     keep true: the per system names must never change the name a bundle stores,
     which is why a name that looks like a path is passed through untouched.
-12. `README.md` — the "C libraries" section becomes two: layer 1 as the quick
+16. `README.md` — the "C libraries" section becomes two: layer 1 as the quick
     and unsafe way, with `int(x, bits)` shown and the trade said plainly, and
     layer 2 as the one to use. `cfunc` is shown once, where `ffi.Func` is
     explained, and not in the list of things to reach for.
-13. The website, `~/Documenti/tau-website`: `src/tooling.md` (the "Plugins"
+17. The website, `~/Documenti/tau-website`: `src/tooling.md` (the "Plugins"
     section, same split), `src/stdlib.md` (a section for `ffi`), and
     `samples/ffi_native.tau`.
 
@@ -224,10 +262,12 @@ Every step leaves the tree working.
 2. Move the parser out of `internal/obj/ffi.c`; `native` becomes `cfunc` and
    takes codes. `ffi.tau` is the only caller, so this is where the old spelling
    stops working — and the old spelling is one day old and in no release.
-3. `plugin` becomes `dlopen`, in the builtins, in the bundler regexp and in the
-   three stdlib modules that open one, in a single commit. This is the breaking
-   one: it goes in a release of its own and in the changelog, since `plugin` is
-   what every program that opens a library has written until now.
+3. `plugin` becomes `dlopen` everywhere at once — the builtin, the bundler
+   regexp, the stdlib, the tests, the examples, the LSP list, the two
+   highlighting queries, the site — in a single commit, since a half done
+   rename is a tree that contradicts itself. This is the breaking one: it goes
+   in a release of its own and in the changelog, `plugin` being what every
+   program that opens a library has written until now.
 4. `dlopen(null)`, then the memory helpers in `ffi.tau` on top of it, then the
    per system names and the better error.
 5. `math.tau` to layer 2, tests green.

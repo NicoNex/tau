@@ -52,7 +52,7 @@ jobs:
         run: git submodule init && git submodule update
 
       - name: Build for Linux
-        run: make && mv tau tau-linux-${{ matrix.arch }}
+        run: make VERSION=${{ github.ref_name }} && mv tau tau-linux-${{ matrix.arch }}
 
       - name: Upload Linux artifact to release
         uses: actions/upload-release-asset@v1
@@ -90,7 +90,7 @@ jobs:
         run: git submodule init && git submodule update
 
       - name: Build for Windows x86_64
-        run: make windows && mv tau.exe tau-windows-x86_64.exe
+        run: make windows VERSION=${{ github.ref_name }} && mv tau.exe tau-windows-x86_64.exe
 
       - name: Upload Windows artifact to release
         uses: actions/upload-release-asset@v1
@@ -120,7 +120,7 @@ jobs:
       - uses: actions/checkout@v4
       - run: git submodule init && git submodule update
       - run: brew install gcc@14 make automake libtool texinfo autoconf
-      - run: make CC=gcc-14 && mv tau tau-macos-${{ matrix.arch }}
+      - run: make CC=gcc-14 VERSION=${{ github.ref_name }} && mv tau tau-macos-${{ matrix.arch }}
 
       - name: Upload MacOS artifact to release
         uses: actions/upload-release-asset@v1

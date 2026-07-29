@@ -1,4 +1,12 @@
 DIR := $(shell pwd)
+
+# The version `tau version` prints, taken from the tag the tree is on rather
+# than written in the source: a release is a tag and nothing else. A tree
+# between two tags says v2.0.15-7-gabc1234, a dirty one says -dirty, and a
+# checkout with no tags in it falls back to the commit. Override it (make
+# VERSION=v2.1.0) where git is not around, as the release workflow does.
+VERSION ?= $(shell git describe --tags --dirty --always 2>/dev/null)
+LDFLAGS_VERSION = -X 'github.com/NicoNex/tau.tagVersion=$(VERSION)'
 GCC := $(shell which gcc)
 DEFAULT_CC = $(CC)
 
@@ -60,7 +68,7 @@ tau:
 	CC=$(CC) \
 	CGO_CFLAGS="$(CFLAGS)" \
 	CGO_LDFLAGS="$(LDFLAGS)" \
-	go build -o $(DIR)/tau
+	go build -ldflags "$(LDFLAGS_VERSION)" -o $(DIR)/tau
 
 # The runtime a bundled program is built on: the VM, the objects and the
 # bytecode decoder, and nothing else. No lexer, no parser, no syntax tree, no
@@ -85,17 +93,17 @@ tau-windows:
 	CGO_LDFLAGS="$(LDFLAGS)" \
 	GOOS=windows \
 	GOARCH=amd64 \
-	go build -o $(DIR)/tau.exe
+	go build -ldflags "$(LDFLAGS_VERSION)" -o $(DIR)/tau.exe
 
 windows: libffi-windows tau-windows
 
 debug:
 	cd cmd/tau && \
-	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DDEBUG" CGO_LDFLAGS="$(LDFLAGS)" go build -o $(DIR)/tau
+	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DDEBUG" CGO_LDFLAGS="$(LDFLAGS)" go build -ldflags "$(LDFLAGS_VERSION)" -o $(DIR)/tau
 
 gc-debug:
 	cd cmd/tau && \
-	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DGC_DEBUG" CGO_LDFLAGS="$(LDFLAGS)" go build -o $(DIR)/tau
+	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DGC_DEBUG" CGO_LDFLAGS="$(LDFLAGS)" go build -ldflags "$(LDFLAGS_VERSION)" -o $(DIR)/tau
 
 # The shared objects the stdlib opens with plugin(). One directory each,
 # added here when a new one shows up.

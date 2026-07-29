@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"runtime/debug"
 	"sort"
 	"strings"
 
@@ -20,7 +21,56 @@ import (
 	"github.com/NicoNex/tau/internal/vm"
 )
 
-const TauVersion = "v2.0.15"
+// TauVersion is what `tau version` prints. It is not written down anywhere:
+// the build sets it from the tag the working tree is on, see the Makefile,
+// and a copy installed with `go install` reads it out of the module version
+// instead. Only a build from a tree with no git and no module info says
+// "devel", and nothing has to be edited before tagging a release.
+var TauVersion = version()
+
+// version returns what the build knows about itself.
+func version() string {
+	// -ldflags -X put the tag here, and there is nothing to work out.
+	if tagVersion != "" {
+		return tagVersion
+	}
+
+	info, ok := debug.ReadBuildInfo()
+	if !ok {
+		return "devel"
+	}
+
+	// Built straight from a checkout without the Makefile: the commit says
+	// more than the version go infers from the tags, which for a module path
+	// with no /v2 in it is not a v2 tag at all.
+	var rev, modified string
+	for _, s := range info.Settings {
+		switch s.Key {
+		case "vcs.revision":
+			rev = s.Value
+		case "vcs.modified":
+			modified = s.Value
+		}
+	}
+	if rev != "" {
+		if len(rev) > 12 {
+			rev = rev[:12]
+		}
+		if modified == "true" {
+			return "devel-" + rev + "-dirty"
+		}
+		return "devel-" + rev
+	}
+
+	// Installed from the module proxy, where the version is all there is.
+	if v := info.Main.Version; v != "" && v != "(devel)" {
+		return v
+	}
+	return "devel"
+}
+
+// tagVersion is set at link time by the Makefile.
+var tagVersion string
 
 var ErrParseError = errors.New("error: parse error")
 

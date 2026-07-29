@@ -216,6 +216,16 @@ Once `recv` is called on an empty pipe it will cause the tau-routine to sleep un
 `close` closes the pipe thus allowing it to be garbage collected.
 The values already in a closed pipe are still delivered; once there are none left `recv` returns `null`.
 
+The `runtime` module says how many cores the program may run on, which is the
+number to size a pool of tau-routines with:
+```py
+runtime = import("runtime")
+
+for i = 0; i < runtime.NumCPU(); i++ {
+	tau worker(i, jobs, results)
+}
+```
+
 ```py
 listen = fn(p) {
 	for val = recv(p) {

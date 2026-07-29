@@ -1,0 +1,19 @@
+# runtime - what the program can know about the machine it runs on.
+#
+# Only what a shared object can answer on its own. The numbers of the
+# interpreter itself, how many tau routines are alive or how full the heap is,
+# are private to it and no plugin can reach them.
+
+rt = plugin("runtime/libruntime.so")
+
+# NumCPU returns how many cores the program may run on, which is the number to
+# size a pool of tau routines with. It never returns less than 1.
+NumCPU = fn() { int(rt.rt_numcpu()) }
+
+# OS returns the system this was built for, named the way Go names it:
+# "linux", "darwin", "windows", "freebsd", "openbsd", "netbsd".
+OS = fn() { string(rt.rt_os()) }
+
+# Arch returns the architecture this was built for, again named the way Go
+# names it: "amd64", "arm64", "386", "arm", "riscv64".
+Arch = fn() { string(rt.rt_arch()) }

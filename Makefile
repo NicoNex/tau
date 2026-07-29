@@ -99,7 +99,7 @@ gc-debug:
 
 # The shared objects the stdlib opens with plugin(). One directory each,
 # added here when a new one shows up.
-PLUGINS = syscall math
+PLUGINS = syscall math runtime
 
 plugins:
 	for p in $(PLUGINS); do $(MAKE) -C stdlib/$$p CC=$(CC) || exit 1; done

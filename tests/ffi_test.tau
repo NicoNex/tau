@@ -98,5 +98,17 @@ testing.Main([
 		["the old untyped call still works", fn(t) {
 				t.AssertEq(int(lib.t_add_i(2, 3), 32), 5)
 				t.AssertEq(int(lib.t_add_l(2, 3), 64), 5)
+
+				# A pointer C returned, handed straight back to C: the raw
+				# call has to pass the address it holds, not what it points at.
+				libc = dlopen("libc.so.6")
+				if !failed(libc) {
+					p = libc.malloc(16)
+					libc.memcpy(p, "hello", 6)
+					t.AssertEq(int(libc.strlen(p)), 5)
+					t.AssertEq(string(p), "hello")
+					t.AssertEq(bytes(p, 5), bytes("hello"))
+					libc.free(p)
+				}
 			}]
 	])

@@ -865,8 +865,12 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 			break;
 
 		case obj_native:
+			// libffi wants the address of the argument, so a pointer travels
+			// as the address of the field holding it. Passing the pointer
+			// itself made the call read whatever it pointed at, which is why
+			// a pointer C had just returned could not be handed back to C.
 			arg_types[i] = &ffi_type_pointer;
-			arg_values[i] = o->data.handle;
+			arg_values[i] = &o->data.handle;
 			break;
 
 		case obj_null:

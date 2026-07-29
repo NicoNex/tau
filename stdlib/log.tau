@@ -1,0 +1,80 @@
+# log - messages with a date on them.
+#
+# The functions of the module write to standard error, one line each, with the
+# local date in front:
+#
+#	log = import("log")
+#
+#	log.Print("listening on {port}")   # 2026/07/29 10:13:44 listening on 8080
+#	log.Fatal("cannot open {path}")    # the same, then exit(1)
+#
+# SetPrefix puts a word of your own in front of the date, SetOutput sends the
+# lines somewhere else, and New builds a logger writing to a file:
+#
+#	l = log.New(os.Create("run.log"), "worker ")
+#	l.Print("started")
+
+os = import("os")
+time = import("time")
+
+# The layout of the date, in the verbs of time.Format. Local time, seconds
+# only: a log line is read by a person, not parsed.
+Layout = "%Y/%m/%d %H:%M:%S"
+
+# New returns a logger writing to w, which is anything with a Write, with
+# prefix written before the date of every line.
+New = fn(w, prefix) {
+	l = new()
+	l.Out = w
+	l.Prefix = if prefix == null { "" } else { string(prefix) }
+
+	# Stamp is what goes in front of a message. Setting it to false turns the
+	# date off, for a program whose output is timestamped by something else.
+	l.Stamp = true
+
+	l.line = fn(msg) {
+		out = l.Prefix
+		if l.Stamp {
+			out = out + time.Format(time.NowLocal(), Layout) + " "
+		}
+		return out + string(msg) + "\n"
+	}
+
+	# Print writes one line. The message is a string, so build it with the
+	# interpolation of the language: log.Print("got {n} of them").
+	l.Print = fn(msg) { l.Out.Write(l.line(msg)) }
+
+	# Fatal writes one line and ends the program with status 1.
+	l.Fatal = fn(msg) {
+		l.Print(msg)
+		exit(1)
+	}
+
+	return l
+}
+
+# The logger behind the functions of the module, on standard error so that the
+# output of a program stays clean.
+std = New(os.Stderr, "")
+
+# SetOutput sends the lines of the module somewhere else, any file or object
+# with a Write.
+SetOutput = fn(w) {
+	std.Out = w
+	return null
+}
+
+# SetPrefix puts s in front of every line, before the date.
+SetPrefix = fn(s) {
+	std.Prefix = string(s)
+	return null
+}
+
+# SetStamp turns the date in front of every line on or off.
+SetStamp = fn(on) {
+	std.Stamp = on == true
+	return null
+}
+
+Print = fn(msg) { std.Print(msg) }
+Fatal = fn(msg) { std.Fatal(msg) }

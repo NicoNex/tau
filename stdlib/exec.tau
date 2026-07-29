@@ -1,0 +1,205 @@
+# exec - running other programs.
+#
+# Run takes the program and its arguments as a list, no shell in between, and
+# waits for it to finish:
+#
+#	exec = import("exec")
+#
+#	r = exec.Run(["git", "rev-parse", "HEAD"])
+#	if r.Status != 0 { ... }
+#	println(r.Stdout)
+#
+# Output is the short way to the text of a program that is expected to work,
+# and returns an error when it doesn't:
+#
+#	head = exec.Output(["git", "rev-parse", "HEAD"])
+#
+# The arguments go to the program as they are, so a file named "; rm -rf ."
+# is a file name and nothing else. Sh runs a command line through /bin/sh when
+# pipes and redirections are really wanted, and then the string is a program:
+# don't build it out of anything that came from outside.
+#
+# ponytail: the program is waited for, its output arrives at the end. Nothing
+# runs in the background and nothing is read while it runs, which is what a
+# long lived child would need.
+
+syscall = import("syscall")
+os = import("os")
+strings = import("strings")
+
+# MaxOutput is how much of the output of a program is kept by default, one
+# megabyte. Options.Max raises it for a program that writes more.
+MaxOutput = 1 << 20
+
+mergeStderr = 1
+inherit = 2
+
+# Options returns the settings of a run, to change and pass to RunWith:
+#
+#	o = exec.Options()
+#	o.Input = "text on the standard input"
+#	o.Stderr = true          # the error output is kept along with the output
+#	o.Quiet = false          # true lets the program write to the terminal
+#	o.Max = 1 << 24          # keep up to sixteen megabytes
+#	o.Dir = "/tmp"           # run it there
+Options = fn() {
+	o = new()
+	o.Input = null
+	o.Stderr = false
+	o.Quiet = false
+	o.Max = MaxOutput
+	o.Dir = null
+	return o
+}
+
+# blobOf packs the arguments the way Spawn wants them: every one of them
+# followed by a zero byte.
+blobOf = fn(argv) {
+	out = []
+	for i = 0; i < len(argv); ++i {
+		# Bytes are taken as they are: turning them into a string first would
+		# stop at the first zero byte, which is what a program may not be
+		# given as an argument anyway.
+		b = if type(argv[i]) == "bytes" { argv[i] } else { bytes(string(argv[i])) }
+		for j = 0; j < len(b); ++j {
+			if b[j] == 0 {
+				return error("exec: argument {i} has a zero byte in it")
+			}
+			out = append(out, b[j])
+		}
+		out = append(out, 0)
+	}
+	return bytes(out)
+}
+
+# RunWith runs argv with the given options and returns the result: Status is
+# the exit status, Stdout what the program wrote, and Truncated whether more
+# came out than Max allowed.
+RunWith = fn(argv, opts) {
+	if type(argv) == "string" {
+		argv = [argv]
+	}
+	if len(argv) == 0 {
+		return error("exec: nothing to run")
+	}
+	if opts == null {
+		opts = Options()
+	}
+
+	if failed(blob = blobOf(argv)) {
+		return blob
+	}
+
+	input = null
+	if opts.Input != null {
+		if failed(input = bytes(string(opts.Input))) {
+			return input
+		}
+	}
+
+	flags = 0
+	if opts.Stderr {
+		flags = flags | mergeStderr
+	}
+	if opts.Quiet {
+		flags = flags | inherit
+	}
+
+	out = null
+	if !opts.Quiet {
+		out = bytes(if opts.Max == null { MaxOutput } else { opts.Max })
+	}
+
+	# A directory of its own means going there and back, since the child is
+	# forked from where this process stands.
+	back = null
+	if opts.Dir != null {
+		if failed(back = os.Getwd()) {
+			return back
+		}
+		if failed(err = os.Chdir(opts.Dir)) {
+			return err
+		}
+	}
+
+	n = syscall.Spawn(blob, len(argv), input, out, flags)
+	status = syscall.SpawnStatus()
+
+	if back != null {
+		os.Chdir(back)
+	}
+	if failed(n) {
+		return error("exec: cannot run {argv[0]}: {n}")
+	}
+
+	r = new()
+	r.Argv = argv
+	r.Status = status
+	r.Truncated = out != null && n > len(out)
+	r.Stdout = if out == null { "" } else { string(slice(out, 0, if r.Truncated { len(out) } else { n })) }
+	return r
+}
+
+# Run runs argv, keeps what it writes, and returns the result. Only a program
+# that could not be started at all is an error: one that ran and failed is a
+# Status other than zero.
+Run = fn(argv) { RunWith(argv, null) }
+
+# Output returns what argv wrote on its standard output, and an error when it
+# ended with a status other than zero.
+Output = fn(argv) {
+	if failed(r = Run(argv)) {
+		return r
+	}
+	if r.Status != 0 {
+		return error("exec: {r.Argv[0]} ended with status {r.Status}")
+	}
+	return r.Stdout
+}
+
+# Status runs argv without keeping its output, which goes to the terminal, and
+# returns the exit status.
+Status = fn(argv) {
+	o = Options()
+	o.Quiet = true
+
+	if failed(r = RunWith(argv, o)) {
+		return r
+	}
+	return r.Status
+}
+
+# Sh runs a command line through /bin/sh, pipes, redirections and all. The
+# command is a program, so keep anything that came from outside out of it, or
+# pass it in Options.Input.
+Sh = fn(cmd) { Run(["/bin/sh", "-c", string(cmd)]) }
+
+# Look returns the path of the program name, searched for in PATH the way a
+# shell would, or an error when there is no such program.
+Look = fn(name) {
+	name = string(name)
+	if strings.Contains(name, "/") {
+		if os.Exists(name) {
+			return name
+		}
+		return error("exec: {name} is not there")
+	}
+
+	path = os.Getenv("PATH")
+	if path == null || path == "" {
+		path = "/usr/local/bin:/usr/bin:/bin"
+	}
+
+	dirs = strings.Split(path, ":")
+	for i = 0; i < len(dirs); ++i {
+		if dirs[i] == "" {
+			continue
+		}
+
+		full = dirs[i] + "/" + name
+		if os.Exists(full) {
+			return full
+		}
+	}
+	return error("exec: {name} is not in PATH")
+}

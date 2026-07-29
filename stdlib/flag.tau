@@ -1,0 +1,211 @@
+# flag - command line flags.
+#
+# A flag is declared before parsing and read after it, from the Value of what
+# the declaration returned:
+#
+#	flag = import("flag")
+#
+#	port = flag.Int("port", 8080, "the port to listen on")
+#	quiet = flag.Bool("q", false, "say nothing")
+#	rest = flag.Parse()
+#
+#	if failed(rest) { println(rest); exit(2) }
+#	println("port {port.Value}, files {rest}")
+#
+# The forms understood are -name value, -name=value and, for a boolean, -name
+# on its own. Two dashes work like one, and a bare -- ends the flags: what
+# follows is returned as it is, dashes included. -h and --help print the
+# usage and exit.
+#
+# A program that parses something other than its own command line, a test for
+# one, builds its own set with New and calls set.Parse(args).
+
+os = import("os")
+strconv = import("strconv")
+strings = import("strings")
+
+# New returns an empty set of flags named after the program it parses for.
+New = fn(name) {
+	set = new()
+	set.Name = name
+	set.flags = {} # name -> the object handed back at declaration
+	set.order = [] # the names, in the order they were declared
+
+	# define adds a flag and returns the object its value lands in.
+	set.define = fn(kind, name, value, usage) {
+		f = new()
+		f.Name = name
+		f.Kind = kind
+		f.Value = value
+		f.Default = value
+		f.Usage = usage
+
+		set.flags[name] = f
+		set.order = append(set.order, name)
+		return f
+	}
+
+	set.String = fn(name, value, usage) { set.define("string", name, string(value), usage) }
+	set.Int = fn(name, value, usage) { set.define("int", name, int(value, 64), usage) }
+	set.Float = fn(name, value, usage) { set.define("float", name, float(value), usage) }
+	set.Bool = fn(name, value, usage) { set.define("bool", name, value == true, usage) }
+
+	# set1 stores the text of one flag, converted to the kind it was declared
+	# with.
+	set.set1 = fn(f, text) {
+		if f.Kind == "string" {
+			f.Value = text
+			return null
+		}
+
+		if f.Kind == "bool" {
+			if text == "true" || text == "1" {
+				f.Value = true
+				return null
+			}
+			if text == "false" || text == "0" {
+				f.Value = false
+				return null
+			}
+			return error("flag: -{f.Name} wants true or false, got {text}")
+		}
+
+		if f.Kind == "int" {
+			if failed(n = strconv.Atoi(text)) {
+				return error("flag: -{f.Name} wants a number, got {text}")
+			}
+			f.Value = n
+			return null
+		}
+
+		if failed(x = strconv.ParseFloat(text)) {
+			return error("flag: -{f.Name} wants a number, got {text}")
+		}
+		f.Value = x
+		return null
+	}
+
+	# Usage returns the lines describing the flags, the way the help prints
+	# them.
+	set.Usage = fn() {
+		out = "usage: {set.Name} [flags] [arguments]\n"
+		for i = 0; i < len(set.order); ++i {
+			f = set.flags[set.order[i]]
+			out = out + "  -{f.Name}"
+			if f.Kind != "bool" {
+				out = out + " {f.Kind}"
+			}
+			out = out + "\n"
+			if f.Usage != null && f.Usage != "" {
+				out = out + "    \t{f.Usage}"
+				if f.Kind == "string" {
+					out = out + " (default \"{f.Default}\")\n"
+				} else {
+					out = out + " (default {f.Default})\n"
+				}
+			}
+		}
+		return out
+	}
+
+	# Lookup returns the flag named name, or null.
+	set.Lookup = fn(name) {
+		f = set.flags[name]
+		if f == null {
+			return null
+		}
+		return f
+	}
+
+	# Parse reads args, which are the arguments without the program name, and
+	# returns the ones left over after the flags. An unknown flag or a value
+	# of the wrong kind gives an error.
+	set.Parse = fn(args) {
+		rest = []
+		for i = 0; i < len(args); ++i {
+			arg = string(args[i])
+
+			# Everything after -- is an argument, and so is anything that
+			# doesn't start with a dash. A lone - is a name for stdin.
+			if arg == "--" {
+				for j = i + 1; j < len(args); ++j {
+					rest = append(rest, string(args[j]))
+				}
+				return rest
+			}
+			if len(arg) < 2 || arg[0] != "-" {
+				rest = append(rest, arg)
+				continue
+			}
+
+			name = slice(arg, 1, len(arg))
+			if name[0] == "-" {
+				name = slice(name, 1, len(name))
+			}
+
+			# -name=value carries its value with it.
+			text = null
+			cut = strings.Cut(name, "=")
+			if cut.Found {
+				name = cut.Before
+				text = cut.After
+			}
+
+			if name == "h" || name == "help" {
+				print(set.Usage())
+				exit(0)
+			}
+
+			f = set.flags[name]
+			if f == null {
+				return error("flag: -{name} is not a flag of {set.Name}")
+			}
+
+			if text == null {
+				# A boolean on its own is true. Anything else takes the next
+				# argument, whatever it looks like.
+				if f.Kind == "bool" {
+					f.Value = true
+					continue
+				}
+				if i + 1 >= len(args) {
+					return error("flag: -{name} needs a value")
+				}
+				++i
+				text = string(args[i])
+			}
+
+			if failed(err = set.set1(f, text)) {
+				return err
+			}
+		}
+		return rest
+	}
+
+	# Reset puts every flag back to the value it was declared with, which is
+	# what a test parsing twice with the same set needs.
+	set.Reset = fn() {
+		for i = 0; i < len(set.order); ++i {
+			f = set.flags[set.order[i]]
+			f.Value = f.Default
+		}
+		return null
+	}
+
+	return set
+}
+
+# The set behind the functions of the module, which parses the command line of
+# the program itself.
+CommandLine = New(if len(os.Args) > 0 { os.Args[0] } else { "program" })
+
+String = fn(name, value, usage) { CommandLine.String(name, value, usage) }
+Int = fn(name, value, usage) { CommandLine.Int(name, value, usage) }
+Float = fn(name, value, usage) { CommandLine.Float(name, value, usage) }
+Bool = fn(name, value, usage) { CommandLine.Bool(name, value, usage) }
+Lookup = fn(name) { CommandLine.Lookup(name) }
+Usage = fn() { CommandLine.Usage() }
+
+# Parse reads the command line of the program, past its name, and returns the
+# arguments that are not flags.
+Parse = fn() { CommandLine.Parse(slice(os.Args, 1, len(os.Args))) }

@@ -1,0 +1,50 @@
+testing = import("testing")
+hmac = import("crypto/hmac")
+sha256 = import("crypto/sha256")
+
+testing.Main([
+		["the test vectors of RFC 4231", fn(t) {
+				# A key of twenty 0x0b bytes over "Hi There".
+				key = ""
+				for i = 0; i < 20; ++i {
+					key = key + string(bytes([0x0b]))
+				}
+				t.AssertEq(hmac.Hex(key, "Hi There"),
+					"b0344c61d8db38535ca8afceaf0bf12b881dc200c9833da726e9376c2e32cff7")
+
+				t.AssertEq(hmac.Hex("Jefe", "what do ya want for nothing?"),
+					"5bdcc146bf60754e6a042426089575c75a003f089d2739839dec58b964ec3843")
+			}],
+		["a key longer than a block is hashed first", fn(t) {
+				key = ""
+				for i = 0; i < 131; ++i {
+					key = key + string(bytes([0xaa]))
+				}
+				t.AssertEq(hmac.Hex(key, "Test Using Larger Than Block-Size Key - Hash Key First"),
+					"60e431591ee0b67f0d8a26aacbf5b77f8e0bc6213728c5140546040f0ee37f54")
+
+				# Past a block the key is its own digest, and both give the
+				# same signature.
+				t.AssertEq(hmac.Hex(key, "x"), hmac.Hex(sha256.Sum(key), "x"))
+			}],
+		["an empty key and an empty message", fn(t) {
+				t.AssertEq(hmac.Hex("", ""),
+					"b613679a0814d9ec772f95d778c35fc5ff1697c493715653c6c712144292c5ad")
+				t.AssertEq(len(hmac.Sum("k", "m")), sha256.Size)
+				t.AssertEq(type(hmac.Sum("k", "m")), "bytes")
+			}],
+		["the key is what makes the signature", fn(t) {
+				t.AssertNe(hmac.Hex("k1", "message"), hmac.Hex("k2", "message"))
+				t.AssertNe(hmac.Hex("k", "a"), hmac.Hex("k", "b"))
+				t.AssertEq(hmac.Sum("k", "m"), hmac.Sum(bytes("k"), bytes("m")))
+			}],
+		["Equal compares without giving the answer away", fn(t) {
+				tag = hmac.Sum("key", "message")
+				t.AssertEq(hmac.Equal(tag, hmac.Sum("key", "message")), true)
+				t.AssertEq(hmac.Equal(tag, hmac.Sum("key", "other")), false)
+				t.AssertEq(hmac.Equal("abc", "abc"), true)
+				t.AssertEq(hmac.Equal("abc", "abd"), false)
+				t.AssertEq(hmac.Equal("ab", "abc"), false)
+				t.AssertEq(hmac.Equal("", ""), true)
+			}]
+	])

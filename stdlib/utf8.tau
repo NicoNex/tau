@@ -1,0 +1,267 @@
+# utf8 - text as code points.
+#
+# A tau string is a run of bytes, and indexing or slicing one counts bytes,
+# the way Go does it. The text inside is UTF-8, so a letter outside ASCII
+# takes more than one byte and len counts them all:
+#
+#	utf8 = import("utf8")
+#	len("città")             # 6, the bytes
+#	utf8.RuneCount("città")  # 5, the letters
+#
+# A code point is a number here, what Go calls a rune. Decoding one at a time
+# over a string is faster on bytes than on the string, because a string has to
+# be converted first:
+#
+#	b = bytes(s)
+#	i = 0
+#	for i < len(b) {
+#		r = utf8.DecodeRune(b, i)
+#		println(r[0])
+#		i = i + r[1]
+#	}
+
+# RuneError is what a byte that isn't valid UTF-8 decodes to, the replacement
+# character U+FFFD.
+RuneError = 0xfffd
+
+# RuneSelf is the first code point that doesn't fit in a single byte.
+RuneSelf = 0x80
+
+# MaxRune is the largest code point there is.
+MaxRune = 0x10ffff
+
+# UTFMax is the most bytes one code point takes.
+UTFMax = 4
+
+# The surrogate range belongs to UTF-16 and is not valid on its own.
+surrogateMin = 0xd800
+surrogateMax = 0xdfff
+
+asBytes = fn(s) {
+	if type(s) == "bytes" {
+		return s
+	}
+	return bytes(string(s))
+}
+
+# ValidRune reports whether r is a code point that can be encoded.
+ValidRune = fn(r) {
+	if r < 0 || r > MaxRune {
+		return false
+	}
+	return r < surrogateMin || r > surrogateMax
+}
+
+# RuneLen returns how many bytes the code point r takes, or -1 when it cannot
+# be encoded.
+RuneLen = fn(r) {
+	if !ValidRune(r) {
+		return -1
+	}
+	if r < 0x80 {
+		return 1
+	}
+	if r < 0x800 {
+		return 2
+	}
+	if r < 0x10000 {
+		return 3
+	}
+	return 4
+}
+
+# EncodeRune returns the string of the code point r. An r that cannot be
+# encoded gives RuneError, as it does in Go.
+EncodeRune = fn(r) {
+	if !ValidRune(r) {
+		r = RuneError
+	}
+
+	if r < 0x80 {
+		return string(bytes([r]))
+	}
+	if r < 0x800 {
+		return string(bytes([0xc0 | (r >> 6), 0x80 | (r & 0x3f)]))
+	}
+	if r < 0x10000 {
+		return string(bytes([
+					0xe0 | (r >> 12),
+					0x80 | ((r >> 6) & 0x3f),
+					0x80 | (r & 0x3f)
+				]))
+	}
+	return string(bytes([
+				0xf0 | (r >> 18),
+				0x80 | ((r >> 12) & 0x3f),
+				0x80 | ((r >> 6) & 0x3f),
+				0x80 | (r & 0x3f)
+			]))
+}
+
+# cont returns the six bits a continuation byte carries, or -1 when b isn't
+# one.
+cont = fn(b) {
+	if (b & 0xc0) != 0x80 {
+		return -1
+	}
+	return b & 0x3f
+}
+
+# bad is what a decode returns when the bytes are not UTF-8: one byte eaten,
+# so a loop over them always moves on.
+bad = [RuneError, 1]
+
+# DecodeRune returns [code point, bytes read] for the character starting at
+# offset i of s, which is a string or bytes. Bytes that are not valid UTF-8
+# decode to [RuneError, 1].
+DecodeRune = fn(s, i) {
+	b = asBytes(s)
+	if i < 0 || i >= len(b) {
+		return [RuneError, 0]
+	}
+
+	c = b[i]
+	if c < 0x80 {
+		return [c, 1]
+	}
+
+	# 110xxxxx: two bytes, down to 0x80 or it is a shorter one written long.
+	if (c & 0xe0) == 0xc0 {
+		if i + 1 >= len(b) {
+			return bad
+		}
+		c1 = cont(b[i + 1])
+		if c1 < 0 {
+			return bad
+		}
+		r = ((c & 0x1f) << 6) | c1
+		if r < 0x80 {
+			return bad
+		}
+		return [r, 2]
+	}
+
+	# 1110xxxx: three bytes, and not a surrogate.
+	if (c & 0xf0) == 0xe0 {
+		if i + 2 >= len(b) {
+			return bad
+		}
+		c1 = cont(b[i + 1])
+		c2 = cont(b[i + 2])
+		if c1 < 0 || c2 < 0 {
+			return bad
+		}
+		r = ((c & 0x0f) << 12) | (c1 << 6) | c2
+		if r < 0x800 || (r >= surrogateMin && r <= surrogateMax) {
+			return bad
+		}
+		return [r, 3]
+	}
+
+	# 11110xxx: four bytes, up to the last code point there is.
+	if (c & 0xf8) == 0xf0 {
+		if i + 3 >= len(b) {
+			return bad
+		}
+		c1 = cont(b[i + 1])
+		c2 = cont(b[i + 2])
+		c3 = cont(b[i + 3])
+		if c1 < 0 || c2 < 0 || c3 < 0 {
+			return bad
+		}
+		r = ((c & 0x07) << 18) | (c1 << 12) | (c2 << 6) | c3
+		if r < 0x10000 || r > MaxRune {
+			return bad
+		}
+		return [r, 4]
+	}
+
+	return bad
+}
+
+# Runes returns the code points of s, one number per character.
+Runes = fn(s) {
+	b = asBytes(s)
+	out = []
+	i = 0
+	for i < len(b) {
+		r = DecodeRune(b, i)
+		out = append(out, r[0])
+		i = i + r[1]
+	}
+	return out
+}
+
+# FromRunes returns the string of the code points in rs.
+FromRunes = fn(rs) {
+	out = ""
+	for i = 0; i < len(rs); ++i {
+		out = out + EncodeRune(rs[i])
+	}
+	return out
+}
+
+# RuneCount returns how many characters s holds, which is len(s) only while
+# the text stays inside ASCII.
+RuneCount = fn(s) {
+	b = asBytes(s)
+	n = 0
+	i = 0
+	for i < len(b) {
+		i = i + DecodeRune(b, i)[1]
+		++n
+	}
+	return n
+}
+
+# Valid reports whether s is UTF-8 from end to end.
+Valid = fn(s) {
+	b = asBytes(s)
+	i = 0
+	for i < len(b) {
+		r = DecodeRune(b, i)
+		if r[0] == RuneError && r[1] == 1 {
+			# A real U+FFFD is three bytes long, one byte means a broken one.
+			return false
+		}
+		i = i + r[1]
+	}
+	return true
+}
+
+# RuneIndex returns the byte offset where character n starts, or -1 when the
+# string is shorter than that. It is what to feed slice when a position is
+# counted in characters rather than bytes.
+RuneIndex = fn(s, n) {
+	b = asBytes(s)
+	i = 0
+	for k = 0; k < n; ++k {
+		if i >= len(b) {
+			return -1
+		}
+		i = i + DecodeRune(b, i)[1]
+	}
+	if i > len(b) {
+		return -1
+	}
+	return i
+}
+
+# Slice returns the characters of s from start to end, counted in characters
+# rather than bytes.
+Slice = fn(s, start, end) {
+	str = string(s)
+	from = RuneIndex(str, start)
+	if from < 0 {
+		return error("utf8: Slice start {start} is past the end")
+	}
+
+	to = RuneIndex(str, end)
+	if to < 0 {
+		return error("utf8: Slice end {end} is past the end")
+	}
+	if to < from {
+		return error("utf8: Slice end {end} is before start {start}")
+	}
+	return slice(str, from, to)
+}

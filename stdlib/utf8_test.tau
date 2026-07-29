@@ -1,0 +1,75 @@
+testing = import("testing")
+utf8 = import("utf8")
+
+testing.Main([
+		["RuneCount counts letters where len counts bytes", fn(t) {
+				t.AssertEq(len("città"), 6)
+				t.AssertEq(utf8.RuneCount("città"), 5)
+				t.AssertEq(utf8.RuneCount(""), 0)
+				t.AssertEq(utf8.RuneCount("abc"), 3)
+				t.AssertEq(utf8.RuneCount("aé€𝄞"), 4)
+			}],
+		["Runes and FromRunes are one the other way round", fn(t) {
+				t.AssertEq(utf8.Runes("aé€𝄞"), [97, 233, 8364, 119070])
+				t.AssertEq(utf8.FromRunes([97, 233, 8364, 119070]), "aé€𝄞")
+				t.AssertEq(utf8.Runes(""), [])
+				t.AssertEq(utf8.FromRunes([]), "")
+			}],
+		["one code point at a time", fn(t) {
+				t.AssertEq(utf8.DecodeRune("a", 0), [97, 1])
+				t.AssertEq(utf8.DecodeRune("é", 0), [233, 2])
+				t.AssertEq(utf8.DecodeRune("€", 0), [8364, 3])
+				t.AssertEq(utf8.DecodeRune("𝄞", 0), [119070, 4])
+
+				# Past the end there is nothing to read.
+				t.AssertEq(utf8.DecodeRune("a", 1), [utf8.RuneError, 0])
+				t.AssertEq(utf8.DecodeRune("a", -1), [utf8.RuneError, 0])
+			}],
+		["bytes that are not UTF-8", fn(t) {
+				# A continuation byte on its own, a two byte head with nothing
+				# after it, and an overlong encoding of "/".
+				t.AssertEq(utf8.DecodeRune(bytes([0x80]), 0), [utf8.RuneError, 1])
+				t.AssertEq(utf8.DecodeRune(bytes([0xc3]), 0), [utf8.RuneError, 1])
+				t.AssertEq(utf8.DecodeRune(bytes([0xc0, 0xaf]), 0), [utf8.RuneError, 1])
+
+				# A surrogate, which belongs to UTF-16 and not here.
+				t.AssertEq(utf8.DecodeRune(bytes([0xed, 0xa0, 0x80]), 0), [utf8.RuneError, 1])
+
+				t.AssertEq(utf8.Valid("aé€𝄞"), true)
+				t.AssertEq(utf8.Valid(""), true)
+				t.AssertEq(utf8.Valid(utf8.EncodeRune(utf8.RuneError)), true)
+				t.AssertEq(utf8.Valid(bytes([0xff])), false)
+				t.AssertEq(utf8.Valid(bytes([0xe2, 0x82])), false)
+			}],
+		["EncodeRune and RuneLen", fn(t) {
+				t.AssertEq(utf8.EncodeRune(97), "a")
+				t.AssertEq(utf8.EncodeRune(233), "é")
+				t.AssertEq(utf8.EncodeRune(8364), "€")
+				t.AssertEq(utf8.EncodeRune(0x1f600), "😀")
+
+				t.AssertEq(utf8.RuneLen(97), 1)
+				t.AssertEq(utf8.RuneLen(233), 2)
+				t.AssertEq(utf8.RuneLen(8364), 3)
+				t.AssertEq(utf8.RuneLen(0x1f600), 4)
+
+				# What cannot be encoded is -1, and encodes as U+FFFD.
+				t.AssertEq(utf8.RuneLen(0xd800), -1)
+				t.AssertEq(utf8.RuneLen(0x110000), -1)
+				t.AssertEq(utf8.ValidRune(0xd800), false)
+				t.AssertEq(utf8.ValidRune(0x10ffff), true)
+				t.AssertEq(utf8.EncodeRune(0x110000), utf8.EncodeRune(utf8.RuneError))
+			}],
+		["positions counted in letters", fn(t) {
+				t.AssertEq(utf8.RuneIndex("città", 0), 0)
+				t.AssertEq(utf8.RuneIndex("città", 3), 3)
+				t.AssertEq(utf8.RuneIndex("città", 4), 4) # after the à
+				t.AssertEq(utf8.RuneIndex("città", 5), 6)
+				t.AssertEq(utf8.RuneIndex("città", 6), -1)
+
+				t.AssertEq(utf8.Slice("città", 1, 4), "itt")
+				t.AssertEq(utf8.Slice("città", 3, 5), "tà")
+				t.AssertEq(utf8.Slice("città", 0, 0), "")
+				t.AssertError(utf8.Slice("città", 0, 9))
+				t.AssertError(utf8.Slice("città", 3, 1))
+			}]
+	])

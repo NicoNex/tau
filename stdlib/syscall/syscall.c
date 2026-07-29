@@ -555,3 +555,163 @@ int64_t sys_tz_name(int64_t t, void *out, int64_t outlen) {
 
     return (int64_t)len;
 }
+
+// ========== Processes ==========
+
+#if !defined(_WIN32) && !defined(WIN32)
+#include <sys/wait.h>
+
+// The status of the last sys_spawn, kept here because a call returns one
+// word and the output length is what it returns.
+static int64_t spawn_status = -1;
+
+int64_t sys_spawn_status(void) { return spawn_status; }
+
+// Runs a program and waits for it to end.
+//
+// blob holds the program and its arguments one after the other, each ended by
+// a zero byte, and nargs says how many there are. What the child writes on
+// its standard output is copied into out, up to outcap bytes; the return
+// value is how much it wrote in all, so a value above outcap means the rest
+// was thrown away. in is written to the standard input of the child, through
+// a temporary file, so that neither side can block on the other.
+//
+// flags: 1 sends the standard error of the child into the same place as its
+// output, 2 leaves output and error alone, inherited from this process.
+//
+// Returns -1 when the child could not be started, and the exit status is left
+// in spawn_status: the value passed to exit, or 128 plus the signal that
+// killed it, or 127 when the program wasn't found.
+int64_t sys_spawn(const void *blob, int64_t bloblen, int64_t nargs,
+                  const void *in, int64_t inlen,
+                  void *out, int64_t outcap, int64_t flags) {
+    spawn_status = -1;
+    if (nargs <= 0 || bloblen <= 0) return -1;
+
+    char **argv = calloc((size_t)nargs + 1, sizeof(char *));
+    if (argv == NULL) return -1;
+
+    // The arguments are where they lie inside the blob, no copy needed: the
+    // caller keeps it alive for the whole call.
+    const char *base = (const char *)blob;
+    int64_t off = 0;
+    for (int64_t i = 0; i < nargs; i++) {
+        if (off >= bloblen) {
+            free(argv);
+            return -1;
+        }
+        argv[i] = (char *)base + off;
+        off += (int64_t)strlen(base + off) + 1;
+    }
+    argv[nargs] = NULL;
+
+    // The input goes into a temporary file rather than a pipe: a pipe would
+    // fill up and stop us here while the child waits for us to read what it
+    // wrote.
+    int infd = -1;
+    FILE *tmp = NULL;
+    if (in != NULL && inlen > 0) {
+        tmp = tmpfile();
+        if (tmp == NULL) {
+            free(argv);
+            return -1;
+        }
+        if (fwrite(in, 1, (size_t)inlen, tmp) != (size_t)inlen) {
+            fclose(tmp);
+            free(argv);
+            return -1;
+        }
+        fflush(tmp);
+        rewind(tmp);
+        infd = fileno(tmp);
+    }
+
+    int capture = (flags & 2) == 0;
+    int fds[2] = {-1, -1};
+    if (capture && pipe(fds) < 0) {
+        if (tmp != NULL) fclose(tmp);
+        free(argv);
+        return -1;
+    }
+
+    pid_t pid = fork();
+    if (pid < 0) {
+        if (capture) { close(fds[0]); close(fds[1]); }
+        if (tmp != NULL) fclose(tmp);
+        free(argv);
+        return -1;
+    }
+
+    if (pid == 0) {
+        if (infd >= 0) dup2(infd, 0);
+        if (capture) {
+            close(fds[0]);
+            dup2(fds[1], 1);
+            if (flags & 1) dup2(fds[1], 2);
+            close(fds[1]);
+        }
+        execvp(argv[0], argv);
+        _exit(127);
+    }
+
+    int64_t total = 0;
+    if (capture) {
+        close(fds[1]);
+
+        char scratch[8192];
+        for (;;) {
+            ssize_t n = read(fds[0], scratch, sizeof(scratch));
+            if (n < 0) {
+                if (errno == EINTR) continue;
+                break;
+            }
+            if (n == 0) break;
+
+            // Everything is read even once out is full, otherwise the child
+            // would sit there waiting for room in the pipe.
+            if (out != NULL && total < outcap) {
+                int64_t room = outcap - total;
+                int64_t take = n < room ? n : room;
+                memcpy((char *)out + total, scratch, (size_t)take);
+            }
+            total += n;
+        }
+        close(fds[0]);
+    }
+
+    int status = 0;
+    while (waitpid(pid, &status, 0) < 0) {
+        if (errno != EINTR) {
+            if (tmp != NULL) fclose(tmp);
+            free(argv);
+            return -1;
+        }
+    }
+
+    if (WIFEXITED(status)) {
+        spawn_status = WEXITSTATUS(status);
+    } else if (WIFSIGNALED(status)) {
+        spawn_status = 128 + WTERMSIG(status);
+    } else {
+        spawn_status = -1;
+    }
+
+    if (tmp != NULL) fclose(tmp);
+    free(argv);
+    return total;
+}
+
+#else
+
+// Windows has no fork, and CreateProcess wants a different shape altogether.
+int64_t sys_spawn_status(void) { return -1; }
+
+int64_t sys_spawn(const void *blob, int64_t bloblen, int64_t nargs,
+                  const void *in, int64_t inlen,
+                  void *out, int64_t outcap, int64_t flags) {
+    (void)blob; (void)bloblen; (void)nargs;
+    (void)in; (void)inlen; (void)out; (void)outcap; (void)flags;
+    return -1;
+}
+
+#endif

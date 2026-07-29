@@ -483,3 +483,32 @@ TzName = fn(sec) {
 	}
 	return string(slice(buf, 0, n))
 }
+
+# ========== Processes ==========
+
+# Spawn runs a program and waits for it. blob holds the program and its
+# arguments one after the other, each one ended by a zero byte, and nargs says
+# how many there are. What the program writes on its standard output is copied
+# into out, and the return value is how many bytes it wrote in all: more than
+# len(out) means the rest was thrown away.
+#
+# input is written to the standard input of the program, or null for nothing.
+# The flags are 1 to fold standard error into the output and 2 to leave both
+# alone, inherited from this process.
+#
+# The exit status is read with SpawnStatus after the call. See the exec module
+# for the usual way to reach all this.
+Spawn = fn(blob, nargs, input, out, flags) {
+	inlen = if input == null { 0 } else { len(input) }
+	outcap = if out == null { 0 } else { len(out) }
+
+	n = int(sys.sys_spawn(blob, len(blob), nargs, input, inlen, out, outcap, flags), 64)
+	if n < 0 {
+		return Error("spawn")
+	}
+	return n
+}
+
+# SpawnStatus is the exit status of the last Spawn: what the program passed to
+# exit, or 128 plus the signal that killed it, or 127 when it wasn't found.
+SpawnStatus = fn() { int(sys.sys_spawn_status(), 64) }

@@ -47,7 +47,7 @@ cutResult = fn(before, after, found) {
 
 Cut = fn(str, sub) {
 	maxAttempts = len(str) - len(sub)
-	for i = 0; i < maxAttempts; ++i {
+	for i = 0; i <= maxAttempts; ++i {
 		if sub == slice(str, i, i + len(sub)) {
 			return cutResult(
 				slice(str, 0, i),

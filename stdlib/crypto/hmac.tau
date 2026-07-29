@@ -1,0 +1,92 @@
+# hmac - the keyed hash of RFC 2104, over SHA-256.
+#
+#	hmac = import("crypto/hmac")
+#
+#	tag = hmac.Hex(key, "the message")
+#	if !hmac.Equal(tag, expected) { ... }
+#
+# A signature is checked with Equal rather than with ==, which stops as soon
+# as two bytes differ and so says something about the key by how long it took.
+
+sha256 = import("crypto/sha256")
+hex = import("encoding/hex")
+
+# toBytes takes a string or bytes and gives bytes.
+toBytes = fn(data) {
+	if type(data) == "bytes" {
+		return data
+	}
+	return bytes(string(data))
+}
+
+# padded returns the key stretched to one block: a long key is hashed first, a
+# short one is filled with zeroes, as RFC 2104 says.
+padded = fn(key) {
+	if failed(key = toBytes(key)) {
+		return key
+	}
+	if len(key) > sha256.BlockSize {
+		key = sha256.Sum(key)
+	}
+
+	out = []
+	for i = 0; i < len(key); ++i {
+		out = append(out, key[i])
+	}
+	for i = len(out); i < sha256.BlockSize; ++i {
+		out = append(out, 0)
+	}
+	return out
+}
+
+# Sum returns the 32 bytes signing msg with key.
+Sum = fn(key, msg) {
+	if failed(k = padded(key)) {
+		return k
+	}
+	if failed(msg = toBytes(msg)) {
+		return msg
+	}
+
+	# The inner hash is over the key with 0x36 through it and the message, the
+	# outer one over the key with 0x5c through it and that digest.
+	inner = []
+	outer = []
+	for i = 0; i < sha256.BlockSize; ++i {
+		inner = append(inner, k[i] ^ 0x36)
+		outer = append(outer, k[i] ^ 0x5c)
+	}
+
+	for i = 0; i < len(msg); ++i {
+		inner = append(inner, msg[i])
+	}
+
+	digest = sha256.Sum(bytes(inner))
+	for i = 0; i < len(digest); ++i {
+		outer = append(outer, digest[i])
+	}
+	return sha256.Sum(bytes(outer))
+}
+
+# Hex returns the signature of msg as hexadecimal digits.
+Hex = fn(key, msg) { hex.EncodeToString(Sum(key, msg)) }
+
+# Equal reports whether two signatures are the same, taking the same time
+# whether they differ in the first byte or in the last.
+Equal = fn(a, b) {
+	if failed(a = toBytes(a)) {
+		return false
+	}
+	if failed(b = toBytes(b)) {
+		return false
+	}
+	if len(a) != len(b) {
+		return false
+	}
+
+	diff = 0
+	for i = 0; i < len(a); ++i {
+		diff = diff | (a[i] ^ b[i])
+	}
+	return diff == 0
+}

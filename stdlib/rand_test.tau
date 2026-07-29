@@ -1,0 +1,108 @@
+testing = import("testing")
+rand = import("rand")
+
+testing.Main([
+		["the same seed gives the same sequence", fn(t) {
+				a = rand.New(42)
+				b = rand.New(42)
+				for i = 0; i < 20; ++i {
+					t.AssertEq(a.Int(), b.Int())
+				}
+				t.AssertNe(rand.New(1).Int(), rand.New(2).Int())
+			}],
+		["Int and Intn stay inside their range", fn(t) {
+				r = rand.New(7)
+				for i = 0; i < 200; ++i {
+					t.Assert(r.Int() >= 0, "Int is never negative")
+
+					n = r.Intn(6)
+					t.Assert(n >= 0 && n < 6, "Intn(6) gave {n}")
+				}
+				t.AssertEq(r.Intn(1), 0)
+				t.AssertError(r.Intn(0))
+				t.AssertError(r.Intn(-3))
+			}],
+		["every value of Intn comes up", fn(t) {
+				r = rand.New(99)
+				seen = [false, false, false, false, false, false]
+				for i = 0; i < 600; ++i {
+					seen[r.Intn(6)] = true
+				}
+				t.AssertEq(seen, [true, true, true, true, true, true])
+			}],
+		["Float stays between zero and one", fn(t) {
+				r = rand.New(3)
+				sum = 0.0
+				for i = 0; i < 500; ++i {
+					v = r.Float()
+					t.Assert(v >= 0.0 && v < 1.0, "Float gave {v}")
+					sum = sum + v
+				}
+
+				# The mean of five hundred draws is nowhere near the ends.
+				mean = sum / 500
+				t.Assert(mean > 0.4 && mean < 0.6, "the mean is {mean}")
+			}],
+		["Bool is not stuck on one answer", fn(t) {
+				r = rand.New(11)
+				heads = 0
+				for i = 0; i < 500; ++i {
+					if r.Bool() {
+						++heads
+					}
+				}
+				t.Assert(heads > 200 && heads < 300, "{heads} heads of 500")
+			}],
+		["Perm and Shuffle keep the elements", fn(t) {
+				r = rand.New(5)
+
+				p = r.Perm(6)
+				t.AssertEq(len(p), 6)
+
+				seen = [false, false, false, false, false, false]
+				for i = 0; i < len(p); ++i {
+					seen[p[i]] = true
+				}
+				t.AssertEq(seen, [true, true, true, true, true, true])
+
+				xs = [1, 2, 3, 4, 5]
+				s = r.Shuffle(xs)
+				t.AssertEq(xs, [1, 2, 3, 4, 5])
+				t.AssertEq(len(s), 5)
+
+				total = 0
+				for i = 0; i < len(s); ++i {
+					total = total + s[i]
+				}
+				t.AssertEq(total, 15)
+			}],
+		["Choice and Bytes", fn(t) {
+				r = rand.New(13)
+				t.AssertEq(r.Choice([]), null)
+				t.AssertEq(r.Choice(["only"]), "only")
+
+				b = r.Bytes(16)
+				t.AssertEq(type(b), "bytes")
+				t.AssertEq(len(b), 16)
+			}],
+		["the module has a source of its own", fn(t) {
+				rand.Seed(123)
+				first = [rand.Int(), rand.Int(), rand.Int()]
+				rand.Seed(123)
+				t.AssertEq([rand.Int(), rand.Int(), rand.Int()], first)
+			}],
+		["Crypto returns the bytes asked for", fn(t) {
+				b = rand.Crypto(32)
+				if type(b) == "error" {
+					t.Skip("no system generator here: {b}")
+					return null
+				}
+
+				t.AssertEq(len(b), 32)
+				t.AssertEq(len(rand.Crypto(0)), 0)
+				t.AssertError(rand.Crypto(-1))
+
+				# Two draws of thirty two bytes are not the same draw.
+				t.AssertNe(b, rand.Crypto(32))
+			}]
+	])

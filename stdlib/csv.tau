@@ -1,0 +1,178 @@
+# csv - comma separated values, the way RFC 4180 writes them.
+#
+# Parse turns the text into a list of records, each one a list of fields, and
+# Format writes that back out:
+#
+#	csv = import("csv")
+#	os = import("os")
+#
+#	rows = csv.Parse(os.ReadFileString("cities.csv"), null)
+#	println(rows[0])
+#	os.WriteFile("out.csv", csv.Format(rows, null))
+#
+# A field may be quoted with ", and a quote inside a quoted field is written
+# twice. Quoted fields may hold the separator and newlines. Both \n and \r\n
+# end a record. The separator is a single character, "," when it is null.
+#
+# ponytail: the whole text at once, no reader over a stream. A file that
+# doesn't fit in memory needs one, and that is when to write it.
+
+# sep returns the separator to use, and complains when it isn't one character.
+sepOf = fn(sep) {
+	if sep == null {
+		return ","
+	}
+
+	sep = string(sep)
+	if len(sep) != 1 {
+		return error("csv: the separator is one character, got \"{sep}\"")
+	}
+	if sep == "\"" || sep == "\r" || sep == "\n" {
+		return error("csv: {sep} cannot be a separator")
+	}
+	return sep
+}
+
+# Parse reads text and returns its records. A record is a list of strings, and
+# every one of them is returned as it was written, without a guess at what it
+# means. An unterminated quoted field is an error.
+Parse = fn(text, sep) {
+	if failed(sep = sepOf(sep)) {
+		return sep
+	}
+
+	text = string(text)
+	rows = []
+	fields = []
+	field = ""
+	quoted = false # inside a "..." field
+	started = false # anything at all seen in this record
+
+	i = 0
+	for i < len(text) {
+		c = text[i]
+
+		if quoted {
+			if c != "\"" {
+				field = field + c
+				++i
+				continue
+			}
+
+			# A doubled quote is one quote, a single one ends the field.
+			if i + 1 < len(text) && text[i + 1] == "\"" {
+				field = field + "\""
+				i = i + 2
+				continue
+			}
+			quoted = false
+			++i
+			continue
+		}
+
+		if c == "\"" && field == "" {
+			quoted = true
+			started = true
+			++i
+			continue
+		}
+
+		if c == sep {
+			fields = append(fields, field)
+			field = ""
+			started = true
+			++i
+			continue
+		}
+
+		if c == "\n" || c == "\r" {
+			if c == "\r" && i + 1 < len(text) && text[i + 1] == "\n" {
+				++i
+			}
+			++i
+
+			# A blank line between records is skipped, the way Go does it.
+			if started || len(fields) > 0 || field != "" {
+				rows = append(rows, append(fields, field))
+			}
+			fields = []
+			field = ""
+			started = false
+			continue
+		}
+
+		field = field + c
+		started = true
+		++i
+	}
+
+	if quoted {
+		return error("csv: the file ends inside a quoted field")
+	}
+	if started || len(fields) > 0 || field != "" {
+		rows = append(rows, append(fields, field))
+	}
+	return rows
+}
+
+# needsQuotes reports whether a field has to be written quoted.
+needsQuotes = fn(field, sep) {
+	if field == "" {
+		return false
+	}
+	if field[0] == " " || field[len(field) - 1] == " " {
+		return true
+	}
+
+	for i = 0; i < len(field); ++i {
+		c = field[i]
+		if c == sep || c == "\"" || c == "\n" || c == "\r" {
+			return true
+		}
+	}
+	return false
+}
+
+# FormatField returns one field written the way a CSV file wants it, quoted
+# only when it has to be.
+FormatField = fn(field, sep) {
+	if failed(sep = sepOf(sep)) {
+		return sep
+	}
+
+	field = string(field)
+	if !needsQuotes(field, sep) {
+		return field
+	}
+
+	out = "\""
+	for i = 0; i < len(field); ++i {
+		if field[i] == "\"" {
+			out = out + "\"\""
+			continue
+		}
+		out = out + field[i]
+	}
+	return out + "\""
+}
+
+# Format writes the records as CSV text, one line each, the last one ended by
+# a newline as well.
+Format = fn(rows, sep) {
+	if failed(sep = sepOf(sep)) {
+		return sep
+	}
+
+	out = ""
+	for r = 0; r < len(rows); ++r {
+		row = rows[r]
+		for f = 0; f < len(row); ++f {
+			if f > 0 {
+				out = out + sep
+			}
+			out = out + FormatField(row[f], sep)
+		}
+		out = out + "\n"
+	}
+	return out
+}

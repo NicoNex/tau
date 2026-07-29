@@ -1,0 +1,181 @@
+# rand - pseudo random numbers.
+#
+# New returns a source seeded with a number, so a program that wants the same
+# sequence every time can have it. The functions of the module itself use one
+# source seeded from the clock at startup:
+#
+#	rand = import("rand")
+#	rand.Intn(6) + 1
+#
+# The generator is xorshift64*, which is small and good enough for shuffles,
+# sampling and tests. It is not for keys or tokens: Crypto reads those from
+# the system.
+
+syscall = import("syscall")
+
+mask63 = 0x7fffffffffffffff
+
+# ushr shifts right without carrying the sign along, which >> does.
+ushr = fn(x, n) { (x >> n) & ((1 << (64 - n)) - 1) }
+
+# mix is splitmix64, used to spread a seed over the whole word: xorshift
+# starting from a small number takes a while to look random.
+mix = fn(x) {
+	x = x + -7046029254386353131
+	z = x ^ ushr(x, 30)
+	z = z * -4658895280553007687
+	z = z ^ ushr(z, 27)
+	z = z * -7723592293110705685
+	return z ^ ushr(z, 31)
+}
+
+# New returns a source of random numbers seeded with seed. Two sources with
+# the same seed give the same sequence.
+New = fn(seed) {
+	r = new()
+	r.state = mix(int(seed, 64))
+	if r.state == 0 {
+		r.state = 1 # xorshift stays at zero forever
+	}
+
+	# next advances the state and returns the whole 64 bit word, sign and all.
+	r.next = fn() {
+		s = r.state
+		s = s ^ ushr(s, 12)
+		s = s ^ (s << 25)
+		s = s ^ ushr(s, 27)
+		r.state = s
+		return s * -7046029254386353131
+	}
+
+	# Int returns a number between 0 and 2^63 - 1.
+	r.Int = fn() { r.next() & mask63 }
+
+	# Intn returns a number between 0 and n - 1. n must be positive.
+	r.Intn = fn(n) {
+		if n <= 0 {
+			return error("rand: Intn needs a positive n, got {n}")
+		}
+
+		# The numbers above the last whole multiple of n are thrown away,
+		# otherwise the low ones would come up more often than the high ones.
+		limit = mask63 - mask63 % n
+		for {
+			v = r.Int()
+			if v < limit {
+				return v % n
+			}
+		}
+	}
+
+	# Float returns a number between 0 (included) and 1 (excluded), with the
+	# 53 bits a float can hold.
+	r.Float = fn() { float(ushr(r.next() & mask63, 10)) / float(1 << 53) }
+
+	# Bool returns true about half the time.
+	r.Bool = fn() { (r.next() & 1) == 1 }
+
+	# Bytes returns n random bytes.
+	r.Bytes = fn(n) {
+		out = []
+		for i = 0; i < n; ++i {
+			out = append(out, r.Int() & 0xff)
+		}
+		return bytes(out)
+	}
+
+	# Perm returns the numbers from 0 to n - 1 in random order.
+	r.Perm = fn(n) {
+		out = []
+		for i = 0; i < n; ++i {
+			out = append(out, i)
+		}
+		return r.Shuffle(out)
+	}
+
+	# Shuffle returns the elements of xs in random order, leaving xs alone.
+	r.Shuffle = fn(xs) {
+		out = []
+		for i = 0; i < len(xs); ++i {
+			out = append(out, xs[i])
+		}
+
+		# Fisher-Yates, from the end down.
+		for i = len(out) - 1; i > 0; --i {
+			j = r.Intn(i + 1)
+			tmp = out[i]
+			out[i] = out[j]
+			out[j] = tmp
+		}
+		return out
+	}
+
+	# Choice returns one element of xs, or null when there are none.
+	r.Choice = fn(xs) {
+		if len(xs) == 0 {
+			return null
+		}
+		return xs[r.Intn(len(xs))]
+	}
+
+	return r
+}
+
+# The source behind the functions of the module, seeded with the clock. The
+# monotonic reading goes in too, so two programs started in the same
+# millisecond don't run the same sequence.
+global = New(syscall.TimeMillis() * 1000003 + syscall.TimeMono())
+
+# Seed restarts the sequence of the module from seed, for a program that wants
+# the same numbers on every run. The state is written into the source that is
+# already there, since a function assigning to global would only be writing to
+# a name of its own.
+Seed = fn(seed) {
+	global.state = New(seed).state
+	return null
+}
+
+Int = fn() { global.Int() }
+Intn = fn(n) { global.Intn(n) }
+Float = fn() { global.Float() }
+Bool = fn() { global.Bool() }
+Bytes = fn(n) { global.Bytes(n) }
+Perm = fn(n) { global.Perm(n) }
+Shuffle = fn(xs) { global.Shuffle(xs) }
+Choice = fn(xs) { global.Choice(xs) }
+
+# Crypto returns n bytes from the system generator, the ones to use for keys,
+# tokens and passwords. Unlike the rest of the module it can fail, when
+# /dev/urandom isn't there.
+#
+# ponytail: /dev/urandom rather than getrandom(2), so no C is needed. On
+# Windows it fails, which is where a sys_getrandom would have to go.
+Crypto = fn(n) {
+	if n < 0 {
+		return error("rand: Crypto needs a length, got {n}")
+	}
+	if n == 0 {
+		return bytes(0)
+	}
+
+	if failed(fd = syscall.Open("/dev/urandom", syscall.O_RDONLY, 0)) {
+		return error("rand: no system generator: {fd}")
+	}
+
+	buf = bytes(n)
+	got = 0
+	for got < n {
+		if failed(k = syscall.Read(fd, slice(buf, got, n), n - got)) {
+			syscall.Close(fd)
+			return k
+		}
+		if k == 0 {
+			syscall.Close(fd)
+			return error("rand: /dev/urandom ended early")
+		}
+		got = got + k
+	}
+
+	syscall.Close(fd)
+	return buf
+}

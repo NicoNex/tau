@@ -54,7 +54,7 @@ func (m Mod) Compile(c *compiler.Compiler) (position int, err error) {
 	if m.IsConstExpression() {
 		o, err := m.Eval()
 		if err != nil {
-			return 0, c.NewError(m.pos, err.Error())
+			return 0, c.WrapError(m.pos, err)
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(m.pos)

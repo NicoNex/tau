@@ -57,7 +57,7 @@ func (g Greater) Compile(c *compiler.Compiler) (position int, err error) {
 	if g.IsConstExpression() {
 		o, err := g.Eval()
 		if err != nil {
-			return 0, c.NewError(g.pos, err.Error())
+			return 0, c.WrapError(g.pos, err)
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(g.pos)

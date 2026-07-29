@@ -5,11 +5,11 @@
 #include "object.h"
 
 // Taken from: https://github.com/haipome/fnv/blob/master/fnv.c#L368
-inline uint64_t fnv64a(char *s) {
+inline uint64_t fnv64a(const char *s, size_t len) {
 	uint64_t hash = 0xcbf29ce484222325ULL;
 
-	while (*s) {
-		hash ^= (uint64_t)*s++;
+	for (size_t i = 0; i < len; i++) {
+		hash ^= (uint64_t) s[i];
 	#if defined(NO_FNV_GCC_OPTIMIZATION)
 		hash *= FNV_64_PRIME;
 	#else
@@ -38,7 +38,7 @@ struct key_hash hash(struct object o) {
 	case obj_string:
 		return (struct key_hash) {
 			.type = o.type,
-			.val = fnv64a(o.data.str->str)
+			.val = fnv64a(o.data.str->str, o.data.str->len)
 		};
 	case obj_float:
 		return (struct key_hash) {

@@ -56,7 +56,7 @@ func (t Times) Compile(c *compiler.Compiler) (position int, err error) {
 	if t.IsConstExpression() {
 		o, err := t.Eval()
 		if err != nil {
-			return 0, c.NewError(t.pos, err.Error())
+			return 0, c.WrapError(t.pos, err)
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(t.pos)

@@ -252,6 +252,18 @@ func (c *Compiler) NewError(pos int, s string, a ...any) error {
 	return tauerr.New(c.fileName, c.fileContent, pos, s, a...)
 }
 
+// WrapError reports an error that already carries its own message, pointing at
+// the source that caused it. Its message is shown as it is: NewError would
+// read it as a format, and an operator error saying '%' would come out as
+// "'%!'(MISSING)".
+func (c *Compiler) WrapError(pos int, err error) error {
+	if c.fileName == "" || c.fileContent == "" {
+		return err
+	}
+
+	return tauerr.Wrap(c.fileName, c.fileContent, pos, err.Error())
+}
+
 func (c *Compiler) Compile(node Compilable) error {
 	_, err := node.Compile(c)
 	c.Emit(code.OpHalt)

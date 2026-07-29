@@ -183,6 +183,14 @@ char *float_str(struct object o);
 struct object new_string_obj(char *str, size_t len);
 struct object new_string_slice(char *str, size_t len, struct gc_header *owner);
 char *string_str(struct object o);
+
+// A tau string is a pointer and a length, never a C string: a slice points
+// into the middle of somebody else's buffer and has no terminator of its own,
+// so reading one as a char * runs into whatever follows. Everything that has
+// to hand a string to C goes through cstr, which copies only when it must,
+// and gives back what it made through cstr_free.
+char *cstr(struct string *s);
+void cstr_free(struct string *s, char *c);
 void mark_string_obj(struct object s);
 void dispose_string_obj(struct object o);
 
@@ -281,5 +289,5 @@ void free_obj(struct object o);
 // Park before blocking so the collector doesn't wait for this thread.
 void gc_park(void);
 void gc_unpark(void);
-uint64_t fnv64a(char *s);
+uint64_t fnv64a(const char *s, size_t len);
 uint32_t is_truthy(struct object * restrict o);

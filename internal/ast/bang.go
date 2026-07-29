@@ -36,7 +36,7 @@ func (b Bang) Compile(c *compiler.Compiler) (position int, err error) {
 	if b.IsConstExpression() {
 		o, err := b.Eval()
 		if err != nil {
-			return 0, c.NewError(b.pos, err.Error())
+			return 0, c.WrapError(b.pos, err)
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(b.pos)

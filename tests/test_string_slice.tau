@@ -1,0 +1,62 @@
+testing = import("testing")
+
+# A string slice points into the middle of the buffer it was cut from and has
+# no terminator of its own. Anything that read it as a C string used to run
+# past its end into the rest of that buffer, which made a slice behave unlike
+# the identical string everywhere it was handed to C.
+
+testing.Main([
+		["a slice is a key like any other string", fn(t) {
+				k = slice("abcdef", 0, 3)
+				m = {}
+				m[k] = 1
+
+				t.AssertEq(m["abc"], 1)
+				t.AssertEq(m[k], 1)
+
+				# And the other way round: a whole string finds what a slice put there.
+				m2 = {}
+				m2["abc"] = 2
+				t.AssertEq(m2[k], 2)
+			}],
+
+		["a slice names a field like any other string", fn(t) {
+				o = new()
+				o.abc = 9
+
+				t.AssertEq(o[slice("abcdef", 0, 3)], 9)
+
+				o[slice("xyzw", 0, 3)] = 4
+				t.AssertEq(o.xyz, 4)
+			}],
+
+		["a number is read up to the end of the slice", fn(t) {
+				t.AssertEq(int(slice("123456", 0, 3)), 123)
+				t.AssertEq(float(slice("1.5999", 0, 3)), 1.5)
+			}],
+
+		["length, comparison and joining already stopped there", fn(t) {
+				k = slice("abcdef", 0, 3)
+
+				t.AssertEq(len(k), 3)
+				t.AssertEq(k, "abc")
+				t.AssertEq(k + "!", "abc!")
+				t.AssertEq(string(k), "abc")
+			}],
+
+		["a slice that runs to the end of its string still works", fn(t) {
+				# This one does end on the terminator of the buffer it shares,
+				# so it takes the path that copies nothing.
+				k = slice("abcdef", 3, 6)
+				m = {}
+				m[k] = 1
+
+				t.AssertEq(m["def"], 1)
+				t.AssertEq(int(slice("00123", 2, 5)), 123)
+			}],
+
+		["an error made from a slice says only the slice", fn(t) {
+				e = error(slice("boom and then some", 0, 4))
+				t.AssertEq(string(e), "boom")
+			}]
+	])

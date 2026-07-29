@@ -195,6 +195,12 @@ func (p *Parser) errorf(s string, a ...any) {
 	p.errs = append(p.errs, tauerr.New(p.file, p.input, p.cur.Pos, s, a...))
 }
 
+// wrapError reports an error that already carries its own message. Its message
+// is shown as it is, where errorf would read it as a format.
+func (p *Parser) wrapError(err error) {
+	p.errs = append(p.errs, tauerr.Wrap(p.file, p.input, p.cur.Pos, err.Error()))
+}
+
 func (p *Parser) parse() ast.Node {
 	var block = ast.NewBlock()
 
@@ -432,7 +438,7 @@ func (p *Parser) parseFloat() ast.Node {
 func (p *Parser) parseString() ast.Node {
 	s, err := ast.NewString(p.file, p.cur.Val, Parse, p.cur.Pos)
 	if err != nil {
-		p.errorf(err.Error())
+		p.wrapError(err)
 		return nil
 	}
 	return s

@@ -53,7 +53,7 @@ func (d Divide) Compile(c *compiler.Compiler) (position int, err error) {
 	if d.IsConstExpression() {
 		o, err := d.Eval()
 		if err != nil {
-			return 0, c.NewError(d.pos, err.Error())
+			return 0, c.WrapError(d.pos, err)
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(d.pos)

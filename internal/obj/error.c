@@ -10,7 +10,7 @@ void dispose_error_obj(struct object o) {
 }
 
 char *error_str(struct object o) {
-	return strdup(o.data.str->str);
+	return strndup(o.data.str->str, o.data.str->len);
 }
 
 struct object new_error_obj(char *str, size_t len) {

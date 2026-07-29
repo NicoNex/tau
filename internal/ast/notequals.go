@@ -66,7 +66,7 @@ func (n NotEquals) Compile(c *compiler.Compiler) (position int, err error) {
 	if n.IsConstExpression() {
 		o, err := n.Eval()
 		if err != nil {
-			return 0, c.NewError(n.pos, err.Error())
+			return 0, c.WrapError(n.pos, err)
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(n.pos)

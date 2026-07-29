@@ -67,7 +67,7 @@ static struct object input_b(struct object *args, size_t len) {
 		if (args[0].type != obj_string) {
 			return errorf("input: argument must be a string, got %s", otype_str(args[0].type));
 		}
-		fputs(args[0].data.str->str, stdout);
+		fwrite(args[0].data.str->str, 1, args[0].data.str->len, stdout);
 	}
 
 	char tmp;
@@ -126,7 +126,7 @@ static struct object error_b(struct object *args, size_t len) {
 	} else if (args[0].type != obj_string) {
 		return errorf("error: argument must be a string, got %s", otype_str(args[0].type));
 	}
-	return new_error_obj(strdup(args[0].data.str->str), args[0].data.str->len);
+	return new_error_obj(strndup(args[0].data.str->str, args[0].data.str->len), args[0].data.str->len);
 }
 
 static struct object type_b(struct object *args, size_t len) {
@@ -154,7 +154,9 @@ static struct object int_b(struct object *args, size_t len) {
 
 	case obj_string: {
 		errno = 0;
-		int64_t i = strtol(args[0].data.str->str, NULL, 10);
+		char *s = cstr(args[0].data.str);
+		int64_t i = strtol(s, NULL, 10);
+		cstr_free(args[0].data.str, s);
 		if (errno != EINVAL && errno != ERANGE) {
 			return new_integer_obj(i);
 		}
@@ -203,7 +205,9 @@ static struct object float_b(struct object *args, size_t len) {
 
 	case obj_string: {
 		errno = 0;
-		double f = strtod(args[0].data.str->str, NULL);
+		char *s = cstr(args[0].data.str);
+		double f = strtod(s, NULL);
+		cstr_free(args[0].data.str, s);
 		if (errno != ERANGE) {
 			return new_float_obj(f);
 		}
@@ -248,7 +252,8 @@ static struct object exit_b(struct object *args, size_t len) {
 			exit(args[0].data.i);
 		case obj_string:
 		case obj_error:
-			puts(args[0].data.str->str);
+			fwrite(args[0].data.str->str, 1, args[0].data.str->len, stdout);
+			putc('\n', stdout);
 			exit(0);
 		default:
 			return errorf("exit: argument must be an integer, string or error");
@@ -262,7 +267,8 @@ static struct object exit_b(struct object *args, size_t len) {
 			return errorf("exit: second argument must be an int");
 		}
 
-		puts(args[0].data.str->str);
+		fwrite(args[0].data.str->str, 1, args[0].data.str->len, stdout);
+		putc('\n', stdout);
 		exit(args[1].data.i);
 
 	default:
@@ -335,8 +341,9 @@ static struct object plugin_b(struct object *args, size_t len) {
 	if (args[0].type != obj_string) {
 		return errorf("plugin: first argument must be string, got %s instead", otype_str(args[0].type));
 	}
-	char *path = args[0].data.str->str;
+	char *path = cstr(args[0].data.str);
 	void *handle = plugin_open(path);
+	cstr_free(args[0].data.str, path);
 	if (!handle) {
 		return errorf("plugin: %s", dlerror());
 	}

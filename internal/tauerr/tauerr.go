@@ -19,6 +19,13 @@ func (e TauErr) Error() string {
 }
 
 func New(file, input string, pos int, s string, a ...any) error {
+	return Wrap(file, input, pos, fmt.Sprintf(s, a...))
+}
+
+// Wrap puts the source line under a message that is already written. It takes
+// the message and not a format, so that one holding a % of its own is shown
+// the way it reads.
+func Wrap(file, input string, pos int, msg string) error {
 	if file == "" {
 		file = "<stdin>"
 	}
@@ -34,7 +41,7 @@ func New(file, input string, pos int, s string, a ...any) error {
 			lineno,
 			line,
 			rel, "",
-			fmt.Sprintf(s, a...),
+			msg,
 		),
 	}
 }

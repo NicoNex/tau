@@ -198,16 +198,20 @@ static inline void vm_exec_dot(struct vm * restrict vm) {
 		vm_errorf(vm, "%s object has no attribute %s", otype_str(left.type), object_str(right));
 	}
 
+	char *name = cstr(right.data.str);
+
 	switch (left.type) {
 	case obj_object:
-		vm_stack_push(vm, object_get(left, right.data.str->str));
+		vm_stack_push(vm, object_get(left, name));
+		cstr_free(right.data.str, name);
 		return;
 
 	case obj_native: {
 		// Pointer to the native object.
-		void *ptr = dlsym(left.data.handle, right.data.str->str);
+		void *ptr = dlsym(left.data.handle, name);
 		if (ptr == NULL) {
-			vm_stack_push(vm, errorf("no object with name \"%s\" found", right.data.str->str));
+			vm_stack_push(vm, errorf("no object with name \"%s\" found", name));
+			cstr_free(right.data.str, name);
 			return;
 		}
 		struct object o = (struct object) {
@@ -215,10 +219,12 @@ static inline void vm_exec_dot(struct vm * restrict vm) {
 			.type = obj_native,
 		};
 		vm_stack_push(vm, o);
+		cstr_free(right.data.str, name);
 		return;
 	}
 
 	default:
+		cstr_free(right.data.str, name);
 		vm_errorf(vm, "%s object has no attribute %s", otype_str(left.type), object_str(right));
 	}
 }
@@ -229,9 +235,12 @@ static inline void vm_exec_define(struct vm * restrict vm) {
 	struct object target = vm_stack_pop(vm);
 
 	switch (target.type) {
-	case obj_object:
-		vm_stack_push(vm, object_set(target, field.data.str->str, val));
+	case obj_object: {
+		char *name = cstr(field.data.str);
+		vm_stack_push(vm, object_set(target, name, val));
+		cstr_free(field.data.str, name);
 		return;
+	}
 
 	case obj_list: {
 		struct object *list = target.data.list->list;
@@ -704,8 +713,9 @@ static inline void vm_exec_index(struct vm * restrict vm) {
 		}
 		vm_stack_push(vm, new_integer_obj(b[idx]));
 	} else if (ASSERT(left, obj_object) && ASSERT(right, obj_string)) {
-		// Dynamic access to a field, the counterpart of obj[name] = value.
-		vm_stack_push(vm, object_get(*left, right->data.str->str));
+		char *name = cstr(right->data.str);
+		vm_stack_push(vm, object_get(*left, name));
+		cstr_free(right->data.str, name);
 	} else if (ASSERT(left, obj_map) && ASSERT4(right, obj_integer, obj_float, obj_string, obj_boolean)) {
 		struct map_pair mp = map_get(*left, *right);
 		vm_stack_push(vm, mp.val);
@@ -781,9 +791,8 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 		case obj_string: {
 			struct string *str = o->data.str;
 
-			strings[i] = str->str;
-			if (str->str[str->len] != '\0') {
-				strings[i] = strndup(str->str, str->len);
+			strings[i] = cstr(str);
+			if (strings[i] != str->str) {
 				copies[ncopies++] = strings[i];
 			}
 
@@ -1311,7 +1320,10 @@ static int vm_loop(struct vm * restrict vm) {
 		if (path.type != obj_string) {
 			vm_errorf(vm, "import: expected string, got %s", otype_str(path.type));
 		}
-		if (vm_exec_load_module(vm, path.data.str->str)) {
+		char *modpath = cstr(path.data.str);
+		int failed = vm_exec_load_module(vm, modpath);
+		cstr_free(path.data.str, modpath);
+		if (failed) {
 			return 1;
 		}
 		DISPATCH();

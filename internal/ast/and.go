@@ -44,7 +44,7 @@ func (a And) Compile(c *compiler.Compiler) (position int, err error) {
 	if a.IsConstExpression() {
 		o, err := a.Eval()
 		if err != nil {
-			return 0, c.NewError(a.pos, err.Error())
+			return 0, c.WrapError(a.pos, err)
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(a.pos)

@@ -44,7 +44,7 @@ func (p PrefixMinus) Compile(c *compiler.Compiler) (position int, err error) {
 	if p.IsConstExpression() {
 		o, err := p.Eval()
 		if err != nil {
-			return 0, c.NewError(p.pos, err.Error())
+			return 0, c.WrapError(p.pos, err)
 		}
 		position = c.Emit(code.OpConstant, c.AddConstant(o))
 		c.Bookmark(p.pos)

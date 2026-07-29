@@ -32,8 +32,11 @@ static inline void write_bytes(struct buffer *buf, uint8_t *bytes, size_t len) {
 	}
 }
 
-static inline void write_string(struct buffer *buf, const char *str) {
-	for (int i = 0; str[i] != '\0'; i++) {
+// Exactly len bytes, not up to a terminator: the reader takes the length that
+// was written before them, and a tau string is a pointer and a length, so it
+// may hold a NUL of its own or stop before the buffer it points into does.
+static inline void write_string(struct buffer *buf, const char *str, size_t len) {
+	for (size_t i = 0; i < len; i++) {
 		write_byte(buf, str[i]);
 	}
 }
@@ -58,7 +61,7 @@ static inline void encode_bookmarks(struct buffer *buf, struct bookmark *bookmar
 		write_uint32(buf, b.lineno);
 		write_uint32(buf, b.pos);
 		write_uint32(buf, b.len);
-		write_string(buf, b.line);
+		write_string(buf, b.line, b.len);
 	}
 }
 
@@ -79,7 +82,7 @@ static inline void encode_objects(struct buffer *buf, struct object *objs, size_
 			break;
 		case obj_string:
 			write_uint32(buf, o.data.str->len);
-			write_string(buf, o.data.str->str);
+			write_string(buf, o.data.str->str, o.data.str->len);
 			break;
 		case obj_function: {
 			struct function *fn = o.data.fn;

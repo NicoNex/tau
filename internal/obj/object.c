@@ -74,11 +74,11 @@ static inline void _object_dispose(struct object_node * restrict n) {
 }
 
 struct object object_get(struct object obj, char *name) {
-	return _object_get(*obj.data.obj, fnv64a(name));
+	return _object_get(*obj.data.obj, fnv64a(name, strlen(name)));
 }
 
 struct object object_set(struct object obj, char *name, struct object val) {
-	_object_set(obj.data.obj, fnv64a(name), name, val);
+	_object_set(obj.data.obj, fnv64a(name, strlen(name)), name, val);
 	return val;
 }
 

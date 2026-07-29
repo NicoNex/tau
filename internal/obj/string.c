@@ -20,6 +20,22 @@ void dispose_string_obj(struct object o) {
 	free(o.data.str);
 }
 
+char *cstr(struct string *s) {
+	// The byte past the last one is the terminator when the string runs to the
+	// end of its buffer, and the next character when it is a slice of a longer
+	// one. Either way it is inside the allocation, so it is safe to look at.
+	if (s->str[s->len] == '\0') {
+		return s->str;
+	}
+	return strndup(s->str, s->len);
+}
+
+void cstr_free(struct string *s, char *c) {
+	if (c != s->str) {
+		free(c);
+	}
+}
+
 char *string_str(struct object o) {
 	return strndup(o.data.str->str, o.data.str->len);
 }

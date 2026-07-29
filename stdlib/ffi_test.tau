@@ -129,6 +129,14 @@ testing.Main([
 				t.AssertEq(m.t_add_i(1, 2), 3)
 				t.AssertEq(m.t_greet(), "ciao")
 
+				# The name of a library rather than a handle, opened here.
+				libc = ffi.Bind("libc.so.6", ["size_t strlen(const char *)"])
+				if !failed(libc) {
+					t.AssertEq(libc.strlen("hello"), 5)
+				}
+				t.AssertError(ffi.Bind("libnothing.so.99", ["int f(void)"]))
+				t.AssertError(ffi.Bind(42, ["int f(void)"]))
+
 				# A signature with no name in it has nothing to bind to, and a
 				# name that is not in the library is an error rather than a
 				# nonsense pointer.

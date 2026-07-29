@@ -349,15 +349,31 @@ String = fn(p) {
 }
 
 # Bind returns an object with one function per signature, named the way the
-# signature names it, which is the short way to take a whole library:
+# signature names it, which is the short way to take a library whose names are
+# the ones you want to call:
 #
-#	libm = dlopen("libm.so.6")
-#	m = ffi.Bind(libm, [
+#	m = ffi.Bind("libm.so.6", [
 #		"double pow(double, double)",
 #		"double sqrt(double)",
 #	])
 #	m.pow(2.0, 10.0)
+#
+# The first argument is a library: a handle from dlopen, or the name of one,
+# which is opened here. Nothing else is done to it - a module that wants its
+# own names, its own error handling or a wrapper around a call writes them out
+# one by one with Func, which is what stdlib/math.tau does.
 Bind = fn(lib, signatures) {
+	# A name rather than a handle: open it, so that the usual case is one call
+	# and not two.
+	if type(lib) == "string" {
+		if failed(lib = dlopen(lib)) {
+			return lib
+		}
+	}
+	if type(lib) != "native" {
+		return error("ffi: Bind wants a library or its name, got {type(lib)}")
+	}
+
 	out = new()
 
 	for i = 0; i < len(signatures); ++i {

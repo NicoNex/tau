@@ -5,6 +5,9 @@
 // what happens here is only reading, and there is no lexer, parser, syntax
 // tree or compiler anywhere in the binary.
 
+// nftw, for the walk that removes the unpacked plugins on the way out.
+#define _XOPEN_SOURCE 700
+
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,6 +16,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <libgen.h>
+#include <ftw.h>
 
 #include "../vm/vm.h"
 #include "../obj/object.h"
@@ -94,6 +98,21 @@ static char *rt_str(struct reader *r) {
 	return s;
 }
 
+// Where the shared objects were unpacked, kept for the walk that removes them.
+static char *plugin_tmpdir;
+
+static int remove_one(const char *path, const struct stat *st, int type, struct FTW *ftw) {
+	(void)st; (void)type; (void)ftw;
+	return remove(path);
+}
+
+// The directory goes when the program does, however it ends: the exit builtin
+// calls exit(), and so does a program that just runs out of instructions.
+static void remove_plugins(void) {
+	if (plugin_tmpdir == NULL) return;
+	nftw(plugin_tmpdir, remove_one, 8, FTW_DEPTH | FTW_PHYS);
+}
+
 // writes_plugins puts the shared objects where the loader will find them and
 // points TAUPATH at the directory, the way the interpreter does.
 static char *write_plugins(struct reader *r) {
@@ -106,6 +125,8 @@ static char *write_plugins(struct reader *r) {
 		fatalf("bundle: cannot make a directory for the plugins\n");
 	}
 	dir = strdup(dir);
+	plugin_tmpdir = dir;
+	atexit(remove_plugins);
 
 	for (uint32_t i = 0; i < n; i++) {
 		char *name = rt_str(r);

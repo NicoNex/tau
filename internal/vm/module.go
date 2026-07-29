@@ -1,5 +1,3 @@
-//go:build !taurt
-
 package vm
 
 /*
@@ -19,9 +17,9 @@ import (
 )
 
 // Importing a module that did not come with the program means reading it,
-// parsing it and compiling it, which is why an interpreter carries a parser
-// and a compiler. A runtime built for a bundled program carries neither: see
-// module_rt.go.
+// parsing it and compiling it, which is why the interpreter carries a parser
+// and a compiler. The runtime a bundled program is built on carries neither,
+// and answers an import from what came with the program: internal/rt/rt.c.
 //export vm_exec_load_module
 func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	path := C.GoString(cpath)

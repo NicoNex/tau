@@ -1,8 +1,6 @@
 package tau
 
 import (
-	"bytes"
-	"encoding/gob"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -53,12 +51,7 @@ func Bundle(path string) ([]byte, error) {
 		return nil, err
 	}
 
-	var buf bytes.Buffer
-	buf.Write(bundlepkg.Magic)
-	if err := gob.NewEncoder(&buf).Encode(b); err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return append(append([]byte{}, bundlepkg.Magic...), b.Encode()...), nil
 }
 
 // bundleState carries how much of the globals and of the constants has been

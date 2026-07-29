@@ -8,7 +8,14 @@
 #include "vm.h"
 #include "opcode.h"
 #include "thrd.h"
-#include "_cgo_export.h"
+#ifdef TAU_RT
+	// A runtime built to run one bundled program has no Go in it: the loader
+	// of a module that came with the program is written in C, next to the
+	// main that starts it.
+	int vm_exec_load_module(struct vm *vm, char *path);
+#else
+	#include "_cgo_export.h"
+#endif
 #include "../obj/plugin.h"
 #include "../obj/libffi/include/ffi.h"
 

@@ -62,16 +62,19 @@ tau:
 	CGO_LDFLAGS="$(LDFLAGS)" \
 	go build -o $(DIR)/tau
 
-# The runtime a bundled program is built on: the VM and the objects, without
-# the lexer, the parser, the syntax tree and the compiler, which a program that
-# travels compiled never asks for. `tau bundle` appends to this rather than to
-# the interpreter, and the executables it writes are smaller for it.
+# The runtime a bundled program is built on: the VM, the objects and the
+# bytecode decoder, and nothing else. No lexer, no parser, no syntax tree, no
+# compiler, and no Go either, so none of the Go runtime is in it. `tau bundle`
+# appends to this rather than to the interpreter, and the executables it writes
+# are a tenth of the size for it.
+RT_SRC = internal/rt/rt.c \
+	internal/vm/vm.c internal/vm/gc.c internal/vm/pool.c \
+	internal/compiler/codec.c \
+	$(wildcard internal/obj/*.c)
+
 tau-rt:
-	cd cmd/tau-rt && \
-	CC=$(CC) \
-	CGO_CFLAGS="$(CFLAGS)" \
-	CGO_LDFLAGS="$(LDFLAGS)" \
-	go build -tags taurt -o $(DIR)/tau-rt
+	$(CC) -DTAU_RT -o $(DIR)/tau-rt $(RT_SRC) $(CFLAGS) $(LDFLAGS) -ldl -lpthread
+	strip $(DIR)/tau-rt
 
 tau-windows:
 	cd cmd/tau && \

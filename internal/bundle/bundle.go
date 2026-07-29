@@ -6,7 +6,6 @@ package bundle
 
 import (
 	"bytes"
-	"encoding/gob"
 	"errors"
 	"os"
 	"path/filepath"
@@ -17,7 +16,7 @@ import (
 
 // Magic marks a bundle. Plain bytecode does not have it, so both kinds can be
 // told apart and keep working.
-var Magic = []byte("TAUB\x02")
+var Magic = []byte("TAUB\x03")
 
 // A Bundle is a compiled program together with everything it needs at run
 // time: every module it imports, already compiled, and the shared objects
@@ -79,8 +78,8 @@ func Is(b []byte) bool {
 func Open(raw []byte) (compiler.Bytecode, func(), error) {
 	var b Bundle
 
-	if err := gob.NewDecoder(bytes.NewReader(raw[len(Magic):])).Decode(&b); err != nil {
-		return compiler.Bytecode{}, nil, errors.New("not a valid tau bundle")
+	if err := b.decode(raw[len(Magic):]); err != nil {
+		return compiler.Bytecode{}, nil, err
 	}
 	vm.SetBundledModules(b.Order, bundledModules(b.Modules))
 

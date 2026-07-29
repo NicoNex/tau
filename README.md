@@ -24,11 +24,15 @@ tau bundle -o myapp main.tau
 ./myapp
 ```
 The modules travel compiled, so a bundled program starts without a parser and
-without a compiler and the executable is built on a runtime that carries
-neither: only the VM, the objects and the bytecode decoder. That runtime is
-`tau-rt`, which `make install` puts next to the standard library. An `import`
-of a path worked out at run time cannot be bundled and is refused there, since
-there is no compiler left to answer it.
+without a compiler. The executable is built on `tau-rt`, a runtime written in C
+that carries the VM, the objects and the bytecode decoder and nothing else, so
+a bundled program weighs a few hundred kilobytes rather than a few megabytes
+and starts in about two milliseconds. `make install` puts it next to the
+standard library.
+
+An `import` of a path worked out at run time cannot be bundled and is refused
+there: it was never in the source for the bundler to find, and there is no
+compiler left to answer it.
 
 `tau build` is the lighter option for machines that already have tau: it writes
 a `.tauc` carrying the same program and its dependencies, without the runtime

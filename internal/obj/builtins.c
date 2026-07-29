@@ -355,29 +355,46 @@ static struct object plugin_b(struct object *args, size_t len) {
 	};
 }
 
-// native(fn, "ret(args)") says what a C function looks like, so that its
-// arguments travel as the C types they really are and its result comes back
-// as a tau value instead of a bare machine word.
-static struct object native_b(struct object *args, size_t len) {
-	if (len != 2) {
-		return errorf("native: wrong number of arguments, expected 2, got %lu", len);
+// cfunc(sym, ret, [args]) gives a C function the types it really has, so that
+// its arguments travel as those types and its result comes back as a tau
+// value instead of a bare machine word. The types are codes, and the names
+// they have are in stdlib/ffi.tau, which is what a program uses:
+//
+//	pow = ffi.Func(libm.pow, "double pow(double, double)")
+static struct object cfunc_b(struct object *args, size_t len) {
+	if (len != 3) {
+		return errorf("cfunc: wrong number of arguments, expected 3, got %lu", len);
 	}
 
-	// The lookup that produced the function may have failed: say so rather
-	// than turning the error into a nonsense pointer.
+	// The lookup that produced the symbol may have failed: say so rather than
+	// turning the error into a nonsense pointer.
 	if (args[0].type == obj_error) {
 		return args[0];
 	}
 	if (args[0].type != obj_native) {
-		return errorf("native: first argument must be a native function, got %s instead", otype_str(args[0].type));
+		return errorf("cfunc: first argument must be a C symbol, got %s instead", otype_str(args[0].type));
 	}
-	if (args[1].type != obj_string) {
-		return errorf("native: second argument must be a string, got %s instead", otype_str(args[1].type));
+	if (args[1].type != obj_integer) {
+		return errorf("cfunc: the result type must be an int, got %s instead", otype_str(args[1].type));
+	}
+	if (args[2].type != obj_list) {
+		return errorf("cfunc: the argument types must be a list, got %s instead", otype_str(args[2].type));
 	}
 
-	char *sig = cstr(args[1].data.str);
-	struct object o = new_native_obj(args[0].data.handle, sig);
-	cstr_free(args[1].data.str, sig);
+	struct object *list = args[2].data.list->list;
+	uint32_t nargs = args[2].data.list->len;
+	int64_t *codes = malloc(sizeof(int64_t) * (nargs > 0 ? nargs : 1));
+
+	for (uint32_t i = 0; i < nargs; i++) {
+		if (list[i].type != obj_integer) {
+			free(codes);
+			return errorf("cfunc: argument type %u must be an int, got %s instead", i+1, otype_str(list[i].type));
+		}
+		codes[i] = list[i].data.i;
+	}
+
+	struct object o = new_native_obj(args[0].data.handle, args[1].data.i, codes, nargs);
+	free(codes);
 	return o;
 }
 
@@ -707,5 +724,5 @@ const builtin builtins[] = {
 	keys_b,
 	delete_b,
 	bytes_b,
-	native_b
+	cfunc_b
 };

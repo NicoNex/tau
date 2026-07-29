@@ -744,6 +744,22 @@ static inline void vm_exec_index(struct vm * restrict vm) {
 		char *name = cstr(right->data.str);
 		vm_stack_push(vm, object_get(*left, name));
 		cstr_free(right->data.str, name);
+	} else if (ASSERT(left, obj_native) && ASSERT(right, obj_string)) {
+		// The dot on a shared object is dlsym with the name written in the
+		// source; this is the same lookup with a name worked out while the
+		// program runs, which is what taking a whole library at once needs.
+		char *name = cstr(right->data.str);
+		void *ptr = dlsym(left->data.handle, name);
+
+		if (ptr == NULL) {
+			vm_stack_push(vm, errorf("no object with name \"%s\" found", name));
+			cstr_free(right->data.str, name);
+			return;
+		}
+		cstr_free(right->data.str, name);
+
+		struct object sym = {.data.handle = ptr, .type = obj_native};
+		vm_stack_push(vm, sym);
 	} else if (ASSERT(left, obj_map) && ASSERT4(right, obj_integer, obj_float, obj_string, obj_boolean)) {
 		struct map_pair mp = map_get(*left, *right);
 		vm_stack_push(vm, mp.val);

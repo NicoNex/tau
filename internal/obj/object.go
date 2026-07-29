@@ -102,7 +102,7 @@ var (
 		"keys",
 		"delete",
 		"bytes",
-		"native",
+		"cfunc",
 	}
 
 	NullObj  = Object(C.null_obj)

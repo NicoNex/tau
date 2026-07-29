@@ -1,0 +1,153 @@
+testing = import("testing")
+ffi = import("ffi")
+
+# The library the tests of the interpreter build, which is where the C
+# functions with known answers live. Without it there is nothing to call.
+lib = plugin("../tests/ffi/libffitest.so")
+have = !failed(lib)
+
+testing.Main([
+		["a signature is a C declaration", fn(t) {
+				t.AssertEq(ffi.Sig("double(double, double)"), [ffi.Float64, [ffi.Float64, ffi.Float64], ""])
+
+				# The name of the function and the names of the arguments are
+				# read and dropped, so a line out of a header works as it is.
+				t.AssertEq(ffi.Sig("int snprintf(char *s, size_t n, const char *fmt, double x)"),
+					[ffi.Int32, [ffi.CString, ffi.UInt64, ffi.CString, ffi.Float64], "snprintf"])
+
+				# Both ways of saying no arguments at all.
+				t.AssertEq(ffi.Sig("void f(void)"), [ffi.Void, [], "f"])
+				t.AssertEq(ffi.Sig("int()"), [ffi.Int32, [], ""])
+
+				# Room anywhere, and an array parameter is the pointer it
+				# decays to - char[] like char *, which as an argument takes a
+				# buffer or a string either way.
+				t.AssertEq(ffi.Sig("  int32 ( int32 , char[] ) "), [ffi.Int32, [ffi.Int32, ffi.CString], ""])
+				t.AssertEq(ffi.Sig("int(int[])"), [ffi.Int32, [ffi.Pointer], ""])
+			}],
+		["the widths C leaves to the machine", fn(t) {
+				runtime = import("runtime")
+
+				# char, short and int are the same everywhere tau runs.
+				t.AssertEq(ffi.Sig("char(short, int)"), [ffi.Int8, [ffi.Int16, ffi.Int32], ""])
+				t.AssertEq(ffi.Sig("unsigned char(unsigned short, unsigned int)"),
+					[ffi.UInt8, [ffi.UInt16, ffi.UInt32], ""])
+
+				# long and size_t are the width of this machine.
+				wide = runtime.Arch() != "386" && runtime.Arch() != "arm" && runtime.OS() != "windows"
+				t.AssertEq(ffi.Sig("long(size_t)"),
+					if wide { [ffi.Int64, [ffi.UInt64], ""] } else { [ffi.Int32, [ffi.UInt32], ""] })
+
+				# The exact width names say the width they say.
+				t.AssertEq(ffi.Sig("int8_t(uint64_t, float32, float64)"),
+					[ffi.Int8, [ffi.UInt64, ffi.Float32, ffi.Float64], ""])
+				t.AssertEq(ffi.Sig("int8(uint64, float, double)"),
+					[ffi.Int8, [ffi.UInt64, ffi.Float32, ffi.Float64], ""])
+			}],
+		["pointers, and the one that is a string", fn(t) {
+				t.AssertEq(ffi.Sig("void *(void *)"), [ffi.Pointer, [ffi.Pointer], ""])
+				t.AssertEq(ffi.Sig("char *(const char *)"), [ffi.CString, [ffi.CString], ""])
+				t.AssertEq(ffi.Sig("uint8_t *(int *)"), [ffi.Pointer, [ffi.Pointer], ""])
+
+				# A pointer to a pointer is an address like any other.
+				t.AssertEq(ffi.Sig("char **(void)"), [ffi.Pointer, [], ""])
+			}],
+		["what a signature may not be", fn(t) {
+				t.AssertError(ffi.Sig("double(double, double"))
+				t.AssertError(ffi.Sig("double double"))
+				t.AssertError(ffi.Sig("banana(int)"))
+				t.AssertError(ffi.Sig("int(banana)"))
+				t.AssertError(ffi.Sig("int(void, int)"))
+				t.AssertError(ffi.Sig("int printf(const char *, ...)"))
+
+				# The letters signatures used to be written in.
+				t.AssertError(ffi.Sig("d(dd)"))
+			}],
+		["a call with the types written down", fn(t) {
+				if !have {
+					t.Skip("build it with `make -C tests/ffi`")
+					return null
+				}
+
+				add = ffi.Func(lib.t_add_d, "double t_add_d(double a, double b)")
+				t.AssertEq(add(1.5, 2.25), 3.75)
+
+				addi = ffi.Func(lib.t_add_i, "int32_t(int32_t, int32_t)")
+				t.AssertEq(addi(2, 3), 5)
+				# An int32 wraps where an int64 would not.
+				t.AssertEq(addi(0x7fffffff, 1), -0x80000000)
+
+				greet = ffi.Func(lib.t_greet, "const char *t_greet(void)")
+				t.AssertEq(greet(), "ciao")
+
+				slen = ffi.Func(lib.t_strlen, "long t_strlen(const char *s)")
+				t.AssertEq(slen("hello"), 5)
+				t.AssertEq(slen(null), -1)
+
+				bump = ffi.Func(lib.t_bump, "void t_bump(int64_t n)")
+				counter = ffi.Func(lib.t_counter, "int64_t(void)")
+				t.AssertEq(bump(3), null)
+				bump(4)
+				t.AssertEq(counter(), 7)
+			}],
+		["a buffer C fills in", fn(t) {
+				if !have {
+					t.Skip("build it with `make -C tests/ffi`")
+					return null
+				}
+
+				fill = ffi.Func(lib.t_fill, "void t_fill(void *out, int n, unsigned char v)")
+				out = bytes(3)
+				fill(out, 3, 9)
+				t.AssertEq(out, bytes([9, 9, 9]))
+
+				# A pointer that came back from C is read with bytes.
+				buf = ffi.Func(lib.t_buf, "void *(void)")
+				t.AssertEq(bytes(buf(), 4), bytes([1, 2, 3, 4]))
+			}],
+		["Func passes a failed lookup through", fn(t) {
+				if !have {
+					t.Skip("build it with `make -C tests/ffi`")
+					return null
+				}
+
+				t.AssertError(ffi.Func(lib.no_such_symbol, "int(void)"))
+				t.AssertError(ffi.Func(lib.t_add_i, "int(banana)"))
+			}],
+		["Bind takes a whole library at once", fn(t) {
+				if !have {
+					t.Skip("build it with `make -C tests/ffi`")
+					return null
+				}
+
+				m = ffi.Bind(lib, [
+						"double t_add_d(double, double)",
+						"int32_t t_add_i(int32_t, int32_t)",
+						"const char *t_greet(void)"
+					])
+				t.AssertEq(m.t_add_d(1.0, 2.0), 3.0)
+				t.AssertEq(m.t_add_i(1, 2), 3)
+				t.AssertEq(m.t_greet(), "ciao")
+
+				# A signature with no name in it has nothing to bind to, and a
+				# name that is not in the library is an error rather than a
+				# nonsense pointer.
+				t.AssertError(ffi.Bind(lib, ["double(double)"]))
+				t.AssertError(ffi.Bind(lib, ["double t_not_there(double)"]))
+			}],
+		["the codes are what cfunc takes", fn(t) {
+				if !have {
+					t.Skip("build it with `make -C tests/ffi`")
+					return null
+				}
+
+				# What Func does, done by hand: the layer underneath takes
+				# numbers and no text at all.
+				add = cfunc(lib.t_add_d, ffi.Float64, [ffi.Float64, ffi.Float64])
+				t.AssertEq(add(1.5, 2.25), 3.75)
+
+				t.AssertError(cfunc(lib.t_add_d, 99, []))
+				t.AssertError(cfunc(lib.t_add_d, ffi.Float64, [ffi.Void]))
+				t.AssertError(cfunc(lib.t_add_d, ffi.Float64, ["double"]))
+			}]
+	])

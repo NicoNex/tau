@@ -1,0 +1,307 @@
+# ffi - calling C with the types written down.
+#
+# A shared object is opened with plugin, and the dot on it gives a symbol.
+# That symbol can be called straight away, which is quick and takes your word
+# for the types; or it can be given a signature, which is what this module is
+# for:
+#
+#	ffi = import("ffi")
+#	libm = plugin("libm.so.6")
+#
+#	pow = ffi.Func(libm.pow, "double pow(double, double)")
+#	println(pow(2.0, 10.0))     # 1024, a float and not a machine word
+#
+# The signature is a C declaration. The name of the function and the names of
+# the arguments may be there or not, so a line copied out of a header works as
+# it stands, and const, volatile and restrict are read and ignored:
+#
+#	snprintf = ffi.Func(libc.snprintf,
+#		"int snprintf(char *s, size_t n, const char *fmt, double x)")
+#
+# The widths C leaves to the machine - char, short, int, long, size_t - are
+# the widths of this machine. The exact width names of stdint.h work too, and
+# so do the tau spellings of the same: uint64 and uint64_t, float64 and
+# double.
+#
+# ponytail: a signature is parsed with a scan and a table, not a grammar. It
+# reads declarations, not C: a function pointer parameter is not understood,
+# and neither is a struct passed by value.
+
+runtime = import("runtime")
+strings = import("strings")
+
+# The type codes, which are the other half of an agreement with the enum at
+# the top of internal/obj/ffi.c: the numbers travel to cfunc and must line up.
+Void = 0
+Bool = 1
+Int8 = 2
+UInt8 = 3
+Int16 = 4
+UInt16 = 5
+Int32 = 6
+UInt32 = 7
+Int64 = 8
+UInt64 = 9
+Float32 = 10
+Float64 = 11
+Pointer = 12
+CString = 13
+
+# The widths of this machine, which is what makes "long" mean what it means
+# here rather than what it meant where the header was written.
+ptrBits = if runtime.Arch() == "386" || runtime.Arch() == "arm" { 32 } else { 64 }
+
+# Windows keeps long at 32 bits even at 64 bits of address, everyone else
+# grows it with the pointer.
+longBits = if runtime.OS() == "windows" { 32 } else { ptrBits }
+
+signed = fn(bits) {
+	if bits == 8 { return Int8 }
+	if bits == 16 { return Int16 }
+	if bits == 32 { return Int32 }
+	return Int64
+}
+
+unsigned = fn(bits) {
+	if bits == 8 { return UInt8 }
+	if bits == 16 { return UInt16 }
+	if bits == 32 { return UInt32 }
+	return UInt64
+}
+
+# The names a signature may be written with. The ones C leaves to the machine
+# are resolved above; the rest are the width they say.
+names = {
+	"void": Void,
+	"bool": Bool,
+	"_Bool": Bool,
+	"char": signed(8),
+	"signed char": signed(8),
+	"unsigned char": unsigned(8),
+	"short": signed(16),
+	"short int": signed(16),
+	"unsigned short": unsigned(16),
+	"unsigned short int": unsigned(16),
+	"int": signed(32),
+	"signed": signed(32),
+	"signed int": signed(32),
+	"unsigned": unsigned(32),
+	"unsigned int": unsigned(32),
+	"long": signed(longBits),
+	"long int": signed(longBits),
+	"unsigned long": unsigned(longBits),
+	"unsigned long int": unsigned(longBits),
+	"long long": Int64,
+	"long long int": Int64,
+	"unsigned long long": UInt64,
+	"unsigned long long int": UInt64,
+	"size_t": unsigned(ptrBits),
+	"ssize_t": signed(ptrBits),
+	"intptr_t": signed(ptrBits),
+	"uintptr_t": unsigned(ptrBits),
+	"ptrdiff_t": signed(ptrBits),
+	"int8_t": Int8,
+	"int8": Int8,
+	"uint8_t": UInt8,
+	"uint8": UInt8,
+	"int16_t": Int16,
+	"int16": Int16,
+	"uint16_t": UInt16,
+	"uint16": UInt16,
+	"int32_t": Int32,
+	"int32": Int32,
+	"uint32_t": UInt32,
+	"uint32": UInt32,
+	"int64_t": Int64,
+	"int64": Int64,
+	"uint64_t": UInt64,
+	"uint64": UInt64,
+	"float": Float32,
+	"float32": Float32,
+	"double": Float64,
+	"float64": Float64,
+	"string": CString,
+	"pointer": Pointer
+}
+
+# The words of a declaration that say nothing about the type.
+qualifiers = {
+	"const": true,
+	"volatile": true,
+	"restrict": true,
+	"__restrict": true,
+	"extern": true,
+	"static": true,
+	"inline": true
+}
+
+isWordByte = fn(c) {
+	return (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || (c >= "0" && c <= "9") || c == "_"
+}
+
+# decl reads one declaration - a result type, or an argument, with or without
+# the name that follows it - and returns [code, name], where the name is the
+# word that was dropped, or "".
+#
+# A star anywhere makes it a pointer, and a char * is the one pointer that
+# travels as a tau string.
+decl = fn(text) {
+	words = []
+	stars = 0
+
+	i = 0
+	for i < len(text) {
+		c = text[i]
+
+		if c == " " || c == "\t" || c == "\n" || c == "\r" {
+			++i
+			continue
+		}
+		if c == "*" {
+			++stars
+			++i
+			continue
+		}
+
+		# An array parameter is a pointer, and what is inside the brackets
+		# says nothing about the call.
+		if c == "[" {
+			++stars
+			for i < len(text) && text[i] != "]" {
+				++i
+			}
+			++i
+			continue
+		}
+
+		if !isWordByte(c) {
+			return error("\"{c}\" has no place in a type")
+		}
+
+		start = i
+		for i < len(text) && isWordByte(text[i]) {
+			++i
+		}
+
+		word = slice(text, start, i)
+		if qualifiers[word] == null {
+			words = append(words, word)
+		}
+	}
+
+	if len(words) == 0 {
+		return error("there is no type here")
+	}
+
+	# The last word is the name of what is being declared unless it is part of
+	# the type: "unsigned long" keeps both words, "unsigned long n" drops the
+	# third.
+	name = ""
+	used = len(words)
+	for {
+		joined = strings.Join(slice(words, 0, used), " ")
+		code = names[joined]
+
+		if code != null {
+			if stars > 0 {
+				# char * is a string, every other pointer is an address.
+				if stars == 1 && (joined == "char" || joined == "signed char") {
+					return [CString, name]
+				}
+				return [Pointer, name]
+			}
+			return [code, name]
+		}
+
+		if used == 1 {
+			return error("\"{joined}\" is not a type this understands")
+		}
+		name = words[used - 1]
+		--used
+	}
+}
+
+# Sig reads a signature and returns [result code, [argument codes], name],
+# where the name is the one the declaration gave the function, or "".
+#
+# It is the parse on its own, for building a call without going through text:
+# what it returns is what Func hands to cfunc.
+Sig = fn(text) {
+	text = strings.TrimSpace(string(text))
+
+	open = strings.Index(text, "(")
+	if open < 0 || len(text) == 0 || text[len(text) - 1] != ")" {
+		return error("ffi: a signature is a C declaration, \"double(double, double)\", got \"{text}\"")
+	}
+	if strings.Contains(text, "...") {
+		return error("ffi: \"{text}\" is variadic, say the types of the arguments this call passes instead")
+	}
+
+	if failed(ret = decl(slice(text, 0, open))) {
+		return error("ffi: in the result of \"{text}\": {ret}")
+	}
+
+	args = []
+	inside = strings.TrimSpace(slice(text, open + 1, len(text) - 1))
+
+	# f() and f(void) are both no arguments at all.
+	if inside != "" {
+		parts = strings.Split(inside, ",")
+		for i = 0; i < len(parts); ++i {
+			if failed(a = decl(parts[i])) {
+				return error("ffi: in argument {i + 1} of \"{text}\": {a}")
+			}
+
+			if a[0] == Void {
+				if len(parts) == 1 {
+					break
+				}
+				return error("ffi: argument {i + 1} of \"{text}\" cannot be void")
+			}
+			args = append(args, a[0])
+		}
+	}
+
+	return [ret[0], args, ret[1]]
+}
+
+# Func returns a callable for the symbol sym, with the types the signature
+# says. sym comes from the dot on a shared object:
+#
+#	libm = plugin("libm.so.6")
+#	pow = ffi.Func(libm.pow, "double pow(double, double)")
+Func = fn(sym, signature) {
+	if failed(s = Sig(signature)) {
+		return s
+	}
+	return cfunc(sym, s[0], s[1])
+}
+
+# Bind returns an object with one function per signature, named the way the
+# signature names it, which is the short way to take a whole library:
+#
+#	libm = plugin("libm.so.6")
+#	m = ffi.Bind(libm, [
+#		"double pow(double, double)",
+#		"double sqrt(double)",
+#	])
+#	m.pow(2.0, 10.0)
+Bind = fn(lib, signatures) {
+	out = new()
+
+	for i = 0; i < len(signatures); ++i {
+		if failed(s = Sig(signatures[i])) {
+			return s
+		}
+		if s[2] == "" {
+			return error("ffi: \"{signatures[i]}\" has no name to bind it to")
+		}
+
+		if failed(f = cfunc(lib[s[2]], s[0], s[1])) {
+			return error("ffi: {s[2]}: {f}")
+		}
+		out[s[2]] = f
+	}
+
+	return out
+}

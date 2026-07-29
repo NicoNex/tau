@@ -279,7 +279,7 @@ void mark_closure_obj(struct object c);
 
 // Native function object: a C function plus the signature that says how to
 // talk to it, see ffi.c.
-struct object new_native_obj(void *fn, char *sig);
+struct object new_native_obj(void *fn, int64_t ret, const int64_t *args, size_t nargs);
 struct object native_call(struct object f, struct object *args, size_t nargs);
 void dispose_native_obj(struct object o);
 char *native_str(struct object o);

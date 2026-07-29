@@ -551,9 +551,9 @@ gcc -shared -o vec.so -fPIC vec.c
 ```
 
 Without help the VM has to guess the argument types from the tau values it was
-given, and can only ever bring back a machine word. `native(fn, signature)`
-says what the function really looks like, and from then on the arguments travel
-as those types and the result comes back as a tau value.
+given, and can only ever bring back a machine word. The `ffi` module of the
+standard library says what the function really looks like, and from then on
+the arguments travel as those types and the result comes back as a tau value.
 
 A signature is a C declaration. The name of the function and the names of the
 arguments may be there or not, so a line copied out of a header works as it
@@ -577,11 +577,12 @@ void *fill(int n) {
 ```
 
 ```python
+ffi = import("ffi")
 lib = plugin("./vec.so")
 
-dot = native(lib.dot, "double(double, double)")
-greet = native(lib.greet, "const char *greet(const char *name)")
-fill = native(lib.fill, "void *(int)")
+dot = ffi.Func(lib.dot, "double(double, double)")
+greet = ffi.Func(lib.greet, "const char *greet(const char *name)")
+fill = ffi.Func(lib.fill, "void *(int)")
 
 println(dot(1.5, 4))
 println(greet("tau"))
@@ -607,7 +608,7 @@ same widths spelled the way tau spells its own:
 | `size_t`, `ssize_t`, `intptr_t`, `uintptr_t` | the width they have on this machine |
 | `int8_t` … `uint64_t`, `int8` … `uint64` | exactly that many bits |
 | `float`, `double`, `float32`, `float64` | a float |
-| `char *` | a tau string, NUL terminated on the way out and copied on the way back |
+| `char *` | a tau string, NULL terminated on the way out and copied on the way back |
 | any other `T *`, `T []`, `pointer` | an address: a `bytes` buffer, a string, a native value or an integer |
 
 `const`, `volatile` and `restrict` are read and ignored, as is the room around
@@ -615,9 +616,24 @@ anything. A variadic signature is refused, since the call is prepared once and
 a `...` says nothing about what will be passed: write the types this particular
 call passes, `int(char *, double)` rather than `int(const char *, ...)`.
 
-The call is prepared once, when `native` is given the signature, not on every
-call. `native` passes an error through untouched, so a failed symbol lookup
-says so instead of turning into a nonsense pointer.
+The call is prepared once, when `ffi.Func` is given the signature, not on every
+call. It passes an error through untouched, so a failed symbol lookup says so
+instead of turning into a nonsense pointer.
+
+`ffi.Bind(lib, [signatures])` does a whole library at once, naming each
+function the way its signature names it:
+
+```python
+m = ffi.Bind(plugin("libm.so.6"), [
+	"double pow(double, double)",
+	"double sqrt(double)",
+])
+println(m.pow(2.0, 10.0), m.sqrt(2.0))
+```
+
+Underneath, `ffi.Func` reads the declaration and calls `cfunc(sym, ret, args)`,
+which takes the types as numbers and prepares the call. That is the whole of
+the C side: reading a declaration is tau, in `stdlib/ffi.tau`.
 
 A pointer that came back from C is read with `bytes(ptr, n)`, which copies `n`
 bytes out of it: that is how a returned buffer, or a struct, is brought into
@@ -627,7 +643,7 @@ sign-extends the right number of them.
 
 The standard library uses all of this: [stdlib/syscall](stdlib/syscall),
 [stdlib/math](stdlib/math) and [stdlib/runtime](stdlib/runtime) are small C
-shared objects opened with `plugin` and described with `native`.
+shared objects opened with `plugin`.
 
 ## Shipping a program
 
@@ -781,7 +797,8 @@ These are always in scope, no import needed.
 - `new()` -- a fresh empty object.
 - `failed(x)` -- true if `x` is an error.
 - `plugin(path)` -- open a C shared object.
-- `native(fn, sig)` -- give a C function a signature, see [C libraries](#c-libraries).
+- `cfunc(sym, ret, args)` -- a C function with its types given as codes. What
+  `ffi.Func` is made of, see [C libraries](#c-libraries).
 - `pipe([n])` -- a new pipe, unbuffered or holding `n` values.
 - `send(p, x)` -- send `x` to the pipe `p`.
 - `recv(p)` -- take the next value out of the pipe `p`.

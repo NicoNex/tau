@@ -56,6 +56,18 @@ split on commas, dropping the argument names and the qualifiers.
 
 Two layers, split where the language boundary really is.
 
+A library written in tau cannot open a shared object by itself: something has
+to call `dlopen`, and that something can only be a builtin. Even a `dlopen`
+that arrived from a shared object would need a shared object opened first. So
+the number of builtins does not go down. What leaves C is the policy: today
+`plugin(path)` opens the file *and* decides where to look for it - the
+directory of the module, every entry of `TAUPATH`, `~/.local/lib/tau`,
+`/usr/local/lib/tau`, `/lib/tau`, forty lines of `plugin.h`. After the change
+the builtin opens exactly the path it was handed, and trying the candidates -
+`libm`, `libm.so`, `libm.so.6`, `libm.dylib`, the directories of the stdlib -
+is `ffi.Open`, in tau, where adding a case means editing a file rather than
+rebuilding the interpreter.
+
 **In C, the primitives.** They take numbers and pointers, never notation, so
 there is nothing to learn and nothing to spell wrong:
 
@@ -202,15 +214,19 @@ a struct helper is a separate question, not part of this change.
 4. The bundler regexp, with a test that bundles a program using `ffi.Open` and
    runs it where the library is not installed.
 5. The stdlib modules, one commit each.
-6. `plugin` stops being a builtin. This is the breaking one: it goes in a
-   release of its own, with the note that `plugin(x)` becomes
-   `import("ffi").Open(x)`.
+6. The name `plugin` goes, replaced by the `dlopen` that does no searching.
+   This is the breaking one, so it goes in a release of its own, with the note
+   that `plugin(x)` becomes `import("ffi").Open(x)` - which is not a rename:
+   `Open` is the one that knows where to look, and `dlopen` no longer does.
 
 ## Open questions
 
-- **Does `plugin` really go away?** Keeping it as an alias costs one line and
-  breaks nobody. Against: two ways to do the same thing, which is the thing
-  this language does not do.
+- **Does `plugin` really go away?** There is a lazier plan than the one above:
+  leave `plugin` exactly as it is, search path included, and have `ffi.Open`
+  call it. Nothing breaks, ever, and the whole breaking step disappears. What
+  is lost is the point of the exercise, since the policy stays in C and the
+  two ways of opening a library both keep working. Worth deciding before step
+  3, not after.
 - **Callbacks.** A C function that takes a function pointer cannot be called at
   all today. `ffi_closure` would fix it, and it needs a story for a C thread
   entering the VM. Out of scope here, but the shape of `ffi.Func` should not

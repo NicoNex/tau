@@ -10,21 +10,36 @@ import (
 	"regexp"
 
 	"github.com/NicoNex/tau/internal/compiler"
+	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
 )
 
 // bundleMagic marks a '.tauc' file that carries its dependencies with it. A
 // plain bytecode file doesn't have it, so both kinds can be told apart and
 // keep working.
-var bundleMagic = []byte("TAUB\x01")
+var bundleMagic = []byte("TAUB\x02")
 
 // A bundle is a compiled program together with everything it needs at run
-// time: the source of every module it imports, and the shared objects those
-// modules load. Running one touches nothing else on the filesystem.
+// time: every module it imports, already compiled, and the shared objects
+// those modules load. Running one touches nothing else on the filesystem and
+// asks nothing of the parser or the compiler.
 type bundle struct {
 	Bytecode []byte
-	Modules  map[string]string
-	Plugins  map[string][]byte
+	// The modules in the order they have to be loaded, dependencies first. A
+	// module is compiled knowing how many globals and constants come before
+	// it, so its indices are absolute and only hold if it is loaded in the
+	// place it was compiled for.
+	Order   []string
+	Modules map[string]moduleCode
+	Plugins map[string][]byte
+}
+
+// A module as it travels: its bytecode, and where in the globals its exported
+// names ended up. The names are what the symbol table used to answer at run
+// time, which is the last thing an import needed the compiler for.
+type moduleCode struct {
+	Bytecode []byte
+	Exports  map[string]int
 }
 
 // importRe and pluginRe find the dependencies of a module.
@@ -37,7 +52,8 @@ var (
 	pluginRe = regexp.MustCompile(`plugin\(\s*"([^"]+)"\s*\)`)
 )
 
-// Bundle compiles path and packs it with its dependencies.
+// Bundle compiles path and packs it with its dependencies, each of them
+// compiled as well.
 func Bundle(path string) ([]byte, error) {
 	bc, err := compile(path)
 	if err != nil {
@@ -46,7 +62,7 @@ func Bundle(path string) ([]byte, error) {
 
 	b := bundle{
 		Bytecode: bc.Encode(),
-		Modules:  map[string]string{},
+		Modules:  map[string]moduleCode{},
 		Plugins:  map[string][]byte{},
 	}
 
@@ -54,7 +70,11 @@ func Bundle(path string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := b.collect(path, string(src)); err != nil {
+
+	// The program owns the globals and the constants that come first, and the
+	// modules take what follows in the order they are collected.
+	st := &bundleState{ndefs: int(bc.NDefs()), nconsts: int(bc.NConsts())}
+	if err := b.collect(st, path, string(src)); err != nil {
 		return nil, err
 	}
 
@@ -66,9 +86,18 @@ func Bundle(path string) ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// collect walks the imports of src, which lives at file, and stores the
-// source of every module it reaches along with the plugins they open.
-func (b bundle) collect(file, src string) error {
+// bundleState carries how much of the globals and of the constants has been
+// handed out, so that the next module compiled follows the ones before it.
+type bundleState struct {
+	ndefs   int
+	nconsts int
+}
+
+// collect walks the imports of src, which lives at file, compiles every module
+// it reaches and stores the plugins they open. A module goes into the bundle
+// after the ones it imports, because that is the order they will be loaded in
+// and the order they were compiled for.
+func (b *bundle) collect(st *bundleState, file, src string) error {
 	for _, m := range pluginRe.FindAllStringSubmatch(src, -1) {
 		if err := b.addPlugin(file, m[1]); err != nil {
 			return err
@@ -91,13 +120,52 @@ func (b bundle) collect(file, src string) error {
 			return err
 		}
 
-		b.Modules[name] = string(mod)
-		if err := b.collect(p, string(mod)); err != nil {
+		// Its own imports first: a module that runs before what it imports
+		// would not find it.
+		if err := b.collect(st, p, string(mod)); err != nil {
 			return err
 		}
+		// The walk may have reached this one from somewhere else meanwhile.
+		if _, done := b.Modules[name]; done {
+			continue
+		}
+
+		code, err := compileModule(st, p, string(mod))
+		if err != nil {
+			return err
+		}
+		b.Modules[name] = code
+		b.Order = append(b.Order, name)
 	}
 
 	return nil
+}
+
+// compileModule compiles one module for the place it will hold in the program,
+// and notes where its exported names land.
+func compileModule(st *bundleState, path, src string) (moduleCode, error) {
+	tree, errs := parser.Parse(path, src)
+	if len(errs) > 0 {
+		return moduleCode{}, fmt.Errorf("build: %v", errs[0])
+	}
+
+	c := compiler.NewImport(st.ndefs, st.nconsts)
+	c.SetFileInfo(path, src)
+	if err := c.Compile(tree); err != nil {
+		return moduleCode{}, err
+	}
+
+	bc := c.Bytecode()
+	exports := map[string]int{}
+	for name, sym := range c.Store {
+		if sym.Scope == compiler.GlobalScope && vm.IsExported(name) {
+			exports[name] = sym.Index
+		}
+	}
+
+	st.ndefs = int(bc.NDefs())
+	st.nconsts += int(bc.NConsts())
+	return moduleCode{Bytecode: bc.Encode(), Exports: exports}, nil
 }
 
 // addPlugin stores the shared object a module opens, looked up the same way
@@ -118,6 +186,17 @@ func (b bundle) addPlugin(file, name string) error {
 	return fmt.Errorf("build: no plugin named %q, opened by %s", name, file)
 }
 
+// bundledModules hands the runtime what it needs of each module: the bundle
+// keeps its own type so that its shape can change without the runtime caring.
+func bundledModules(mods map[string]moduleCode) map[string]vm.BundledModule {
+	out := make(map[string]vm.BundledModule, len(mods))
+
+	for name, m := range mods {
+		out[name] = vm.BundledModule{Bytecode: m.Bytecode, Exports: m.Exports}
+	}
+	return out
+}
+
 // IsBundle reports whether b holds a bundle rather than plain bytecode.
 func IsBundle(b []byte) bool {
 	return bytes.HasPrefix(b, bundleMagic)
@@ -132,7 +211,7 @@ func openBundle(raw []byte) (compiler.Bytecode, func(), error) {
 	if err := gob.NewDecoder(bytes.NewReader(raw[len(bundleMagic):])).Decode(&b); err != nil {
 		return compiler.Bytecode{}, nil, errors.New("not a valid tau bundle")
 	}
-	vm.SetBundledModules(b.Modules)
+	vm.SetBundledModules(b.Order, bundledModules(b.Modules))
 
 	clean := func() {}
 	if len(b.Plugins) > 0 {

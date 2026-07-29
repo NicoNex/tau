@@ -99,9 +99,15 @@ func ExecFileVM(f string) (err error) {
 }
 
 // runBytecode runs a compiled program, named after the file it came from so
-// that a runtime error can say where it happened.
+// that a runtime error can say where it happened. The modules that came with
+// it, if any, are loaded into the same state first.
 func runBytecode(name string, bytecode compiler.Bytecode) error {
 	tvm := vm.New(name, bytecode)
+
+	if err := tvm.LoadBundled(); err != nil {
+		fmt.Println(err)
+		return err
+	}
 	if !tvm.Run() {
 		return errors.New("runtime error")
 	}

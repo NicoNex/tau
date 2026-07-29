@@ -108,6 +108,10 @@ func isExported(n string) bool {
 	return unicode.IsUpper(r)
 }
 
+// IsExported reports whether a module gives this name to whoever imports it,
+// which it does when the name starts with an upper case letter.
+func IsExported(n string) bool { return isExported(n) }
+
 // searchDirs are the directories a module is looked up into, in order: next
 // to the file that imports it, then the ones the stdlib is installed in. The
 // TAUPATH environment variable, a list separated like PATH, comes first.
@@ -164,15 +168,71 @@ func SearchDirs(vmdir string) []string { return searchDirs(vmdir) }
 // LookupModule resolves the module taupath imported by vmfile.
 func LookupModule(vmfile, taupath string) (string, error) { return lookup(vmfile, taupath) }
 
-// SetBundledModules hands the runtime the modules carried inside a bundle.
-// They are found by the name they are imported with, before the filesystem is
-// looked at, so a bundled program runs with nothing installed.
+// A BundledModule is a module compiled when the program was bundled, together
+// with the globals its exported names ended up in. Both of those are what the
+// compiler used to work out at import time.
+type BundledModule struct {
+	Bytecode []byte
+	Exports  map[string]int
+}
+
+// SetBundledModules hands the runtime the modules carried inside a bundle, in
+// the order they have to be loaded. A module is compiled knowing how many
+// globals and constants come before it, so it only fits where it was meant to.
 //
 // ponytail: keyed by the import string, so two different modules imported
 // under the same name would collide. Key by importer too if that ever bites.
-func SetBundledModules(mods map[string]string) { bundled = mods }
+func SetBundledModules(order []string, mods map[string]BundledModule) {
+	bundledOrder, bundled = order, mods
+}
 
-var bundled map[string]string
+var (
+	bundled      map[string]BundledModule
+	bundledOrder []string
+)
+
+// LoadBundled runs the modules that came with the program and puts them where
+// an import will find them. They are loaded before the program rather than
+// when it asks for them, because the place each one holds in the globals and
+// in the constants was decided when it was compiled, and running them in
+// another order would put them somewhere else.
+func (vm VM) LoadBundled() error {
+	for _, name := range bundledOrder {
+		m, ok := bundled[name]
+		if !ok {
+			return fmt.Errorf("import: %q is listed in the bundle but not in it", name)
+		}
+
+		bc := compiler.DecodeBytecode(m.Bytecode)
+		// The VM takes the name and frees it when it is disposed of, so it is
+		// not ours to give back.
+		cname := C.CString(name)
+
+		tvm := C.new_vm_with_state(cname, cbytecode(bc), vm.vm.state)
+		if i := C.vm_run(tvm); i != 0 {
+			C.vm_dispose(tvm)
+			return fmt.Errorf("import: %s failed to load", name)
+		}
+		vm.vm.state = tvm.state
+
+		mod := C.new_object()
+		for exp, idx := range m.Exports {
+			o := C.get_global(vm.vm.state.globals, C.size_t(idx))
+			cexp := C.CString(exp)
+
+			if o._type == C.obj_object {
+				C.object_set(mod, cexp, C.object_to_module(o))
+			} else {
+				C.object_set(mod, cexp, o)
+			}
+		}
+		// modtab_put keeps a copy of the name, so this is the last use of the
+		// one the VM owns.
+		C.modtab_put(vm.vm.state.mods, cname, mod)
+		C.vm_dispose(tvm)
+	}
+	return nil
+}
 
 func lookup(vmfile, taupath string) (string, error) {
 	// The directory of the importing file, so that a module finds the ones
@@ -200,9 +260,11 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 		return 1
 	}
 
-	// A bundled module comes with the program, so it is looked for before the
-	// filesystem: that is what makes a built program run on its own.
-	src, isBundled := bundled[path]
+	// A bundled module came with the program and was loaded before it started,
+	// so it is looked for under the name it is imported with and the
+	// filesystem is never touched: that is what makes a built program run on
+	// its own.
+	_, isBundled := bundled[path]
 
 	p := path
 	if !isBundled {
@@ -226,17 +288,20 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 		return 0
 	}
 
-	if !isBundled {
-		b, err := os.ReadFile(p)
-		if err != nil {
-			msg := fmt.Sprintf("import: %v", err)
-			C.go_vm_errorf(vm, C.CString(msg))
-			return 1
-		}
-		src = string(b)
+	if isBundled {
+		// Loaded before the program ran, so finding it missing here means the
+		// bundle is not the one it says it is.
+		msg := fmt.Sprintf("import: %q came with the program but was not loaded", path)
+		C.go_vm_errorf(vm, C.CString(msg))
+		return 1
 	}
-	b := []byte(src)
 
+	b, err := os.ReadFile(p)
+	if err != nil {
+		msg := fmt.Sprintf("import: %v", err)
+		C.go_vm_errorf(vm, C.CString(msg))
+		return 1
+	}
 	tree, errs := parser.Parse(p, string(b))
 	if len(errs) > 0 {
 		m := fmt.Sprintf("import: %v", errs[0])

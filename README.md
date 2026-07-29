@@ -111,13 +111,18 @@ The types are `int`, `float`, `string`, `bool`, `null`, `list`, `map`,
 one as a string.
 
 Integers can be written in base 10, 16, 2 and 8, and underscores may be used
-anywhere inside a number to group digits. Division always produces a float;
-`int()` truncates.
+anywhere inside a number to group digits.
+
+Two integers divide into an integer, the way they do in C and in Go: the
+remainder is dropped. A float on either side makes it a float division, as it
+does for `+`, `-` and `*`, so `float(a) / b` is how two integers give a
+fraction. Dividing an integer by zero is an error, where a float division
+gives `inf`.
 
 ```python
 # numbers
 println(255, 0xff, 0b1111_1111, 0o377, 1_000_000)
-println(2.5, 1.5e3, 7 / 2, 7 % 2, int(7 / 2))
+println(2.5, 1.5e3, 7 / 2, 7 % 2, 7 / 2.0, float(7) / 2)
 
 # strings
 name = "tau"
@@ -134,7 +139,7 @@ println(xs[1], kv["a"], o.field, len(xs), keys(kv))
 
 ```
 255 255 255 255 1000000
-2.5 1500 3.5 1 3
+2.5 1500 3 1 3.5 3.5
 hello, tau the answer is 42
 a raw string: {name} and \n stay as they are
 two 1 value 3 [2, a]

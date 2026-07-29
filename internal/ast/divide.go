@@ -41,6 +41,16 @@ func (d Divide) Eval() (obj.Object, error) {
 		return obj.NullObj, fmt.Errorf("unsupported operator '/' for type %v", right.Type())
 	}
 
+	// Two integers divide into an integer, and only a float on one of the
+	// sides makes it a float division. Same rule as the virtual machine, see
+	// vm_exec_div.
+	if obj.AssertTypes(left, obj.IntType) && obj.AssertTypes(right, obj.IntType) {
+		if right.Int() == 0 {
+			return obj.NullObj, fmt.Errorf("can't divide by 0")
+		}
+		return obj.NewInteger(left.Int() / right.Int()), nil
+	}
+
 	l, r := obj.ToFloat(left, right)
 	return obj.NewFloat(l / r), nil
 }

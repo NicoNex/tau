@@ -478,7 +478,17 @@ static inline void vm_exec_div(struct vm * restrict vm) {
 	struct object *right = &vm_stack_pop(vm);
 	struct object *left = &vm_stack_peek(vm);
 
-	if (M_ASSERT2(left, right, obj_integer, obj_float)) {
+	// Two integers divide into an integer, the way they do in C and in Go:
+	// the remainder is dropped rather than turned into a fraction nobody
+	// asked for. A float on either side makes it a float division, as it
+	// does for +, - and *. Write float(a) / float(b) for the fraction of two
+	// integers.
+	if (M_ASSERT(left, right, obj_integer)) {
+		if (right->data.i == 0) {
+			vm_errorf(vm, "can't divide by 0");
+		}
+		left->data.i /= right->data.i;
+	} else if (M_ASSERT2(left, right, obj_integer, obj_float)) {
 		double l = to_double(left);
 		double r = to_double(right);
 		left->data.f = l / r;
@@ -494,6 +504,10 @@ static inline void vm_exec_mod(struct vm * restrict vm) {
 
 	if (!M_ASSERT(left, right, obj_integer)) {
 		unsupported_operator_error(vm, "%", left, right);
+	}
+	// Without this the machine raises SIGFPE and the whole process goes.
+	if (right->data.i == 0) {
+		vm_errorf(vm, "can't divide by 0");
 	}
 	left->data.i %= right->data.i;
 }

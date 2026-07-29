@@ -183,8 +183,7 @@ FormatInt = fn(i, base) {
 	out = ""
 	for i > 0 {
 		out = digits[i % base] + out
-		# The division always yields a float, int() truncates it back.
-		i = int(i / base)
+		i = i / base
 	}
 
 	if neg {

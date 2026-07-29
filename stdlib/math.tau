@@ -1,10 +1,10 @@
 # math - the usual functions on floats.
 #
-# Everything returns a float, whatever it was given: a division in tau does
-# the same, so nothing here comes as a surprise. The functions come from the
-# C math library through a shared object of their own; a native call brings
-# back a machine word, so a double travels as its bits and float(x, 64) reads
-# them back.
+# Everything returns a float, whatever it was given, so an integer handed to
+# one of these comes back as a float and stays one through the arithmetic
+# that follows. The functions come from the C math library through a shared
+# object of their own; a native call brings back a machine word, so a double
+# travels as its bits and float(x, 64) reads them back.
 
 m = plugin("math/libmath.so")
 

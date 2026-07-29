@@ -119,7 +119,7 @@ quicksort = fn(xs, lo, hi, less) {
 
 	# Median of the ends and the middle, so that an already sorted list
 	# doesn't degenerate into O(n^2).
-	mid = lo + int((hi - lo) / 2)
+	mid = lo + (hi - lo) / 2
 	if less(xs[mid], xs[lo]) { xs = swap(xs, mid, lo) }
 	if less(xs[hi], xs[lo]) { xs = swap(xs, hi, lo) }
 	if less(xs[hi], xs[mid]) { xs = swap(xs, hi, mid) }

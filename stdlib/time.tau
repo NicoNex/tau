@@ -45,10 +45,11 @@ Months = ["January", "February", "March", "April", "May", "June", "July",
 	"August", "September", "October", "November", "December"]
 
 # div is the integer division that rounds towards minus infinity, the one the
-# calendar arithmetic below is written in terms of. A division in tau gives a
-# float, so the result comes back through int().
+# calendar arithmetic below is written in terms of. Dividing two integers
+# rounds towards zero, which is a different answer on the negative side, so
+# the quotient is pushed down by one where the two disagree.
 div = fn(a, b) {
-	q = int(a / b)
+	q = a / b
 	if a % b != 0 && (a < 0) != (b < 0) {
 		--q
 	}

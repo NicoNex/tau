@@ -131,10 +131,15 @@ func TestTau(t *testing.T) {
 	tt.add(`a = 2; b = 8; a *= b; a`, obj.NewInteger(16))
 	tt.add(`a = 3.5; b = 3; a *= b; a`, obj.NewFloat(10.5))
 
-	// Test divide
-	tt.add(`a = 16; b = 2; a / b`, obj.NewFloat(8))
-	tt.add(`a = 3; b = 2; a / b`, obj.NewFloat(1.5))
-	tt.add(`a = 3; b = 2; a /= b; a`, obj.NewFloat(1.5))
+	// Test divide: two integers divide into an integer, a float on either
+	// side makes it a float division.
+	tt.add(`a = 16; b = 2; a / b`, obj.NewInteger(8))
+	tt.add(`a = 3; b = 2; a / b`, obj.NewInteger(1))
+	tt.add(`a = 3; b = 2; a /= b; a`, obj.NewInteger(1))
+	tt.add(`a = 3.0; b = 2.0; a / b`, obj.NewFloat(1.5))
+	tt.add(`a = 3; b = 2.0; a / b`, obj.NewFloat(1.5))
+	tt.add(`a = 3.0; b = 2; a /= b; a`, obj.NewFloat(1.5))
+	tt.add(`float(3) / float(2)`, obj.NewFloat(1.5))
 
 	// Test modulus
 	tt.add(`a = 10; b = 3; a % b`, obj.NewInteger(1))

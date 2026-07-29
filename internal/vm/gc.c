@@ -181,16 +181,39 @@ void gc_unregister(struct vm *vm) {
 	free(n);
 }
 
+// park_node marks a VM as not running, so that a collection does not wait for
+// it. Unlike gc_park it works on a VM that isn't the current one.
+static void park_node(struct vm_node *n) {
+	if (n == NULL) return;
+
+	mtx_lock(&mu);
+	if (!n->parked) {
+		n->parked = 1;
+		nparked++;
+		cnd_broadcast(&cnd);
+	}
+	mtx_unlock(&mu);
+}
+
 void *gc_activate(struct vm *vm) {
 	struct vm_node *prev = self;
+
+	// The VM that was running is sitting inside the call that started this
+	// one - a module import - on this very thread, so it will not reach a
+	// safepoint until this one returns. Park it, or a collection in here
+	// would wait for an answer that cannot come.
+	park_node(prev);
+
 	self = vm->gc_node;
 	gc_unpark();
 	return prev;
 }
 
-// Restores the VM that was running before a nested vm_run (module import).
+// Restores the VM that was running before a nested vm_run (module import),
+// and puts it back to work.
 void gc_restore(void *prev) {
 	self = prev;
+	gc_unpark();
 }
 
 // Roots that don't belong to any VM, e.g. the arguments of a builtin called

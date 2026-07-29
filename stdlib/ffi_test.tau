@@ -3,7 +3,7 @@ ffi = import("ffi")
 
 # The library the tests of the interpreter build, which is where the C
 # functions with known answers live. Without it there is nothing to call.
-lib = plugin("../tests/ffi/libffitest.so")
+lib = dlopen("../tests/ffi/libffitest.so")
 have = !failed(lib)
 
 testing.Main([

@@ -23,7 +23,7 @@ import (
 // bundled anyway, whichever way we look for it.
 var (
 	importRe = regexp.MustCompile(`import\(\s*"([^"]+)"\s*\)`)
-	pluginRe = regexp.MustCompile(`plugin\(\s*"([^"]+)"\s*\)`)
+	pluginRe = regexp.MustCompile(`dlopen\(\s*"([^"]+)"\s*\)`)
 )
 
 // Bundle compiles path and packs it with its dependencies, each of them

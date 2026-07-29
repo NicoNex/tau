@@ -6,7 +6,7 @@
 # object of their own; a native call brings back a machine word, so a double
 # travels as its bits and float(x, 64) reads them back.
 
-m = plugin("math/libmath.so")
+m = dlopen("math/libmath.so")
 
 Pi = 3.141592653589793
 E = 2.718281828459045

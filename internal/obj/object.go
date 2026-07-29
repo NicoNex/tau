@@ -90,7 +90,7 @@ var (
 		"append",
 		"new",
 		"failed",
-		"plugin",
+		"dlopen",
 		"pipe",
 		"send",
 		"recv",

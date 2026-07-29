@@ -2,9 +2,9 @@
 # Provides a cross-platform abstraction layer for system calls
 # Similar to Go's syscall package
 
-# The library is looked up next to the installed stdlib, plugin() falls back
+# The library is looked up next to the installed stdlib, dlopen() falls back
 # to ~/.local/lib/tau and /lib/tau when the relative path doesn't exist.
-sys = plugin("syscall/libsyscall.so")
+sys = dlopen("syscall/libsyscall.so")
 
 # ========== Error Handling ==========
 

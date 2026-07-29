@@ -1,12 +1,12 @@
 # ffi - calling C with the types written down.
 #
-# A shared object is opened with plugin, and the dot on it gives a symbol.
+# A shared object is opened with dlopen, and the dot on it gives a symbol.
 # That symbol can be called straight away, which is quick and takes your word
 # for the types; or it can be given a signature, which is what this module is
 # for:
 #
 #	ffi = import("ffi")
-#	libm = plugin("libm.so.6")
+#	libm = dlopen("libm.so.6")
 #
 #	pow = ffi.Func(libm.pow, "double pow(double, double)")
 #	println(pow(2.0, 10.0))     # 1024, a float and not a machine word
@@ -268,7 +268,7 @@ Sig = fn(text) {
 # Func returns a callable for the symbol sym, with the types the signature
 # says. sym comes from the dot on a shared object:
 #
-#	libm = plugin("libm.so.6")
+#	libm = dlopen("libm.so.6")
 #	pow = ffi.Func(libm.pow, "double pow(double, double)")
 Func = fn(sym, signature) {
 	if failed(s = Sig(signature)) {
@@ -280,7 +280,7 @@ Func = fn(sym, signature) {
 # Bind returns an object with one function per signature, named the way the
 # signature names it, which is the short way to take a whole library:
 #
-#	libm = plugin("libm.so.6")
+#	libm = dlopen("libm.so.6")
 #	m = ffi.Bind(libm, [
 #		"double pow(double, double)",
 #		"double sqrt(double)",

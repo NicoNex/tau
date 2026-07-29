@@ -333,19 +333,19 @@ static struct object failed_b(struct object *args, size_t len) {
 	return parse_bool(args[0].type == obj_error);
 }
 
-static struct object plugin_b(struct object *args, size_t len) {
+static struct object dlopen_b(struct object *args, size_t len) {
 	if (len != 1) {
-		return errorf("plugin: wrong number of arguments, expected 1, got %lu", len);
+		return errorf("dlopen: wrong number of arguments, expected 1, got %lu", len);
 	}
 
 	if (args[0].type != obj_string) {
-		return errorf("plugin: first argument must be string, got %s instead", otype_str(args[0].type));
+		return errorf("dlopen: first argument must be string, got %s instead", otype_str(args[0].type));
 	}
 	char *path = cstr(args[0].data.str);
 	void *handle = plugin_open(path);
 	cstr_free(args[0].data.str, path);
 	if (!handle) {
-		return errorf("plugin: %s", dlerror());
+		return errorf("dlopen: %s", dlerror());
 	}
 
 	return (struct object) {
@@ -712,7 +712,7 @@ const builtin builtins[] = {
 	append_b,
 	new_b,
 	failed_b,
-	plugin_b,
+	dlopen_b,
 	pipe_b,
 	send_b,
 	recv_b,

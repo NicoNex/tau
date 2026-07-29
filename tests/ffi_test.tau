@@ -3,7 +3,7 @@ ffi = import("ffi")
 
 # The library is looked up next to this file, the way the stdlib modules find
 # theirs. Build it with `make -C tests/ffi`.
-lib = plugin("ffi/libffitest.so")
+lib = dlopen("ffi/libffitest.so")
 
 testing.Main([
 		["a signature is a C declaration", fn(t) {

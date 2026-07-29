@@ -1,5 +1,5 @@
 print("Loading test module...\n")
-libc = plugin("/usr/lib/libc.so.6")
+libc = dlopen("/usr/lib/libc.so.6")
 print("libc type in module: ")
 print(type(libc))
 print("\n")

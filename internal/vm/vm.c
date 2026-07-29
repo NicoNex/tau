@@ -763,6 +763,20 @@ static inline void vm_call_builtin(struct vm * restrict vm, builtin fn, size_t n
 	}
 }
 
+// A native function that was given a signature knows how to marshal itself,
+// so the VM only has to hand it the arguments where they lie and take back
+// whatever tau value comes out, an error included.
+static inline void vm_call_native_fn(struct vm * restrict vm, struct object *n, size_t numargs) {
+	struct object res = native_call(*n, &vm->stack[vm->sp-numargs], numargs);
+
+	vm->sp -= numargs + 1;
+	vm_stack_push(vm, res);
+	if (res.type > obj_builtin) {
+		vm_heap_add(vm, res);
+		gc();
+	}
+}
+
 static inline void vm_call_native(struct vm * restrict vm, struct object *n, size_t numargs) {
 	ffi_cif cif;
 	ffi_type *arg_types[numargs];
@@ -823,13 +837,22 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 			arg_values[i] = &o->data.i;
 			break;
 
+		// A value C has no idea what to do with is a mistake in the program,
+		// not in the VM: it comes back as an error the caller can check.
 		default:
-			vm_errorf(vm, "unsupported argument type %s for native objects", otype_str(o->type));
+			for (size_t j = 0; j < ncopies; j++) free(copies[j]);
+			vm->sp -= numargs + 1;
+			vm_stack_push(vm, errorf("unsupported argument type %s for native objects", otype_str(o->type)));
+			vm_heap_add(vm, vm->stack[vm->sp-1]);
+			return;
 		}
 	}
 
 	if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, numargs, &ffi_type_pointer, arg_types) != FFI_OK) {
+		for (size_t j = 0; j < ncopies; j++) free(copies[j]);
+		vm->sp -= numargs + 1;
 		vm_stack_push(vm, errorf("failed to prepare the native function"));
+		vm_heap_add(vm, vm->stack[vm->sp-1]);
 		return;
 	}
 
@@ -871,6 +894,8 @@ static inline void vm_exec_call(struct vm * restrict vm, size_t numargs) {
 		return vm_call_builtin(vm, o->data.builtin, numargs);
 	case obj_native:
 		return vm_call_native(vm, o, numargs);
+	case obj_native_fn:
+		return vm_call_native_fn(vm, o, numargs);
 	default:
 		vm_errorf(vm, "calling non-function: got type %s", otype_str(o->type));
 	}

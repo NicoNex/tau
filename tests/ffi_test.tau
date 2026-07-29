@@ -1,0 +1,86 @@
+testing = import("testing")
+
+# The library is looked up next to this file, the way the stdlib modules find
+# theirs. Build it with `make -C tests/ffi`.
+lib = plugin("ffi/libffitest.so")
+
+testing.Main([
+		["floats come back as floats", fn(t) {
+				add = native(lib.t_add_d, "d(dd)")
+				t.AssertEq(add(1.5, 2.25), 3.75)
+
+				addf = native(lib.t_add_f, "f(ff)")
+				t.AssertEq(addf(1.5, 2.25), 3.75)
+			}],
+		["narrow integers keep their width", fn(t) {
+				addi = native(lib.t_add_i, "i(ii)")
+				t.AssertEq(addi(2, 3), 5)
+				# int32 arithmetic wraps where int64 would not.
+				t.AssertEq(addi(0x7fffffff, 1), -0x80000000)
+
+				addu = native(lib.t_add_u, "I(II)")
+				t.AssertEq(addu(0xffffffff, 1), 0)
+
+				neg = native(lib.t_neg_c, "c(c)")
+				t.AssertEq(neg(5), -5)
+
+				adds = native(lib.t_add_s, "s(ss)")
+				t.AssertEq(adds(0x7fff, 1), -0x8000)
+
+				addl = native(lib.t_add_l, "l(ll)")
+				t.AssertEq(addl(1, 2), 3)
+			}],
+		["bools and void", fn(t) {
+				not = native(lib.t_not_b, "b(b)")
+				t.AssertEq(not(false), true)
+				t.AssertEq(not(true), false)
+
+				bump = native(lib.t_bump, "v(l)")
+				counter = native(lib.t_counter, "l()")
+				t.AssertEq(bump(3), null)
+				bump(4)
+				t.AssertEq(counter(), 7)
+			}],
+		["strings in and out", fn(t) {
+				greet = native(lib.t_greet, "z()")
+				t.AssertEq(greet(), "ciao")
+
+				nul = native(lib.t_nullstr, "z()")
+				t.AssertEq(nul(), null)
+
+				slen = native(lib.t_strlen, "l(z)")
+				t.AssertEq(slen("hello"), 5)
+				t.AssertEq(slen(null), -1)
+			}],
+		["pointers and memory", fn(t) {
+				buf = native(lib.t_buf, "p()")
+				t.AssertEq(bytes(buf(), 4), bytes([1, 2, 3, 4]))
+
+				# A returned struct is read field by field out of its bytes.
+				point = native(lib.t_point, "p()")
+				b = bytes(point(), 8)
+				t.AssertEq(b[0], 7)
+				t.AssertEq(b[4], 255)
+
+				# An out parameter: tau owns the buffer, C fills it.
+				fill = native(lib.t_fill, "v(piC)")
+				out = bytes(3)
+				fill(out, 3, 9)
+				t.AssertEq(out, bytes([9, 9, 9]))
+			}],
+		["mistakes are values, not crashes", fn(t) {
+				t.AssertEq(failed(native(lib.no_such_symbol, "i()")), true)
+				t.AssertEq(failed(native(lib.t_add_i, "i(iq)")), true)
+				t.AssertEq(failed(native(lib.t_add_i, "ii")), true)
+
+				addi = native(lib.t_add_i, "i(ii)")
+				t.AssertEq(failed(addi(1)), true)
+				t.AssertEq(failed(addi(1, "two")), true)
+
+				t.AssertEq(failed(bytes(lib.t_add_i, -1)), true)
+			}],
+		["the old untyped call still works", fn(t) {
+				t.AssertEq(int(lib.t_add_i(2, 3), 32), 5)
+				t.AssertEq(int(lib.t_add_l(2, 3), 64), 5)
+			}]
+	])

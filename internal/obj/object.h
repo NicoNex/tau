@@ -39,7 +39,11 @@ enum obj_type {
 	obj_object,
 	obj_pipe,
 	obj_bytes,
-	obj_native
+	obj_native,
+	// A native function with a declared signature. It is added at the end so
+	// that the values of the ones before it, which the bytecode carries, stay
+	// where they were.
+	obj_native_fn
 };
 
 struct function {
@@ -272,6 +276,13 @@ struct object new_closure_obj(struct function *fn, struct object *free, size_t n
 char *closure_str(struct object o);
 void dispose_closure_obj(struct object o);
 void mark_closure_obj(struct object c);
+
+// Native function object: a C function plus the signature that says how to
+// talk to it, see ffi.c.
+struct object new_native_obj(void *fn, char *sig);
+struct object native_call(struct object f, struct object *args, size_t nargs);
+void dispose_native_obj(struct object o);
+char *native_str(struct object o);
 
 // Builtin object.
 typedef struct object (*builtin)(struct object *args, size_t len);

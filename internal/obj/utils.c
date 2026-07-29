@@ -33,9 +33,10 @@ char *otype_str(enum obj_type t) {
 		"object",
 		"pipe",
 		"bytes",
+		"native",
 		"native"
 	};
-	return t <= obj_native ? strings[t] : "corrupted";
+	return t <= obj_native_fn ? strings[t] : "corrupted";
 }
 
 char *object_str(struct object o) {
@@ -70,6 +71,8 @@ char *object_str(struct object o) {
 		return bytes_str(o);
 	case obj_native:
 		return strdup("<native>");
+	case obj_native_fn:
+		return native_str(o);
 	default:
 		return strdup("<corrupted>");
 	}
@@ -148,6 +151,9 @@ void free_obj(struct object o) {
 		return;
 	case obj_native:
 		dlclose(o.data.handle);
+		return;
+	case obj_native_fn:
+		dispose_native_obj(o);
 		return;
 	default:
 		return;

@@ -355,6 +355,32 @@ static struct object plugin_b(struct object *args, size_t len) {
 	};
 }
 
+// native(fn, "ret(args)") says what a C function looks like, so that its
+// arguments travel as the C types they really are and its result comes back
+// as a tau value instead of a bare machine word.
+static struct object native_b(struct object *args, size_t len) {
+	if (len != 2) {
+		return errorf("native: wrong number of arguments, expected 2, got %lu", len);
+	}
+
+	// The lookup that produced the function may have failed: say so rather
+	// than turning the error into a nonsense pointer.
+	if (args[0].type == obj_error) {
+		return args[0];
+	}
+	if (args[0].type != obj_native) {
+		return errorf("native: first argument must be a native function, got %s instead", otype_str(args[0].type));
+	}
+	if (args[1].type != obj_string) {
+		return errorf("native: second argument must be a string, got %s instead", otype_str(args[1].type));
+	}
+
+	char *sig = cstr(args[1].data.str);
+	struct object o = new_native_obj(args[0].data.handle, sig);
+	cstr_free(args[1].data.str, sig);
+	return o;
+}
+
 static struct object pipe_b(struct object *args, size_t len) {
 	switch (len) {
 	case 0:
@@ -600,8 +626,29 @@ static struct object delete_b(struct object *args, size_t len) {
 
 // TODO: eventually add the obj_integer case like in Python.
 static struct object bytes_b(struct object *args, size_t len) {
-	if (len != 1) {
-		return errorf("bytes: wrong number of arguments, expected 1, got %lu", len);
+	if (len != 1 && len != 2) {
+		return errorf("bytes: wrong number of arguments, expected 1 or 2, got %lu", len);
+	}
+
+	// bytes(ptr, n) copies n bytes from a pointer a C function returned: it is
+	// how a returned buffer, or a struct, is read from tau.
+	if (len == 2) {
+		if (args[0].type != obj_native) {
+			return errorf("bytes: reading a length needs a native pointer, got %s instead", otype_str(args[0].type));
+		}
+		if (args[1].type != obj_integer) {
+			return errorf("bytes: second argument must be an int, got %s instead", otype_str(args[1].type));
+		}
+		if (args[1].data.i < 0) {
+			return errorf("bytes: size must be positive, got %ld", args[1].data.i);
+		}
+		if (args[0].data.handle == NULL) {
+			return errorf("bytes: reading from a null pointer");
+		}
+		size_t n = args[1].data.i;
+		uint8_t *b = malloc(n > 0 ? n : 1);
+		memcpy(b, args[0].data.handle, n);
+		return new_bytes_obj(b, n);
 	}
 
 	struct object arg = args[0];
@@ -659,5 +706,6 @@ const builtin builtins[] = {
 	slice_b,
 	keys_b,
 	delete_b,
-	bytes_b
+	bytes_b,
+	native_b
 };

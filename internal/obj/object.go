@@ -69,6 +69,7 @@ const (
 	PipeType          = C.obj_pipe     // pipe
 	BytesType         = C.obj_bytes    // bytes
 	NativeType        = C.obj_native   // native
+	NativeFnType      = C.obj_native_fn // native
 )
 
 var (
@@ -101,6 +102,7 @@ var (
 		"keys",
 		"delete",
 		"bytes",
+		"native",
 	}
 
 	NullObj  = Object(C.null_obj)

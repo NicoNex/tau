@@ -54,28 +54,41 @@ split on commas, dropping the argument names and the qualifiers.
 
 ## The design
 
-Two layers, split where the language boundary really is.
+Decided: **`plugin` stays a builtin and grows**, and **`native` stays a builtin
+and shrinks**. The module is written on top of both, not instead of them.
 
 A library written in tau cannot open a shared object by itself: something has
 to call `dlopen`, and that something can only be a builtin. Even a `dlopen`
 that arrived from a shared object would need a shared object opened first. So
-the number of builtins does not go down. What leaves C is the policy: today
-`plugin(path)` opens the file *and* decides where to look for it - the
-directory of the module, every entry of `TAUPATH`, `~/.local/lib/tau`,
-`/usr/local/lib/tau`, `/lib/tau`, forty lines of `plugin.h`. After the change
-the builtin opens exactly the path it was handed, and trying the candidates -
-`libm`, `libm.so`, `libm.so.6`, `libm.dylib`, the directories of the stdlib -
-is `ffi.Open`, in tau, where adding a case means editing a file rather than
-rebuilding the interpreter.
+`plugin` keeps its name and its search path, and gets the things it should
+have had from the start - see "What plugin should do" below.
 
-**In C, the primitives.** Two, the same number there are today, and they take
-numbers and pointers rather than notation, so there is nothing to learn and
-nothing to spell wrong:
+`native` is the other way round. Of the three things it does, only one has to
+be in C:
+
+1. reading the signature, which is text handling and moves to `ffi.tau`;
+2. preparing the call, `ffi_prep_cif` and an `obj_native_fn` the VM knows how
+   to call, which is a VM object no C library can hand out;
+3. marshalling, per call: a tau int into a four byte ABI slot, a tau string as
+   a NUL terminated `char *`, the collector parked for the duration, the
+   result read back out of the returned word. This one touches how values are
+   represented, and a tau int has no address to hand to `memcpy` in the first
+   place.
+
+It could be done entirely in tau, over a system `libffi.so`, by building the
+`ffi_type *` and argument arrays by hand with `malloc` and `memcpy`. It would
+mean writing the size and the layout of `ffi_cif` into tau source, requiring a
+shared libffi where it is static today, and spending a few dozen VM operations
+on every call. Point 3 is the one thing in the FFI that has to be C, and it is
+the only thing that stays.
+
+**In C, the primitives.** Two, the same two there are today:
 
 ```
-dlopen(path)             -> a handle, or an error saying what dlerror said.
-                            Opens the path it was given and looks nowhere else.
-native(fn, ret, [args])  -> a prepared call, the types given as integer codes.
+plugin(path [, flags])   -> a handle, or an error. Keeps the search path it
+                            has, plus what is listed below.
+native(fn, ret, [args])  -> a prepared call, the types given as integer codes,
+                            never as text.
 ```
 
 Everything else the FFI needs is already C, and we are in the business of
@@ -128,6 +141,35 @@ The signature stays exactly what it is now — a C declaration, names and
 qualifiers optional — only the parser moves. `ffi.Func` turns the text into
 `native(fn, ret_code, arg_codes)` and everything below that is unchanged.
 
+### What plugin should do
+
+Everything here is a thing it cannot do today.
+
+- **`plugin(null)`** gives the handle of the program itself, `dlopen(NULL)`.
+  That is what makes `dlsym`, `dlclose`, `malloc` and the rest reachable as
+  ordinary C functions, so that none of them needs a builtin of its own.
+- **A bare name resolves per system.** `plugin("m")` and `plugin("libm")` try
+  `libm.so`, `libm.so.6`, `libm.dylib`, `m.dll` and so on, so that a program
+  that opens the maths library is not a Linux program. A name that looks like
+  a path (it has a separator, or an extension already) is used as it is, which
+  is what keeps the bundler working: the file inside a bundle is stored under
+  the name written in the source.
+- **The error says what was tried.** Today the message is whatever `dlerror`
+  said about the last directory attempted, so a library that exists but pulls
+  in a missing dependency reports "no such file". The error should carry the
+  paths tried and the reason each one failed.
+- **Flags.** `plugin(path, flags)` for `RTLD_NOW` against the default lazy
+  binding, and `RTLD_GLOBAL` for a library whose symbols the next one needs.
+  The constants come from `ffi.tau` - `ffi.Now`, `ffi.Global` - so the builtin
+  takes an integer and nothing else.
+- **Opening the same library twice** returns the same handle from the loader
+  anyway; what should not happen twice is the `dlclose` at collection. Whoever
+  writes `lib.Close()` has to mark the handle closed.
+
+What it should *not* grow is a method: the dot on a handle is `dlsym`, so a
+field named `Close` would be a symbol named `Close`. The conveniences live on
+the object `ffi.Open` returns, which wraps the handle rather than being one.
+
 ### The surface of the module
 
 ```
@@ -167,22 +209,21 @@ a struct helper is a separate question, not part of this change.
 3. `internal/obj/builtins.c:361` — `native_b` takes `(fn, ret_code, [arg_codes])`:
    an integer and a list of integers, no string anywhere. Validate the codes and
    say which one is wrong.
-4. `internal/obj/builtins.c:336` — `plugin_b` becomes `dlopen_b`: `dlopen` of
-   the path it was handed and nothing else. `plugin_open` and its search path
-   move to `ffi.Open`, so `internal/obj/plugin.h` loses forty lines and keeps
-   only the Windows shims. It must also accept `null` for the handle of the
-   program itself, which is what makes `dlsym` reachable without a builtin
-   for it.
+4. `internal/obj/builtins.c:336` — `plugin_b` keeps its name and grows what
+   the section above lists: `null` for the program itself, a bare name
+   resolved per system, an error that says what was tried, and an optional
+   flags argument. The candidate names and the search path stay in
+   `internal/obj/plugin.h`, which is where they are now.
 5. `internal/vm/vm.c:223` — the `dlsym` in `vm_exec_dot` stays as it is. It is
    how a symbol is read today, it is what the untyped call uses, and it is the
    one primitive that lets everything else — `dlsym` itself, `dlclose`,
    `malloc` — be reached as ordinary C functions.
 6. No builtins for memory. `malloc`, `free` and `memcpy` come from the C
    library through the FFI, and reading stays `bytes(ptr, n)`.
-7. `internal/obj/object.go` — `plugin` becomes `dlopen` in `Builtins`. Change
-   the name **in place**, and add nothing before it: the index of a builtin is
-   what a compiled `.tauc` holds, so moving one invalidates every bundle ever
-   built.
+7. `internal/obj/object.go` — nothing to add and nothing to move. The index of
+   a builtin is what a compiled `.tauc` holds, so the array stays exactly as
+   it is; `plugin` and `native` keep their places and only their arguments
+   change.
 
 ### The tau side
 
@@ -240,19 +281,18 @@ a struct helper is a separate question, not part of this change.
 4. The bundler regexp, with a test that bundles a program using `ffi.Open` and
    runs it where the library is not installed.
 5. The stdlib modules, one commit each.
-6. The name `plugin` goes, replaced by the `dlopen` that does no searching.
-   This is the breaking one, so it goes in a release of its own, with the note
-   that `plugin(x)` becomes `import("ffi").Open(x)` - which is not a rename:
-   `Open` is the one that knows where to look, and `dlopen` no longer does.
+6. `plugin` grows the flags, the null handle and the per system names. Nothing
+   breaks here: every call that works today keeps working, and `ffi.Open` is
+   built on top of it.
 
 ## Open questions
 
-- **Does `plugin` really go away?** There is a lazier plan than the one above:
-  leave `plugin` exactly as it is, search path included, and have `ffi.Open`
-  call it. Nothing breaks, ever, and the whole breaking step disappears. What
-  is lost is the point of the exercise, since the policy stays in C and the
-  two ways of opening a library both keep working. Worth deciding before step
-  3, not after.
+- **Two ways to open a library.** `plugin` stays, so both `plugin("libm.so")`
+  and `ffi.Open("m")` will work. That is deliberate - the first is the
+  primitive, the second is the one with the manners - but it is the kind of
+  thing that ends up documented twice and explained badly. The stdlib should
+  use `ffi.Open` everywhere, and the README should show `plugin` only where it
+  is explaining what `ffi.Open` is made of.
 - **Callbacks.** A C function that takes a function pointer cannot be called at
   all today. `ffi_closure` would fix it, and it needs a story for a C thread
   entering the VM. Out of scope here, but the shape of `ffi.Func` should not

@@ -345,7 +345,7 @@ func (p *Parser) parseImport() ast.Node {
 		return nil
 	}
 
-	return ast.NewImport(args[0], Parse, pos)
+	return ast.NewImport(args[0], pos)
 }
 
 func (p *Parser) parseFunction() ast.Node {

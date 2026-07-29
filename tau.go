@@ -40,15 +40,6 @@ func writeFile(fname string, cont []byte) {
 	}
 }
 
-func precompiledBytecode(path string) (compiler.Bytecode, error) {
-	b, err := os.ReadFile(path)
-	if err != nil {
-		fmt.Println(err)
-		return compiler.Bytecode{}, fmt.Errorf("error opening file %q: %w", path, err)
-	}
-	return compiler.DecodeBytecode(b), nil
-}
-
 func compile(path string) (bc compiler.Bytecode, err error) {
 	input := string(readFile(path))
 	res, errs := parser.Parse(path, input)

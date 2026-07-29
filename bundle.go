@@ -5,6 +5,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"strings"
 
 	bundlepkg "github.com/NicoNex/tau/internal/bundle"
 	"github.com/NicoNex/tau/internal/compiler"
@@ -61,11 +62,64 @@ type bundleState struct {
 	nconsts int
 }
 
+// stripComments blanks out everything after a # that isn't inside a string, so
+// that the example in a doc comment isn't taken for a dependency: a module
+// showing how it is imported is the usual shape of a comment in the stdlib.
+func stripComments(src string) string {
+	var (
+		out       strings.Builder
+		inStr     bool
+		escape    bool
+		inComment bool
+	)
+
+	for _, r := range src {
+		switch {
+		case inComment:
+			if r == '\n' {
+				inComment = false
+				out.WriteRune(r)
+			}
+			continue
+
+		case escape:
+			escape = false
+
+		case inStr && r == '\\':
+			escape = true
+
+		case r == '"':
+			inStr = !inStr
+
+		case r == '#':
+			inComment = true
+			continue
+		}
+		out.WriteRune(r)
+	}
+	return out.String()
+}
+
+// The files whose walk has not returned yet, innermost last: see collectInto.
+var walking []string
+
 // collect walks the imports of src, which lives at file, compiles every module
 // it reaches and stores the plugins they open. A module goes into the bundle
 // after the ones it imports, because that is the order they will be loaded in
 // and the order they were compiled for.
 func collectInto(b *bundlepkg.Bundle, st *bundleState, file, src string) error {
+	// A cycle would be walked for as long as the stack holds, so the files
+	// whose walk has not returned yet are named instead.
+	for _, f := range walking {
+		if f == file {
+			return fmt.Errorf("build: import cycle %s -> %s", strings.Join(walking, " -> "), file)
+		}
+	}
+	walking = append(walking, file)
+	defer func() { walking = walking[:len(walking)-1] }()
+
+	src = stripComments(src)
+
 	for _, m := range pluginRe.FindAllStringSubmatch(src, -1) {
 		if err := addPlugin(b, file, m[1]); err != nil {
 			return err
@@ -153,4 +207,3 @@ func addPlugin(b *bundlepkg.Bundle, file, name string) error {
 
 	return fmt.Errorf("build: no plugin named %q, opened by %s", name, file)
 }
-

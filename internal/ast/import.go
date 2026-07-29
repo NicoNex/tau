@@ -10,17 +10,12 @@ import (
 )
 
 type Import struct {
-	name  Node
-	parse parseFn
-	pos   int
+	name Node
+	pos  int
 }
 
-func NewImport(name Node, parse parseFn, pos int) Node {
-	return &Import{
-		name:  name,
-		parse: parse,
-		pos:   pos,
-	}
+func NewImport(name Node, pos int) Node {
+	return &Import{name: name, pos: pos}
 }
 
 func (i Import) Eval() (obj.Object, error) {

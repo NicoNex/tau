@@ -338,8 +338,24 @@ static struct object dlopen_b(struct object *args, size_t len) {
 		return errorf("dlopen: wrong number of arguments, expected 1, got %lu", len);
 	}
 
+	// dlopen(null) is the program itself, which is where the C library it was
+	// linked against can be reached: malloc, free, memcpy and dlsym are
+	// ordinary functions once you have this handle.
+	if (args[0].type == obj_null) {
+		void *self = dlopen(NULL, RTLD_LAZY);
+
+		if (self == NULL) {
+			return errorf("dlopen: %s", dlerror());
+		}
+		return (struct object) {
+			.data.handle = self,
+			.type = obj_native,
+			.gc = gc_header_alloc()
+		};
+	}
+
 	if (args[0].type != obj_string) {
-		return errorf("dlopen: first argument must be string, got %s instead", otype_str(args[0].type));
+		return errorf("dlopen: first argument must be a string or null, got %s instead", otype_str(args[0].type));
 	}
 	char *path = cstr(args[0].data.str);
 	void *handle = plugin_open(path);

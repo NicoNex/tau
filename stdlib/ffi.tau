@@ -277,6 +277,77 @@ Func = fn(sym, signature) {
 	return cfunc(sym, s[0], s[1])
 }
 
+# The program itself, which is where the C library it was linked against
+# lives: malloc, free and memcpy are ordinary C functions, so the memory a C
+# call needs is not a thing the language has to grow.
+self = dlopen(null)
+
+mallocFn = if failed(self) { self } else { Func(self.malloc, "void *malloc(size_t n)") }
+freeFn = if failed(self) { self } else { Func(self.free, "void free(void *p)") }
+memcpyFn = if failed(self) { self } else { Func(self.memcpy, "void *memcpy(void *dst, const void *src, size_t n)") }
+strlenFn = if failed(self) { self } else { Func(self.strlen, "size_t strlen(const char *s)") }
+
+# Alloc returns n bytes of memory C owns. Unlike bytes(n), the collector knows
+# nothing about it and will not free it: that is Free, and forgetting to call
+# it leaks.
+Alloc = fn(n) {
+	if failed(mallocFn) {
+		return error("ffi: no C library here: {mallocFn}")
+	}
+	if n <= 0 {
+		return error("ffi: Alloc wants a size, got {n}")
+	}
+
+	p = mallocFn(n)
+	if p == null {
+		return error("ffi: out of memory asking for {n} bytes")
+	}
+	return p
+}
+
+# Free gives back what Alloc returned.
+Free = fn(p) {
+	if failed(freeFn) {
+		return error("ffi: no C library here: {freeFn}")
+	}
+	freeFn(p)
+	return null
+}
+
+# Write copies data, a string or bytes, into memory at p, which is what fills
+# a buffer a C function handed back.
+Write = fn(p, data) {
+	if failed(memcpyFn) {
+		return error("ffi: no C library here: {memcpyFn}")
+	}
+	if p == null {
+		return error("ffi: Write to a null pointer")
+	}
+
+	if type(data) != "bytes" {
+		if failed(data = bytes(string(data))) {
+			return data
+		}
+	}
+	memcpyFn(p, data, len(data))
+	return len(data)
+}
+
+# Read returns n bytes copied out of the pointer p, which is bytes(p, n) under
+# another name, here so that the module reads as one thing.
+Read = fn(p, n) { bytes(p, n) }
+
+# String returns the C string at p, read up to its NUL and copied into tau.
+String = fn(p) {
+	if failed(strlenFn) {
+		return error("ffi: no C library here: {strlenFn}")
+	}
+	if p == null {
+		return null
+	}
+	return string(bytes(p, strlenFn(p)))
+}
+
 # Bind returns an object with one function per signature, named the way the
 # signature names it, which is the short way to take a whole library:
 #

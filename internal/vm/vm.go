@@ -137,10 +137,13 @@ func lookupPaths(vmdir, taupath string) []string {
 		if filepath.Ext(taupath) != "" {
 			return []string{taupath}
 		}
-		return []string{taupath + ".tau", taupath + ".tauc"}
+		return []string{taupath + ".tau"}
 	}
 
-	exts := []string{".tau", ".tauc"}
+	// Only source: a '.tauc' holds bytecode, and the loader parses what it
+	// reads, so offering one here could only end in a lexer error about a
+	// byte nobody typed.
+	exts := []string{".tau"}
 	if filepath.Ext(taupath) != "" {
 		exts = []string{""}
 	}
@@ -217,6 +220,7 @@ func (vm VM) LoadBundled() error {
 		mod := C.new_object()
 		for exp, idx := range m.Exports {
 			o := C.get_global(vm.vm.state.globals, C.size_t(idx))
+			// object_set copies the name, so this one is ours to free.
 			cexp := C.CString(exp)
 
 			if o._type == C.obj_object {
@@ -224,6 +228,7 @@ func (vm VM) LoadBundled() error {
 			} else {
 				C.object_set(mod, cexp, o)
 			}
+			C.free(unsafe.Pointer(cexp))
 		}
 		// modtab_put keeps a copy of the name, so this is the last use of the
 		// one the VM owns.
@@ -237,9 +242,16 @@ func lookup(vmfile, taupath string) (string, error) {
 	// The directory of the importing file, so that a module finds the ones
 	// that sit next to it whatever the working directory is.
 	for _, p := range lookupPaths(filepath.Dir(vmfile), taupath) {
-		if _, err := os.Stat(p); err == nil {
-			return p, nil
+		if _, err := os.Stat(p); err != nil {
+			continue
 		}
+
+		// The absolute path, so that the same file reached as "m.tau" and as
+		// "./dir/../m.tau" is one module and not two.
+		if abs, err := filepath.Abs(p); err == nil {
+			return abs, nil
+		}
+		return p, nil
 	}
 	return "", fmt.Errorf("no module named %q", taupath)
 }
@@ -249,7 +261,6 @@ func lookup(vmfile, taupath string) (string, error) {
 func setModuleDir(file string) {
 	C.set_module_dir(C.CString(filepath.Dir(file)))
 }
-
 
 func init() {
 	C.set_exit()

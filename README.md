@@ -550,6 +550,12 @@ There are two ways to call C, and the second is built out of the first.
 out while the program runs. `dlopen(null)` is the handle of the program
 itself, which is where the C library it was linked against can be reached.
 
+It takes the name of a file, and that name differs from system to system, so
+`ffi.Lib("m")` is the one to reach for when a program has to run on more than
+one: it tries the shapes the system uses -- `libm.so.6`, `libm.dylib`,
+`m.dll` -- and says what it tried when none of them opens. A name with a slash
+or an extension already in it is opened as it stands.
+
 ```bash
 gcc -shared -o vec.so -fPIC vec.c
 ```
@@ -575,16 +581,23 @@ void *fill(int n) {
 
 A symbol can be called with no declaration at all. Every argument goes as an
 int64 or a double, and the result comes back as a machine word you take apart
-yourself with `int(x, bits)` or `float(x, 64)`.
+yourself: `int(x)` for a number, `string(x)` for a `char *`, `bytes(x, n)` for
+a buffer, and a pointer C gave you can be handed straight back to C.
 
 ```python
-lib = dlopen("./vec.so")
+libc = dlopen("libc.so.6")
 
-println(string(bytes(lib.fill(4), 4)))
+p = libc.malloc(32)
+libc.memcpy(p, "hello", 6)
+println(int(libc.strlen(p)), string(p), string(bytes(p, 5)))
+libc.free(p)
+
+println(int(libc.abs(-5)), int(libc.atoi("1234")))
 ```
 
 ```
-xxxx
+5 hello hello
+5 1234
 ```
 
 It is three lines to try a library, and it takes your word for the types: pass
@@ -623,10 +636,11 @@ An integer where the signature says `double` is converted on the way in, so
 `dot(1.5, 4)` needs no help.
 
 `ffi.Bind` does a whole library at once, naming each function the way its
-signature names it, and takes the name of a library as well as a handle:
+signature names it, and takes the name of a library as well as a handle -- the
+same names `ffi.Lib` understands:
 
 ```python
-m = ffi.Bind("libm.so.6", [
+m = ffi.Bind("m", [
 	"double pow(double, double)",
 	"double sqrt(double)",
 ])

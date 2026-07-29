@@ -31,6 +31,17 @@ func build() error {
 	return tau.CompileFiles(opt.files, opt.output)
 }
 
+// bundle writes the program and its imports into a copy of the interpreter,
+// which makes an executable that runs on its own.
+func bundle() error {
+	opt := parseBundleOpts()
+	if opt.file == "" {
+		usageBundle()
+		return errUsage
+	}
+	return tau.BuildExecutable(opt.file, opt.output)
+}
+
 // test runs the *_test.tau files, like `go test` does.
 func test() error {
 	return tau.TestFiles(parseTestOpts().paths)
@@ -61,6 +72,8 @@ func help() error {
 		usageRun()
 	case "build":
 		usageBuild()
+	case "bundle":
+		usageBundle()
 	case "test":
 		usageTest()
 	case "fmt":
@@ -97,6 +110,15 @@ func check(err error) {
 }
 
 func main() {
+	// An interpreter with a program appended to it is that program: the
+	// arguments belong to it, not to the commands this binary would otherwise
+	// answer to.
+	if tau.HasEmbeddedProgram() {
+		tau.SetArgs(os.Args)
+		check(tau.RunEmbedded())
+		return
+	}
+
 	if len(os.Args) < 2 {
 		tau.SetArgs(os.Args)
 		tau.REPL()
@@ -108,6 +130,8 @@ func main() {
 		check(run())
 	case "build":
 		check(build())
+	case "bundle":
+		check(bundle())
 	case "test":
 		check(test())
 	case "fmt":

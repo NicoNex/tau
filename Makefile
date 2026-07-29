@@ -17,17 +17,6 @@ ifeq ($(UNAME_S),Darwin)
 endif
 
 # Check if CC is defined
-ifneq ($(origin CC), undefined)
-    # Check if CC is not clang
-    ifneq ($(CC), clang)
-        # Check if the compiler is actually GCC by looking for "GCC" in the version output
-        GCC_CHECK := $(shell $(CC) --version 2>/dev/null | head -n 1 | grep -i "gcc")
-        ifneq ($(GCC_CHECK),)
-            CFLAGS += -fopenmp
-            LDFLAGS += -fopenmp
-        endif
-    endif
-endif
 
 # Default compiler fallback to GCC if GCC environment variable is set
 ifneq ($(GCC),)
@@ -137,7 +126,7 @@ profile:
 
 # The Go tests first, then the ones written in tau.
 test: tau plugins
-	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go test ./internal/... ./cmd/...
+	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go test . ./internal/... ./cmd/...
 	TAUPATH=$(DIR)/stdlib ./tau test stdlib
 
 run: all

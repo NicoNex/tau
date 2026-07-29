@@ -95,7 +95,13 @@ func ExecFileVM(f string) (err error) {
 		}
 	}
 
-	tvm := vm.New(f, bytecode)
+	return runBytecode(f, bytecode)
+}
+
+// runBytecode runs a compiled program, named after the file it came from so
+// that a runtime error can say where it happened.
+func runBytecode(name string, bytecode compiler.Bytecode) error {
+	tvm := vm.New(name, bytecode)
 	if !tvm.Run() {
 		return errors.New("runtime error")
 	}

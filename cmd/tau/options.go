@@ -21,6 +21,11 @@ type buildOpt struct {
 	output string
 }
 
+type bundleOpt struct {
+	file   string
+	output string
+}
+
 type testOpt struct {
 	paths []string
 }
@@ -44,6 +49,17 @@ func parseRunOpts() (opt runOpt) {
 	if cmd.NArg() > 1 {
 		opt.args = cmd.Args()[1:]
 	}
+	return
+}
+
+func parseBundleOpts() (opt bundleOpt) {
+	cmd := flag.NewFlagSet("bundle", flag.ExitOnError)
+	cmd.StringVar(&opt.output, "o", "", "Write the executable to the given file")
+	cmd.StringVar(&opt.output, "out", "", "Write the executable to the given file (same as -o)")
+	cmd.Usage = usageBundle
+	cmd.Parse(os.Args[2:])
+
+	opt.file = cmd.Arg(0)
 	return
 }
 
@@ -95,6 +111,7 @@ Tau is a dynamically typed, interpreted programming language.
 Commands:
   run       Run a tau file
   build     Compile tau files into '.tauc' bytecode
+  bundle    Compile a tau file into a standalone executable
   test      Run the tests of the given files or directories
   fmt       Format tau source files
   repl      Start the interactive prompt
@@ -123,6 +140,28 @@ Examples:
   %s run server.tau -port 8080
   %s hello.tau
 `, os.Args[0], os.Args[0], os.Args[0], os.Args[0])
+}
+
+func usageBundle() {
+	fmt.Fprintf(os.Stderr, `Usage: %s bundle [OPTIONS] FILE
+
+Compile FILE and everything it imports into a single executable, a copy of
+the interpreter with the program appended to it. The result runs where tau
+is not installed and needs nothing else.
+
+Without -o the executable takes the name of the source file without its
+extension.
+
+Options:
+  -o, --out FILE    Write the executable to FILE
+
+Arguments:
+  FILE              Path to the '.tau' file to bundle
+
+Examples:
+  %s bundle main.tau
+  %s bundle -o myapp main.tau
+`, os.Args[0], os.Args[0], os.Args[0])
 }
 
 func usageBuild() {

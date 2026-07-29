@@ -1,8 +1,8 @@
 package vm
 
 /*
-#cgo CFLAGS: -g -Ofast -fopenmp -I../obj/libffi/include
-#cgo LDFLAGS: -fopenmp -L../obj/libffi/lib -lm
+#cgo CFLAGS: -g -Ofast -I../obj/libffi/include
+#cgo LDFLAGS: -L../obj/libffi/lib -lm
 #include <stdlib.h>
 #include <stdio.h>
 #include "vm.h"

@@ -14,6 +14,25 @@ sudo make install
 You can try it out in the terminal by simply running `tau`.
 For additional info run `tau --help`.
 
+## Shipping a program
+`tau bundle` writes a program and everything it imports into a single
+executable: a copy of the interpreter with the program appended to it. The
+result runs where tau is not installed and needs nothing else, the modules and
+the shared objects it uses included.
+```bash
+tau bundle -o myapp main.tau
+./myapp
+```
+`tau build` is the lighter option for machines that already have tau: it writes
+a `.tauc` carrying the same program and its dependencies, without the
+interpreter in front of it.
+
+On macOS the executable has to be signed before it will start, because
+appending to one invalidates the signature it came with:
+```bash
+codesign -s - myapp
+```
+
 ## Syntax
 
 ### Hello World

@@ -1,10 +1,20 @@
-# ===== JSON parser (OO style) for Tau =====
-# - Objects -> Tau maps, Arrays -> Tau lists
-# - Strings with escapes; \uXXXX preserved verbatim
-# - Numbers (int/float with exponent)
-# - Literals: true, false, null
-# - Strict JSON (no trailing commas)
-# - Pretty errors with line/col via error()
+# json - reading and writing JSON.
+#
+# Unmarshal turns the text into the values of the language, an object into a
+# map and an array into a list, and Marshal writes them back:
+#
+#	json = import("json")
+#
+#	# A raw string, or the braces would be read as interpolation and the
+#	# quotes would need escaping.
+#	v = json.Unmarshal(`{"name": "tau", "tags": [1, 2]}`)
+#	println(v["name"], v["tags"][0])
+#	println(json.MarshalIndent(v, "  "))
+#
+# What it reads is JSON and nothing more: no trailing commas, no comments, no
+# single quotes. A text it will not take comes back as an error saying at
+# which line and column it gave up. An escape of the form \uXXXX is kept as
+# it was written rather than turned into the character it names.
 
 spaces = "\t\n\v\f\r "
 

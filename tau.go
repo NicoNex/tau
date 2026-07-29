@@ -77,7 +77,7 @@ var ErrParseError = errors.New("error: parse error")
 func readFile(fname string) []byte {
 	b, err := os.ReadFile(fname)
 	if err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 	return b
@@ -85,7 +85,7 @@ func readFile(fname string) []byte {
 
 func writeFile(fname string, cont []byte) {
 	if err := os.WriteFile(fname, cont, 0644); err != nil {
-		fmt.Println(err)
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
 	}
 }

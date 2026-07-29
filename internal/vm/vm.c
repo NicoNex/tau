@@ -147,7 +147,7 @@ inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 	if (b == NULL) {
 		va_list args;
 		va_start(args, fmt);
-		vprintf(fmt, args);
+		vfprintf(stderr, fmt, args);
 		va_end(args);
 		longjmp(vm->env, 1);
 	}
@@ -163,7 +163,11 @@ inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 	arrow[b->pos] = '^';
 	arrow[b->pos+1] = '\0';
 
-	printf(
+	// What went wrong goes to standard error, so that the output of a program
+	// stays what the program wrote.
+	fflush(stdout);
+	fprintf(
+		stderr,
 		"error in file %s at line %d:\n    %s\n    %s\n%s\n",
 		vm->file,
 		b->lineno,
@@ -178,7 +182,8 @@ inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
 	struct bookmark *b = vm_get_bookmark(vm);
 	if (b == NULL) {
-		puts(fmt);
+		fflush(stdout);
+		fprintf(stderr, "%s\n", fmt);
 		return;
 	}
 
@@ -187,7 +192,9 @@ void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
 	arrow[b->pos] = '^';
 	arrow[b->pos+1] = '\0';
 
-	printf(
+	fflush(stdout);
+	fprintf(
+		stderr,
 		"error in file %s at line %d:\n    %s\n    %s\n%s\n",
 		vm->file,
 		b->lineno,

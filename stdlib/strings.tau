@@ -1,3 +1,19 @@
+# strings - operations on text.
+#
+# A string is a run of bytes and everything here counts bytes, the way Go does
+# it: Index gives a byte offset, and slicing at one that falls inside a letter
+# outside ASCII cuts the letter in half. The utf8 module is where the code
+# points are.
+#
+#	strings = import("strings")
+#
+#	strings.Split("a,b,c", ",")        # [a, b, c]
+#	strings.Cut("key=value", "=")      # {Before: key, After: value, Found: true}
+#	strings.TrimSpace("  hi\n")        # hi
+#
+# Nothing is modified in place, since a string cannot be: every function here
+# returns a new one.
+
 buffer = import("buffer")
 
 spaces = "\t\n\v\f\r "

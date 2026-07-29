@@ -77,7 +77,7 @@ var precedences = map[item.Type]int{
 	item.MinusMinus:     Prefix,
 	item.BwAnd:          BitwiseAnd,
 	item.BwOr:           BitwiseOr,
-	item.BwXor:          BitwiseOr,
+	item.BwXor:          BitwiseXor,
 	item.LShift:         Shift,
 	item.RShift:         Shift,
 	item.LParen:         Call,
@@ -375,6 +375,10 @@ func (p *Parser) parseFunctionParams() []ast.Identifier {
 
 	for p.peek.Is(item.Comma) {
 		p.next()
+		// The trailing comma of a parameter list written over several lines.
+		if p.peek.Is(item.RParen) {
+			break
+		}
 		p.next()
 		ret = append(ret, ast.NewIdentifier(p.cur.Val, p.cur.Pos))
 	}
@@ -784,6 +788,10 @@ func (p *Parser) parseNodePairs(end item.Type) [][2]ast.Node {
 	pairs = append(pairs, p.parsePair())
 	for p.peek.Is(item.Comma) {
 		p.next()
+		// The trailing comma of a map written over several lines.
+		if p.peek.Is(end) {
+			break
+		}
 		p.next()
 		pairs = append(pairs, p.parsePair())
 	}
@@ -812,6 +820,12 @@ func (p *Parser) parseNodeSequence(sep, end item.Type) []ast.Node {
 
 	for p.peek.Is(sep) {
 		p.next()
+		// A separator right before the end is the trailing one, written so
+		// that a list spread over several lines can gain a line without
+		// touching the one above it.
+		if p.peek.Is(end) {
+			break
+		}
 		p.next()
 		seq = append(seq, p.parseExpr(Lowest))
 	}

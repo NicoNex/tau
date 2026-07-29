@@ -122,7 +122,6 @@ func ExecFileVM(f string) (err error) {
 			var clean func()
 
 			if bytecode, clean, err = bundlepkg.Open(raw); err != nil {
-				fmt.Println(err)
 				return err
 			}
 			defer clean()
@@ -131,7 +130,6 @@ func ExecFileVM(f string) (err error) {
 		}
 	} else {
 		if bytecode, err = compile(f); err != nil {
-			fmt.Println(err)
 			return err
 		}
 	}
@@ -139,14 +137,11 @@ func ExecFileVM(f string) (err error) {
 	return runBytecode(f, bytecode)
 }
 
-// runBytecode runs a compiled program and reports what went wrong on the way
-// out, the way the command line expects.
+// runBytecode runs a compiled program. What went wrong is returned rather
+// than printed: the caller is the one that knows where its messages go, and
+// printing here as well is how the same error ended up on the screen twice.
 func runBytecode(name string, bytecode compiler.Bytecode) error {
-	if err := bundlepkg.Run(name, bytecode); err != nil {
-		fmt.Println(err)
-		return err
-	}
-	return nil
+	return bundlepkg.Run(name, bytecode)
 }
 
 // SetArgs hands the command line to the program about to run.

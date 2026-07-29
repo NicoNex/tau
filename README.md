@@ -543,21 +543,16 @@ different one on every run.
 
 ## C libraries
 
-`plugin(path)` opens a shared object; its symbols are read off the returned
-value with the dot.
+There are two ways to call C, and the second is built out of the first.
+
+`dlopen(path)` opens a shared object. The dot on the handle is `dlsym`, so
+`lib.name` is a symbol, and `lib[name]` is the same lookup with a name worked
+out while the program runs. `dlopen(null)` is the handle of the program
+itself, which is where the C library it was linked against can be reached.
 
 ```bash
 gcc -shared -o vec.so -fPIC vec.c
 ```
-
-Without help the VM has to guess the argument types from the tau values it was
-given, and can only ever bring back a machine word. The `ffi` module of the
-standard library says what the function really looks like, and from then on
-the arguments travel as those types and the result comes back as a tau value.
-
-A signature is a C declaration. The name of the function and the names of the
-arguments may be there or not, so a line copied out of a header works as it
-stands.
 
 ```c
 // vec.c
@@ -576,26 +571,76 @@ void *fill(int n) {
 }
 ```
 
+### The raw way
+
+A symbol can be called with no declaration at all. Every argument goes as an
+int64 or a double, and the result comes back as a machine word you take apart
+yourself with `int(x, bits)` or `float(x, 64)`.
+
+```python
+lib = dlopen("./vec.so")
+
+println(string(bytes(lib.fill(4), 4)))
+```
+
+```
+xxxx
+```
+
+It is three lines to try a library, and it takes your word for the types: pass
+the wrong ones and you get a wrong answer, or a signal. One limit is worth
+knowing before it bites, since nothing warns you about it: **a function that
+returns a `double` does not survive this**. The call is prepared with a
+pointer-sized result and reads the integer register, so `lib.dot(1.5, 4.0)`
+comes back as `9.88e-324` rather than `6`. Pointers and integers do survive.
+
+### With the types written down
+
+The `ffi` module of the standard library gives a symbol a signature, and from
+then on the arguments travel as those types and the result comes back as a tau
+value.
+
+A signature is a C declaration. The name of the function and the names of the
+arguments may be there or not, so a line copied out of a header works as it
+stands.
+
 ```python
 ffi = import("ffi")
-lib = plugin("./vec.so")
+lib = dlopen("./vec.so")
 
-dot = ffi.Func(lib.dot, "double(double, double)")
+dot = ffi.Func(lib.dot, "double dot(double a, double b)")
 greet = ffi.Func(lib.greet, "const char *greet(const char *name)")
-fill = ffi.Func(lib.fill, "void *(int)")
+fill = ffi.Func(lib.fill, "void *fill(int n)")
 
-println(dot(1.5, 4))
-println(greet("tau"))
-println(string(bytes(fill(4), 4)))
-println(lib.dot(1.5, 4))       # the same call, untyped
+println(dot(1.5, 4), greet("tau"), string(bytes(fill(4), 4)))
 ```
 
 ```
-6
-hello, tau
-xxxx
-<native>
+6 hello, tau xxxx
 ```
+
+An integer where the signature says `double` is converted on the way in, so
+`dot(1.5, 4)` needs no help.
+
+`ffi.Bind` does a whole library at once, naming each function the way its
+signature names it, and takes the name of a library as well as a handle:
+
+```python
+m = ffi.Bind("libm.so.6", [
+	"double pow(double, double)",
+	"double sqrt(double)",
+])
+println(m.pow(2.0, 10.0), m.sqrt(2))
+```
+
+```
+1024 1.4142135623730951
+```
+
+Memory comes from the C library rather than from the language: `ffi.Alloc` and
+`ffi.Free` are `malloc` and `free`, `ffi.Write` is `memcpy` into a pointer,
+`ffi.String` reads a C string up to its NUL, and `ffi.Read(p, n)` is
+`bytes(p, n)`.
 
 The types are the ones C writes, the exact width ones of `stdint.h`, and the
 same widths spelled the way tau spells its own:
@@ -620,17 +665,6 @@ The call is prepared once, when `ffi.Func` is given the signature, not on every
 call. It passes an error through untouched, so a failed symbol lookup says so
 instead of turning into a nonsense pointer.
 
-`ffi.Bind(lib, [signatures])` does a whole library at once, naming each
-function the way its signature names it:
-
-```python
-m = ffi.Bind(plugin("libm.so.6"), [
-	"double pow(double, double)",
-	"double sqrt(double)",
-])
-println(m.pow(2.0, 10.0), m.sqrt(2.0))
-```
-
 Underneath, `ffi.Func` reads the declaration and calls `cfunc(sym, ret, args)`,
 which takes the types as numbers and prepares the call. That is the whole of
 the C side: reading a declaration is tau, in `stdlib/ffi.tau`.
@@ -641,9 +675,11 @@ tau. `bytes(n)` on its own allocates an empty buffer of `n` bytes, the way
 `make([]byte, n)` does in Go. For a word whose width is known, `int(x, bits)`
 sign-extends the right number of them.
 
-The standard library uses all of this: [stdlib/syscall](stdlib/syscall),
-[stdlib/math](stdlib/math) and [stdlib/runtime](stdlib/runtime) are small C
-shared objects opened with `plugin`.
+The standard library uses all of this. [stdlib/math.tau](stdlib/math.tau) is
+the shortest example and carries no C of its own: the interpreter is linked
+against libm, so it declares the functions it wants off `dlopen(null)`.
+[stdlib/syscall](stdlib/syscall) and [stdlib/runtime](stdlib/runtime) are small
+shared objects of their own, opened with `dlopen` and called the raw way.
 
 ## Shipping a program
 
@@ -796,7 +832,7 @@ These are always in scope, no import needed.
 - `append(xs, ...)` -- a new List with the arguments added at the end.
 - `new()` -- a fresh empty object.
 - `failed(x)` -- true if `x` is an error.
-- `plugin(path)` -- open a C shared object.
+- `dlopen(path)` -- open a C shared object, or the program itself with `null`.
 - `cfunc(sym, ret, args)` -- a C function with its types given as codes. What
   `ffi.Func` is made of, see [C libraries](#c-libraries).
 - `pipe([n])` -- a new pipe, unbuffered or holding `n` values.

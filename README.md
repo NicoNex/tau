@@ -141,9 +141,11 @@ two 1 value 3 [2, a]
 ```
 
 Anything between braces inside a double quoted string is an expression, and its
-value is put in the string. A string in backticks is raw: braces and
-backslashes are the characters they look like. Since a nested string closes the
-one it sits in, quote it: `"{if hot { \"warm\" } else { \"cold\" }}"`.
+value is put in the string. To write a brace that stands for itself, double it
+or escape it: `"{{"` and `"\{"` both give one. A string in backticks is raw:
+braces and backslashes are the characters they look like, which is the easier
+way to write anything with braces in it, JSON included. Since a nested string
+closes the one it sits in, quote it: `"{if hot { \"warm\" } else { \"cold\" }}"`.
 
 Comments start with `#` and run to the end of the line. A newline ends a
 statement; `;` does the same in the middle of a line.
@@ -159,13 +161,27 @@ statement; `;` does the same in the middle of a line.
 ++  --
 ```
 
-From loosest to tightest, the levels are: assignment, `||`, `&&`, `|` and `^`,
+From loosest to tightest, the levels are: assignment, `||`, `&&`, `|`, `^`,
 `&`, `==` and `!=`, the comparisons, `<<` and `>>`, `+` and `-`, `*` `/` `%`,
-the prefix operators, calls, indexing, and `.` last. Note that the shifts bind
-*less* tightly than the arithmetic, unlike C: `1 << 2 + 3` is `32`.
+the prefix operators, calls, indexing, and `.` last. That is the order C uses,
+trap included: `&` is looser than `==`, so `a & b == c` is `a & (b == c)` and
+wants parentheses. The shifts are looser than the arithmetic as well, so
+`1 << 2 + 3` is `1 << 5`, which is `32`.
 
 `==` on two lists or two maps compares identity, not contents; for a structural
 comparison use `cmp.Equal` from the standard library.
+
+A list, a map, a call and a parameter list may end with a comma, so that a line
+can be added to one written over several lines without touching the line above
+it. It is allowed, never required.
+
+```python
+primes = [
+	2,
+	3,
+	5,
+]
+```
 
 ### Control flow
 

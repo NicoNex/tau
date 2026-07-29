@@ -348,6 +348,78 @@ String = fn(p) {
 	return string(bytes(p, strlenFn(p)))
 }
 
+# Lib opens a shared library by the name it has on this system, so that a
+# program that wants the maths library says "m" rather than the file name of
+# one machine:
+#
+#	libm = ffi.Lib("m")           # libm.so.6 here, libm.dylib elsewhere
+#	libc = ffi.Lib("c")
+#
+# A name with a separator or an extension in it is a path and is opened as it
+# stands. Everything else is tried in the shapes this system uses, and if none
+# of them opens, the error says what was tried.
+#
+# ponytail: the candidates are a list, not a query to the loader. glibc keeps
+# the real library behind a version suffix and the unversioned name is a
+# linker script that dlopen refuses, which is why libm.so.6 is in the list; a
+# machine whose suffix is not there needs the path spelled out. Reading the
+# ldconfig cache is the fix if that ever bites.
+Lib = fn(name) {
+	name = string(name)
+
+	if isPath(name) {
+		return dlopen(name)
+	}
+
+	tried = candidates(name)
+	for i = 0; i < len(tried); ++i {
+		h = dlopen(tried[i])
+
+		if !failed(h) {
+			return h
+		}
+	}
+	names = strings.Join(tried, ", ")
+	return error("ffi: no library named \"{name}\" here, tried {names}")
+}
+
+# isPath reports whether a name is already the name of a file rather than the
+# stem of one.
+isPath = fn(name) {
+	if strings.Contains(name, "/") {
+		return true
+	}
+	if strings.Contains(name, ".so") {
+		return true
+	}
+	if strings.Contains(name, ".dylib") {
+		return true
+	}
+	return strings.Contains(name, ".dll")
+}
+
+# candidates returns the file names a bare library name may have on this
+# system, in the order to try them.
+candidates = fn(name) {
+	os = runtime.OS()
+
+	if os == "windows" {
+		return [name + ".dll", "lib" + name + ".dll"]
+	}
+	if os == "darwin" {
+		return ["lib" + name + ".dylib", name + ".dylib"]
+	}
+
+	# The versioned names first: on glibc the unversioned one is a linker
+	# script, which dlopen will not open.
+	return [
+		"lib" + name + ".so.6",
+		"lib" + name + ".so.1",
+		"lib" + name + ".so",
+		name + ".so"
+	]
+}
+
 # Bind returns an object with one function per signature, named the way the
 # signature names it, which is the short way to take a library whose names are
 # the ones you want to call:
@@ -363,10 +435,10 @@ String = fn(p) {
 # own names, its own error handling or a wrapper around a call writes them out
 # one by one with Func, which is what stdlib/math.tau does.
 Bind = fn(lib, signatures) {
-	# A name rather than a handle: open it, so that the usual case is one call
-	# and not two.
+	# A name rather than a handle: open it the way Lib does, so that the usual
+	# case is one call and not two.
 	if type(lib) == "string" {
-		if failed(lib = dlopen(lib)) {
+		if failed(lib = Lib(lib)) {
 			return lib
 		}
 	}

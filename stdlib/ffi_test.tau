@@ -143,6 +143,27 @@ testing.Main([
 				t.AssertError(ffi.Bind(lib, ["double(double)"]))
 				t.AssertError(ffi.Bind(lib, ["double t_not_there(double)"]))
 			}],
+		["Lib opens a library by the name it has here", fn(t) {
+				runtime = import("runtime")
+				if runtime.OS() != "linux" && runtime.OS() != "darwin" {
+					t.Skip("the names of this system are not in the test")
+					return null
+				}
+
+				# The stem, not the file name: libm.so.6 here, libm.dylib
+				# elsewhere.
+				t.AssertEq(type(ffi.Lib("m")), "native")
+				t.AssertEq(type(ffi.Lib("c")), "native")
+
+				# A name that is already a file name is opened as it stands.
+				t.AssertEq(type(ffi.Lib(if runtime.OS() == "darwin" { "libm.dylib" } else { "libm.so.6" })), "native")
+
+				# And one that is nowhere says what it tried.
+				strings = import("strings")
+				e = ffi.Lib("no-such-library-anywhere")
+				t.AssertError(e)
+				t.AssertEq(strings.Contains(string(e), "tried"), true)
+			}],
 		["memory C owns", fn(t) {
 				p = ffi.Alloc(32)
 				t.AssertEq(type(p), "native")

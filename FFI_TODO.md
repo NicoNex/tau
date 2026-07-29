@@ -7,7 +7,7 @@ design and the checklist.
 
 Two ways to reach C, on purpose, and the second is built out of the first.
 
-**Layer 1, raw.** `plugin` opens a shared object, the dot on a handle is
+**Layer 1, raw.** `dlopen` opens a shared object, the dot on a handle is
 `dlsym`, and a symbol can be called straight away with no declaration at all:
 the arguments go as int64 or double, the result comes back as a machine word
 that you decode yourself with `int(x, bits)` or `float(x, 64)`. Three lines to
@@ -15,16 +15,16 @@ try a library, and it will lie to you if you get the types wrong. That is the
 deal, and the documentation has to say it in those words.
 
 ```tau
-libm = plugin("m")
+libm = dlopen("m")
 println(float(libm.pow(2.0, 10.0), 64))
 ```
 
 **Layer 2, declared.** `stdlib/ffi.tau` gives a symbol a signature written as a
-C declaration. Same `plugin`, same dot, one more step:
+C declaration. Same `dlopen`, same dot, one more step:
 
 ```tau
 ffi  = import("ffi")
-libm = plugin("m")
+libm = dlopen("m")
 
 pow = ffi.Func(libm.pow, "double pow(double, double)")
 println(pow(2.0, 10.0))
@@ -41,7 +41,7 @@ They are what keeps this a layer instead of a mess.
 1. **Layer 1 never learns a job of layer 2.** No C declarations parsed in
    `builtins.c`, no signature strings in a builtin. The primitives take numbers
    and pointers.
-2. **Layer 2 never goes around layer 1.** `ffi.tau` calls `plugin`, uses the
+2. **Layer 2 never goes around layer 1.** `ffi.tau` calls `dlopen`, uses the
    dot for symbols, and gets its memory from the C library through layer 1.
 
 A corollary worth keeping: `ffi.tau` is the proof that layer 1 is complete. If
@@ -53,18 +53,18 @@ Today, all of it:
 
 | what | where |
 | --- | --- |
-| `plugin(path)` — dlopen with a search path | `internal/obj/builtins.c:336`, `internal/obj/plugin.h:41` |
+| `dlopen(path)` — the library, with a search path (`plugin` until the rename) | `internal/obj/builtins.c:336`, `internal/obj/plugin.h:41` |
 | `lib.symbol` — dlsym, gives an `obj_native` pointer | `internal/vm/vm.c:223` (`vm_exec_dot`) |
 | the untyped call — arguments guessed, result a word | `internal/vm/vm.c:769` |
 | `bytes(ptr, n)` — copy `n` bytes out of a pointer | `internal/obj/builtins.c:633` |
 
-What it should gain, all of it in `plugin`:
+What it should gain, all of it in `dlopen`:
 
-- **`plugin(null)`** — the handle of the program itself, `dlopen(NULL)`. This is
+- **`dlopen(null)`** — the handle of the program itself. This is
   the one that matters: it makes `malloc`, `free`, `memcpy`, `strlen`, `dlsym`
   and `dlclose` reachable as ordinary C functions, so layer 2 needs no builtin
   for memory and none for closing a library.
-- **A bare name resolved per system.** `plugin("m")` tries `libm.so`,
+- **A bare name resolved per system.** `dlopen("m")` tries `libm.so`,
   `libm.so.6`, `libm.dylib`, `m.dll`. A name that already looks like a path — it
   has a separator or an extension — is used as it is, which is what keeps the
   bundler working, since a bundle stores a shared object under the name written
@@ -73,38 +73,38 @@ What it should gain, all of it in `plugin`:
   `dlerror` said about the last directory attempted, so a library that exists
   but pulls in a missing dependency reports "no such file". List the paths and
   the reason each one failed.
-- **Flags**, `plugin(path, flags)` for `RTLD_NOW` and `RTLD_GLOBAL`, with the
+- **Flags**, `dlopen(path, flags)` for `RTLD_NOW` and `RTLD_GLOBAL`, with the
   constants in `ffi.tau` so that the builtin takes an integer. Only if
   something actually needs them.
 
 What it must *not* gain: methods. The dot on a handle is `dlsym`, so a field
 named `Close` would be a symbol named `Close`. Conveniences belong to layer 2.
 
-## The seam: `_native`
+## The seam: `cfunc`
 
-One builtin, twenty lines, the only thing that cannot be moved anywhere:
+The second primitive of layer 1, and the only thing in the whole FFI that
+cannot be moved anywhere else:
 
 ```
-_native(sym, ret_code, [arg_codes]) -> a callable
+cfunc(sym, ret_code, [arg_codes]) -> a callable
 ```
 
 It prepares an `ffi_cif` once and returns an `obj_native_fn` the VM knows how
 to call. No text: the codes are integers, and `ffi.tau` is what produces them.
 
-The underscore is the whole of its privacy, and that is on purpose. It is
-plumbing; it stays out of the documentation except where the README explains
-what `ffi.Func` is made of; and writing `_native(sym, 12, [12, 12])` by hand is
-unattractive enough that nobody will.
+It is public, like the rest of layer 1, and it needs no underscore to keep
+people away: writing `cfunc(sym, 12, [12, 12])` by hand is unattractive enough
+on its own, and anyone who does it is in layer 1, where the deal is already
+that you know what you are doing. `ffi.Func` is the same thing with the types
+written in C, and the name says so.
 
-**It cannot be hidden further, and it cannot be moved.** Every alternative was
-looked at:
+**It cannot be moved.** Every alternative was looked at:
 
-- *Take it out of the builtins.* Builtins are resolved by name at compile time,
-  so `ffi.tau` would lose it too: it is ordinary tau source, not a privileged
-  module.
-- *Let the compiler resolve it only under the stdlib.* Policy about file paths
-  inside the compiler, broken for a vendored stdlib and for a bundle compiled
-  elsewhere.
+- *Take it out of the builtins and hand it only to the stdlib.* Builtins are
+  resolved by name at compile time, so `ffi.tau` would lose it too: it is
+  ordinary tau source, not a privileged module. Resolving it only for files
+  under the stdlib would be policy about file paths inside the compiler, broken
+  for a vendored stdlib and for a bundle compiled elsewhere.
 - *Ship it as a shared object of the stdlib.* A `.so` can only hand tau back a
   machine word: the untyped path wraps whatever comes back into `obj_native`
   (`vm.c:902`). Writing the object into a buffer instead only moves the
@@ -118,11 +118,11 @@ looked at:
   an argument slot cannot be filled from tau; and a forwarding closure would
   need varargs, which tau does not have.
 
-Hiding it harder would be theatre in any case. The untyped call of layer 1 is
-public, documented and about to be improved, and it is strictly the more
-dangerous of the two: it calls an arbitrary pointer with guessed types, where
-`_native` at least checks the arity and the argument types and returns an error
-instead of walking off the stack.
+Hiding it would be theatre in any case. The untyped call of layer 1 is public,
+documented and about to be improved, and it is strictly the more dangerous of
+the two: it calls an arbitrary pointer with guessed types, where `cfunc` at
+least checks the arity and the argument types and returns an error instead of
+walking off the stack.
 
 ## Layer 2: `stdlib/ffi.tau`
 
@@ -140,7 +140,7 @@ ffi.Write(p, data)          memcpy into memory C owns.
 ffi.String(p)               a C string read up to its NUL.
 ffi.Read(p, n)              which is bytes(p, n), here so the module reads as
                             one thing.
-ffi.Now, ffi.Global         the flags for plugin, if plugin grows them.
+ffi.Now, ffi.Global         the flags for dlopen, if dlopen grows them.
 ```
 
 The signature is what it already is today, a C declaration: the name of the
@@ -151,7 +151,7 @@ accepted. The parser moves out of C with its behaviour unchanged, and the cases
 in `tests/ffi_test.tau` are what says so.
 
 The memory helpers are four calls into libc through layer 1, opened once with
-`plugin(null)`. They are in the module because otherwise everyone writes the
+`dlopen(null)`. They are in the module because otherwise everyone writes the
 same three lines, not because they are primitives.
 
 ## What to change
@@ -164,16 +164,18 @@ same three lines, not because they are primitives.
    `dispose_native_obj` and `native_str`.
 2. `new_native_obj(void *fn, char ret, const char *codes, size_t n)` — the same
    function without the parsing.
-3. `internal/obj/builtins.c:361` — `native_b` becomes `_native_b`, taking
+3. `internal/obj/builtins.c:361` — `native_b` becomes `cfunc_b`, taking
    `(sym, int, [int])` and saying which code it does not know. It keeps the
    check that passes an error argument straight through, which is what makes a
    failed symbol lookup readable.
-4. `internal/obj/builtins.c:336` — `plugin_b` grows the null handle, the per
-   system names, the better error and the optional flags. The search path stays
-   in `internal/obj/plugin.h`, where it is now.
-5. `internal/obj/object.go` — rename `native` to `_native` in `Builtins`, **in
-   place**. The index of a builtin is what a compiled `.tauc` holds, so nothing
-   may be inserted or moved.
+4. `internal/obj/builtins.c:336` — `plugin_b` becomes `dlopen_b` and grows the
+   null handle, the per system names, the better error and the optional flags.
+   The search path stays where it is, in `internal/obj/plugin.h`, which should
+   be renamed with it.
+5. `internal/obj/object.go` — in `Builtins`, `plugin` becomes `dlopen` and
+   `native` becomes `cfunc`, both **renamed in place**. The index of a builtin
+   is what a compiled `.tauc` holds, so nothing may be inserted or moved: a
+   bundle built before the rename keeps running afterwards.
 6. `internal/vm/vm.c:223` and `:769` — untouched. The dot is `dlsym` and the
    untyped call is layer 1, which stays exactly as it is.
 
@@ -182,7 +184,7 @@ same three lines, not because they are primitives.
 7. `stdlib/ffi.tau` — new. The signature parser (about 120 lines), `Func`,
    `Bind`, `Sig`, the codes, the memory helpers. It may import `strings`, which
    pulls only `buffer`; it must not import `syscall`, `os`, or anything else
-   that opens a plugin of its own.
+   that opens a library of its own.
 8. `stdlib/ffi_test.tau` — new: the cases of `tests/ffi_test.tau` rewritten
    against `ffi.Func`, plus the ones that only exist here — a signature that
    does not parse, `Bind` over several functions, an `Alloc`/`Write`/`String`
@@ -198,14 +200,17 @@ same three lines, not because they are primitives.
 
 ### Everything else
 
-11. `bundle.go:26` — `pluginRe` keeps working, since `plugin` does not change
-    name and layer 2 opens nothing. The one thing to check is that the per
-    system names never change the name a bundle stores, which is why a name
-    that looks like a path is passed through untouched.
+11. `bundle.go:26` — `pluginRe` looks for `plugin("...")` in the source to
+    decide which shared objects a bundle carries. It has to look for
+    `dlopen("...")` instead, and it has to change in the same commit as the
+    builtin or every bundled program stops finding its library. Layer 2 adds
+    nothing to look for, since it opens nothing of its own. The other thing to
+    keep true: the per system names must never change the name a bundle stores,
+    which is why a name that looks like a path is passed through untouched.
 12. `README.md` — the "C libraries" section becomes two: layer 1 as the quick
     and unsafe way, with `int(x, bits)` shown and the trade said plainly, and
-    layer 2 as the one to use. `_native` appears only as what `ffi.Func` is
-    made of.
+    layer 2 as the one to use. `cfunc` is shown once, where `ffi.Func` is
+    explained, and not in the list of things to reach for.
 13. The website, `~/Documenti/tau-website`: `src/tooling.md` (the "Plugins"
     section, same split), `src/stdlib.md` (a section for `ffi`), and
     `samples/ffi_native.tau`.
@@ -216,11 +221,15 @@ Every step leaves the tree working.
 
 1. `stdlib/ffi.tau` and its tests, calling the `native` that exists today. The
    new way is available, nothing has changed.
-2. Move the parser out of `internal/obj/ffi.c`; `native` becomes `_native` and
+2. Move the parser out of `internal/obj/ffi.c`; `native` becomes `cfunc` and
    takes codes. `ffi.tau` is the only caller, so this is where the old spelling
    stops working — and the old spelling is one day old and in no release.
-3. `plugin(null)`, then the memory helpers in `ffi.tau` on top of it.
-4. The per system names and the better error in `plugin`.
+3. `plugin` becomes `dlopen`, in the builtins, in the bundler regexp and in the
+   three stdlib modules that open one, in a single commit. This is the breaking
+   one: it goes in a release of its own and in the changelog, since `plugin` is
+   what every program that opens a library has written until now.
+4. `dlopen(null)`, then the memory helpers in `ffi.tau` on top of it, then the
+   per system names and the better error.
 5. `math.tau` to layer 2, tests green.
 6. `syscall.tau` and `runtime.tau`, one commit each, if and when it is worth
    it.
@@ -228,7 +237,7 @@ Every step leaves the tree working.
 
 ## Open questions
 
-- **Flags.** `RTLD_NOW` and `RTLD_GLOBAL` are two lines in `plugin_b` and a
+- **Flags.** `RTLD_NOW` and `RTLD_GLOBAL` are two lines in `dlopen_b` and a
   constant each in `ffi.tau`. Nothing needs them yet. Add them when something
   does.
 - **Callbacks.** A C function that takes a function pointer cannot be called at
@@ -239,6 +248,7 @@ Every step leaves the tree working.
 - **Structs by value**, in and out. libffi builds a type at runtime for them,
   and `ffi.Struct([codes])` is the natural spelling. A change of its own; today
   a struct is read with `bytes(ptr, n)` and written with `ffi.Write`.
-- **Windows.** `plugin_open` splits `TAUPATH` on `:` and reads `HOME`, neither
+- **Windows.** `plugin_open` (`dl_open` after the rename) splits `TAUPATH` on
+  `:` and reads `HOME`, neither
   of which is right there. Whoever writes the per system names will be looking
   at exactly that code.

@@ -1,11 +1,11 @@
 # math - the usual functions on floats.
 #
-# Everything returns a float, whatever it was given, so an integer handed to
-# one of these comes back as a float and stays one through the arithmetic that
-# follows.
+# Everything returns a float, whatever it was given: an integer handed to one
+# of these is converted on the way into C and comes back a float, and stays
+# one through the arithmetic that follows.
 #
-# The functions are the ones of the C math library, called with their real
-# signatures through the ffi module: no shared object of our own in between,
+# The functions are the ones of the C math library, declared and called
+# through the ffi module. There is no shared object of our own in between,
 # since the interpreter is already linked against libm and dlopen(null) is the
 # handle of the program itself.
 
@@ -25,69 +25,30 @@ Ln10 = 2.302585092994046
 MaxInt = 9223372036854775807
 MinInt = -9223372036854775807 - 1
 
-# The functions themselves, taken from the library by their declarations.
-c = ffi.Bind(libm, [
-		"double sqrt(double)",
-		"double cbrt(double)",
-		"double exp(double)",
-		"double log(double)",
-		"double log2(double)",
-		"double log10(double)",
-		"double sin(double)",
-		"double cos(double)",
-		"double tan(double)",
-		"double asin(double)",
-		"double acos(double)",
-		"double atan(double)",
-		"double sinh(double)",
-		"double cosh(double)",
-		"double tanh(double)",
-		"double floor(double)",
-		"double ceil(double)",
-		"double round(double)",
-		"double trunc(double)",
-		"double pow(double, double)",
-		"double atan2(double, double)",
-		"double fmod(double, double)",
-		"double hypot(double, double)",
-		"int isnan(double)",
-		"int isinf(double)"
-	])
+Sqrt = ffi.Func(libm.sqrt, "double sqrt(double)")
+Cbrt = ffi.Func(libm.cbrt, "double cbrt(double)")
+Exp = ffi.Func(libm.exp, "double exp(double)")
+Log = ffi.Func(libm.log, "double log(double)")
+Log2 = ffi.Func(libm.log2, "double log2(double)")
+Log10 = ffi.Func(libm.log10, "double log10(double)")
+Sin = ffi.Func(libm.sin, "double sin(double)")
+Cos = ffi.Func(libm.cos, "double cos(double)")
+Tan = ffi.Func(libm.tan, "double tan(double)")
+Asin = ffi.Func(libm.asin, "double asin(double)")
+Acos = ffi.Func(libm.acos, "double acos(double)")
+Atan = ffi.Func(libm.atan, "double atan(double)")
+Sinh = ffi.Func(libm.sinh, "double sinh(double)")
+Cosh = ffi.Func(libm.cosh, "double cosh(double)")
+Tanh = ffi.Func(libm.tanh, "double tanh(double)")
+Floor = ffi.Func(libm.floor, "double floor(double)")
+Ceil = ffi.Func(libm.ceil, "double ceil(double)")
+Round = ffi.Func(libm.round, "double round(double)")
+Trunc = ffi.Func(libm.trunc, "double trunc(double)")
 
-# f1 and f2 take whatever they are given as a float, so that Sqrt(2) works as
-# well as Sqrt(2.0).
-f1 = fn(fun) {
-	return fn(x) { fun(float(x)) }
-}
-
-f2 = fn(fun) {
-	return fn(x, y) { fun(float(x), float(y)) }
-}
-
-Sqrt = f1(c.sqrt)
-Cbrt = f1(c.cbrt)
-Exp = f1(c.exp)
-Log = f1(c.log)
-Log2 = f1(c.log2)
-Log10 = f1(c.log10)
-Sin = f1(c.sin)
-Cos = f1(c.cos)
-Tan = f1(c.tan)
-Asin = f1(c.asin)
-Acos = f1(c.acos)
-Atan = f1(c.atan)
-Sinh = f1(c.sinh)
-Cosh = f1(c.cosh)
-Tanh = f1(c.tanh)
-Floor = f1(c.floor)
-Ceil = f1(c.ceil)
-Round = f1(c.round)
-Trunc = f1(c.trunc)
-
-Pow = f2(c.pow)
-Atan2 = f2(c.atan2)
-Mod = f2(c.fmod)
-Hypot = f2(c.hypot)
+Pow = ffi.Func(libm.pow, "double pow(double, double)")
+Atan2 = ffi.Func(libm.atan2, "double atan2(double, double)")
+Mod = ffi.Func(libm.fmod, "double fmod(double, double)")
+Hypot = ffi.Func(libm.hypot, "double hypot(double, double)")
 
 # Abs is the absolute value, an integer staying an integer: it is the one case
 # where going through a float would lose the largest values.
@@ -105,8 +66,14 @@ Inf = fn(sign) {
 # NaN returns a value that is not a number, and IsNaN is how to recognise one:
 # != does not follow IEEE here, so x != x is not the test it is in C.
 NaN = fn() { 0.0 / 0.0 }
-IsNaN = fn(x) { c.isnan(float(x)) != 0 }
-IsInf = fn(x) { c.isinf(float(x)) != 0 }
+
+# The two that C answers with an int, which here is a question with a yes or a
+# no.
+isnan = ffi.Func(libm.isnan, "int isnan(double)")
+isinf = ffi.Func(libm.isinf, "int isinf(double)")
+
+IsNaN = fn(x) { isnan(x) != 0 }
+IsInf = fn(x) { isinf(x) != 0 }
 
 Min = fn(a, b) { if a < b { a } else { b } }
 Max = fn(a, b) { if a > b { a } else { b } }

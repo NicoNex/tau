@@ -5,75 +5,90 @@ testing = import("testing")
 lib = plugin("ffi/libffitest.so")
 
 testing.Main([
-		["floats come back as floats", fn(t) {
-				add = native(lib.t_add_d, "d(dd)")
+		["a signature is a C declaration", fn(t) {
+				# The name of the function and the names of the arguments may
+				# be there, so a line out of a header works as it is.
+				add = native(lib.t_add_d, "double t_add_d(double a, double b)")
 				t.AssertEq(add(1.5, 2.25), 3.75)
 
-				addf = native(lib.t_add_f, "f(ff)")
+				# The exact width names work too, spelled either way, and the
+				# room around them is room.
+				t.AssertEq(native(lib.t_add_i, " int32 ( int32 , int32 ) ")(2, 3), 5)
+				t.AssertEq(native(lib.t_add_i, "int32_t(int32_t, int32_t)")(2, 3), 5)
+			}],
+		["floats come back as floats", fn(t) {
+				add = native(lib.t_add_d, "double(double, double)")
+				t.AssertEq(add(1.5, 2.25), 3.75)
+
+				addf = native(lib.t_add_f, "float(float, float)")
 				t.AssertEq(addf(1.5, 2.25), 3.75)
 			}],
 		["narrow integers keep their width", fn(t) {
-				addi = native(lib.t_add_i, "i(ii)")
+				addi = native(lib.t_add_i, "int32_t(int32_t, int32_t)")
 				t.AssertEq(addi(2, 3), 5)
 				# int32 arithmetic wraps where int64 would not.
 				t.AssertEq(addi(0x7fffffff, 1), -0x80000000)
 
-				addu = native(lib.t_add_u, "I(II)")
+				addu = native(lib.t_add_u, "unsigned int(unsigned int, unsigned int)")
 				t.AssertEq(addu(0xffffffff, 1), 0)
 
-				neg = native(lib.t_neg_c, "c(c)")
+				neg = native(lib.t_neg_c, "char(char)")
 				t.AssertEq(neg(5), -5)
 
-				adds = native(lib.t_add_s, "s(ss)")
+				adds = native(lib.t_add_s, "short(short, short)")
 				t.AssertEq(adds(0x7fff, 1), -0x8000)
 
-				addl = native(lib.t_add_l, "l(ll)")
+				addl = native(lib.t_add_l, "long(long, long)")
 				t.AssertEq(addl(1, 2), 3)
 			}],
 		["bools and void", fn(t) {
-				not = native(lib.t_not_b, "b(b)")
+				not = native(lib.t_not_b, "bool(bool)")
 				t.AssertEq(not(false), true)
 				t.AssertEq(not(true), false)
 
-				bump = native(lib.t_bump, "v(l)")
-				counter = native(lib.t_counter, "l()")
+				bump = native(lib.t_bump, "void(int64_t)")
+				counter = native(lib.t_counter, "int64_t(void)")
 				t.AssertEq(bump(3), null)
 				bump(4)
 				t.AssertEq(counter(), 7)
 			}],
 		["strings in and out", fn(t) {
-				greet = native(lib.t_greet, "z()")
+				greet = native(lib.t_greet, "char *(void)")
 				t.AssertEq(greet(), "ciao")
 
-				nul = native(lib.t_nullstr, "z()")
+				nul = native(lib.t_nullstr, "char *(void)")
 				t.AssertEq(nul(), null)
 
-				slen = native(lib.t_strlen, "l(z)")
+				slen = native(lib.t_strlen, "long strlen(const char *s)")
 				t.AssertEq(slen("hello"), 5)
 				t.AssertEq(slen(null), -1)
 			}],
 		["pointers and memory", fn(t) {
-				buf = native(lib.t_buf, "p()")
+				buf = native(lib.t_buf, "void *(void)")
 				t.AssertEq(bytes(buf(), 4), bytes([1, 2, 3, 4]))
 
 				# A returned struct is read field by field out of its bytes.
-				point = native(lib.t_point, "p()")
+				point = native(lib.t_point, "void *(void)")
 				b = bytes(point(), 8)
 				t.AssertEq(b[0], 7)
 				t.AssertEq(b[4], 255)
 
 				# An out parameter: tau owns the buffer, C fills it.
-				fill = native(lib.t_fill, "v(piC)")
+				fill = native(lib.t_fill, "void t_fill(void *out, int n, unsigned char v)")
 				out = bytes(3)
 				fill(out, 3, 9)
 				t.AssertEq(out, bytes([9, 9, 9]))
 			}],
 		["mistakes are values, not crashes", fn(t) {
-				t.AssertEq(failed(native(lib.no_such_symbol, "i()")), true)
-				t.AssertEq(failed(native(lib.t_add_i, "i(iq)")), true)
-				t.AssertEq(failed(native(lib.t_add_i, "ii")), true)
+				t.AssertEq(failed(native(lib.no_such_symbol, "int(void)")), true)
+				t.AssertEq(failed(native(lib.t_add_i, "int(int, banana)")), true)
+				t.AssertEq(failed(native(lib.t_add_i, "int int")), true)
+				# The letters the signatures used to be written in.
+				t.AssertEq(failed(native(lib.t_add_i, "i(ii)")), true)
+				# Variadic, which a prepared call cannot be.
+				t.AssertEq(failed(native(lib.t_add_i, "int f(int, ...)")), true)
 
-				addi = native(lib.t_add_i, "i(ii)")
+				addi = native(lib.t_add_i, "int32_t(int32_t, int32_t)")
 				t.AssertEq(failed(addi(1)), true)
 				t.AssertEq(failed(addi(1, "two")), true)
 

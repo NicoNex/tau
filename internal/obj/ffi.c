@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 #include "object.h"
 #include "libffi/include/ffi.h"
 
@@ -21,8 +22,8 @@ struct native {
 	ffi_type *types[];
 };
 
-// The letters of a signature. Lowercase is signed, uppercase is the unsigned
-// of the same width, which is the only pun in the whole notation.
+// The codes a signature is kept in, one per type. They are internal: what a
+// signature is written in is C.
 //
 //   v void (result only)   f float
 //   b bool                 d double
@@ -50,45 +51,244 @@ static ffi_type *type_of(char c) {
 	}
 }
 
-// new_native_obj reads a signature written as "ret(args)", e.g. "d(dd)" for
-// double f(double, double) or "v()" for void f(void), and prepares the call
-// once and for all.
+// The code of an integer type of a given width, so that the C types whose
+// width depends on the machine are read with sizeof rather than assumed.
+static char int_code(size_t width, int is_unsigned) {
+	switch (width) {
+	case 1:  return is_unsigned ? 'C' : 'c';
+	case 2:  return is_unsigned ? 'S' : 's';
+	case 4:  return is_unsigned ? 'I' : 'i';
+	default: return is_unsigned ? 'L' : 'l';
+	}
+}
+
+// The type names a signature may use: the ones C writes, the exact width ones
+// of stdint.h, and the same widths spelled the way tau spells its own types.
+// Everything is a name here, so a signature can be pasted out of a header.
+static char code_of_name(const char *t) {
+	if (!strcmp(t, "void"))                     return 'v';
+	if (!strcmp(t, "bool") || !strcmp(t, "_Bool")) return 'b';
+	if (!strcmp(t, "float"))                    return 'f';
+	if (!strcmp(t, "double"))                   return 'd';
+	if (!strcmp(t, "string"))                   return 'z';
+	if (!strcmp(t, "pointer"))                  return 'p';
+
+	// The widths C leaves to the machine.
+	if (!strcmp(t, "char"))                     return int_code(sizeof(char), 0);
+	if (!strcmp(t, "signed char"))              return int_code(sizeof(char), 0);
+	if (!strcmp(t, "unsigned char"))            return int_code(sizeof(char), 1);
+	if (!strcmp(t, "short") || !strcmp(t, "short int"))
+		return int_code(sizeof(short), 0);
+	if (!strcmp(t, "unsigned short") || !strcmp(t, "unsigned short int"))
+		return int_code(sizeof(short), 1);
+	if (!strcmp(t, "int") || !strcmp(t, "signed") || !strcmp(t, "signed int"))
+		return int_code(sizeof(int), 0);
+	if (!strcmp(t, "unsigned") || !strcmp(t, "unsigned int"))
+		return int_code(sizeof(int), 1);
+	if (!strcmp(t, "long") || !strcmp(t, "long int"))
+		return int_code(sizeof(long), 0);
+	if (!strcmp(t, "unsigned long") || !strcmp(t, "unsigned long int"))
+		return int_code(sizeof(long), 1);
+	if (!strcmp(t, "long long") || !strcmp(t, "long long int"))
+		return int_code(sizeof(long long), 0);
+	if (!strcmp(t, "unsigned long long") || !strcmp(t, "unsigned long long int"))
+		return int_code(sizeof(long long), 1);
+	if (!strcmp(t, "size_t"))                   return int_code(sizeof(size_t), 1);
+	if (!strcmp(t, "ssize_t"))                  return int_code(sizeof(size_t), 0);
+	if (!strcmp(t, "intptr_t"))                 return int_code(sizeof(void *), 0);
+	if (!strcmp(t, "uintptr_t"))                return int_code(sizeof(void *), 1);
+
+	// The widths that are the width whatever the machine is.
+	if (!strcmp(t, "int8_t")   || !strcmp(t, "int8"))   return 'c';
+	if (!strcmp(t, "uint8_t")  || !strcmp(t, "uint8"))  return 'C';
+	if (!strcmp(t, "int16_t")  || !strcmp(t, "int16"))  return 's';
+	if (!strcmp(t, "uint16_t") || !strcmp(t, "uint16")) return 'S';
+	if (!strcmp(t, "int32_t")  || !strcmp(t, "int32"))  return 'i';
+	if (!strcmp(t, "uint32_t") || !strcmp(t, "uint32")) return 'I';
+	if (!strcmp(t, "int64_t")  || !strcmp(t, "int64"))  return 'l';
+	if (!strcmp(t, "uint64_t") || !strcmp(t, "uint64")) return 'L';
+	if (!strcmp(t, "float32"))                          return 'f';
+	if (!strcmp(t, "float64"))                          return 'd';
+
+	return 0;
+}
+
+// A word of a declaration that says nothing about the type it is made of.
+static int is_qualifier(const char *w) {
+	return !strcmp(w, "const") || !strcmp(w, "volatile") || !strcmp(w, "restrict")
+		|| !strcmp(w, "__restrict") || !strcmp(w, "extern") || !strcmp(w, "static");
+}
+
+// code_of_decl reads one declaration - a return type, or a parameter, with or
+// without the name that follows it - and gives back the code of its type.
+//
+// The name is dropped: in "char *buf" the type is char * and buf is a word
+// only a person needs. A star anywhere makes it a pointer, and a char * is
+// the one pointer that travels as a tau string.
+static char code_of_decl(const char *decl, size_t len, char *err, size_t errlen) {
+	char words[8][32];
+	int nwords = 0, stars = 0;
+	size_t i = 0;
+
+	while (i < len) {
+		char c = decl[i];
+
+		if (c == ' ' || c == '\t' || c == '\n') { i++; continue; }
+		if (c == '*') { stars++; i++; continue; }
+		if (c == '[') {
+			// An array parameter is a pointer, and what follows the bracket
+			// says nothing about the call.
+			stars++;
+			while (i < len && decl[i] != ']') i++;
+			i++;
+			continue;
+		}
+
+		if (!isalnum((unsigned char) c) && c != '_') {
+			snprintf(err, errlen, "'%c' has no place in a type", c);
+			return 0;
+		}
+
+		size_t start = i;
+		while (i < len && (isalnum((unsigned char) decl[i]) || decl[i] == '_')) i++;
+
+		size_t wlen = i - start;
+		if (wlen >= sizeof(words[0])) {
+			snprintf(err, errlen, "\"%.*s\" is not a type", (int) wlen, decl + start);
+			return 0;
+		}
+		if (nwords == 8) {
+			snprintf(err, errlen, "too many words for one type");
+			return 0;
+		}
+
+		memcpy(words[nwords], decl + start, wlen);
+		words[nwords][wlen] = '\0';
+		if (!is_qualifier(words[nwords])) nwords++;
+	}
+
+	if (nwords == 0) {
+		snprintf(err, errlen, "there is no type here");
+		return 0;
+	}
+
+	// The last word is the name of the thing being declared unless it is
+	// part of the type: "unsigned long" keeps both words, "unsigned long n"
+	// drops the third.
+	char joined[8 * 32];
+	int used = nwords;
+	for (;;) {
+		joined[0] = '\0';
+		for (int w = 0; w < used; w++) {
+			if (w > 0) strcat(joined, " ");
+			strcat(joined, words[w]);
+		}
+
+		if (code_of_name(joined) != 0) break;
+		if (used == 1) {
+			snprintf(err, errlen, "\"%s\" is not a type this understands", joined);
+			return 0;
+		}
+		used--;
+	}
+
+	char code = code_of_name(joined);
+
+	if (stars > 0) {
+		// char * is a string, everything else is an address.
+		if (stars == 1 && (!strcmp(joined, "char") || !strcmp(joined, "signed char"))) {
+			return 'z';
+		}
+		return 'p';
+	}
+	if (code == 'z') return 'z';
+	return code;
+}
+
+// new_native_obj reads the signature of a C function and prepares the call
+// once and for all. It is written the way C writes it, and the name of the
+// function and the names of the arguments may be there or not:
+//
+//	native(libm.pow, "double(double, double)")
+//	native(libc.snprintf, "int snprintf(char *buf, size_t n, const char *fmt, double x)")
+//	native(libc.fflush, "void(void *)")
+//
+// The exact width names of stdint.h work as well, spelled either way:
+// uint64_t and uint64, float64 and double.
 struct object new_native_obj(void *fn, char *sig) {
-	char *open = strchr(sig, '(');
+	char err[128];
+
+	// Room around the declaration is room, here as it is in C.
+	while (isspace((unsigned char) *sig)) sig++;
 	size_t len = strlen(sig);
+	while (len > 0 && isspace((unsigned char) sig[len-1])) len--;
 
-	if (open == NULL || open != sig+1 || sig[len-1] != ')') {
-		return errorf("native: signature must be written as \"ret(args)\", got \"%s\"", sig);
+	char *open = memchr(sig, '(', len);
+
+	if (open == NULL || len == 0 || sig[len-1] != ')') {
+		return errorf(
+			"native: a signature is a C declaration, \"double(double, double)\", got \"%s\"",
+			sig
+		);
 	}
-	if (type_of(sig[0]) == NULL) {
-		return errorf("native: unknown type '%c' in signature \"%s\"", sig[0], sig);
+	if (memchr(sig, '.', len) != NULL) {
+		return errorf(
+			"native: \"%.*s\" is variadic, say the types of the arguments this call passes instead",
+			(int) len, sig
+		);
 	}
 
+	char ret = code_of_decl(sig, open - sig, err, sizeof(err));
+	if (ret == 0) {
+		return errorf("native: in the result of \"%.*s\": %s", (int) len, sig, err);
+	}
+
+	// The arguments, one declaration per comma. "void" on its own is C for
+	// none at all, and so is nothing.
 	char *argsig = open + 1;
-	size_t nargs = len - 3;
+	size_t arglen = (sig + len - 1) - argsig;
+	char codes[256];
+	size_t nargs = 0;
 
-	if (nargs > 255) {
-		return errorf("native: too many arguments in signature \"%s\"", sig);
+	for (size_t i = 0, start = 0; i <= arglen; i++) {
+		if (i < arglen && sig[argsig - sig + i] != ',') continue;
+
+		size_t plen = i - start;
+		char code = code_of_decl(argsig + start, plen, err, sizeof(err));
+
+		// Nothing between the parentheses at all.
+		if (code == 0 && nargs == 0 && i == arglen && plen == 0) break;
+
+		if (code == 0) {
+			return errorf("native: in argument %lu of \"%.*s\": %s", nargs+1, (int) len, sig, err);
+		}
+		if (code == 'v') {
+			if (nargs == 0 && i == arglen) break; // f(void)
+			return errorf("native: argument %lu of \"%.*s\" cannot be void", nargs+1, (int) len, sig);
+		}
+		if (nargs == 255) {
+			return errorf("native: too many arguments in \"%.*s\"", (int) len, sig);
+		}
+
+		codes[nargs++] = code;
+		start = i + 1;
 	}
 
 	struct native *n = malloc(sizeof(struct native) + nargs * sizeof(ffi_type *));
 
 	for (size_t i = 0; i < nargs; i++) {
-		if (argsig[i] == 'v' || (n->types[i] = type_of(argsig[i])) == NULL) {
-			free(n);
-			return errorf("native: unknown type '%c' in signature \"%s\"", argsig[i], sig);
-		}
+		n->types[i] = type_of(codes[i]);
 	}
 
 	n->fn = fn;
-	n->ret = sig[0];
+	n->ret = ret;
 	n->nargs = nargs;
-	n->args = strndup(argsig, nargs);
+	n->args = strndup(codes, nargs);
 
-	if (ffi_prep_cif(&n->cif, FFI_DEFAULT_ABI, nargs, type_of(sig[0]), n->types) != FFI_OK) {
+	if (ffi_prep_cif(&n->cif, FFI_DEFAULT_ABI, nargs, type_of(ret), n->types) != FFI_OK) {
 		free(n->args);
 		free(n);
-		return errorf("native: cannot prepare a call with signature \"%s\"", sig);
+		return errorf("native: cannot prepare a call with signature \"%.*s\"", (int) len, sig);
 	}
 
 	return (struct object) {

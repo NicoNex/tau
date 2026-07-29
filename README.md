@@ -551,10 +551,13 @@ gcc -shared -o vec.so -fPIC vec.c
 ```
 
 Without help the VM has to guess the argument types from the tau values it was
-given, and can only ever bring back a machine word. `native(fn, "ret(args)")`
-says what the function really looks like, one letter per C type, and from then
-on the arguments travel as those types and the result comes back as a tau
-value.
+given, and can only ever bring back a machine word. `native(fn, signature)`
+says what the function really looks like, and from then on the arguments travel
+as those types and the result comes back as a tau value.
+
+A signature is a C declaration. The name of the function and the names of the
+arguments may be there or not, so a line copied out of a header works as it
+stands.
 
 ```c
 // vec.c
@@ -576,9 +579,9 @@ void *fill(int n) {
 ```python
 lib = plugin("./vec.so")
 
-dot = native(lib.dot, "d(dd)")
-greet = native(lib.greet, "z(z)")
-fill = native(lib.fill, "p(i)")
+dot = native(lib.dot, "double(double, double)")
+greet = native(lib.greet, "const char *greet(const char *name)")
+fill = native(lib.fill, "void *(int)")
 
 println(dot(1.5, 4))
 println(greet("tau"))
@@ -593,16 +596,24 @@ xxxx
 <native>
 ```
 
-The letters, lowercase signed and uppercase the unsigned of the same width:
+The types are the ones C writes, the exact width ones of `stdint.h`, and the
+same widths spelled the way tau spells its own:
 
-| letter | C type | letter | C type |
-|---|---|---|---|
-| `v` | void, as a result only | `f` | float |
-| `b` | bool | `d` | double |
-| `c` `C` | int8, uint8 | `p` | pointer, kept as a native value |
-| `s` `S` | int16, uint16 | `z` | `char *`, as a tau string |
-| `i` `I` | int32, uint32 | | |
-| `l` `L` | int64, uint64 | | |
+| written | is |
+|---|---|
+| `void` | nothing, as a result, and no arguments as a parameter list |
+| `bool`, `_Bool` | a boolean |
+| `char`, `short`, `int`, `long`, `long long` | the signed integer of that width on this machine, `unsigned` in front for the other sign |
+| `size_t`, `ssize_t`, `intptr_t`, `uintptr_t` | the width they have on this machine |
+| `int8_t` … `uint64_t`, `int8` … `uint64` | exactly that many bits |
+| `float`, `double`, `float32`, `float64` | a float |
+| `char *` | a tau string, NUL terminated on the way out and copied on the way back |
+| any other `T *`, `T []`, `pointer` | an address: a `bytes` buffer, a string, a native value or an integer |
+
+`const`, `volatile` and `restrict` are read and ignored, as is the room around
+anything. A variadic signature is refused, since the call is prepared once and
+a `...` says nothing about what will be passed: write the types this particular
+call passes, `int(char *, double)` rather than `int(const char *, ...)`.
 
 The call is prepared once, when `native` is given the signature, not on every
 call. `native` passes an error through untouched, so a failed symbol lookup

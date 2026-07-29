@@ -2,19 +2,87 @@
 # Provides a cross-platform abstraction layer for system calls
 # Similar to Go's syscall package
 
+ffi = import("ffi")
+
 # The library is looked up next to the installed stdlib, dlopen() falls back
 # to ~/.local/lib/tau and /lib/tau when the relative path doesn't exist.
-sys = dlopen("syscall/libsyscall.so")
+lib = dlopen("syscall/libsyscall.so")
+
+# Every call is declared, so that a result comes back the width it really has
+# rather than as a machine word to be read with int(x, 64) - and forgetting
+# the 64 truncated it to an int of C, which is what a size or a millisecond
+# does not fit in.
+sys = ffi.Bind(lib, [
+		"int64_t sys_open(const char *path, int64_t flags, int64_t mode)",
+		"int64_t sys_close(int64_t fd)",
+		"int64_t sys_read(int64_t fd, void *buf, int64_t count)",
+		"int64_t sys_write(int64_t fd, const void *buf, int64_t count)",
+		"int64_t sys_lseek(int64_t fd, int64_t offset, int64_t whence)",
+		"int64_t sys_unlink(const char *path)",
+		"int64_t sys_mkdir(const char *path, int64_t mode)",
+		"int64_t sys_rmdir(const char *path)",
+		"int64_t sys_chmod(const char *path, int64_t mode)",
+		"int64_t sys_access(const char *path, int64_t mode)",
+		"int64_t sys_socket(int64_t domain, int64_t type, int64_t protocol)",
+		"int64_t sys_bind(int64_t sockfd, const void *addr, int64_t addrlen)",
+		"int64_t sys_listen(int64_t sockfd, int64_t backlog)",
+		"int64_t sys_accept(int64_t sockfd, void *addr, void *addrlen)",
+		"int64_t sys_connect(int64_t sockfd, const void *addr, int64_t addrlen)",
+		"int64_t sys_send(int64_t sockfd, const void *buf, int64_t len, int64_t flags)",
+		"int64_t sys_recv(int64_t sockfd, void *buf, int64_t len, int64_t flags)",
+		"int64_t sys_sendto(int64_t sockfd, const void *buf, int64_t len, int64_t flags, const void *dest_addr, int64_t addrlen)",
+		"int64_t sys_recvfrom(int64_t sockfd, void *buf, int64_t len, int64_t flags, void *src_addr, void *addrlen)",
+		"int64_t sys_setsockopt(int64_t sockfd, int64_t level, int64_t optname, const void *optval, int64_t optlen)",
+		"int64_t sys_getsockopt(int64_t sockfd, int64_t level, int64_t optname, void *optval, void *optlen)",
+		"int64_t sys_shutdown(int64_t sockfd, int64_t how)",
+		"uint16_t sys_htons(uint16_t hostshort)",
+		"uint16_t sys_ntohs(uint16_t netshort)",
+		"uint32_t sys_htonl(uint32_t hostlong)",
+		"uint32_t sys_ntohl(uint32_t netlong)",
+		"uint32_t sys_inet_addr(const char *cp)",
+		"int64_t sys_sockaddr_in(void *buf, const char *ip, int64_t port)",
+		"int64_t sys_sockaddr_in_size()",
+		"int64_t sys_sockaddr_port(const void *buf)",
+		"int64_t sys_sockaddr_ip(const void *buf, void *out, int64_t outlen)",
+		"int64_t sys_int32(void *buf, int64_t v)",
+		"int64_t sys_int32_size()",
+		"int64_t sys_timeval(void *buf, int64_t ms)",
+		"int64_t sys_timeval_size()",
+		"int64_t sys_time_unix()",
+		"int64_t sys_time_ms()",
+		"int64_t sys_time_mono_ms()",
+		"int64_t sys_sleep_ms(int64_t ms)",
+		"int64_t sys_strerror(int64_t err, void *out, int64_t outlen)",
+		"int64_t sys_errno()",
+		"void sys_set_errno(int64_t err)",
+		"int64_t sys_getenv(const char *name, void *out, int64_t outlen)",
+		"int64_t sys_setenv(const char *name, const char *value, int64_t overwrite)",
+		"int64_t sys_unsetenv(const char *name)",
+		"int64_t sys_stat_size(const char *path)",
+		"int64_t sys_stat_mode(const char *path)",
+		"int64_t sys_stat_mtime(const char *path)",
+		"int64_t sys_stat_isdir(const char *path)",
+		"int64_t sys_rename(const char *from, const char *to)",
+		"int64_t sys_getcwd(void *out, int64_t outlen)",
+		"int64_t sys_chdir(const char *path)",
+		"int64_t sys_opendir(const char *path)",
+		"int64_t sys_readdir(int64_t dir, void *out, int64_t outlen)",
+		"int64_t sys_closedir(int64_t dir)",
+		"int64_t sys_tz_offset(int64_t t)",
+		"int64_t sys_tz_name(int64_t t, void *out, int64_t outlen)",
+		"int64_t sys_spawn_status(void)",
+		"int64_t sys_spawn(const void *blob, int64_t bloblen, int64_t nargs, const void *in, int64_t inlen, void *out, int64_t outcap, int64_t flags)"
+	])
 
 # ========== Error Handling ==========
 
-Errno = fn() { int(sys.sys_errno()) }
+Errno = fn() { sys.sys_errno() }
 SetErrno = fn(err) { sys.sys_set_errno(err) }
 
 # Strerror returns the message of an errno value.
 Strerror = fn(err) {
 	buf = bytes(256)
-	n = int(sys.sys_strerror(err, buf, 256))
+	n = sys.sys_strerror(err, buf, 256)
 	return string(slice(buf, 0, n))
 }
 
@@ -109,7 +177,7 @@ SOMAXCONN = 128
 # ========== File Operations ==========
 
 Open = fn(path, flags, mode) {
-	result = int(sys.sys_open(path, flags, mode))
+	result = sys.sys_open(path, flags, mode)
 	if result < 0 {
 		return error("open failed: errno {Errno()}")
 	}
@@ -117,7 +185,7 @@ Open = fn(path, flags, mode) {
 }
 
 Close = fn(fd) {
-	result = int(sys.sys_close(fd))
+	result = sys.sys_close(fd)
 	if result < 0 {
 		return error("close failed: errno {Errno()}")
 	}
@@ -125,7 +193,7 @@ Close = fn(fd) {
 }
 
 Read = fn(fd, buf, count) {
-	result = int(sys.sys_read(fd, buf, count))
+	result = sys.sys_read(fd, buf, count)
 	if result < 0 {
 		return error("read failed: errno {Errno()}")
 	}
@@ -133,7 +201,7 @@ Read = fn(fd, buf, count) {
 }
 
 Write = fn(fd, buf, count) {
-	result = int(sys.sys_write(fd, buf, count))
+	result = sys.sys_write(fd, buf, count)
 	if result < 0 {
 		return error("write failed: errno {Errno()}")
 	}
@@ -141,7 +209,7 @@ Write = fn(fd, buf, count) {
 }
 
 Lseek = fn(fd, offset, whence) {
-	result = int(sys.sys_lseek(fd, offset, whence), 64)
+	result = sys.sys_lseek(fd, offset, whence)
 	if result < 0 {
 		return error("lseek failed: errno {Errno()}")
 	}
@@ -149,7 +217,7 @@ Lseek = fn(fd, offset, whence) {
 }
 
 Unlink = fn(path) {
-	result = int(sys.sys_unlink(path))
+	result = sys.sys_unlink(path)
 	if result < 0 {
 		return error("unlink failed: errno {Errno()}")
 	}
@@ -157,7 +225,7 @@ Unlink = fn(path) {
 }
 
 Mkdir = fn(path, mode) {
-	result = int(sys.sys_mkdir(path, mode))
+	result = sys.sys_mkdir(path, mode)
 	if result < 0 {
 		return error("mkdir failed: errno {Errno()}")
 	}
@@ -165,7 +233,7 @@ Mkdir = fn(path, mode) {
 }
 
 Rmdir = fn(path) {
-	result = int(sys.sys_rmdir(path))
+	result = sys.sys_rmdir(path)
 	if result < 0 {
 		return error("rmdir failed: errno {Errno()}")
 	}
@@ -173,7 +241,7 @@ Rmdir = fn(path) {
 }
 
 Chmod = fn(path, mode) {
-	result = int(sys.sys_chmod(path, mode))
+	result = sys.sys_chmod(path, mode)
 	if result < 0 {
 		return error("chmod failed: errno {Errno()}")
 	}
@@ -181,7 +249,7 @@ Chmod = fn(path, mode) {
 }
 
 Access = fn(path, mode) {
-	result = int(sys.sys_access(path, mode))
+	result = sys.sys_access(path, mode)
 	if result < 0 {
 		return error("access failed: errno {Errno()}")
 	}
@@ -191,7 +259,7 @@ Access = fn(path, mode) {
 # ========== Network Operations ==========
 
 Socket = fn(domain, socktype, protocol) {
-	result = int(sys.sys_socket(domain, socktype, protocol))
+	result = sys.sys_socket(domain, socktype, protocol)
 	if result < 0 {
 		return error("socket failed: errno {Errno()}")
 	}
@@ -199,7 +267,7 @@ Socket = fn(domain, socktype, protocol) {
 }
 
 Bind = fn(sockfd, addr, addrlen) {
-	result = int(sys.sys_bind(sockfd, addr, addrlen))
+	result = sys.sys_bind(sockfd, addr, addrlen)
 	if result < 0 {
 		return error("bind failed: errno {Errno()}")
 	}
@@ -207,7 +275,7 @@ Bind = fn(sockfd, addr, addrlen) {
 }
 
 Listen = fn(sockfd, backlog) {
-	result = int(sys.sys_listen(sockfd, backlog))
+	result = sys.sys_listen(sockfd, backlog)
 	if result < 0 {
 		return error("listen failed: errno {Errno()}")
 	}
@@ -215,7 +283,7 @@ Listen = fn(sockfd, backlog) {
 }
 
 Accept = fn(sockfd, addr, addrlen) {
-	result = int(sys.sys_accept(sockfd, addr, addrlen))
+	result = sys.sys_accept(sockfd, addr, addrlen)
 	if result < 0 {
 		return error("accept failed: errno {Errno()}")
 	}
@@ -223,7 +291,7 @@ Accept = fn(sockfd, addr, addrlen) {
 }
 
 Connect = fn(sockfd, addr, addrlen) {
-	result = int(sys.sys_connect(sockfd, addr, addrlen))
+	result = sys.sys_connect(sockfd, addr, addrlen)
 	if result < 0 {
 		return error("connect failed: errno {Errno()}")
 	}
@@ -231,7 +299,7 @@ Connect = fn(sockfd, addr, addrlen) {
 }
 
 Send = fn(sockfd, buf, len, flags) {
-	result = int(sys.sys_send(sockfd, buf, len, flags))
+	result = sys.sys_send(sockfd, buf, len, flags)
 	if result < 0 {
 		return error("send failed: errno {Errno()}")
 	}
@@ -239,7 +307,7 @@ Send = fn(sockfd, buf, len, flags) {
 }
 
 Recv = fn(sockfd, buf, len, flags) {
-	result = int(sys.sys_recv(sockfd, buf, len, flags))
+	result = sys.sys_recv(sockfd, buf, len, flags)
 	if result < 0 {
 		return error("recv failed: errno {Errno()}")
 	}
@@ -247,7 +315,7 @@ Recv = fn(sockfd, buf, len, flags) {
 }
 
 Sendto = fn(sockfd, buf, len, flags, dest_addr, addrlen) {
-	result = int(sys.sys_sendto(sockfd, buf, len, flags, dest_addr, addrlen))
+	result = sys.sys_sendto(sockfd, buf, len, flags, dest_addr, addrlen)
 	if result < 0 {
 		return error("sendto failed: errno {Errno()}")
 	}
@@ -255,7 +323,7 @@ Sendto = fn(sockfd, buf, len, flags, dest_addr, addrlen) {
 }
 
 Recvfrom = fn(sockfd, buf, len, flags, src_addr, addrlen) {
-	result = int(sys.sys_recvfrom(sockfd, buf, len, flags, src_addr, addrlen))
+	result = sys.sys_recvfrom(sockfd, buf, len, flags, src_addr, addrlen)
 	if result < 0 {
 		return error("recvfrom failed: errno {Errno()}")
 	}
@@ -263,7 +331,7 @@ Recvfrom = fn(sockfd, buf, len, flags, src_addr, addrlen) {
 }
 
 Setsockopt = fn(sockfd, level, optname, optval, optlen) {
-	result = int(sys.sys_setsockopt(sockfd, level, optname, optval, optlen))
+	result = sys.sys_setsockopt(sockfd, level, optname, optval, optlen)
 	if result < 0 {
 		return error("setsockopt failed: errno {Errno()}")
 	}
@@ -271,7 +339,7 @@ Setsockopt = fn(sockfd, level, optname, optval, optlen) {
 }
 
 Getsockopt = fn(sockfd, level, optname, optval, optlen) {
-	result = int(sys.sys_getsockopt(sockfd, level, optname, optval, optlen))
+	result = sys.sys_getsockopt(sockfd, level, optname, optval, optlen)
 	if result < 0 {
 		return error("getsockopt failed: errno {Errno()}")
 	}
@@ -279,7 +347,7 @@ Getsockopt = fn(sockfd, level, optname, optval, optlen) {
 }
 
 Shutdown = fn(sockfd, how) {
-	result = int(sys.sys_shutdown(sockfd, how))
+	result = sys.sys_shutdown(sockfd, how)
 	if result < 0 {
 		return error("shutdown failed: errno {Errno()}")
 	}
@@ -288,16 +356,16 @@ Shutdown = fn(sockfd, how) {
 
 # ========== Network Helper Functions ==========
 
-Htons = fn(hostshort) { int(sys.sys_htons(hostshort)) }
-Ntohs = fn(netshort) { int(sys.sys_ntohs(netshort)) }
-Htonl = fn(hostlong) { int(sys.sys_htonl(hostlong)) }
-Ntohl = fn(netlong) { int(sys.sys_ntohl(netlong)) }
-InetAddr = fn(cp) { int(sys.sys_inet_addr(cp)) }
+Htons = fn(hostshort) { sys.sys_htons(hostshort) }
+Ntohs = fn(netshort) { sys.sys_ntohs(netshort) }
+Htonl = fn(hostlong) { sys.sys_htonl(hostlong) }
+Ntohl = fn(netlong) { sys.sys_ntohl(netlong) }
+InetAddr = fn(cp) { sys.sys_inet_addr(cp) }
 
 # ========== Address Helpers ==========
 
 # SockaddrInSize is the length of a sockaddr_in.
-SockaddrInSize = fn() { int(sys.sys_sockaddr_in_size()) }
+SockaddrInSize = fn() { sys.sys_sockaddr_in_size() }
 
 # SockaddrIn returns a sockaddr_in filled for ip:port, ready for Bind,
 # Connect and Sendto. An empty ip means "any address".
@@ -308,12 +376,12 @@ SockaddrIn = fn(ip, port) {
 }
 
 # SockaddrPort returns the port stored in a sockaddr_in.
-SockaddrPort = fn(sa) { int(sys.sys_sockaddr_port(sa)) }
+SockaddrPort = fn(sa) { sys.sys_sockaddr_port(sa) }
 
 # SockaddrIP returns the dotted address stored in a sockaddr_in.
 SockaddrIP = fn(sa) {
 	buf = bytes(64)
-	n = int(sys.sys_sockaddr_ip(sa, buf, 64))
+	n = sys.sys_sockaddr_ip(sa, buf, 64)
 	return string(slice(buf, 0, n))
 }
 
@@ -322,7 +390,7 @@ SockaddrIP = fn(sa) {
 # Int32 returns the bytes of a native int32, for the calls that want a
 # pointer to one.
 Int32 = fn(n) {
-	buf = bytes(int(sys.sys_int32_size()))
+	buf = bytes(sys.sys_int32_size())
 	sys.sys_int32(buf, n)
 	return buf
 }
@@ -330,7 +398,7 @@ Int32 = fn(n) {
 # Timeval returns the bytes of a struct timeval of ms milliseconds, for the
 # timeout options of setsockopt.
 Timeval = fn(ms) {
-	buf = bytes(int(sys.sys_timeval_size()))
+	buf = bytes(sys.sys_timeval_size())
 	sys.sys_timeval(buf, ms)
 	return buf
 }
@@ -338,13 +406,13 @@ Timeval = fn(ms) {
 # ========== Time ==========
 
 # TimeUnix returns the wall clock time in seconds since the Unix epoch.
-TimeUnix = fn() { int(sys.sys_time_unix(), 64) }
+TimeUnix = fn() { sys.sys_time_unix() }
 
 # TimeMillis returns the wall clock time in milliseconds.
-TimeMillis = fn() { int(sys.sys_time_ms(), 64) }
+TimeMillis = fn() { sys.sys_time_ms() }
 
 # TimeMono returns a monotonic timestamp in milliseconds.
-TimeMono = fn() { int(sys.sys_time_mono_ms(), 64) }
+TimeMono = fn() { sys.sys_time_mono_ms() }
 
 # SleepMillis pauses the current tau routine for ms milliseconds.
 SleepMillis = fn(ms) { sys.sys_sleep_ms(ms) }
@@ -354,7 +422,7 @@ SleepMillis = fn(ms) { sys.sys_sleep_ms(ms) }
 # Getenv returns the value of the variable name, or null when it isn't set.
 Getenv = fn(name) {
 	buf = bytes(4096)
-	n = int(sys.sys_getenv(name, buf, 4096))
+	n = sys.sys_getenv(name, buf, 4096)
 	if n < 0 {
 		return null
 	}
@@ -363,7 +431,7 @@ Getenv = fn(name) {
 
 # Setenv sets the variable name to value, overwriting what was there.
 Setenv = fn(name, value) {
-	if int(sys.sys_setenv(name, value, 1)) < 0 {
+	if sys.sys_setenv(name, value, 1) < 0 {
 		return Error("setenv")
 	}
 	return null
@@ -371,7 +439,7 @@ Setenv = fn(name, value) {
 
 # Unsetenv removes the variable name.
 Unsetenv = fn(name) {
-	if int(sys.sys_unsetenv(name)) < 0 {
+	if sys.sys_unsetenv(name) < 0 {
 		return Error("unsetenv")
 	}
 	return null
@@ -387,7 +455,7 @@ S_IFLNK = 0120000
 
 # StatSize returns the size of the file at path in bytes.
 StatSize = fn(path) {
-	n = int(sys.sys_stat_size(path), 64)
+	n = sys.sys_stat_size(path)
 	if n < 0 {
 		return Error("stat {path}")
 	}
@@ -396,7 +464,7 @@ StatSize = fn(path) {
 
 # StatMode returns the mode of the file at path, permissions and type.
 StatMode = fn(path) {
-	n = int(sys.sys_stat_mode(path))
+	n = sys.sys_stat_mode(path)
 	if n < 0 {
 		return Error("stat {path}")
 	}
@@ -406,7 +474,7 @@ StatMode = fn(path) {
 # StatMtime returns when the file at path was last modified, in seconds since
 # the Unix epoch.
 StatMtime = fn(path) {
-	n = int(sys.sys_stat_mtime(path), 64)
+	n = sys.sys_stat_mtime(path)
 	if n < 0 {
 		return Error("stat {path}")
 	}
@@ -415,7 +483,7 @@ StatMtime = fn(path) {
 
 # StatIsDir reports whether path is a directory.
 StatIsDir = fn(path) {
-	n = int(sys.sys_stat_isdir(path))
+	n = sys.sys_stat_isdir(path)
 	if n < 0 {
 		return Error("stat {path}")
 	}
@@ -423,7 +491,7 @@ StatIsDir = fn(path) {
 }
 
 Rename = fn(from, to) {
-	if int(sys.sys_rename(from, to)) < 0 {
+	if sys.sys_rename(from, to) < 0 {
 		return Error("rename {from}")
 	}
 	return null
@@ -432,7 +500,7 @@ Rename = fn(from, to) {
 # Getwd returns the working directory.
 Getwd = fn() {
 	buf = bytes(4096)
-	n = int(sys.sys_getcwd(buf, 4096))
+	n = sys.sys_getcwd(buf, 4096)
 	if n < 0 {
 		return Error("getcwd")
 	}
@@ -440,7 +508,7 @@ Getwd = fn() {
 }
 
 Chdir = fn(path) {
-	if int(sys.sys_chdir(path)) < 0 {
+	if sys.sys_chdir(path) < 0 {
 		return Error("chdir {path}")
 	}
 	return null
@@ -451,7 +519,7 @@ Chdir = fn(path) {
 # Readdirnames returns the names inside the directory at path, "." and ".."
 # included, the way the system hands them over.
 Readdirnames = fn(path) {
-	d = int(sys.sys_opendir(path), 64)
+	d = sys.sys_opendir(path)
 	if d == 0 {
 		return Error("opendir {path}")
 	}
@@ -459,7 +527,7 @@ Readdirnames = fn(path) {
 	names = []
 	buf = bytes(4096)
 	for {
-		n = int(sys.sys_readdir(d, buf, 4096))
+		n = sys.sys_readdir(d, buf, 4096)
 		if n < 0 {
 			sys.sys_closedir(d)
 			return names
@@ -472,12 +540,12 @@ Readdirnames = fn(path) {
 
 # TzOffset returns the seconds between local time and UTC at the instant sec,
 # daylight saving included.
-TzOffset = fn(sec) { int(sys.sys_tz_offset(sec), 64) }
+TzOffset = fn(sec) { sys.sys_tz_offset(sec) }
 
 # TzName returns the abbreviation of the local zone at the instant sec.
 TzName = fn(sec) {
 	buf = bytes(64)
-	n = int(sys.sys_tz_name(sec, buf, 64))
+	n = sys.sys_tz_name(sec, buf, 64)
 	if n < 0 {
 		return Error("tzname")
 	}
@@ -502,7 +570,7 @@ Spawn = fn(blob, nargs, input, out, flags) {
 	inlen = if input == null { 0 } else { len(input) }
 	outcap = if out == null { 0 } else { len(out) }
 
-	n = int(sys.sys_spawn(blob, len(blob), nargs, input, inlen, out, outcap, flags), 64)
+	n = sys.sys_spawn(blob, len(blob), nargs, input, inlen, out, outcap, flags)
 	if n < 0 {
 		return Error("spawn")
 	}
@@ -511,4 +579,4 @@ Spawn = fn(blob, nargs, input, out, flags) {
 
 # SpawnStatus is the exit status of the last Spawn: what the program passed to
 # exit, or 128 plus the signal that killed it, or 127 when it wasn't found.
-SpawnStatus = fn() { int(sys.sys_spawn_status(), 64) }
+SpawnStatus = fn() { sys.sys_spawn_status() }

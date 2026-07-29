@@ -2,3 +2,6 @@
 	path = libffi
 	url = https://github.com/libffi/libffi
 	tag = v3.4.6
+	# The build happens in the checkout, and it leaves the host triplet
+	# directories behind: that is litter of ours, not a change to libffi.
+	ignore = untracked

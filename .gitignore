@@ -15,6 +15,7 @@
 
 /tau
 /tau-rt
+/tau-debug
 /cmd/tau/tau
 /tau-lsp
 /cmd/tau-lsp/tau-lsp

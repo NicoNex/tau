@@ -656,6 +656,41 @@ Memory comes from the C library rather than from the language: `ffi.Alloc` and
 `ffi.String` reads a C string up to its NUL, and `ffi.Read(p, n)` is
 `bytes(p, n)`.
 
+### The other direction
+
+`ffi.Export` turns a tau function into one C can call, which is what a library
+wants when it takes a handler, a comparator or a visitor:
+
+```python
+ffi = import("ffi")
+libc = dlopen("libc.so.6")
+
+qsort = ffi.Func(libc.qsort, "void qsort(void *base, size_t n, size_t size, void *cmp)")
+
+cmp = ffi.Export("int compare(const void *a, const void *b)", fn(a, b) {
+	return bytes(a, 1)[0] - bytes(b, 1)[0]
+})
+
+buf = bytes([5, 3, 9, 1, 7])
+qsort(buf, 5, 1, cmp)
+println(buf)
+```
+
+```
+[1, 3, 5, 7, 9]
+```
+
+What comes back is an ordinary function pointer as far as C is concerned. The
+call is answered by the VM of the thread that entered C, so a handler called
+from the loop of a library works; one called from a thread the library made
+for itself finds no tau there and gets a zero back. A function that fails
+inside a callback does not unwind through C: the failure stops there, and the
+C side carries on with what it was given.
+
+The exported function lives for as long as the program does. Whoever was
+handed the pointer never says when they are finished with it, and freeing a
+trampoline C still holds is the one crash this cannot have.
+
 The types are the ones C writes, the exact width ones of `stdint.h`, and the
 same widths spelled the way tau spells its own:
 
@@ -849,6 +884,8 @@ These are always in scope, no import needed.
 - `dlopen(path)` -- open a C shared object, or the program itself with `null`.
 - `cfunc(sym, ret, args)` -- a C function with its types given as codes. What
   `ffi.Func` is made of, see [C libraries](#c-libraries).
+- `cexport(fn, ret, args)` -- a tau function C can call, the same way round.
+  What `ffi.Export` is made of.
 - `pipe([n])` -- a new pipe, unbuffered or holding `n` values.
 - `send(p, x)` -- send `x` to the pipe `p`.
 - `recv(p)` -- take the next value out of the pipe `p`.

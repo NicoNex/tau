@@ -1106,6 +1106,53 @@ struct object vm_last_popped_stack_elem(struct vm * restrict vm) {
 
 static int vm_loop(struct vm * restrict vm);
 
+// vm_call_tau runs a tau function from C and gives back what it returned. It
+// is what a callback needs: libffi hands the arguments to a handler written in
+// C, and the answer has to come from the VM that is already running on this
+// thread.
+//
+// The loop is entered again rather than resumed. A frame whose ip is NULL sits
+// under the call, and returning into it halts the new loop the way the end of
+// a program does, so the outer loop is left exactly where it was. vm_loop arms
+// its own landing pad for errors, so a failure in here comes back as a value
+// instead of jumping through the C function that called us - which would leave
+// it holding locks and allocations nobody will free.
+struct object vm_call_tau(struct vm * restrict vm, struct object cl, struct object *args, size_t nargs) {
+	if (cl.type != obj_closure) {
+		return errorf("callback: %s is not a function", otype_str(cl.type));
+	}
+
+	// The landing pad of whoever is waiting further down the C stack.
+	jmp_buf saved;
+	memcpy(saved, vm->env, sizeof(jmp_buf));
+
+	uint32_t sp = vm->sp;
+	uint32_t frame_idx = vm->frame_idx;
+
+	if (frame_idx + 2 >= MAX_FRAMES || sp + nargs + 1 >= STACK_SIZE) {
+		return errorf("callback: no room left to call into tau");
+	}
+
+	// The frame that stops the loop: everything of it is unused but the ip.
+	struct frame halt = {0};
+	vm_push_frame(vm, halt);
+
+	vm_stack_push(vm, cl);
+	for (size_t i = 0; i < nargs; i++) {
+		vm_stack_push(vm, args[i]);
+	}
+
+	vm_call_closure(vm, &cl, nargs);
+	int failed = vm_loop(vm);
+	struct object res = failed ? errorf("callback: the function failed") : vm_stack_peek(vm);
+
+	vm->sp = sp;
+	vm->frame_idx = frame_idx;
+	memcpy(vm->env, saved, sizeof(jmp_buf));
+
+	return res;
+}
+
 // Registers the VM as a GC root set and runs it.
 int vm_run(struct vm * restrict vm) {
 	// The VM of a tau routine is registered by whoever spawned it.

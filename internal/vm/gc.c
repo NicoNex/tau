@@ -195,6 +195,15 @@ static void park_node(struct vm_node *n) {
 	mtx_unlock(&mu);
 }
 
+// The VM running on this thread, or NULL when no tau code is running here.
+// It is what a C function calling back into tau has to ask: a callback is
+// answered by the VM of the thread that entered C, and a thread that never
+// did has no VM to answer with.
+struct vm *gc_current_vm(void) {
+	if (self == NULL) return NULL;
+	return self->vm;
+}
+
 void *gc_activate(struct vm *vm) {
 	struct vm_node *prev = self;
 

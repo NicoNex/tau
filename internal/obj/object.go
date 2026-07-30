@@ -103,6 +103,7 @@ var (
 		"delete",
 		"bytes",
 		"cfunc",
+		"cexport",
 	}
 
 	NullObj  = Object(C.null_obj)

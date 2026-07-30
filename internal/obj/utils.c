@@ -17,6 +17,24 @@ __attribute__((weak)) struct gc_header *gc_header_alloc(void) {
 	return h;
 }
 
+// The same for the three the FFI needs to call back into tau. Without a VM
+// there is nobody to call and nothing to keep alive, which is exactly the
+// truth in a program that links only this package.
+__attribute__((weak)) struct vm *gc_current_vm(void) { return NULL; }
+__attribute__((weak)) void *gc_add_roots(struct object *objs, size_t len) {
+	(void) objs;
+	(void) len;
+	return NULL;
+}
+
+__attribute__((weak)) struct object vm_call_tau(struct vm *vm, struct object cl, struct object *args, size_t nargs) {
+	(void) vm;
+	(void) cl;
+	(void) args;
+	(void) nargs;
+	return errorf("callback: there is no virtual machine here");
+}
+
 char *otype_str(enum obj_type t) {
 	static char *strings[] = {
 		"null",

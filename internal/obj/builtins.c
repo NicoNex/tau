@@ -414,6 +414,46 @@ static struct object cfunc_b(struct object *args, size_t len) {
 	return o;
 }
 
+// cexport(fn, ret, [args]) turns a tau function into a C function pointer, so
+// that a library can call it: a signal handler, a comparator, a visitor. The
+// types are codes, and stdlib/ffi.tau writes them from a C declaration:
+//
+//	onClicked = ffi.Export("void handler(void *button, void *data)", fn(b, d) { ... })
+//
+// What comes back lives for as long as the program does. Whoever was given it
+// keeps it, and there is no moment when tau can know they are done.
+static struct object cexport_b(struct object *args, size_t len) {
+	if (len != 3) {
+		return errorf("cexport: wrong number of arguments, expected 3, got %lu", len);
+	}
+
+	if (args[0].type == obj_error) {
+		return args[0];
+	}
+	if (args[1].type != obj_integer) {
+		return errorf("cexport: the result type must be an int, got %s instead", otype_str(args[1].type));
+	}
+	if (args[2].type != obj_list) {
+		return errorf("cexport: the argument types must be a list, got %s instead", otype_str(args[2].type));
+	}
+
+	struct object *list = args[2].data.list->list;
+	uint32_t nargs = args[2].data.list->len;
+	int64_t *codes = malloc(sizeof(int64_t) * (nargs > 0 ? nargs : 1));
+
+	for (uint32_t i = 0; i < nargs; i++) {
+		if (list[i].type != obj_integer) {
+			free(codes);
+			return errorf("cexport: argument type %u must be an int, got %s instead", i+1, otype_str(list[i].type));
+		}
+		codes[i] = list[i].data.i;
+	}
+
+	struct object o = new_cexport_obj(args[0], args[1].data.i, codes, nargs);
+	free(codes);
+	return o;
+}
+
 static struct object pipe_b(struct object *args, size_t len) {
 	switch (len) {
 	case 0:
@@ -740,5 +780,6 @@ const builtin builtins[] = {
 	keys_b,
 	delete_b,
 	bytes_b,
-	cfunc_b
+	cfunc_b,
+	cexport_b
 };

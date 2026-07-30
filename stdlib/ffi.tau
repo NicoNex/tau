@@ -348,6 +348,33 @@ String = fn(p) {
 	return string(bytes(p, strlenFn(p)))
 }
 
+# Export turns a tau function into one C can call, which is what a library
+# wants when it takes a handler, a comparator or a visitor:
+#
+#	cmp = ffi.Export("int compare(const void *a, const void *b)", fn(a, b) {
+#		...
+#	})
+#	libc.qsort(buf, 5, 1, cmp)
+#
+# The signature is the one C will call it by, and the declaration comes first
+# here because the function is usually written on the spot.
+#
+# What comes back lives for as long as the program does: whoever was given it
+# keeps it, and there is no moment at which tau can know they are finished
+# with it. A function handed to C and then freed is a crash waiting for the
+# next event.
+#
+# ponytail: the call is answered by the VM of the thread that entered C, so a
+# library that calls back from a thread of its own gets zero and nothing runs.
+# Threads of that kind need a VM of their own to be created and registered,
+# which is a change to the collector, not to this.
+Export = fn(signature, f) {
+	if failed(s = Sig(signature)) {
+		return s
+	}
+	return cexport(f, s[0], s[1])
+}
+
 # Lib opens a shared library by the name it has on this system, so that a
 # program that wants the maths library says "m" rather than the file name of
 # one machine:

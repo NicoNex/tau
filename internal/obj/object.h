@@ -280,6 +280,7 @@ void mark_closure_obj(struct object c);
 // Native function object: a C function plus the signature that says how to
 // talk to it, see ffi.c.
 struct object new_native_obj(void *fn, int64_t ret, const int64_t *args, size_t nargs);
+struct object new_cexport_obj(struct object fn, int64_t ret, const int64_t *args, size_t nargs);
 struct object native_call(struct object f, struct object *args, size_t nargs);
 void dispose_native_obj(struct object o);
 char *native_str(struct object o);
@@ -300,5 +301,13 @@ void free_obj(struct object o);
 // Park before blocking so the collector doesn't wait for this thread.
 void gc_park(void);
 void gc_unpark(void);
+
+// The VM of this thread and a call into it, for a C function that calls back
+// into tau. Both live in internal/vm; declared here because the FFI is the
+// only thing in obj that needs them.
+struct vm;
+struct vm *gc_current_vm(void);
+struct object vm_call_tau(struct vm *vm, struct object cl, struct object *args, size_t nargs);
+void *gc_add_roots(struct object *objs, size_t len);
 uint64_t fnv64a(const char *s, size_t len);
 uint32_t is_truthy(struct object * restrict o);

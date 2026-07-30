@@ -198,6 +198,56 @@ testing.Main([
 				t.AssertError(ffi.Write(null, "x"))
 				t.AssertEq(ffi.String(null), null)
 			}],
+		["a tau function C can call", fn(t) {
+				libc = ffi.Lib("c")
+				if failed(libc) {
+					t.Skip("no C library here")
+					return null
+				}
+
+				qsort = ffi.Func(libc.qsort, "void qsort(void *base, size_t n, size_t size, void *cmp)")
+
+				# The comparator is tau, called by C, once per comparison. The
+				# count goes in a ref, since a closure captures by value and
+				# a plain number would be a copy of its own.
+				ref = import("ref")
+				calls = ref.New(0)
+				cmp = ffi.Export("int compare(const void *a, const void *b)", fn(a, b) {
+						calls.v = calls.v + 1
+						return bytes(a, 1)[0] - bytes(b, 1)[0]
+					})
+
+				buf = bytes([5, 3, 9, 1, 7])
+				qsort(buf, 5, 1, cmp)
+				t.AssertEq(buf, bytes([1, 3, 5, 7, 9]))
+				# What it closed over is still there, and was written to from
+				# inside a call C made.
+				t.Assert(calls.v > 0, "the comparator was never called")
+			}],
+		["a function that fails inside C is not a crash", fn(t) {
+				libc = ffi.Lib("c")
+				if failed(libc) {
+					t.Skip("no C library here")
+					return null
+				}
+
+				qsort = ffi.Func(libc.qsort, "void qsort(void *base, size_t n, size_t size, void *cmp)")
+
+				# Indexing a pointer is not a thing: the comparator fails on
+				# every call, C carries on with what it was told, and the
+				# program is still standing afterwards.
+				bad = ffi.Export("int compare(const void *a, const void *b)", fn(a, b) { a[99] })
+				buf = bytes([3, 1, 2])
+				qsort(buf, 3, 1, bad)
+
+				t.AssertEq(len(buf), 3)
+				t.AssertEq(1 + 1, 2)
+			}],
+		["what Export refuses", fn(t) {
+				t.AssertError(ffi.Export("int f(int)", 42))
+				t.AssertError(ffi.Export("banana(int)", fn(x) { x }))
+				t.AssertError(ffi.Export("int f(void, int)", fn(x) { x }))
+			}],
 		["the codes are what cfunc takes", fn(t) {
 				if !have {
 					t.Skip("build it with `make -C tests/ffi`")

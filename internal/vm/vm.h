@@ -94,6 +94,7 @@ struct vm *new_vm_with_state(char *file, struct bytecode bc, struct state state)
 int vm_run(struct vm * restrict vm);
 void vm_errorf(struct vm * restrict vm, const char *fmt, ...);
 void go_vm_errorf(struct vm * restrict vm, const char *fmt);
+struct object vm_call_tau(struct vm * restrict vm, struct object cl, struct object *args, size_t nargs);
 struct object vm_last_popped_stack_elem(struct vm * restrict vm);
 void vm_dispose(struct vm *vm);
 void state_dispose(struct state s);
@@ -136,6 +137,7 @@ void gc_register(struct vm *vm);   // Makes the VM a root, initially parked.
 void gc_unregister(struct vm *vm);
 void *gc_activate(struct vm *vm);  // Called by the thread that runs the VM, returns the previous one.
 void gc_restore(void *prev);       // Restores the VM active before gc_activate.
+struct vm *gc_current_vm(void);
 void *gc_add_roots(struct object *objs, size_t len);
 void gc_remove_roots(void *handle);
 void gc_park(void);                // Before blocking (pipes, native calls, IO).

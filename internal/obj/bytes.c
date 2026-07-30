@@ -8,7 +8,6 @@ void dispose_bytes_obj(struct object o) {
 	if (o.data.bytes->owner == NULL) {
 		free(o.data.bytes->bytes);
 	}
-	free(o.data.bytes);
 }
 
 char *bytes_str(struct object o) {
@@ -29,32 +28,24 @@ char *bytes_str(struct object o) {
 }
 
 struct object new_bytes_obj(uint8_t *bytes, size_t len) {
-	struct bytes *b = malloc(sizeof(struct bytes));
-	b->bytes = bytes;
-	b->len = len;
-	b->owner = NULL;
-
-	return (struct object) {
-		.data.bytes = b,
-		.type = obj_bytes,
-		.gc = gc_header_alloc(),
-	};
+	return new_bytes_slice(bytes, len, NULL);
 }
 
 void mark_bytes_obj(struct object b) {
-	b.gc->mark |= GC_MARK;
+	obj_gc(b)->mark |= GC_MARK;
 	mark_owner(b.data.bytes->owner);
 }
 
 struct object new_bytes_slice(uint8_t *bytes, size_t len, struct gc_header *owner) {
-	struct bytes *b = malloc(sizeof(struct bytes));
+	struct gc_header *h = gc_alloc(sizeof(struct bytes));
+	struct bytes *b = GC_PAYLOAD(h);
 	b->bytes = bytes;
 	b->len = len;
 	b->owner = owner;
 
-	return (struct object) {
+	h->obj = (struct object) {
 		.data.bytes = b,
 		.type = obj_bytes,
-		.gc = gc_header_alloc(),
 	};
+	return h->obj;
 }

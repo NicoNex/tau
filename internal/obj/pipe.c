@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include "../vm/thrd.h"
 #include "object.h"
 
@@ -42,7 +43,6 @@ void dispose_pipe_obj(struct object pipe) {
 	mtx_destroy(&p->mu);
 	cnd_destroy(&p->not_empty);
 	cnd_destroy(&p->not_full);
-	free(p);
 }
 
 void mark_pipe_obj(struct object pipe) {
@@ -52,7 +52,7 @@ void mark_pipe_obj(struct object pipe) {
 	for (uint32_t i = 0; i < p->len; i++) {
 		mark_obj(p->buf[(p->head + i) % p->cap]);
 	}
-	pipe.gc->mark |= GC_MARK;
+	obj_gc(pipe)->mark |= GC_MARK;
 }
 
 int pipe_send(struct object pipe, struct object o) {
@@ -129,8 +129,10 @@ struct object pipe_recv(struct object pipe) {
 // buffered one holds as many values as it was asked for. The only difference
 // between the two is whether a sender waits for a receiver.
 static struct object pipe_new(size_t cap, uint32_t is_buffered) {
-	struct pipe *pipe = calloc(1, sizeof(struct pipe));
+	struct gc_header *h = gc_alloc(sizeof(struct pipe));
+	struct pipe *pipe = GC_PAYLOAD(h);
 
+	memset(pipe, 0, sizeof(struct pipe));
 	pipe->buf = calloc(cap, sizeof(struct object));
 	pipe->cap = cap;
 	pipe->is_buffered = is_buffered;
@@ -138,11 +140,11 @@ static struct object pipe_new(size_t cap, uint32_t is_buffered) {
 	cnd_init(&pipe->not_empty);
 	cnd_init(&pipe->not_full);
 
-	return (struct object) {
+	h->obj = (struct object) {
 		.data.pipe = pipe,
 		.type = obj_pipe,
-		.gc = gc_header_alloc()
 	};
+	return h->obj;
 }
 
 struct object new_pipe() {

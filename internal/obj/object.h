@@ -123,22 +123,43 @@ union data {
 
 struct object {
 	union data data;
-	// What the collector knows about this object, NULL for the values it
-	// doesn't look after (integers, booleans, builtins).
-	struct gc_header *gc;
 	enum obj_type type;
 };
 
 // Every collectable object owns one of these: it holds the state the
-// collector keeps about the object and doubles as its node in the heap, so
-// an object costs a single allocation for both.
+// collector keeps about the object, doubles as its node in the heap, and is
+// allocated in one block with what `data` points at, which follows it.
+//
+// That last part is why an object carries no pointer to its header: the
+// header sits at a known offset before the payload, so `data` finds it. An
+// object is two words instead of three, and it costs one allocation instead
+// of two.
 struct gc_header {
 	uint32_t mark;
+	// Bytes of payload after the header, needed to put the block back in the
+	// right free list.
+	uint32_t size;
 	struct gc_header *next;
 	struct object obj;
 };
 
-struct gc_header *gc_header_alloc(void);
+// The payload of a header, and the header of a payload.
+#define GC_PAYLOAD(h) ((void *) ((struct gc_header *) (h) + 1))
+#define GC_OF(p)      ((struct gc_header *) (p) - 1)
+
+// A header and the `size` bytes of payload after it, in one allocation.
+struct gc_header *gc_alloc(size_t size);
+
+// The header of an object, NULL for the ones the collector doesn't look
+// after. Those are the values with no payload of their own (integers,
+// booleans, builtins) and the native handles, which point at memory this
+// program didn't allocate and doesn't free.
+static inline struct gc_header *obj_gc(struct object o) {
+	if (o.type <= obj_builtin || o.type == obj_native) {
+		return NULL;
+	}
+	return GC_OF(o.data.handle);
+}
 
 struct key_hash {
 	uint64_t type;
@@ -310,11 +331,11 @@ void free_obj(struct object o);
 static inline struct gc_header *slice_owner(struct object o) {
 	switch (o.type) {
 	case obj_string:
-		return o.data.str->owner != NULL ? o.data.str->owner : o.gc;
+		return o.data.str->owner != NULL ? o.data.str->owner : obj_gc(o);
 	case obj_bytes:
-		return o.data.bytes->owner != NULL ? o.data.bytes->owner : o.gc;
+		return o.data.bytes->owner != NULL ? o.data.bytes->owner : obj_gc(o);
 	case obj_list:
-		return o.data.list->owner != NULL ? o.data.list->owner : o.gc;
+		return o.data.list->owner != NULL ? o.data.list->owner : obj_gc(o);
 	default:
 		return NULL;
 	}

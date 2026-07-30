@@ -17,7 +17,6 @@ void dispose_string_obj(struct object o) {
 	if (o.data.str->owner == NULL) {
 		free(o.data.str->str);
 	}
-	free(o.data.str);
 }
 
 char *cstr(struct string *s) {
@@ -41,32 +40,24 @@ char *string_str(struct object o) {
 }
 
 struct object new_string_obj(char *str, size_t len) {
-	struct string *s = malloc(sizeof(struct string));
-	s->str = str;
-	s->len = len;
-	s->owner = NULL;
-
-	return (struct object) {
-		.data.str = s,
-		.type = obj_string,
-		.gc = gc_header_alloc(),
-	};
+	return new_string_slice(str, len, NULL);
 }
 
 void mark_string_obj(struct object s) {
-	s.gc->mark |= GC_MARK;
+	obj_gc(s)->mark |= GC_MARK;
 	mark_owner(s.data.str->owner);
 }
 
 struct object new_string_slice(char *str, size_t len, struct gc_header *owner) {
-	struct string *s = malloc(sizeof(struct string));
+	struct gc_header *h = gc_alloc(sizeof(struct string));
+	struct string *s = GC_PAYLOAD(h);
 	s->str = str;
 	s->len = len;
 	s->owner = owner;
 
-	return (struct object) {
+	h->obj = (struct object) {
 		.data.str = s,
 		.type = obj_string,
-		.gc = gc_header_alloc(),
 	};
+	return h->obj;
 }

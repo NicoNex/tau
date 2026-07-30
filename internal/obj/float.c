@@ -22,6 +22,5 @@ struct object new_float_obj(double val) {
 	return (struct object) {
 		.data.f = val,
 		.type = obj_float,
-		.gc = NULL,
 	};
 }

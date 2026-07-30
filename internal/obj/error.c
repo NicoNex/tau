@@ -6,7 +6,6 @@
 
 void dispose_error_obj(struct object o) {
 	free(o.data.str->str);
-	free(o.data.str);
 }
 
 char *error_str(struct object o) {
@@ -14,15 +13,17 @@ char *error_str(struct object o) {
 }
 
 struct object new_error_obj(char *str, size_t len) {
-	struct string *s = malloc(sizeof(struct string));
+	struct gc_header *h = gc_alloc(sizeof(struct string));
+	struct string *s = GC_PAYLOAD(h);
 	s->str = str;
 	s->len = len;
+	s->owner = NULL;
 
-	return (struct object) {
+	h->obj = (struct object) {
 		.data.str = s,
 		.type = obj_error,
-		.gc = gc_header_alloc(),
 	};
+	return h->obj;
 }
 
 inline struct object errorf(char *fmt, ...) {

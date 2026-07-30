@@ -920,7 +920,6 @@ static inline void vm_call_native(struct vm * restrict vm, struct object *n, siz
 	struct object res = (struct object) {
 		.data.i = (int64_t) return_value,
 		.type = obj_native,
-		.gc = NULL
 	};
 	vm_stack_push(vm, res);
 }

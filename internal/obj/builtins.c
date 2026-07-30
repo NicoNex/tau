@@ -13,7 +13,6 @@ struct object new_builtin_obj(struct object (*builtin)(struct object *args, size
 	return (struct object) {
 		.data.builtin = builtin,
 		.type = obj_builtin,
-		.gc = NULL,
 	};
 }
 
@@ -292,7 +291,7 @@ static struct object append_b(struct object *args, size_t len) {
 	if (old->cap - old->len >= len - 1) {
 		struct object ret = new_list_obj_data(old->list, old->len, old->cap);
 		struct list *new = ret.data.list;
-		old->owner = ret.gc;
+		old->owner = obj_gc(ret);
 
 		for (size_t i = 1; i < len; i++) {
 			new->list[new->len++] = args[i];
@@ -350,7 +349,6 @@ static struct object dlopen_b(struct object *args, size_t len) {
 		return (struct object) {
 			.data.handle = self,
 			.type = obj_native,
-			.gc = gc_header_alloc()
 		};
 	}
 
@@ -367,7 +365,6 @@ static struct object dlopen_b(struct object *args, size_t len) {
 	return (struct object) {
 		.data.handle = handle,
 		.type = obj_native,
-		.gc = gc_header_alloc()
 	};
 }
 

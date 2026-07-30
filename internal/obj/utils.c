@@ -11,9 +11,11 @@ __attribute__((weak)) uint32_t gc_epoch = 1;
 __attribute__((weak)) void gc_park(void) {}
 __attribute__((weak)) void gc_unpark(void) {}
 
-__attribute__((weak)) struct gc_header *gc_header_alloc(void) {
-	struct gc_header *h = malloc(sizeof(struct gc_header));
+__attribute__((weak)) struct gc_header *gc_alloc(size_t size) {
+	struct gc_header *h = malloc(sizeof(struct gc_header) + size);
 	h->mark = 0;
+	h->size = size;
+	h->obj = null_obj;
 	return h;
 }
 
@@ -106,8 +108,10 @@ inline void mark_obj(struct object o) {
 	// Objects already visited in this cycle are skipped, otherwise a cycle
 	// (an object holding a closure that captured the object itself, a list
 	// containing itself...) would recur forever.
-	if (o.type > obj_builtin && o.gc != NULL && (o.gc->mark >> GC_EPOCH_SHIFT) != gc_epoch) {
-		o.gc->mark = (o.gc->mark & (GC_MARK | GC_TRACKED)) | (gc_epoch << GC_EPOCH_SHIFT);
+	struct gc_header *h = obj_gc(o);
+
+	if (h != NULL && (h->mark >> GC_EPOCH_SHIFT) != gc_epoch) {
+		h->mark = (h->mark & (GC_MARK | GC_TRACKED)) | (gc_epoch << GC_EPOCH_SHIFT);
 
 		switch (o.type) {
 		case obj_object:
@@ -132,7 +136,7 @@ inline void mark_obj(struct object o) {
 			mark_pipe_obj(o);
 			break;
 		default:
-			o.gc->mark |= GC_MARK;
+			h->mark |= GC_MARK;
 			break;
 		}
 	}

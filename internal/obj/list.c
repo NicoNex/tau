@@ -7,7 +7,6 @@ void dispose_list_obj(struct object o) {
 	if (o.data.list->owner == NULL) {
 		free(o.data.list->list);
 	}
-	free(o.data.list);
 }
 
 // TODO: optimise this.
@@ -37,67 +36,44 @@ char *list_str(struct object o) {
 }
 
 void mark_list_obj(struct object l) {
-	l.gc->mark |= GC_MARK;
+	obj_gc(l)->mark |= GC_MARK;
 	mark_owner(l.data.list->owner);
 	for (uint32_t i = 0; i < l.data.list->len; i++) {
 		mark_obj(l.data.list->list[i]);
 	}
 }
 
-struct object make_list(size_t cap) {
-	struct list *l = malloc(sizeof(struct list));
-	l->list = calloc(cap, sizeof(struct object));
-	l->len = 0;
+// The one place a list object is made: the header and the descriptor after
+// it in a single block, with the array of elements left where it is.
+static struct object list_new(struct object *list, size_t len, size_t cap, struct gc_header *owner) {
+	struct gc_header *h = gc_alloc(sizeof(struct list));
+	struct list *l = GC_PAYLOAD(h);
+	l->list = list;
+	l->len = len;
 	l->cap = cap;
-	l->owner = NULL;
+	l->owner = owner;
 
-	return (struct object) {
+	h->obj = (struct object) {
 		.data.list = l,
 		.type = obj_list,
-		.gc = gc_header_alloc()
 	};
+	return h->obj;
+}
+
+struct object make_list(size_t cap) {
+	return list_new(calloc(cap, sizeof(struct object)), 0, cap, NULL);
 }
 
 struct object new_list_obj(struct object *list, size_t len) {
-	struct list *l = malloc(sizeof(struct list));
-	l->list = list;
-	l->len = len;
-	l->cap = len;
-	l->owner = NULL;
-
-	return (struct object) {
-		.data.list = l,
-		.type = obj_list,
-		.gc = gc_header_alloc()
-	};
+	return list_new(list, len, len, NULL);
 }
 
 struct object new_list_obj_data(struct object *list, size_t len, size_t cap) {
-	struct list *l = malloc(sizeof(struct list));
-	l->list = list;
-	l->len = len;
-	l->cap = cap;
-	l->owner = NULL;
-
-	return (struct object) {
-		.data.list = l,
-		.type = obj_list,
-		.gc = gc_header_alloc()
-	};
+	return list_new(list, len, cap, NULL);
 }
 
 struct object new_list_slice(struct object *list, size_t len, struct gc_header *owner) {
-	struct list *l = malloc(sizeof(struct list));
-	l->list = list;
-	l->len = len;
-	l->cap = len;
-	l->owner = owner;
-
-	return (struct object) {
-		.data.list = l,
-		.type = obj_list,
-		.gc = gc_header_alloc(),
-	};
+	return list_new(list, len, len, owner);
 }
 
 inline struct list list_copy(struct list l) {

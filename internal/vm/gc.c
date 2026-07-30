@@ -69,9 +69,18 @@ uint32_t gc_epoch = 1;
 // don't run a VM (e.g. `tau somebuiltin()`).
 static __thread struct vm_node *self = NULL;
 
-// Recycled headers, kept per thread so that allocating an object needs no
+// A block is a header and the payload that follows it, so blocks come in as
+// many sizes as there are payloads. They are recycled in one free list per
+// size, indexed by the payload in words; the payloads bigger than
+// GC_MAX_RECYCLED (a pipe, a prepared native call) are rare enough to go
+// straight back to free.
+#define GC_MAX_RECYCLED 64
+#define GC_NBUCKETS     (GC_MAX_RECYCLED / 8 + 1)
+#define gc_bucket(size) (((size) + 7) / 8)
+
+// Recycled blocks, kept per thread so that allocating an object needs no
 // lock. A thread that ends gives back what it holds in gc_flush_headers.
-static __thread struct gc_header *free_headers = NULL;
+static __thread struct gc_header *free_headers[GC_NBUCKETS];
 static __thread int nfree_headers = 0;
 // Build with -DMAX_FREE_HEADERS=0 to always go through malloc, so that a
 // sanitizer can see the use-after-frees the reuse would hide.
@@ -79,19 +88,21 @@ static __thread int nfree_headers = 0;
 	#define MAX_FREE_HEADERS 1024
 #endif
 
-// Header of a new object: the state of the collector and the node of the
-// heap in a single allocation.
-struct gc_header *gc_header_alloc(void) {
-	struct gc_header *h = free_headers;
+// A new block: the state the collector keeps, the node of the heap and the
+// payload of the object, all in one allocation.
+struct gc_header *gc_alloc(size_t size) {
+	size_t bucket = gc_bucket(size);
+	struct gc_header *h = NULL;
 
-	if (h != NULL) {
-		free_headers = h->next;
+	if (bucket < GC_NBUCKETS && (h = free_headers[bucket]) != NULL) {
+		free_headers[bucket] = h->next;
 		nfree_headers--;
 	} else {
-		h = malloc(sizeof(struct gc_header));
+		h = malloc(sizeof(struct gc_header) + size);
 	}
 	h->mark = 0;
-	// Until heap_add puts the object in, the header is one a slice may
+	h->size = size;
+	// Until the constructor puts the object in, the header is one a slice may
 	// already point at as its owner: a recycled one still holds the object
 	// that was swept, and mark_owner would walk it.
 	h->obj = null_obj;
@@ -100,23 +111,27 @@ struct gc_header *gc_header_alloc(void) {
 }
 
 static void gc_mark_recycle(struct gc_header *h) {
-	if (nfree_headers >= MAX_FREE_HEADERS) {
+	size_t bucket = gc_bucket(h->size);
+
+	if (bucket >= GC_NBUCKETS || nfree_headers >= MAX_FREE_HEADERS) {
 		free(h);
 		return;
 	}
-	h->next = free_headers;
-	free_headers = h;
+	h->next = free_headers[bucket];
+	free_headers[bucket] = h;
 	nfree_headers++;
 }
 
-// Called by a thread that is about to end, its headers are of no use to it.
+// Called by a thread that is about to end, its blocks are of no use to it.
 void gc_flush_headers(void) {
-	for (struct gc_header *h = free_headers; h != NULL;) {
-		struct gc_header *next = h->next;
-		free(h);
-		h = next;
+	for (size_t i = 0; i < GC_NBUCKETS; i++) {
+		for (struct gc_header *h = free_headers[i]; h != NULL;) {
+			struct gc_header *next = h->next;
+			free(h);
+			h = next;
+		}
+		free_headers[i] = NULL;
 	}
-	free_headers = NULL;
 	nfree_headers = 0;
 }
 
@@ -325,12 +340,11 @@ void gc_release_segment(void) {
 // Takes ownership of the object. Objects that are already tracked (e.g. one
 // received from a pipe and returned by a builtin) are ignored.
 void heap_add(struct object obj) {
-	if (obj.gc == NULL || (obj.gc->mark & GC_TRACKED)) return;
-	obj.gc->mark |= GC_TRACKED;
-
-	// The header is the node, it was allocated with the object.
-	struct gc_header *node = obj.gc;
-	node->obj = obj;
+	// The header is the node, and it was allocated with the object: there is
+	// nothing to copy into it, the constructor already did.
+	struct gc_header *node = obj_gc(obj);
+	if (node == NULL || (node->mark & GC_TRACKED)) return;
+	node->mark |= GC_TRACKED;
 
 	struct heap *s = heap_segment();
 	node->next = s->root;

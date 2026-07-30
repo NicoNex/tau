@@ -181,7 +181,6 @@ void map_delete(struct object map, struct object key) {
 
 void dispose_map_obj(struct object map) {
 	_map_dispose(map.data.map->root);
-	free(map.data.map);
 }
 
 // TODO: actually return map content as string.
@@ -226,14 +225,19 @@ char *map_str(struct object map) {
 }
 
 struct object new_map() {
-	return (struct object) {
-		.data.map = calloc(1, sizeof(struct map_node)),
+	struct gc_header *h = gc_alloc(sizeof(struct map));
+	struct map *m = GC_PAYLOAD(h);
+	m->root = NULL;
+	m->len = 0;
+
+	h->obj = (struct object) {
+		.data.map = m,
 		.type = obj_map,
-		.gc = gc_header_alloc()
 	};
+	return h->obj;
 }
 
 void mark_map_obj(struct object m) {
-	m.gc->mark |= GC_MARK;
+	obj_gc(m)->mark |= GC_MARK;
 	mark_map_children(m.data.map->root);
 }

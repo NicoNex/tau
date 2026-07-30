@@ -87,7 +87,10 @@ struct object new_native_obj(void *fn, int64_t ret, const int64_t *args, size_t 
 		return errorf("cfunc: too many arguments, %lu", nargs);
 	}
 
-	struct native *n = malloc(sizeof(struct native) + nargs * sizeof(ffi_type *));
+	// The prepared call is the payload of the header: variable in size,
+	// because the argument types follow it.
+	struct gc_header *h = gc_alloc(sizeof(struct native) + nargs * sizeof(ffi_type *));
+	struct native *n = GC_PAYLOAD(h);
 	char *codes = malloc(nargs + 1);
 
 	for (size_t i = 0; i < nargs; i++) {
@@ -95,7 +98,7 @@ struct object new_native_obj(void *fn, int64_t ret, const int64_t *args, size_t 
 
 		if (c == 0 || c == 'v') {
 			free(codes);
-			free(n);
+			free(h);
 			return errorf("cfunc: argument %lu: %ld is not a type an argument can have", i+1, args[i]);
 		}
 		codes[i] = c;
@@ -110,21 +113,20 @@ struct object new_native_obj(void *fn, int64_t ret, const int64_t *args, size_t 
 
 	if (ffi_prep_cif(&n->cif, FFI_DEFAULT_ABI, nargs, type_of(retc), n->types) != FFI_OK) {
 		free(n->args);
-		free(n);
+		free(h);
 		return errorf("cfunc: cannot prepare a call with these types");
 	}
 
-	return (struct object) {
+	h->obj = (struct object) {
 		.data.handle = n,
 		.type = obj_native_fn,
-		.gc = gc_header_alloc()
 	};
+	return h->obj;
 }
 
 void dispose_native_obj(struct object o) {
 	struct native *n = o.data.handle;
 	free(n->args);
-	free(n);
 }
 
 char *native_str(struct object o) {
@@ -291,7 +293,6 @@ struct object native_call(struct object f, struct object *args, size_t nargs) {
 		return (struct object) {
 			.data.handle = ret.p,
 			.type = obj_native,
-			.gc = NULL
 		};
 	}
 }
@@ -363,7 +364,6 @@ static void cexport_entry(ffi_cif *cif, void *ret, void **args, void *user) {
 			objs[i] = (struct object) {
 				.data.handle = *(void **) p,
 				.type = obj_native,
-				.gc = NULL
 			};
 			break;
 		}
@@ -472,6 +472,5 @@ struct object new_cexport_obj(struct object fn, int64_t ret, const int64_t *args
 	return (struct object) {
 		.data.handle = cb->code,
 		.type = obj_native,
-		.gc = NULL
 	};
 }

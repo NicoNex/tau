@@ -84,7 +84,6 @@ struct object object_set(struct object obj, char *name, struct object val) {
 
 void dispose_object_obj(struct object obj) {
 	_object_dispose(*obj.data.obj);
-	free(obj.data.obj);
 }
 
 // Appends "name: value" for every field, in the order of the tree.
@@ -126,11 +125,15 @@ char *object_obj_str(struct object obj) {
 }
 
 struct object new_object() {
-	return (struct object) {
-		.data.obj = calloc(1, sizeof(struct object_node *)),
+	struct gc_header *h = gc_alloc(sizeof(struct object_node *));
+	struct object_node **root = GC_PAYLOAD(h);
+	*root = NULL;
+
+	h->obj = (struct object) {
+		.data.obj = root,
 		.type = obj_object,
-		.gc = gc_header_alloc(),
 	};
+	return h->obj;
 }
 
 struct object object_to_module(struct object o) {
@@ -161,6 +164,6 @@ struct object object_keys(struct object o) {
 }
 
 void mark_object_obj(struct object o) {
-	o.gc->mark |= GC_MARK;
+	obj_gc(o)->mark |= GC_MARK;
 	mark_object_children(*o.data.obj);
 }

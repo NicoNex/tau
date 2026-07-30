@@ -629,10 +629,7 @@ static struct object slice_b(struct object *args, size_t len) {
 		} else if (start == end) {
 			return new_list_obj(NULL, 0);
 		}
-		// A slice of a slice points at the owner of the buffer, not at the
-		// slice it was cut from.
-		struct gc_header *owner = args[0].data.list->owner != NULL ? args[0].data.list->owner : args[0].gc;
-		return new_list_slice(&args[0].data.list->list[start], end-start, owner);
+		return new_list_slice(&args[0].data.list->list[start], end-start, slice_owner(args[0]));
 	}
 
 	case obj_string: {
@@ -641,10 +638,7 @@ static struct object slice_b(struct object *args, size_t len) {
 		} else if (start == end) {
 			return new_string_obj(strdup(""), 0);
 		}
-		// A slice of a slice points at the owner of the buffer, not at the
-		// slice it was cut from.
-		struct gc_header *owner = args[0].data.str->owner != NULL ? args[0].data.str->owner : args[0].gc;
-		return new_string_slice(&args[0].data.str->str[start], end-start, owner);
+		return new_string_slice(&args[0].data.str->str[start], end-start, slice_owner(args[0]));
 	}
 	case obj_bytes: {
 		if (end > args[0].data.bytes->len) {
@@ -652,10 +646,7 @@ static struct object slice_b(struct object *args, size_t len) {
 		} else if (start == end) {
 			return new_bytes_obj(NULL, 0);
 		}
-		// A slice of a slice points at the owner of the buffer, not at the
-		// slice it was cut from.
-		struct gc_header *owner = args[0].data.bytes->owner != NULL ? args[0].data.bytes->owner : args[0].gc;
-		return new_bytes_slice(&args[0].data.bytes->bytes[start], end-start, owner);
+		return new_bytes_slice(&args[0].data.bytes->bytes[start], end-start, slice_owner(args[0]));
 	}
 	default:
 		return errorf("slice: first argument must be a list or string, got %s instead", otype_str(args[0].type));
@@ -734,7 +725,7 @@ static struct object bytes_b(struct object *args, size_t len) {
 		return new_bytes_obj(calloc(arg.data.i, sizeof(uint8_t)), arg.data.i);
 	}
 	case obj_string:
-		return new_bytes_slice((uint8_t *) arg.data.str->str, arg.data.str->len, arg.gc);
+		return new_bytes_slice((uint8_t *) arg.data.str->str, arg.data.str->len, slice_owner(arg));
 	case obj_list: {
 		size_t len = arg.data.list->len;
 		struct object *list = arg.data.list->list;

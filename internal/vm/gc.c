@@ -91,6 +91,10 @@ struct gc_header *gc_header_alloc(void) {
 		h = malloc(sizeof(struct gc_header));
 	}
 	h->mark = 0;
+	// Until heap_add puts the object in, the header is one a slice may
+	// already point at as its owner: a recycled one still holds the object
+	// that was swept, and mark_owner would walk it.
+	h->obj = null_obj;
 
 	return h;
 }

@@ -295,7 +295,30 @@ char *otype_str(enum obj_type t);
 char *object_str(struct object o);
 void print_obj(struct object o);
 void mark_obj(struct object o);
+// The owner of the buffer a slice points into. It goes through mark_obj and
+// not through the mark bit alone, so that an owner which is itself a slice
+// marks the owner underneath it. Slicing flattens the chain and there is
+// normally nothing under the first owner: this is what makes forgetting to
+// flatten cost a hop instead of the buffer.
+void mark_owner(struct gc_header *h);
 void free_obj(struct object o);
+
+// The header to hand to a slice cut out of `o`, which holds the buffer alive
+// for as long as the slice is around. A slice of a slice takes the owner of
+// the buffer and not the slice it was cut from, so that the chain is one hop
+// deep whatever it is sliced out of.
+static inline struct gc_header *slice_owner(struct object o) {
+	switch (o.type) {
+	case obj_string:
+		return o.data.str->owner != NULL ? o.data.str->owner : o.gc;
+	case obj_bytes:
+		return o.data.bytes->owner != NULL ? o.data.bytes->owner : o.gc;
+	case obj_list:
+		return o.data.list->owner != NULL ? o.data.list->owner : o.gc;
+	default:
+		return NULL;
+	}
+}
 
 // Garbage collector hooks, implemented in ../vm/heap.c.
 // Park before blocking so the collector doesn't wait for this thread.

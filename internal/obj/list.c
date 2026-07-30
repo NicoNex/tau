@@ -38,9 +38,7 @@ char *list_str(struct object o) {
 
 void mark_list_obj(struct object l) {
 	l.gc->mark |= GC_MARK;
-	if (l.data.list->owner != NULL) {
-		l.data.list->owner->mark |= GC_MARK;
-	}
+	mark_owner(l.data.list->owner);
 	for (uint32_t i = 0; i < l.data.list->len; i++) {
 		mark_obj(l.data.list->list[i]);
 	}

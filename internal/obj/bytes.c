@@ -43,9 +43,7 @@ struct object new_bytes_obj(uint8_t *bytes, size_t len) {
 
 void mark_bytes_obj(struct object b) {
 	b.gc->mark |= GC_MARK;
-	if (b.data.bytes->owner != NULL) {
-		b.data.bytes->owner->mark |= GC_MARK;
-	}
+	mark_owner(b.data.bytes->owner);
 }
 
 struct object new_bytes_slice(uint8_t *bytes, size_t len, struct gc_header *owner) {

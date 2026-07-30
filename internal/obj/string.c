@@ -55,9 +55,7 @@ struct object new_string_obj(char *str, size_t len) {
 
 void mark_string_obj(struct object s) {
 	s.gc->mark |= GC_MARK;
-	if (s.data.str->owner != NULL) {
-		s.data.str->owner->mark |= GC_MARK;
-	}
+	mark_owner(s.data.str->owner);
 }
 
 struct object new_string_slice(char *str, size_t len, struct gc_header *owner) {

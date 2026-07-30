@@ -138,6 +138,12 @@ inline void mark_obj(struct object o) {
 	}
 }
 
+void mark_owner(struct gc_header *h) {
+	if (h != NULL) {
+		mark_obj(h->obj);
+	}
+}
+
 void free_obj(struct object o) {
 	switch (o.type) {
 	case obj_string:

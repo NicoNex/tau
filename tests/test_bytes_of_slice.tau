@@ -1,0 +1,24 @@
+# bytes() of a string *slice* must hold the owner of the buffer, not the slice:
+# marking the slice keeps alive the one object whose disposal frees nothing,
+# and the buffer underneath goes back to malloc while the bytes still read it.
+
+strings = import("strings")
+
+mk = fn() {
+	s = strings.Repeat("ab", 2048)
+	return bytes(slice(s, 100, 116))
+}
+
+b = mk()
+
+# Enough same-sized allocations to have the freed buffer handed out again.
+for i = 0; i < 3000; ++i {
+	junk = strings.Repeat("Z", 4096)
+}
+
+got = string(b)
+if got != "abababababababab" {
+	println("FAIL: got {got}, want abababababababab")
+} else {
+	println("ok")
+}

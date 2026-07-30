@@ -1,5 +1,5 @@
 testing = import("testing")
-rand = import("rand")
+rand = import("math/rand")
 
 testing.Main([
 		["the same seed gives the same sequence", fn(t) {

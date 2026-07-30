@@ -778,24 +778,24 @@ starts with a comment saying what it is for.
 | `cmp` | comparison and ordering of values, `Equal` and `Compare` |
 | `crypto/hmac` | the keyed hash of RFC 2104, over SHA-256 |
 | `crypto/sha256` | the hash of FIPS 180-4 |
-| `csv` | comma separated values, the way RFC 4180 writes them |
 | `encoding/base64` | the encoding of RFC 4648 |
+| `encoding/csv` | comma separated values, the way RFC 4180 writes them |
 | `encoding/hex` | hexadecimal encoding |
+| `encoding/json` | JSON, parsed and written |
 | `errno` | the numbers `errno` takes |
 | `errors` | errors as values: `New`, `Wrap`, `Is`, `Message` |
-| `exec` | running other programs |
 | `flag` | command line flags |
-| `http` | HTTP/1.1 client and server, in the shape of Go's net/http |
 | `io` | moving bytes between streams |
-| `json` | JSON, parsed and written |
 | `list` | operations on lists |
 | `log` | messages with a date on them |
 | `maps` | operations on maps and objects |
 | `math` | the usual functions on floats |
+| `math/rand` | pseudo random numbers, and `Crypto` for the ones that matter |
 | `net` | TCP and UDP sockets, in the shape of Go's net package |
+| `net/http` | HTTP/1.1 client and server, in the shape of Go's net/http |
 | `os` | files, environment, working directory, `os.Args` |
+| `os/exec` | running other programs |
 | `path` | slash separated paths |
-| `rand` | pseudo random numbers, and `Crypto` for the ones that matter |
 | `ref` | a cell holding a value that a closure has to change |
 | `regexp` | regular expressions, in the shape of Go's regexp package |
 | `runtime` | what the program can know about the machine it runs on |
@@ -804,20 +804,20 @@ starts with a comment saying what it is for.
 | `syscall` | the system calls underneath the rest |
 | `testing` | the test runner `tau test` uses |
 | `time` | clocks and pauses |
-| `utf8` | text as code points |
+| `unicode/utf8` | text as code points |
 
-`http` and `net` have their own documents: [HTTP_README.md](HTTP_README.md) and
+`net/http` and `net` have their own documents: [HTTP_README.md](HTTP_README.md) and
 [NET_README.md](NET_README.md).
 
 A taste of a few of them:
 
 ```python
 log = import("log")
-rand = import("rand")
-utf8 = import("utf8")
-csv = import("csv")
+rand = import("math/rand")
+utf8 = import("unicode/utf8")
+csv = import("encoding/csv")
 sha256 = import("crypto/sha256")
-exec = import("exec")
+exec = import("os/exec")
 
 log.Print("started")
 r = rand.New(1)                       # seeded, so the sequence repeats

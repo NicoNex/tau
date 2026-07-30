@@ -17,7 +17,7 @@ The `http.tau` library provides Go-style HTTP primitives:
 ### Simple HTTP Server
 
 ```tau
-http = import("stdlib/http.tau")
+http = import("net/http")
 
 # Register a handler
 http.HandleFunc("/", fn(w, req) {
@@ -39,7 +39,7 @@ http.ListenAndServe(":8080", nil)
 ### HTTP Client
 
 ```tau
-http = import("stdlib/http.tau")
+http = import("net/http")
 
 # Make a GET request
 resp = Get("http://example.com:80/")
@@ -448,7 +448,7 @@ mux.Handle("/static/", FileServer("./public"))
 ### REST API Server
 
 ```tau
-http = import("stdlib/http.tau")
+http = import("net/http")
 
 mux = NewServeMux()
 
@@ -478,7 +478,7 @@ ListenAndServe(":8080", mux)
 ### HTTP Client with Custom Headers
 
 ```tau
-http = import("stdlib/http.tau")
+http = import("net/http")
 
 client = NewClient()
 
@@ -497,7 +497,7 @@ if !failed(resp) {
 ### Static File Server
 
 ```tau
-http = import("stdlib/http.tau")
+http = import("net/http")
 
 mux = NewServeMux()
 
@@ -516,7 +516,7 @@ ListenAndServe(":8080", mux)
 ### Middleware Pattern
 
 ```tau
-http = import("stdlib/http.tau")
+http = import("net/http")
 
 # Logging middleware
 loggingMiddleware = fn(next) {

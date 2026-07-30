@@ -1,5 +1,5 @@
 testing = import("testing")
-utf8 = import("utf8")
+utf8 = import("unicode/utf8")
 
 testing.Main([
 		["RuneCount counts letters where len counts bytes", fn(t) {

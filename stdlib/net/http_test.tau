@@ -1,5 +1,5 @@
 testing = import("testing")
-http = import("http")
+http = import("net/http")
 time = import("time")
 
 addr = "127.0.0.1:45181"

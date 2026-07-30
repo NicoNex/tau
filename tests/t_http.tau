@@ -1,4 +1,4 @@
-http = import("http")
+http = import("net/http")
 net = import("net")
 time = import("time")
 

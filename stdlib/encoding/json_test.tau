@@ -1,5 +1,5 @@
 testing = import("testing")
-json = import("json")
+json = import("encoding/json")
 
 testing.Main([
 		["encode", fn(t) {

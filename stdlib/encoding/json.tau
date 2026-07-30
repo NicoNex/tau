@@ -3,7 +3,7 @@
 # Unmarshal turns the text into the values of the language, an object into a
 # map and an array into a list, and Marshal writes them back:
 #
-#	json = import("json")
+#	json = import("encoding/json")
 #
 #	# A raw string, or the braces would be read as interpolation and the
 #	# quotes would need escaping.

@@ -4,7 +4,7 @@
 # the way Go does it. The text inside is UTF-8, so a letter outside ASCII
 # takes more than one byte and len counts them all:
 #
-#	utf8 = import("utf8")
+#	utf8 = import("unicode/utf8")
 #	len("città")             # 6, the bytes
 #	utf8.RuneCount("città")  # 5, the letters
 #

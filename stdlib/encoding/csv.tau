@@ -3,7 +3,7 @@
 # Parse turns the text into a list of records, each one a list of fields, and
 # Format writes that back out:
 #
-#	csv = import("csv")
+#	csv = import("encoding/csv")
 #	os = import("os")
 #
 #	rows = csv.Parse(os.ReadFileString("cities.csv"), null)

@@ -3,7 +3,7 @@
 # Run takes the program and its arguments as a list, no shell in between, and
 # waits for it to finish:
 #
-#	exec = import("exec")
+#	exec = import("os/exec")
 #
 #	r = exec.Run(["git", "rev-parse", "HEAD"])
 #	if r.Status != 0 { ... }

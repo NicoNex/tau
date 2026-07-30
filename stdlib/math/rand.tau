@@ -4,7 +4,7 @@
 # sequence every time can have it. The functions of the module itself use one
 # source seeded from the clock at startup:
 #
-#	rand = import("rand")
+#	rand = import("math/rand")
 #	rand.Intn(6) + 1
 #
 # The generator is xorshift64*, which is small and good enough for shuffles,

@@ -1,5 +1,5 @@
 testing = import("testing")
-exec = import("exec")
+exec = import("os/exec")
 os = import("os")
 strings = import("strings")
 

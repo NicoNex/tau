@@ -1,5 +1,5 @@
 testing = import("testing")
-csv = import("csv")
+csv = import("encoding/csv")
 
 testing.Main([
 		["records and fields", fn(t) {

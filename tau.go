@@ -129,6 +129,11 @@ func ExecFileVM(f string) (err error) {
 			bytecode = compiler.DecodeBytecode(raw)
 		}
 	} else {
+		// Before anything runs: a module that cannot be found is an error the
+		// author wants now, not on the branch that reaches it.
+		if err = CheckImports(f); err != nil {
+			return err
+		}
 		if bytecode, err = compile(f); err != nil {
 			return err
 		}

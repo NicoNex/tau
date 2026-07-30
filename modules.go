@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/NicoNex/tau/internal/mod"
+	"github.com/NicoNex/tau/internal/vm"
 )
 
 // The commands that look after tau.mod. Fetching happens here and nowhere
@@ -157,6 +158,108 @@ func ModTidy() error {
 	}
 	_, err = mod.Load(root)
 	return err
+}
+
+// CheckImports makes sure every module the program names can be found, before
+// the program runs a single instruction.
+//
+// The imports are walked the way `tau build` already walks them, and for the
+// same reason: an import takes a literal, so the set is knowable without
+// running anything. What this adds is that `tau run` now agrees with `tau
+// build` about it. A path that does not resolve was going to be an error
+// either way; the difference is whether it arrives now or halfway through a
+// run, on the one branch nobody tested.
+//
+// It is also where the modules from elsewhere are fetched from the cache and
+// checked against tau.sum. Doing that here means it happens once, at the
+// start, rather than the first time execution wanders into an import.
+func CheckImports(entry string) error {
+	entry, err := filepath.Abs(entry)
+	if err != nil {
+		return err
+	}
+
+	var (
+		seen    = map[string]bool{}
+		remotes []string
+		walk    func(file string) error
+	)
+
+	walk = func(file string) error {
+		if seen[file] {
+			return nil
+		}
+		seen[file] = true
+
+		src, err := os.ReadFile(file)
+		if err != nil {
+			return err
+		}
+
+		// Comments first, or the usage example at the top of a module - the
+		// shape every file in the stdlib starts with - would be read as a
+		// dependency, and a program would refuse to run over a line that is
+		// there to be read by a person.
+		for _, m := range importRe.FindAllStringSubmatch(stripComments(string(src)), -1) {
+			path := m[1]
+
+			if mod.IsRemote(path) {
+				remotes = append(remotes, path)
+				continue
+			}
+			next, err := vm.LookupModule(file, path)
+			if err != nil {
+				return fmt.Errorf("%v, imported by %s", err, relName(file))
+			}
+			if err := walk(next); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
+	if err := walk(entry); err != nil {
+		return err
+	}
+	if len(remotes) == 0 {
+		return nil
+	}
+
+	// One resolver for the lot: working out which version of what the build
+	// uses is the same answer for every import of one program.
+	r, err := mod.Load(filepath.Dir(entry))
+	if err != nil {
+		return err
+	}
+	for i := 0; i < len(remotes); i++ {
+		path := remotes[i]
+
+		file, err := r.Resolve(path)
+		if err != nil {
+			return err
+		}
+		// A fetched module imports too, and what it imports has to be there
+		// as much as anything else.
+		if err := walk(file); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// relName is the shortest honest way to name a file in a message: the path the
+// author would recognise when it is under the working directory, and the whole
+// of it when it is somewhere else, such as the cache.
+func relName(file string) string {
+	wd, err := os.Getwd()
+	if err != nil {
+		return file
+	}
+	rel, err := filepath.Rel(wd, file)
+	if err != nil || strings.HasPrefix(rel, "..") {
+		return file
+	}
+	return rel
 }
 
 // tauLine is what goes on the `tau` line of a new manifest: the release this

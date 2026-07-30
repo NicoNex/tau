@@ -115,6 +115,8 @@ Commands:
   test      Run the tests of the given files or directories
   fmt       Format tau source files
   repl      Start the interactive prompt
+  get       Fetch a module and add it to tau.mod
+  mod       Look after tau.mod
   version   Print version information
   help      Display help for a command
 
@@ -223,6 +225,38 @@ Examples:
   %s fmt -l stdlib
   %s fmt -w .
 `, os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0])
+}
+
+func usageGet() {
+	fmt.Fprintf(os.Stderr, `Usage: %s get PATH[@VERSION]
+
+Fetch a module, add it to tau.mod and write its hash into tau.sum. Without a
+version the highest one tagged vX.Y.Z is taken.
+
+Modules land in $TAUHOME, or ~/.tau when that is unset, under pkg/ and one
+directory per version. Nothing is ever fetched while a program runs.
+
+Fetching goes through git, which has to be installed. Building from what is
+already there does not need it.
+
+Examples:
+  %s get github.com/NicoNex/example
+  %s get github.com/NicoNex/example@v1.2.0
+`, os.Args[0], os.Args[0], os.Args[0])
+}
+
+func usageMod() {
+	fmt.Fprintf(os.Stderr, `Usage: %s mod COMMAND
+
+Commands:
+  init PATH   Write a tau.mod for the module in this directory
+  tidy        Require what the source imports, drop what it does not
+  download    Fetch everything tau.mod requires
+
+Examples:
+  %s mod init github.com/you/thing
+  %s mod tidy
+`, os.Args[0], os.Args[0], os.Args[0])
 }
 
 func usageRepl() {

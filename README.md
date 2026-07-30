@@ -436,6 +436,59 @@ Importing a file twice gives the same module: the table is keyed on the
 absolute path, so two spellings of one file still run it once. A cycle is an
 error rather than a crash.
 
+### Modules from somewhere else
+
+An import path whose first element is a host names a module that does not live
+on this machine:
+
+```python
+example = import("github.com/NicoNex/example")
+util = import("github.com/NicoNex/example/util")
+```
+
+That is the whole rule: a host has a dot in it, so `strings` and
+`crypto/sha256` are the library, `./util` is the file next door, and
+`github.com/...` is fetched. There is no registry, because an import path is
+already an address.
+
+A module says who it is in a `tau.mod` at its root:
+
+```
+module github.com/NicoNex/example
+
+tau 2.0
+
+require (
+	github.com/x/y v1.4.0
+	git.sr.ht/~z/w v0.3.1
+)
+```
+
+`tau mod init PATH` writes one, `tau get PATH[@VERSION]` adds a requirement and
+fetches it, `tau mod tidy` makes the file say what the source actually imports.
+Versions are git tags of the form `v1.2.3`.
+
+Where two modules ask for different versions of a third, the build takes the
+highest of what was asked, and never a version nobody asked for. That rule is
+minimum version selection, and what it buys is an answer that needs no solver
+and does not change between today and next year.
+
+Fetched modules land in `~/.tau/pkg`, or under `$TAUHOME`, one directory per
+version. They are read once written, so a version is the bytes it was the day
+it arrived and two projects can share the tree. `tau.sum` holds the hash of
+every version the build reads: a tag moved after the fact stops the build
+instead of running.
+
+Nothing is fetched while a program runs. `tau get` and `tau mod tidy` reach the
+network, a build reads what is already there, and a bundled program carries it.
+Fetching goes through `git`, which is therefore needed to *get* a module and
+not to build or run one.
+
+Inside a module, a path names either the file of that name or a directory of
+that name holding a file called after it: `github.com/NicoNex/example` is
+`example.tau` at the root, and `.../example/util` is either `util.tau` beside
+it or `util/util.tau`.
+
 ### Tests
 
 `tau test` runs every `*_test.tau` in the paths it is given, each in its own

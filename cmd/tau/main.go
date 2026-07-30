@@ -80,6 +80,10 @@ func help() error {
 		usageFmt()
 	case "repl":
 		usageRepl()
+	case "get":
+		usageGet()
+	case "mod":
+		usageMod()
 	default:
 		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", cmd)
 		usageGeneral()
@@ -138,6 +142,10 @@ func main() {
 		check(format())
 	case "repl":
 		check(repl())
+	case "get":
+		check(get())
+	case "mod":
+		check(modcmd())
 	case "version", "-v", "--version":
 		check(version())
 	case "help", "-h", "--help":
@@ -153,6 +161,41 @@ func main() {
 		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", cmd)
 		usageGeneral()
 		os.Exit(1)
+	}
+}
+
+// get fetches a module and writes it into tau.mod.
+func get() error {
+	if len(os.Args) < 3 {
+		usageGet()
+		return nil
+	}
+	return tau.Get(os.Args[2])
+}
+
+// modcmd is the family that looks after the manifest itself.
+func modcmd() error {
+	if len(os.Args) < 3 {
+		usageMod()
+		return nil
+	}
+
+	switch sub := os.Args[2]; sub {
+	case "init":
+		var path string
+		if len(os.Args) > 3 {
+			path = os.Args[3]
+		}
+		return tau.ModInit(path)
+	case "tidy":
+		return tau.ModTidy()
+	case "download":
+		return tau.ModDownload()
+	default:
+		fmt.Fprintf(os.Stderr, "unknown command %q\n\n", "mod "+sub)
+		usageMod()
+		os.Exit(1)
+		return nil
 	}
 }
 

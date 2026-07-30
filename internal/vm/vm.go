@@ -20,6 +20,7 @@ import (
 	"unsafe"
 
 	"github.com/NicoNex/tau/internal/compiler"
+	"github.com/NicoNex/tau/internal/mod"
 	"github.com/NicoNex/tau/internal/obj"
 )
 
@@ -238,7 +239,37 @@ func (vm VM) LoadBundled() error {
 	return nil
 }
 
+// The modules of the program being run, worked out the first time an import
+// needs them and kept: the answer is the same for every import of one run, and
+// finding it walks the requirement graph.
+//
+// ponytail: one resolver for the process. A program is one module tree.
+var (
+	resolver     *mod.Resolver
+	resolverErr  error
+	resolverDone bool
+)
+
+func modules(vmfile string) (*mod.Resolver, error) {
+	if !resolverDone {
+		resolverDone = true
+		resolver, resolverErr = mod.Load(filepath.Dir(vmfile))
+	}
+	return resolver, resolverErr
+}
+
 func lookup(vmfile, taupath string) (string, error) {
+	// A path whose first element is a host names a module from somewhere
+	// else, and those are never looked for on this machine's library paths:
+	// the version the program was written against is the one in the cache.
+	if mod.IsRemote(taupath) {
+		r, err := modules(vmfile)
+		if err != nil {
+			return "", err
+		}
+		return r.Resolve(taupath)
+	}
+
 	// The directory of the importing file, so that a module finds the ones
 	// that sit next to it whatever the working directory is.
 	for _, p := range lookupPaths(filepath.Dir(vmfile), taupath) {

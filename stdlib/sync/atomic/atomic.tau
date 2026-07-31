@@ -47,7 +47,7 @@ Int = fn(v) {
 	a.cell = bytes(8)
 
 	# Load returns what the cell holds.
-	a.Load = fn() { int(at.at_load(a.cell)) }
+	a.Load = fn() { at.at_load(a.cell) }
 
 	# Store writes n into the cell.
 	a.Store = fn(n) { at.at_store(a.cell, n) }
@@ -55,15 +55,15 @@ Int = fn(v) {
 	# Add adds delta and returns what the cell holds afterwards. That answer
 	# belongs to the caller alone: no two routines adding at once are given
 	# the same one, which is what makes it usable as a ticket.
-	a.Add = fn(delta) { int(at.at_add(a.cell, delta)) }
+	a.Add = fn(delta) { at.at_add(a.cell, delta) }
 
 	# Swap writes n and returns what was there before.
-	a.Swap = fn(n) { int(at.at_swap(a.cell, n)) }
+	a.Swap = fn(n) { at.at_swap(a.cell, n) }
 
 	# CompareAndSwap writes new if the cell holds old, and reports whether it
 	# did. It is what a change that has to read the old value first is built
 	# from: read, work out the new one, and try until this one takes.
-	a.CompareAndSwap = fn(old, new) { int(at.at_cas(a.cell, old, new)) != 0 }
+	a.CompareAndSwap = fn(old, new) { at.at_cas(a.cell, old, new) != 0 }
 
 	a.Store(v)
 	return a

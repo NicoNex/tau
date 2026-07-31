@@ -24,3 +24,6 @@
 internal/obj/libffi
 internal/vm/bdwgc
 profile
+
+# What the release workflow stages and packages.
+/dist

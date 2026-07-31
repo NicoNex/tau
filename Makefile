@@ -88,8 +88,16 @@ RT_SRC = internal/rt/rt.c \
 	internal/compiler/codec.c \
 	$(wildcard internal/obj/*.c)
 
+# Windows has no libdl: what dlopen is there comes from plugin.h, which calls
+# LoadLibrary, and threads are in the C library itself.
+ifeq ($(OS),Windows_NT)
+    RT_LIBS =
+else
+    RT_LIBS = -ldl -lpthread
+endif
+
 tau-rt:
-	$(CC) -DTAU_RT -o $(DIR)/tau-rt $(RT_SRC) $(CFLAGS) $(LDFLAGS) -ldl -lpthread
+	$(CC) -DTAU_RT -o $(DIR)/tau-rt $(RT_SRC) $(CFLAGS) $(LDFLAGS) $(RT_LIBS)
 	strip $(DIR)/tau-rt
 
 tau-windows:

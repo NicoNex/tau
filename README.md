@@ -921,6 +921,7 @@ starts with a comment saying what it is for.
 | `encoding/csv` | comma separated values, the way RFC 4180 writes them |
 | `encoding/hex` | hexadecimal encoding |
 | `encoding/json` | JSON, parsed and written |
+| `encoding/xml` | XML, parsed into a tree of elements and written back |
 | `errno` | the numbers `errno` takes |
 | `errors` | errors as values: `New`, `Wrap`, `Is`, `Message` |
 | `flag` | command line flags |

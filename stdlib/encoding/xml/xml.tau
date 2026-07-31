@@ -1,0 +1,661 @@
+# xml - reading and writing XML.
+#
+# Parse gives back the root element, and an element is a plain object with
+# four fields: Name, Attr, Children and Text.
+#
+#	xml = import("encoding/xml")
+#
+#	doc = xml.Parse(`<catalog n="2">
+#		<book id="a"><title>Tau</title></book>
+#		<book id="b"><title>More tau</title></book>
+#	</catalog>`)
+#
+#	println(doc.Name, doc.Attr["n"])
+#	for i = 0; i < len(doc.Children); i++ {
+#		b = doc.Children[i]
+#		println(xml.Get(b, "id"), xml.Child(b, "title").Text)
+#	}
+#
+# A node holds no functions of its own, and that is on purpose: Child, All and
+# Get are module functions taking a node. A document of any size is tens of
+# thousands of elements, and three closures on each of them would cost more
+# than the document does.
+#
+# Names are kept as they are written, prefix and all: an attribute called
+# c:identifier is looked up under that name. Resolving prefixes to the URI
+# their xmlns declared would mean carrying a scope through the whole parse,
+# and a reader that wants it can read the xmlns attributes, which are there
+# like any others.
+#
+# Text is the character data directly inside an element, as written. Nothing
+# is trimmed: whitespace between elements is data as far as this is concerned,
+# and strings.TrimSpace is there for whoever knows it is not.
+#
+# Text is all of an element's character data put together, so where text and
+# elements are interleaved - a paragraph with emphasis in the middle of it -
+# the order between the two is not kept, and writing such a node back out puts
+# its text first. XML that carries data rather than prose does not interleave
+# them, and that is the XML this is for.
+#
+# What it does not do: validation, DTDs, entities of your own. The five named
+# ones are understood, and so are &#nn; and &#xhh;.
+#
+# How it goes about it, because it decides how fast it is:
+#
+#   - The scan runs over the bytes of the source and not its characters.
+#     Indexing a string gives back a string, which is an allocation for every
+#     character looked at; indexing bytes gives an integer and allocates
+#     nothing.
+#   - A run of text with no entity in it is handed back as one slice of the
+#     source, which shares the buffer rather than copying it.
+#   - The hot loops read their state into locals first. Reading a field of an
+#     object costs a hash and a walk, and doing that per character is most of
+#     the time a parser written the obvious way spends.
+#   - Where and what line an error is on is worked out when there is an error,
+#     never before. Counting lines while scanning costs every document to
+#     serve the ones that fail.
+
+utf8 = import("unicode/utf8")
+buffer = import("buffer")
+
+# The bytes the grammar turns on.
+bTab = 9
+bLF = 10
+bCR = 13
+bSpace = 32
+bBang = 33
+bQuote = 34
+bHash = 35
+bAmp = 38
+bApos = 39
+bDash = 45
+bSlash = 47
+bSemi = 59
+bLT = 60
+bEq = 61
+bGT = 62
+bQuestion = 63
+bUpperX = 88
+bLBracket = 91
+bRBracket = 93
+bLowerX = 120
+
+# What may sit inside a name, and what counts as space, as tables indexed by
+# the byte. A lexer asks these questions once per character of the document,
+# and a table answers in one index where a chain of comparisons takes as many
+# branches as there are characters it has to rule out.
+nameByte = fn() {
+	t = []
+	for c = 0; c < 256; c++ {
+		t = append(t, c > bSpace)
+	}
+	t[bLT] = false
+	t[bGT] = false
+	t[bSlash] = false
+	t[bEq] = false
+	t[bQuote] = false
+	t[bApos] = false
+	t[bQuestion] = false
+	t[bBang] = false
+	return t
+}()
+
+spaceByte = fn() {
+	t = []
+	for c = 0; c < 256; c++ {
+		t = append(t, false)
+	}
+	t[bSpace] = true
+	t[bLF] = true
+	t[bTab] = true
+	t[bCR] = true
+	return t
+}()
+
+# Node builds an element. Exported because a program that writes XML rather
+# than reading it has to make one.
+Node = fn(name) {
+	n = new()
+	n.Name = name
+	n.Attr = {}
+	n.Children = []
+	n.Text = ""
+	return n
+}
+
+# --- reading
+
+Parser = fn(src) {
+	p = new()
+	p.s = src
+	p.b = bytes(src)
+	p.n = len(src)
+	p.i = 0
+
+	# fail says where it went wrong, working the line and the column out from
+	# the offset. It runs once per parse at the most.
+	p.fail = fn(msg) {
+		line = 1
+		col = 1
+		b = p.b
+
+		for k = 0; k < p.i && k < p.n; k++ {
+			if b[k] == bLF {
+				line++
+				col = 1
+			} else {
+				col++
+			}
+		}
+		return error("xml parse error at {line}:{col} -> {msg}")
+	}
+
+	p.skipSpace = fn() {
+		b = p.b
+		n = p.n
+		i = p.i
+
+		for i < n && spaceByte[b[i]] { i++ }
+		p.i = i
+	}
+
+	# looking reports whether the source at the cursor starts with lit. Used
+	# where the shape is rare enough that a slice and a compare are cheaper
+	# than spelling the bytes out.
+	p.looking = fn(lit) {
+		if p.i + len(lit) > p.n {
+			return false
+		}
+		return slice(p.s, p.i, p.i + len(lit)) == lit
+	}
+
+	# skipUntil moves past the next occurrence of a two or three byte marker.
+	# An unterminated one is a mistake, not an empty document.
+	p.skipUntil = fn(c0, c1, c2, what) {
+		b = p.b
+		n = p.n
+		i = p.i
+		last = if c2 < 0 { 2 } else { 3 }
+
+		for i + last <= n {
+			if b[i] == c0 && b[i + 1] == c1 && (c2 < 0 || b[i + 2] == c2) {
+				p.i = i + last
+				return null
+			}
+			i++
+		}
+		p.i = n
+		return p.fail("unterminated {what}")
+	}
+
+	# skipDoctype steps over a DOCTYPE, internal subset included. The subset
+	# is between brackets and holds '>' of its own, so the depth is counted.
+	p.skipDoctype = fn() {
+		b = p.b
+		n = p.n
+		i = p.i
+		depth = 0
+
+		for i < n {
+			c = b[i]
+			if c == bLBracket {
+				depth++
+			} else if c == bRBracket {
+				depth--
+			} else if c == bGT && depth <= 0 {
+				p.i = i + 1
+				return null
+			}
+			i++
+		}
+		p.i = n
+		return p.fail("unterminated DOCTYPE")
+	}
+
+	# skipMisc steps over what may sit before and after the root: processing
+	# instructions, the declaration, comments and a DOCTYPE.
+	p.skipMisc = fn() {
+		for {
+			p.skipSpace()
+			if p.i + 1 >= p.n || p.b[p.i] != bLT {
+				return null
+			}
+
+			c = p.b[p.i + 1]
+			if c == bQuestion {
+				p.i += 2
+				if failed(e = p.skipUntil(bQuestion, bGT, -1, "processing instruction")) {
+					return e
+				}
+			} else if c == bBang && p.looking("<!--") {
+				p.i += 4
+				if failed(e = p.skipUntil(bDash, bDash, bGT, "comment")) {
+					return e
+				}
+			} else if c == bBang && p.looking("<!DOCTYPE") {
+				p.i += 9
+				if failed(e = p.skipDoctype()) {
+					return e
+				}
+			} else {
+				return null
+			}
+		}
+	}
+
+	p.name = fn() {
+		b = p.b
+		n = p.n
+		i = p.i
+		start = i
+
+		# The table lets through more than a name may hold, which costs
+		# nothing: the job here is to find where it ends.
+		for i < n && nameByte[b[i]] { i++ }
+		if i == start {
+			return p.fail("expected a name")
+		}
+		p.i = i
+		return slice(p.s, start, i)
+	}
+
+	# reference reads what follows an '&' and gives back what it stands for.
+	p.reference = fn() {
+		p.i++
+		b = p.b
+		n = p.n
+		i = p.i
+		start = i
+
+		for i < n && b[i] != bSemi && b[i] > bSpace && b[i] != bLT {
+			i++
+		}
+		if i >= n || b[i] != bSemi {
+			p.i = i
+			return p.fail("unterminated entity reference")
+		}
+
+		name = slice(p.s, start, i)
+		p.i = i + 1
+
+		if name == "lt" { return "<" }
+		if name == "gt" { return ">" }
+		if name == "amp" { return "&" }
+		if name == "quot" { return "\"" }
+		if name == "apos" { return "'" }
+
+		if b[start] == bHash && i > start + 1 {
+			from = start + 1
+			base = 10
+
+			if b[from] == bLowerX || b[from] == bUpperX {
+				from++
+				base = 16
+			}
+			if failed(r = digits(p.b, from, i, base)) {
+				p.i = start
+				return p.fail("bad character reference &{name};")
+			}
+			return utf8.EncodeRune(r)
+		}
+		p.i = start
+		return p.fail("unknown entity &{name};")
+	}
+
+	# scan runs to the next byte that ends a run of character data, either the
+	# stop byte or an '&'. It is the innermost loop of the whole parser.
+	p.scan = fn(stop) {
+		b = p.b
+		n = p.n
+		i = p.i
+
+		for i < n {
+			c = b[i]
+			if c == stop || c == bAmp {
+				break
+			}
+			i++
+		}
+		p.i = i
+		return i
+	}
+
+	# run reads character data up to stop. A run without references is one
+	# slice of the source and costs no copy at all; one with them is joined
+	# once at the end.
+	p.run = fn(stop) {
+		start = p.i
+		end = p.scan(stop)
+
+		if end >= p.n || p.b[end] != bAmp {
+			return slice(p.s, start, end)
+		}
+
+		out = buffer.Builder()
+		out.Write(slice(p.s, start, end))
+
+		for p.i < p.n && p.b[p.i] == bAmp {
+			if failed(r = p.reference()) {
+				return r
+			}
+			out.Write(r)
+
+			start = p.i
+			end = p.scan(stop)
+			out.Write(slice(p.s, start, end))
+		}
+		return out.String()
+	}
+
+	p.attrValue = fn() {
+		if p.i >= p.n {
+			return p.fail("an attribute value is quoted")
+		}
+		quote = p.b[p.i]
+		if quote != bQuote && quote != bApos {
+			return p.fail("an attribute value is quoted")
+		}
+		p.i++
+
+		if failed(v = p.run(quote)) {
+			return v
+		}
+		if p.i >= p.n || p.b[p.i] != quote {
+			return p.fail("unterminated attribute value")
+		}
+		p.i++
+		return v
+	}
+
+	# element reads one element, the '<' already under the cursor.
+	p.element = fn() {
+		p.i++
+		if failed(name = p.name()) {
+			return name
+		}
+		node = Node(name)
+
+		for {
+			p.skipSpace()
+			if p.i >= p.n {
+				return p.fail("unterminated tag <{name}>")
+			}
+			c = p.b[p.i]
+
+			if c == bSlash {
+				p.i++
+				if p.i >= p.n || p.b[p.i] != bGT {
+					return p.fail("expected '>' after '/'")
+				}
+				p.i++
+				return node
+			}
+			if c == bGT {
+				p.i++
+				return p.content(node)
+			}
+
+			if failed(attr = p.name()) {
+				return attr
+			}
+			p.skipSpace()
+			if p.i >= p.n || p.b[p.i] != bEq {
+				return p.fail("expected '=' after attribute {attr}")
+			}
+			p.i++
+			p.skipSpace()
+
+			if failed(val = p.attrValue()) {
+				return val
+			}
+			node.Attr[attr] = val
+		}
+	}
+
+	# content reads what lies between a start tag and its end tag.
+	p.content = fn(node) {
+		text = buffer.Builder()
+		children = []
+
+		for {
+			if p.i >= p.n {
+				return p.fail("unterminated element <{node.Name}>")
+			}
+
+			if p.b[p.i] != bLT {
+				if failed(t = p.run(bLT)) {
+					return t
+				}
+				text.Write(t)
+				continue
+			}
+
+			c = if p.i + 1 < p.n { p.b[p.i + 1] } else { -1 }
+
+			if c == bSlash {
+				p.i += 2
+				if failed(name = p.name()) {
+					return name
+				}
+				if name != node.Name {
+					return p.fail("</{name}> closes <{node.Name}>")
+				}
+				p.skipSpace()
+				if p.i >= p.n || p.b[p.i] != bGT {
+					return p.fail("expected '>' after </{name}>")
+				}
+				p.i++
+
+				node.Text = text.String()
+				node.Children = children
+				return node
+			}
+
+			if c == bBang {
+				if p.looking("<![CDATA[") {
+					p.i += 9
+					start = p.i
+					if failed(e = p.skipUntil(bRBracket, bRBracket, bGT, "CDATA section")) {
+						return e
+					}
+					text.Write(slice(p.s, start, p.i - 3))
+					continue
+				}
+				if p.looking("<!--") {
+					p.i += 4
+					if failed(e = p.skipUntil(bDash, bDash, bGT, "comment")) {
+						return e
+					}
+					continue
+				}
+				return p.fail("expected a comment or a CDATA section")
+			}
+
+			if c == bQuestion {
+				p.i += 2
+				if failed(e = p.skipUntil(bQuestion, bGT, -1, "processing instruction")) {
+					return e
+				}
+				continue
+			}
+
+			if failed(child = p.element()) {
+				return child
+			}
+			children = append(children, child)
+		}
+	}
+
+	p.document = fn() {
+		if failed(e = p.skipMisc()) {
+			return e
+		}
+		if p.i >= p.n || p.b[p.i] != bLT {
+			return p.fail("expected an element")
+		}
+		if failed(root = p.element()) {
+			return root
+		}
+
+		# What follows the root may only be a comment or an instruction.
+		if failed(e = p.skipMisc()) {
+			return e
+		}
+		if p.i < p.n {
+			return p.fail("text after the root element")
+		}
+		return root
+	}
+
+	return p
+}
+
+# digits reads an unsigned number out of the bytes between from and to.
+digits = fn(b, from, to, base) {
+	if from >= to {
+		return error("no digits")
+	}
+	n = 0
+
+	for i = from; i < to; i++ {
+		c = b[i]
+		d = -1
+
+		if c >= 48 && c <= 57 {
+			d = c - 48
+		} else if c >= 97 && c <= 102 {
+			d = c - 87
+		} else if c >= 65 && c <= 70 {
+			d = c - 55
+		}
+		if d < 0 || d >= base {
+			return error("not a digit in base {base}")
+		}
+		n = n * base + d
+	}
+	return n
+}
+
+# Parse reads a document and gives back its root element.
+Parse = fn(src) {
+	p = Parser(src)
+	return p.document()
+}
+
+# --- looking around a tree
+
+# Child is the first child element called name, and null when there is none.
+Child = fn(node, name) {
+	cs = node.Children
+	for i = 0; i < len(cs); i++ {
+		if cs[i].Name == name {
+			return cs[i]
+		}
+	}
+	return null
+}
+
+# All is every child element called name, in the order they were written.
+All = fn(node, name) {
+	cs = node.Children
+	out = []
+
+	for i = 0; i < len(cs); i++ {
+		if cs[i].Name == name {
+			out = append(out, cs[i])
+		}
+	}
+	return out
+}
+
+# Get is the value of an attribute, and "" when it is not there. An attribute
+# written empty and one that is absent are told apart by node.Attr.
+Get = fn(node, name) {
+	v = node.Attr[name]
+	if v == null {
+		return ""
+	}
+	return v
+}
+
+# --- writing
+
+# Escape makes a string safe between tags and inside an attribute value. A
+# string with nothing to escape comes back as it was, without a copy.
+Escape = fn(s) {
+	b = bytes(s)
+	n = len(s)
+	out = null
+	start = 0
+
+	for i = 0; i < n; i++ {
+		c = b[i]
+		r = ""
+
+		if c == bLT {
+			r = "&lt;"
+		} else if c == bGT {
+			r = "&gt;"
+		} else if c == bAmp {
+			r = "&amp;"
+		} else if c == bQuote {
+			r = "&quot;"
+		} else if c == bApos {
+			r = "&apos;"
+		} else {
+			continue
+		}
+
+		if out == null {
+			out = buffer.Builder()
+		}
+		out.Write(slice(s, start, i))
+		out.Write(r)
+		start = i + 1
+	}
+
+	if out == null {
+		return s
+	}
+	out.Write(slice(s, start, n))
+	return out.String()
+}
+
+# String writes a node back out. Attributes come out in the order keys gives
+# them and not the order they were written: XML says an attribute list is a
+# set, and this holds one.
+String = fn(node) {
+	out = buffer.Builder()
+	write(out, node)
+	return out.String()
+}
+
+write = fn(out, node) {
+	out.Write("<")
+	out.Write(node.Name)
+
+	ks = keys(node.Attr)
+	for i = 0; i < len(ks); i++ {
+		out.Write(" ")
+		out.Write(ks[i])
+		out.Write("=\"")
+		out.Write(Escape(node.Attr[ks[i]]))
+		out.Write("\"")
+	}
+
+	if len(node.Children) == 0 && node.Text == "" {
+		out.Write("/>")
+		return null
+	}
+	out.Write(">")
+	out.Write(Escape(node.Text))
+
+	cs = node.Children
+	for i = 0; i < len(cs); i++ {
+		write(out, cs[i])
+	}
+
+	out.Write("</")
+	out.Write(node.Name)
+	out.Write(">")
+}

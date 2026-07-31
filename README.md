@@ -941,6 +941,7 @@ starts with a comment saying what it is for.
 | `runtime` | what the program can know about the machine it runs on |
 | `strconv` | conversions between strings and numbers |
 | `strings` | operations on strings |
+| `sync` | mutexes, wait groups and once, for state shared between routines |
 | `syscall` | the system calls underneath the rest |
 | `testing` | the test runner `tau test` uses |
 | `time` | clocks and pauses |

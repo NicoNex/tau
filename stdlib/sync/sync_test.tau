@@ -1,0 +1,140 @@
+testing = import("testing")
+sync = import("sync")
+time = import("time")
+
+testing.Main([
+		["Mutex keeps increments from being lost", fn(t) {
+				mu = sync.Mutex()
+				wg = sync.WaitGroup()
+				c = new()
+				c.n = 0
+
+				for i = 0; i < 8; i++ {
+					wg.Go(fn() {
+							for j = 0; j < 100; j++ {
+								mu.Lock()
+								c.n++
+								mu.Unlock()
+							}
+						})
+				}
+				wg.Wait()
+				t.AssertEq(c.n, 800)
+			}],
+
+		["Unlock of an unlocked Mutex is an error", fn(t) {
+				mu = sync.Mutex()
+				t.AssertEq(failed(mu.Unlock()), true)
+				mu.Lock()
+				t.AssertEq(failed(mu.Unlock()), false)
+			}],
+
+		["RWMutex lets readers in together", fn(t) {
+				rw = sync.RWMutex()
+				wg = sync.WaitGroup()
+				c = new()
+				c.in = 0
+				c.most = 0
+
+				# Every reader is inside before any of them leaves, so the count of
+				# those inside must reach the number of readers.
+				for i = 0; i < 4; i++ {
+					wg.Go(fn() {
+							rw.RLock()
+							c.in++
+							if c.in > c.most {
+								c.most = c.in
+							}
+							time.Sleep(50)
+							c.in--
+							rw.RUnlock()
+						})
+				}
+				wg.Wait()
+				t.AssertEq(c.most, 4)
+			}],
+
+		["RWMutex keeps a writer alone", fn(t) {
+				rw = sync.RWMutex()
+				wg = sync.WaitGroup()
+				c = new()
+				c.n = 0
+
+				for i = 0; i < 4; i++ {
+					wg.Go(fn() {
+							rw.RLock()
+							time.Sleep(20)
+							rw.RUnlock()
+						})
+					wg.Go(fn() {
+							rw.Lock()
+							c.n++
+							rw.Unlock()
+						})
+				}
+				wg.Wait()
+				t.AssertEq(c.n, 4)
+				t.AssertEq(failed(rw.RUnlock()), true)
+			}],
+
+		["WaitGroup waits for what Add counted", fn(t) {
+				wg = sync.WaitGroup()
+				c = new()
+				c.n = 0
+
+				wg.Add(3)
+				for i = 0; i < 3; i++ {
+					tau fn() {
+						time.Sleep(30)
+						c.n++
+						wg.Done()
+					}()
+				}
+				wg.Wait()
+				t.AssertEq(c.n, 3)
+
+				# Waiting on a group that owes nothing returns at once, and the group
+				# is good for another round.
+				wg.Wait()
+				wg.Go(fn() { c.n++ })
+				wg.Wait()
+				t.AssertEq(c.n, 4)
+			}],
+
+		["WaitGroup refuses to go below zero", fn(t) {
+				wg = sync.WaitGroup()
+				t.AssertEq(failed(wg.Done()), true)
+				wg.Add(1)
+				t.AssertEq(failed(wg.Add(-2)), true)
+				wg.Done()
+				wg.Wait()
+			}],
+
+		["Once runs the function once", fn(t) {
+				once = sync.Once()
+				wg = sync.WaitGroup()
+				c = new()
+				c.n = 0
+
+				for i = 0; i < 8; i++ {
+					wg.Go(fn() { once.Do(fn() { c.n++ }) })
+				}
+				wg.Wait()
+				t.AssertEq(c.n, 1)
+			}],
+
+		["OnceFunc and OnceValue", fn(t) {
+				c = new()
+				c.calls = 0
+
+				f = sync.OnceFunc(fn() { c.calls++ })
+				f()
+				f()
+				t.AssertEq(c.calls, 1)
+
+				v = sync.OnceValue(fn() { c.calls++; return 42 })
+				t.AssertEq(v(), 42)
+				t.AssertEq(v(), 42)
+				t.AssertEq(c.calls, 2)
+			}],
+	])

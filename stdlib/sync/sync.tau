@@ -1,0 +1,203 @@
+# sync - the locks tau routines share state with.
+#
+# A pipe is the only thing the language gives that two routines can touch at
+# the same time without racing, so everything here is a pipe underneath. A
+# mutex is a pipe of one value: holding the lock means having put the token
+# in, and unlocking means taking it back out, which is why a second Lock waits
+# - the pipe is full.
+#
+# As in Go, none of these may be copied once used: pass the object around, it
+# is a reference. And as in Go, the first rule is that a pipe is usually the
+# better answer. Reach for a lock only when the thing being shared is state
+# rather than a message.
+
+# Mutex is a lock held by one routine at a time.
+#
+#	mu = sync.Mutex()
+#	mu.Lock()
+#	balance = balance + 1
+#	mu.Unlock()
+Mutex = fn() {
+	m = new()
+	m.tok = pipe(1)
+	m.locked = false
+
+	# Lock takes the lock, waiting until whoever holds it gives it back.
+	m.Lock = fn() {
+		send(m.tok, 1)
+		m.locked = true
+	}
+
+	# Unlock gives the lock back. Unlocking one that is not locked is a
+	# mistake and returns an error rather than waiting forever for a token
+	# that nobody put in.
+	m.Unlock = fn() {
+		if !m.locked {
+			return error("sync: unlock of unlocked mutex")
+		}
+		m.locked = false
+		recv(m.tok)
+	}
+
+	# ponytail: no TryLock. It needs a send that gives up instead of waiting,
+	# and the language has no such send; reading m.locked would answer about
+	# the past, not about the moment the lock is taken.
+
+	return m
+}
+
+# RWMutex is a lock any number of readers may hold together, but only one
+# writer alone.
+#
+# Readers can starve a writer: a writer waits for the last reader to leave,
+# and readers that keep arriving never leave a gap. Use it where reads are
+# many and writes are rare, which is the case it exists for.
+RWMutex = fn() {
+	rw = new()
+	rw.w = Mutex() # held by the writer, or by the readers as a group
+	rw.r = Mutex() # guards the count
+	rw.readers = 0
+
+	# RLock takes the lock for reading. The first reader in takes the writer
+	# lock on behalf of all of them, the last one out gives it back.
+	rw.RLock = fn() {
+		rw.r.Lock()
+		rw.readers++
+		if rw.readers == 1 {
+			rw.w.Lock()
+		}
+		rw.r.Unlock()
+	}
+
+	# RUnlock gives back a reader's hold.
+	rw.RUnlock = fn() {
+		rw.r.Lock()
+		if rw.readers == 0 {
+			rw.r.Unlock()
+			return error("sync: RUnlock of unlocked RWMutex")
+		}
+		rw.readers--
+		if rw.readers == 0 {
+			rw.w.Unlock()
+		}
+		rw.r.Unlock()
+	}
+
+	# Lock takes the lock for writing, waiting for every reader to be done.
+	rw.Lock = fn() { rw.w.Lock() }
+
+	# Unlock gives back the writer's hold.
+	rw.Unlock = fn() { rw.w.Unlock() }
+
+	return rw
+}
+
+# WaitGroup waits for a collection of tau routines to finish.
+#
+#	wg = sync.WaitGroup()
+#	for i = 0; i < 3; i++ {
+#		wg.Go(fn() { work() })
+#	}
+#	wg.Wait()
+WaitGroup = fn() {
+	wg = new()
+	wg.mu = Mutex()
+	wg.n = 0
+	wg.done = null # the pipe waiters sleep on, closed when the count is 0
+
+	# Add changes the count by delta, which may be negative. A count that
+	# would go below zero is a mistake and returns an error.
+	#
+	# Reaching zero closes the pipe rather than sending on it: a close wakes
+	# every waiter at once, which is what "everyone is done" means. The next
+	# Add from zero makes a fresh one, so a group can be used again.
+	wg.Add = fn(delta) {
+		wg.mu.Lock()
+		if wg.n + delta < 0 {
+			wg.mu.Unlock()
+			return error("sync: negative WaitGroup counter")
+		}
+		wg.n += delta
+		if wg.n == 0 {
+			if wg.done != null {
+				close(wg.done)
+				wg.done = null
+			}
+		} else if wg.done == null {
+			wg.done = pipe()
+		}
+		wg.mu.Unlock()
+	}
+
+	# Done marks one of the routines as finished.
+	wg.Done = fn() { wg.Add(-1) }
+
+	# run is what Go starts: f, and the Done that must follow it whatever f
+	# does. It is a field because `tau` starts a call, and this is the call.
+	wg.run = fn(f) {
+		f()
+		wg.Done()
+	}
+
+	# Go counts one more routine and starts it, so that the Add and the
+	# routine cannot drift apart.
+	wg.Go = fn(f) {
+		wg.Add(1)
+		tau wg.run(f)
+	}
+
+	# Wait sleeps until the count is zero. Zero already, and it returns.
+	wg.Wait = fn() {
+		wg.mu.Lock()
+		d = wg.done
+		wg.mu.Unlock()
+		if d != null {
+			recv(d)
+		}
+	}
+
+	return wg
+}
+
+# Once runs a thing once, however many routines ask for it.
+#
+#	once = sync.Once()
+#	get = fn() { once.Do(fn() { conf = load() }); return conf }
+Once = fn() {
+	o = new()
+	o.mu = Mutex()
+	o.done = false
+
+	# Do calls f if no call to Do on this Once ever has. Callers arriving
+	# while f runs wait for it: when Do returns, f has returned.
+	#
+	# f may not call Do on the same Once, that waits for a lock it holds.
+	o.Do = fn(f) {
+		o.mu.Lock()
+		if !o.done {
+			o.done = true
+			f()
+		}
+		o.mu.Unlock()
+	}
+
+	return o
+}
+
+# OnceFunc returns a function that calls f only the first time it is called.
+OnceFunc = fn(f) {
+	o = Once()
+	return fn() { o.Do(f) }
+}
+
+# OnceValue returns a function that calls f the first time it is called and
+# returns what f returned, that same value every time after.
+OnceValue = fn(f) {
+	o = Once()
+	v = new()
+	v.val = null
+	return fn() {
+		o.Do(fn() { v.val = f() })
+		return v.val
+	}
+}

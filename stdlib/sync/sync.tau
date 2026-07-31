@@ -96,7 +96,7 @@ RWMutex = fn() {
 #
 #	wg = sync.WaitGroup()
 #	for i = 0; i < 3; i++ {
-#		wg.Go(fn() { work() })
+#		wg.Tau(fn() { work() })
 #	}
 #	wg.Wait()
 WaitGroup = fn() {
@@ -132,16 +132,17 @@ WaitGroup = fn() {
 	# Done marks one of the routines as finished.
 	wg.Done = fn() { wg.Add(-1) }
 
-	# run is what Go starts: f, and the Done that must follow it whatever f
+	# run is what Tau starts: f, and the Done that must follow it whatever f
 	# does. It is a field because `tau` starts a call, and this is the call.
 	wg.run = fn(f) {
 		f()
 		wg.Done()
 	}
 
-	# Go counts one more routine and starts it, so that the Add and the
-	# routine cannot drift apart.
-	wg.Go = fn(f) {
+	# Tau counts one more routine and starts it, so that the Add and the
+	# routine cannot drift apart. Go spells this one Go, after its own
+	# keyword; the keyword here is tau.
+	wg.Tau = fn(f) {
 		wg.Add(1)
 		tau wg.run(f)
 	}

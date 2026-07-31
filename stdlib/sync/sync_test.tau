@@ -10,7 +10,7 @@ testing.Main([
 				c.n = 0
 
 				for i = 0; i < 8; i++ {
-					wg.Go(fn() {
+					wg.Tau(fn() {
 							for j = 0; j < 100; j++ {
 								mu.Lock()
 								c.n++
@@ -39,7 +39,7 @@ testing.Main([
 				# Every reader is inside before any of them leaves, so the count of
 				# those inside must reach the number of readers.
 				for i = 0; i < 4; i++ {
-					wg.Go(fn() {
+					wg.Tau(fn() {
 							rw.RLock()
 							c.in++
 							if c.in > c.most {
@@ -61,12 +61,12 @@ testing.Main([
 				c.n = 0
 
 				for i = 0; i < 4; i++ {
-					wg.Go(fn() {
+					wg.Tau(fn() {
 							rw.RLock()
 							time.Sleep(20)
 							rw.RUnlock()
 						})
-					wg.Go(fn() {
+					wg.Tau(fn() {
 							rw.Lock()
 							c.n++
 							rw.Unlock()
@@ -96,7 +96,7 @@ testing.Main([
 				# Waiting on a group that owes nothing returns at once, and the group
 				# is good for another round.
 				wg.Wait()
-				wg.Go(fn() { c.n++ })
+				wg.Tau(fn() { c.n++ })
 				wg.Wait()
 				t.AssertEq(c.n, 4)
 			}],
@@ -117,7 +117,7 @@ testing.Main([
 				c.n = 0
 
 				for i = 0; i < 8; i++ {
-					wg.Go(fn() { once.Do(fn() { c.n++ }) })
+					wg.Tau(fn() { once.Do(fn() { c.n++ }) })
 				}
 				wg.Wait()
 				t.AssertEq(c.n, 1)

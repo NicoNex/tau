@@ -143,15 +143,21 @@ header.scrolled {
 .mark .wordmark {
 	font-family: var(--serif);
 	font-size: 1.75rem;
+	font-weight: 700;
 	line-height: 1;
-	letter-spacing: -0.005em;
+	letter-spacing: -0.012em;
 	color: var(--ink);
 	white-space: nowrap;
 }
 .mark .wordmark .t {
 	font-style: italic;
-	font-size: 1.16em;
+	font-weight: 700;
+	font-size: 1.2em;
 	color: var(--accent);
+	/* A serif italic tau is a thin thing next to a bold roman "au", so it is
+	   given the weight the face itself will not give it. */
+	-webkit-text-stroke: 0.4px currentColor;
+	padding-right: 0.02em;
 }
 /* The serif and the monospace have different bodies, so the two names line up
    by eye rather than by baseline. */

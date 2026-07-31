@@ -32,10 +32,31 @@ Builder = fn() {
 	b.Len = fn() { b.size }
 
 	# String returns the concatenation of everything written.
+	#
+	# The pieces are joined in pairs, and the pairs in pairs, until one is
+	# left. Adding them up one at a time would copy everything accumulated so
+	# far at every step, which is the O(n^2) this type exists to avoid - and
+	# was what it did. Halving the count each round makes it O(n log n) of
+	# copying, all of it done by the concatenation itself rather than a byte
+	# at a time here.
 	b.String = fn() {
+		parts = b.parts
+
+		for len(parts) > 1 {
+			merged = []
+			for i = 0; i < len(parts); i += 2 {
+				if i + 1 < len(parts) {
+					merged = append(merged, parts[i] + parts[i + 1])
+				} else {
+					merged = append(merged, parts[i])
+				}
+			}
+			parts = merged
+		}
+
 		out = ""
-		for i = 0; i < len(b.parts); ++i {
-			out = out + b.parts[i]
+		if len(parts) == 1 {
+			out = parts[0]
 		}
 		# Collapse the pieces, further writes start from here.
 		b.parts = [out]

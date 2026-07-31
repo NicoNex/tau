@@ -163,7 +163,9 @@ profile:
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go build profile.go
 
 # The Go tests first, then the ones written in tau.
-test: tau plugins
+# tau-rt too: a bundled program is built on it, so a runtime left behind by an
+# older build is a decoder that no longer agrees with the encoder.
+test: tau tau-rt plugins
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go test . ./internal/... ./cmd/...
 	TAUPATH=$(DIR)/stdlib ./tau test stdlib
 

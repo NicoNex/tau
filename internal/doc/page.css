@@ -33,7 +33,7 @@
 	--measure: 44rem;
 	--rail: 17.5rem;
 	--gutter: 3.5rem;
-	--head: 5.1rem;
+	--head: 5.6rem;
 	--r: 10px;
 	--shadow: 0 1px 2px rgba(24, 26, 48, .05), 0 16px 40px -24px rgba(24, 26, 48, .38);
 }
@@ -135,14 +135,14 @@ header.scrolled {
 .mark {
 	display: flex;
 	align-items: center;
-	gap: 0.6rem;
+	gap: 0.7rem;
 	min-width: 0;
 	animation: rise .55s cubic-bezier(.2, .7, .3, 1) both;
 }
 /* The name of the language, spelled with the letter it is named after. */
 .mark .wordmark {
 	font-family: var(--serif);
-	font-size: 1.4rem;
+	font-size: 1.75rem;
 	line-height: 1;
 	letter-spacing: -0.005em;
 	color: var(--ink);
@@ -153,25 +153,28 @@ header.scrolled {
 	font-size: 1.16em;
 	color: var(--accent);
 }
+/* The serif and the monospace have different bodies, so the two names line up
+   by eye rather than by baseline. */
+.mark .wordmark { transform: translateY(1px); }
 .mark .slash {
 	font-family: var(--mono);
-	font-size: 1rem;
+	font-size: 1.2rem;
 	color: var(--line);
 	transform: translateY(-1px);
 }
 .mark h1 {
 	margin: 0;
 	font-family: var(--mono);
-	font-size: 1.14rem;
+	font-size: 1.42rem;
 	font-weight: 600;
-	letter-spacing: -0.025em;
+	letter-spacing: -0.028em;
 	white-space: nowrap;
 	overflow: hidden;
 	text-overflow: ellipsis;
 }
 .mark .kind {
 	font-family: var(--mono);
-	font-size: 0.63rem;
+	font-size: 0.68rem;
 	font-weight: 700;
 	text-transform: uppercase;
 	letter-spacing: 0.14em;
@@ -561,9 +564,11 @@ footer .k { text-transform: uppercase; letter-spacing: 0.13em; }
 }
 
 @media (max-width: 940px) {
-	:root { --head: 4rem; }
+	:root { --head: 4.4rem; }
 	.masthead { padding: 0 1.25rem; gap: 0.9rem; }
 	.mark .kind, .mark .slash { display: none; }
+	.mark .wordmark { font-size: 1.45rem; }
+	.mark h1 { font-size: 1.15rem; }
 	.import code { font-size: 0.72rem; }
 	.sheet {
 		grid-template-columns: minmax(0, 1fr);

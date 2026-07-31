@@ -39,6 +39,32 @@ for i = 0; i < 3; ++i {
 	}
 }
 
+// TestNesting is the case a line opening more than one bracket makes: the
+// indentation goes up by one level, not by one per bracket, and the line that
+// closes them comes back to the one that opened them.
+func TestNesting(t *testing.T) {
+	const src = `testing.Main([
+["a", fn(t) {
+t.AssertEq(1, 1)
+}]
+])
+`
+	const want = `testing.Main([
+	["a", fn(t) {
+		t.AssertEq(1, 1)
+	}]
+])
+`
+
+	out, err := Source("test.tau", src)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if out != want {
+		t.Errorf("got\n%s\nwant\n%s", out, want)
+	}
+}
+
 // TestStdlib formats every module of the standard library: they are the
 // largest tau sources around, and each of them has to survive untouched.
 func TestStdlib(t *testing.T) {

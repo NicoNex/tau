@@ -129,7 +129,7 @@ func print(toks []tok) string {
 		out   strings.Builder
 		line  []tok
 		kinds []bool // for every open brace, whether it holds a block
-		depth int
+		open  []int  // for every bracket still open, the indent of its line
 		prev  int
 	)
 
@@ -138,11 +138,16 @@ func print(toks []tok) string {
 			return
 		}
 
-		// A line starting with a closing bracket belongs to the level its
-		// opening one was on.
-		indent := depth
-		if line[0].closes() && indent > 0 {
-			indent--
+		// One level per line that leaves something open, not one per bracket:
+		// "main([" opens two and still indents what follows by one. What the
+		// stack holds is the indent of the line each bracket was opened on,
+		// so a line starting with a closing one goes back to it.
+		indent := 0
+		if n := len(open); n > 0 {
+			indent = open[n-1] + 1
+			if line[0].closes() {
+				indent = open[n-1]
+			}
 		}
 
 		out.WriteString(strings.Repeat("\t", indent))
@@ -151,9 +156,9 @@ func print(toks []tok) string {
 
 		for _, t := range line {
 			if t.opens() {
-				depth++
-			} else if t.closes() && depth > 0 {
-				depth--
+				open = append(open, indent)
+			} else if t.closes() && len(open) > 0 {
+				open = open[:len(open)-1]
 			}
 		}
 		line = line[:0]

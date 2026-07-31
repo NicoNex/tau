@@ -1,0 +1,97 @@
+testing = import("testing")
+atomic = import("sync/atomic")
+sync = import("sync")
+
+testing.Main([
+	["an Int counts what every routine adds", fn(t) {
+		n = atomic.Int(0)
+		wg = sync.WaitGroup()
+
+		for i = 0; i < 8; i++ {
+			wg.Tau(fn() {
+				for j = 0; j < 1000; j++ {
+					n.Add(1)
+				}
+			})
+		}
+		wg.Wait()
+		t.AssertEq(n.Load(), 8000)
+	}],
+
+	["Add hands every caller a different answer", fn(t) {
+		n = atomic.Int(0)
+		wg = sync.WaitGroup()
+		mu = sync.Mutex()
+		seen = new()
+		seen.tickets = {}
+
+		# Every Add returns the count as it stood after that one, so no two
+		# routines can be handed the same number.
+		for i = 0; i < 8; i++ {
+			wg.Tau(fn() {
+				for j = 0; j < 100; j++ {
+					k = n.Add(1)
+					mu.Lock()
+					seen.tickets[k] = true
+					mu.Unlock()
+				}
+			})
+		}
+		wg.Wait()
+		t.AssertEq(len(keys(seen.tickets)), 800)
+	}],
+
+	["Load, Store and Swap", fn(t) {
+		n = atomic.Int(7)
+		t.AssertEq(n.Load(), 7)
+		n.Store(-3)
+		t.AssertEq(n.Load(), -3)
+		t.AssertEq(n.Swap(42), -3)
+		t.AssertEq(n.Load(), 42)
+		t.AssertEq(n.Add(-2), 40)
+	}],
+
+	["CompareAndSwap writes only what it was told to expect", fn(t) {
+		n = atomic.Int(5)
+		t.AssertEq(n.CompareAndSwap(4, 9), false)
+		t.AssertEq(n.Load(), 5)
+		t.AssertEq(n.CompareAndSwap(5, 9), true)
+		t.AssertEq(n.Load(), 9)
+	}],
+
+	["two Ints are two cells", fn(t) {
+		a = atomic.Int(1)
+		b = atomic.Int(2)
+		a.Store(100)
+		t.AssertEq(a.Load(), 100)
+		t.AssertEq(b.Load(), 2)
+	}],
+
+	["a Bool is a flag routines watch", fn(t) {
+		stop = atomic.Bool(false)
+		t.AssertEq(stop.Load(), false)
+
+		wg = sync.WaitGroup()
+		n = atomic.Int(0)
+		wg.Tau(fn() {
+			for !stop.Load() {
+				n.Add(1)
+			}
+		})
+		stop.Store(true)
+		wg.Wait()
+		t.AssertEq(stop.Load(), true)
+
+		t.AssertEq(stop.Swap(false), true)
+		t.AssertEq(stop.CompareAndSwap(true, true), false)
+		t.AssertEq(stop.CompareAndSwap(false, true), true)
+		t.AssertEq(stop.Load(), true)
+	}],
+
+	["a Bool holds booleans and nothing else", fn(t) {
+		b = atomic.Bool(false)
+		t.AssertEq(failed(b.Store(1)), true)
+		t.AssertEq(b.Load(), false)
+		t.AssertEq(failed(atomic.Bool("yes")), true)
+	}],
+])

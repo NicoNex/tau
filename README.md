@@ -866,8 +866,12 @@ sign-extends the right number of them.
 The standard library uses all of this. [stdlib/math.tau](stdlib/math.tau) is
 the shortest example and carries no C of its own: the interpreter is linked
 against libm, so it declares the functions it wants off `dlopen(null)`.
-[stdlib/syscall](stdlib/syscall) and [stdlib/runtime](stdlib/runtime) are small
-shared objects of their own, opened with `dlopen` and called the raw way.
+[stdlib/syscall](stdlib/syscall), [stdlib/runtime](stdlib/runtime) and
+[stdlib/sync/atomic](stdlib/sync/atomic) are small shared objects of their own,
+opened with `dlopen`. The last of those is the case where the trick math plays
+cannot work: an atomic add is an instruction the compiler writes inline, not a
+function in a library with a name to look up, so there has to be C of our own
+around it.
 
 ## Shipping a program
 
@@ -942,6 +946,7 @@ starts with a comment saying what it is for.
 | `strconv` | conversions between strings and numbers |
 | `strings` | operations on strings |
 | `sync` | mutexes, wait groups and once, for state shared between routines |
+| `sync/atomic` | reads and writes no other routine can see half of |
 | `syscall` | the system calls underneath the rest |
 | `testing` | the test runner `tau test` uses |
 | `time` | clocks and pauses |

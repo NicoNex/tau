@@ -115,7 +115,7 @@ gc-debug:
 
 # The shared objects the stdlib opens with plugin(). One directory each,
 # added here when a new one shows up.
-PLUGINS = syscall runtime
+PLUGINS = syscall runtime sync/atomic
 
 plugins:
 	for p in $(PLUGINS); do $(MAKE) -C stdlib/$$p CC=$(CC) || exit 1; done

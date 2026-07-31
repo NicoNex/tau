@@ -1,0 +1,128 @@
+# atomic - reads and writes no other routine can see half of.
+#
+# A mutex makes a whole section of code the property of one routine. These
+# make a single read, write or addition indivisible, which is less and is
+# often all that is wanted: a counter every routine bumps, a flag one routine
+# raises and the others watch. That costs one instruction here against a pipe,
+# a wait and a wake with sync.Mutex.
+#
+# The rest of sync is written in tau because a pipe is enough to build it.
+# This is not: the processor's instructions are the primitive, and no
+# arrangement of pipes is one. So this module is the one place in sync with a
+# shared object of its own - it cannot borrow the C library the way math does,
+# since these are instructions the compiler emits inline and not functions
+# with a name to look up.
+#
+# Where a mutex would still be needed: anything touching two values at once.
+# Atomics make each of them safe on its own and say nothing about the pair.
+
+ffi = import("ffi")
+
+# The library is looked up next to this file, wherever the stdlib was put.
+# Named for the module and not "libatomic", which is the name of the one GCC
+# ships: a plain name is handed to the loader of the system first, and it
+# would answer with that one.
+lib = dlopen("libsyncatomic.so")
+
+at = ffi.Bind(lib, [
+	"int64_t at_load(void *p)",
+	"void at_store(void *p, int64_t v)",
+	"int64_t at_add(void *p, int64_t delta)",
+	"int64_t at_swap(void *p, int64_t v)",
+	"int64_t at_cas(void *p, int64_t old, int64_t new)",
+])
+
+# Int is an integer several routines may read and write at once.
+#
+#	hits = atomic.Int(0)
+#	... in every routine:
+#	hits.Add(1)
+#	... after they are done:
+#	hits.Load()
+#
+# The cell is eight bytes the collector owns, so an Int costs nothing to get
+# rid of: it goes when nothing holds it, like any other value.
+Int = fn(v) {
+	a = new()
+	a.cell = bytes(8)
+
+	# Load returns what the cell holds.
+	a.Load = fn() { int(at.at_load(a.cell)) }
+
+	# Store writes n into the cell.
+	a.Store = fn(n) { at.at_store(a.cell, n) }
+
+	# Add adds delta and returns what the cell holds afterwards. That answer
+	# belongs to the caller alone: no two routines adding at once are given
+	# the same one, which is what makes it usable as a ticket.
+	a.Add = fn(delta) { int(at.at_add(a.cell, delta)) }
+
+	# Swap writes n and returns what was there before.
+	a.Swap = fn(n) { int(at.at_swap(a.cell, n)) }
+
+	# CompareAndSwap writes new if the cell holds old, and reports whether it
+	# did. It is what a change that has to read the old value first is built
+	# from: read, work out the new one, and try until this one takes.
+	a.CompareAndSwap = fn(old, new) { int(at.at_cas(a.cell, old, new)) != 0 }
+
+	a.Store(v)
+	return a
+}
+
+# Bool is a flag several routines may read and write at once, an Int holding
+# 0 or 1.
+#
+#	stop = atomic.Bool(false)
+#	... one routine:
+#	stop.Store(true)
+#	... the others:
+#	if stop.Load() { return }
+Bool = fn(v) {
+	b = new()
+	b.n = Int(0)
+
+	# num is the 0 or 1 a bool is kept as. Anything else is a mistake worth
+	# catching here rather than storing something no Load could return.
+	b.num = fn(x) {
+		if type(x) != "bool" {
+			return error("atomic: Bool wants a boolean, got {type(x)}")
+		}
+		return if x { 1 } else { 0 }
+	}
+
+	# Load returns what the flag holds.
+	b.Load = fn() { b.n.Load() != 0 }
+
+	# Store writes x into the flag.
+	b.Store = fn(x) {
+		if failed(n = b.num(x)) {
+			return n
+		}
+		b.n.Store(n)
+	}
+
+	# Swap writes x and returns what was there before.
+	b.Swap = fn(x) {
+		if failed(n = b.num(x)) {
+			return n
+		}
+		return b.n.Swap(n) != 0
+	}
+
+	# CompareAndSwap writes new if the flag holds old, and reports whether it
+	# did.
+	b.CompareAndSwap = fn(old, new) {
+		if failed(o = b.num(old)) {
+			return o
+		}
+		if failed(n = b.num(new)) {
+			return n
+		}
+		return b.n.CompareAndSwap(o, n)
+	}
+
+	if failed(err = b.Store(v)) {
+		return err
+	}
+	return b
+}

@@ -9,7 +9,8 @@
 # As in Go, none of these may be copied once used: pass the object around, it
 # is a reference. And as in Go, the first rule is that a pipe is usually the
 # better answer. Reach for a lock only when the thing being shared is state
-# rather than a message.
+# rather than a message. For a single counter or flag, sync/atomic is smaller
+# still: one instruction against a pipe, a wait and a wake.
 #
 # Every field these objects use is given a value where the object is built,
 # before any other routine can reach it. That is not tidiness: giving a field

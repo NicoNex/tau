@@ -1,5 +1,13 @@
 testing = import("testing")
 re = import("regexp")
+buffer = import("buffer")
+
+# reader returns a stream holding s, to search with the Reader family.
+reader = fn(s) {
+	b = buffer.Buffer()
+	b.Write(bytes(s))
+	return b
+}
 
 testing.Main([
 	["MatchString", fn(t) {
@@ -54,5 +62,183 @@ testing.Main([
 	["no exponential blowup", fn(t) {
 		evil = re.Compile("(a+)+b")
 		t.AssertEq(evil.MatchString("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), false)
+	}],
+	["counted repetition", fn(t) {
+		t.AssertEq(re.Compile(`a{3}`).FindString("aaaa"), "aaa")
+		t.AssertEq(re.Compile(`a{2,}`).FindString("aaaa"), "aaaa")
+		t.AssertEq(re.Compile(`a{1,2}`).FindString("aaaa"), "aa")
+		t.AssertEq(re.Compile(`a{2,3}?`).FindString("aaaa"), "aa")
+		# A brace that opens no count is a literal one.
+		t.AssertEq(re.Compile(`a{b`).FindString(`xa{b`), `a{b`)
+		t.AssertError(re.Compile(`a{3,2}`))
+	}],
+	["flags", fn(t) {
+		t.AssertEq(re.Compile("(?i)abc").MatchString("AbC"), true)
+		t.AssertEq(re.Compile("(?i)[a-c]+").FindString("xABCy"), "ABC")
+		t.AssertEq(re.Compile("(?i:a)b").MatchString("Ab"), true)
+		t.AssertEq(re.Compile("(?i:a)b").MatchString("aB"), false)
+		t.AssertEq(re.Compile("a.b").MatchString("a\nb"), false)
+		t.AssertEq(re.Compile("(?s)a.b").MatchString("a\nb"), true)
+		t.AssertEq(re.Compile("(?m)^b$").MatchString("a\nb\nc"), true)
+		t.AssertEq(re.Compile("^b$").MatchString("a\nb\nc"), false)
+		# U swaps greedy and lazy round.
+		t.AssertEq(re.Compile("(?U)<.+>").FindString("<a><b>"), "<a>")
+		t.AssertError(re.Compile("(?x)a"))
+		t.AssertError(re.Compile("(?)a"))
+	}],
+	["\\A and \\z ignore the m flag", fn(t) {
+		t.AssertEq(re.Compile("(?m)\\Ab").MatchString("a\nb"), false)
+		t.AssertEq(re.Compile("(?m)b\\z").MatchString("b\nc"), false)
+		t.AssertEq(re.Compile("\\Aa").MatchString("abc"), true)
+	}],
+	["POSIX classes", fn(t) {
+		t.AssertEq(re.Compile("[[:digit:]]+").FindString("ab 123"), "123")
+		t.AssertEq(re.Compile("[[:alpha:][:digit:]]+").FindString(" a1b "), "a1b")
+		t.AssertEq(re.Compile("[[:^digit:]]+").FindString("12ab34"), "ab")
+		t.AssertEq(re.Compile("[[:space:]]").MatchString("a\tb"), true)
+		t.AssertError(re.Compile("[[:nope:]]"))
+		t.AssertError(re.Compile("[[:digit]]"))
+	}],
+	["escapes", fn(t) {
+		t.AssertEq(re.Compile("a\\tb").MatchString("a\tb"), true)
+		t.AssertEq(re.Compile("\\x41").FindString("xAy"), "A")
+		t.AssertEq(re.Compile(`\x{41}`).FindString("xAy"), "A")
+		t.AssertEq(re.Compile("\\101").FindString("xAy"), "A")
+		t.AssertEq(re.Compile("\\.").MatchString("."), true)
+		t.AssertEq(re.Compile("\\.").MatchString("a"), false)
+		t.AssertEq(re.Compile("[\\d\\.]+").FindString("a1.2b"), "1.2")
+		t.AssertEq(re.Compile("[\\D]+").FindString("1ab2"), "ab")
+		t.AssertError(re.Compile("\\1"))
+		t.AssertError(re.Compile("\\y"))
+		t.AssertError(re.Compile("a\\"))
+	}],
+	["\\Q...\\E", fn(t) {
+		t.AssertEq(re.Compile("\\Qa.b\\E").MatchString("a.b"), true)
+		t.AssertEq(re.Compile("\\Qa.b\\E").MatchString("axb"), false)
+		# The star repeats the last character of the quoted run.
+		t.AssertEq(re.Compile("\\Qab\\E*").FindString("xabbb"), "abbb")
+		t.AssertEq(re.Compile("\\Qa+b").MatchString("a+b"), true)
+	}],
+	["named groups", fn(t) {
+		g = re.Compile("(?P<key>\\w+)=(?P<val>\\w+)")
+		t.AssertEq(g.SubexpNames(), ["", "key", "val"])
+		t.AssertEq(g.SubexpIndex("val"), 2)
+		t.AssertEq(g.SubexpIndex("nope"), -1)
+		t.AssertEq(g.FindStringSubmatch("a=1"), ["a=1", "a", "1"])
+		t.AssertEq(re.Compile("(?<n>a)").SubexpNames(), ["", "n"])
+		t.AssertEq(re.Compile("(?:a)(b)").NumSubexp(), 1)
+		t.AssertError(re.Compile("(?P<n>a)(?P<n>b)"))
+		t.AssertError(re.Compile("(?P=n)"))
+	}],
+	["Expand", fn(t) {
+		g = re.Compile("(?P<key>\\w+)=(?P<val>\\w+)")
+		m = g.FindStringSubmatchIndex("a=1")
+		t.AssertEq(g.ExpandString("", `${val}:$key`, "a=1", m), "1:a")
+		t.AssertEq(g.ExpandString("> ", "$1", "a=1", m), "> a")
+		t.AssertEq(string(g.Expand(bytes(""), bytes("$2"), bytes("a=1"), m)), "1")
+		t.AssertEq(g.ReplaceAllString("a=1 b=2", "$val=$key"), "1=a 2=b")
+		t.AssertEq(g.ReplaceAllString("a=1", "$$"), "$")
+		t.AssertEq(g.ReplaceAllString("a=1", "$nope"), "")
+	}],
+	["replace", fn(t) {
+		d = re.Compile("[0-9]+")
+		t.AssertEq(d.ReplaceAllLiteralString("a1b", "$1"), "a$1b")
+		t.AssertEq(d.ReplaceAllStringFunc("a1b22", fn(s) { "<" + s + ">" }), "a<1>b<22>")
+		t.AssertEq(string(d.ReplaceAll(bytes("a1b"), bytes("#"))), "a#b")
+		t.AssertEq(string(d.ReplaceAllLiteral(bytes("a1b"), bytes("$0"))), "a$0b")
+		t.AssertEq(string(d.ReplaceAllFunc(bytes("a1b"), fn(b) { bytes("#") })), "a#b")
+	}],
+	["Split", fn(t) {
+		c = re.Compile(",")
+		t.AssertEq(c.Split("a,b,c", -1), ["a", "b", "c"])
+		t.AssertEq(c.Split("a,b,c", 2), ["a", "b,c"])
+		t.AssertEq(c.Split("a,b,c", 0), null)
+		t.AssertEq(c.Split("", -1), [""])
+	}],
+	["the byte side of the family", fn(t) {
+		d = re.Compile("[0-9]+")
+		t.AssertEq(d.Match(bytes("a1")), true)
+		t.AssertEq(string(d.Find(bytes("ab 12"))), "12")
+		t.AssertEq(d.FindIndex(bytes("ab 12")), [3, 5])
+		t.AssertEq(d.Find(bytes("abc")), null)
+		t.AssertEq(string(re.Compile("(a)(b)").FindSubmatch(bytes("ab"))[1]), "a")
+		t.AssertEq(d.FindSubmatchIndex(bytes("a1")), [1, 2])
+		t.AssertEq(string(d.FindAll(bytes("a1b22"), -1)[1]), "22")
+		t.AssertEq(d.FindAllIndex(bytes("a1b22"), -1), [[1, 2], [3, 5]])
+		t.AssertEq(d.FindAllSubmatchIndex(bytes("a1"), -1), [[1, 2]])
+		t.AssertEq(string(d.FindAllSubmatch(bytes("a1b22"), -1)[1][0]), "22")
+	}],
+	["the reader side of the family", fn(t) {
+		d = re.Compile("[0-9]+")
+		t.AssertEq(d.FindReaderIndex(reader("ab 12")), [3, 5])
+		t.AssertEq(d.FindReaderIndex(reader("abc")), null)
+		t.AssertEq(d.MatchReader(reader("a1")), true)
+		t.AssertEq(d.MatchReader(reader("abc")), false)
+		t.AssertEq(re.Compile("(a)(b)").FindReaderSubmatchIndex(reader("xab")), [1, 3, 1, 2, 2, 3])
+		t.AssertEq(re.MatchReader("[0-9]+", reader("a1")), true)
+		t.AssertError(re.MatchReader("(", reader("a")))
+	}],
+	["the index and submatch families", fn(t) {
+		g = re.Compile("(\\w)(\\d)")
+		t.AssertEq(g.FindStringSubmatchIndex("xa1"), [1, 3, 1, 2, 2, 3])
+		t.AssertEq(g.FindAllStringSubmatch("a1 b2", -1), [["a1", "a", "1"], ["b2", "b", "2"]])
+		t.AssertEq(g.FindAllStringSubmatchIndex("a1", -1), [[0, 2, 0, 1, 1, 2]])
+		t.AssertEq(g.FindAllStringIndex("a1 b2", -1), [[0, 2], [3, 5]])
+		t.AssertEq(g.FindAllString("nothing", -1), null)
+		# A group that took no part in the match is null.
+		t.AssertEq(re.Compile("(a)|(b)").FindStringSubmatch("b"), ["b", null, "b"])
+	}],
+	["empty matches step forward", fn(t) {
+		t.AssertEq(re.Compile("a*").FindAllString("baac", -1), ["", "aa", ""])
+		t.AssertEq(re.Compile("a*").FindAllString("", -1), [""])
+	}],
+	["a body that matches nothing leaves the loop", fn(t) {
+		t.AssertEq(re.Compile("(|a)*").FindStringSubmatchIndex("aa"), [0, 0, 0, 0])
+		t.AssertEq(re.Compile("(a|)*").FindStringSubmatchIndex("aa"), [0, 2, 1, 2])
+		t.AssertEq(re.Compile("(a*)*").FindString("b"), "")
+		t.AssertEq(re.Compile("(a?)*").FindString("aaa"), "aaa")
+	}],
+	["LiteralPrefix", fn(t) {
+		t.AssertEq(re.Compile("abc").LiteralPrefix(), ["abc", true])
+		t.AssertEq(re.Compile("abc+").LiteralPrefix(), ["abc", false])
+		t.AssertEq(re.Compile("[ab]c").LiteralPrefix(), ["", false])
+	}],
+	["Longest and CompilePOSIX", fn(t) {
+		a = re.Compile("a|ab")
+		t.AssertEq(a.FindString("ab"), "a")
+		a.Longest()
+		t.AssertEq(a.FindString("ab"), "ab")
+
+		t.AssertEq(re.CompilePOSIX("a|ab").FindString("ab"), "ab")
+		# POSIX knows none of what Perl added.
+		t.AssertError(re.CompilePOSIX("\\d"))
+		t.AssertError(re.CompilePOSIX("(?:a)"))
+		t.AssertError(re.CompilePOSIX("a+?"))
+		t.AssertEq(re.CompilePOSIX("[[:digit:]]+").FindString("a12"), "12")
+	}],
+	["Copy leaves the original alone", fn(t) {
+		a = re.Compile("a|ab")
+		b = a.Copy()
+		b.Longest()
+		t.AssertEq(a.FindString("ab"), "a")
+		t.AssertEq(b.FindString("ab"), "ab")
+	}],
+	["MarshalText and UnmarshalText", fn(t) {
+		d = re.Compile("[0-9]+")
+		t.AssertEq(string(d.MarshalText()), "[0-9]+")
+		t.AssertEq(d.UnmarshalText(bytes("[a-z]+")), null)
+		t.AssertEq(d.String(), "[a-z]+")
+		t.AssertEq(d.FindString("12ab"), "ab")
+		t.AssertError(d.UnmarshalText(bytes("(")))
+	}],
+	["QuoteMeta and the package level shortcuts", fn(t) {
+		t.AssertEq(re.QuoteMeta("a.b*c"), "a\\.b\\*c")
+		t.AssertEq(re.Compile(re.QuoteMeta("a.b")).MatchString("a.b"), true)
+		t.AssertEq(re.Compile(re.QuoteMeta("a.b")).MatchString("axb"), false)
+		t.AssertEq(re.MatchString("[0-9]+", "a1"), true)
+		t.AssertEq(re.Match("[0-9]+", bytes("ab")), false)
+		t.AssertError(re.MatchString("(", "a"))
+		t.AssertEq(re.MustCompile("a+").String(), "a+")
+		t.AssertEq(re.MustCompilePOSIX("a|ab").FindString("ab"), "ab")
 	}]
 ])

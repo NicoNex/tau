@@ -344,6 +344,14 @@ func FormatFiles(paths []string, write, list bool) error {
 // With browser the same thing is written as a page and opened, at the name
 // asked for rather than at the top.
 func Doc(arg string, browser bool) error {
+	return DocTo(os.Stdout, arg, browser)
+}
+
+// DocTo is Doc, writing where it is told to. The prompt has a writer of its
+// own - the terminal it is running on - and going through os.Stdout there
+// means going through a pipe and a routine copying out of it, which arrives
+// whenever it arrives.
+func DocTo(w io.Writer, arg string, browser bool) error {
 	name, sym, err := resolveDoc(arg)
 	if err != nil {
 		return err
@@ -367,7 +375,7 @@ func Doc(arg string, browser bool) error {
 	if browser {
 		return doc.OpenBrowser(pkg, sym)
 	}
-	return doc.Text(os.Stdout, pkg, sym)
+	return doc.Text(w, pkg, sym)
 }
 
 // resolveDoc splits "sync/atomic.Int.Add" into the module and the name inside

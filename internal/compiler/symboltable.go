@@ -38,6 +38,20 @@ func NewEnclosedSymbolTable(outer *SymbolTable) *SymbolTable {
 	}
 }
 
+// Names are the global names defined so far, which is what a prompt completes
+// and what it lists when asked what is defined.
+func (s *SymbolTable) Names() []string {
+	g := s.global()
+
+	out := make([]string, 0, len(g.Store))
+	for name, sym := range g.Store {
+		if sym.Scope == GlobalScope {
+			out = append(out, name)
+		}
+	}
+	return out
+}
+
 // global returns the outermost table, the one holding the global names.
 func (s *SymbolTable) global() *SymbolTable {
 	for s.outer != nil {

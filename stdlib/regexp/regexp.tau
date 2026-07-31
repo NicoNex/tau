@@ -8,15 +8,26 @@
 #
 # Supported syntax:
 #
-#	.          any character except a newline
-#	[abc]      class, with ranges and negation as [^a-z]
-#	\d \w \s   digit, word and space classes, uppercase to negate
-#	\b \B      word boundary
-#	^ $        beginning and end of the text
-#	x* x+ x?   repetition, append ? for the lazy form
-#	x{n,m}     counted repetition, {n} and {n,} too
-#	(x)        capturing group, (?:x) plain group
-#	a|b        alternation
+#	.            any character, a newline too under the s flag
+#	[abc]        class, with ranges and negation as [^a-z]
+#	[[:alpha:]]  POSIX class, [[:^alpha:]] to negate it
+#	\d \w \s     digit, word and space classes, uppercase to negate
+#	\b \B        word boundary
+#	^ $          beginning and end of the text, of the line under m
+#	\A \z        beginning and end of the text, whatever the flags
+#	x* x+ x?     repetition, append ? for the lazy form
+#	x{n,m}       counted repetition, {n} and {n,} too
+#	(x)          capturing group, (?:x) plain group
+#	(?P<n>x)     named group, (?<n>x) spells the same thing
+#	(?i) (?i:x)  flags, i m s U, until the group ends or for x alone
+#	\Q...\E      literal text, whatever punctuation it holds
+#	\n \x7f \177 escapes, by name, by hexadecimal, by octal
+#	a|b          alternation
+#
+# The text is walked one byte at a time, so a pattern speaks of bytes and not
+# of runes: . matches a byte and a range like [α-ω] means nothing.
+
+io = import("io")
 
 # --- syntax tree ---
 
@@ -41,6 +52,19 @@ node = fn(t) {
 
 isDigit = fn(c) { c >= "0" && c <= "9" }
 isWord = fn(c) { isDigit(c) || (c >= "a" && c <= "z") || (c >= "A" && c <= "Z") || c == "_" }
+isOctal = fn(c) { c >= "0" && c <= "7" }
+isHex = fn(c) { isDigit(c) || (c >= "a" && c <= "f") || (c >= "A" && c <= "F") }
+
+# code and char turn a byte into its number and back. A string holds no zero
+# byte, so 1 is the lowest character there is and the classes start there.
+code = fn(c) { bytes(c)[0] }
+char = fn(n) { string(bytes([n])) }
+
+lowest = char(1)
+highest = char(255)
+
+toLower = fn(c) { if c >= "A" && c <= "Z" { char(code(c) + 32) } else { c } }
+toUpper = fn(c) { if c >= "a" && c <= "z" { char(code(c) - 32) } else { c } }
 
 # A class is a list of [lo, hi] ranges plus the negation flag.
 classOf = fn(ranges, negated) {
@@ -49,6 +73,82 @@ classOf = fn(ranges, negated) {
 	n.negated = negated
 	return n
 }
+
+# complement returns the ranges that the given ones leave out. A negated class
+# nested in another one, as the D of [\D.] or the ^ of [[:^space:]], has no
+# negation flag of its own to carry, so it is turned inside out instead.
+complement = fn(ranges) {
+	inside = []
+	for i = 0; i < 256; ++i {
+		inside = append(inside, false)
+	}
+
+	for i = 0; i < len(ranges); ++i {
+		for c = code(ranges[i][0]); c <= code(ranges[i][1]); ++c {
+			inside[c] = true
+		}
+	}
+
+	out = []
+	lo = -1
+
+	for c = 1; c < 256; ++c {
+		if !inside[c] && lo == -1 {
+			lo = c
+		} else if inside[c] && lo != -1 {
+			out = append(out, [char(lo), char(c - 1)])
+			lo = -1
+		}
+	}
+
+	if lo != -1 {
+		out = append(out, [char(lo), highest])
+	}
+	return out
+}
+
+# fold widens the ranges so that a letter matches in either case, which is
+# what the i flag asks for. A negated class is folded before it is negated,
+# so that [^a] under i turns down A as well.
+fold = fn(ranges) {
+	out = ranges
+
+	for i = 0; i < len(ranges); ++i {
+		lo = ranges[i][0]
+		hi = ranges[i][1]
+
+		a = if lo > "a" { lo } else { "a" }
+		b = if hi < "z" { hi } else { "z" }
+		if a <= b {
+			out = append(out, [toUpper(a), toUpper(b)])
+		}
+
+		a = if lo > "A" { lo } else { "A" }
+		b = if hi < "Z" { hi } else { "Z" }
+		if a <= b {
+			out = append(out, [toLower(a), toLower(b)])
+		}
+	}
+
+	return out
+}
+
+# The POSIX classes, spelled [[:name:]] inside a class.
+posixClasses = new()
+posixClasses.alnum = [["0", "9"], ["A", "Z"], ["a", "z"]]
+posixClasses.alpha = [["A", "Z"], ["a", "z"]]
+posixClasses.ascii = [[lowest, char(127)]]
+posixClasses.blank = [["\t", "\t"], [" ", " "]]
+posixClasses.cntrl = [[lowest, char(31)], [char(127), char(127)]]
+posixClasses.digit = [["0", "9"]]
+posixClasses.graph = [[char(33), char(126)]]
+posixClasses.lower = [["a", "z"]]
+posixClasses.print = [[char(32), char(126)]]
+posixClasses.punct = [[char(33), char(47)], [char(58), char(64)], [char(91), char(96)], [char(123), char(126)]]
+posixClasses.space = [["\t", "\r"], [" ", " "]]
+posixClasses.upper = [["A", "Z"]]
+posixClasses.word = [["0", "9"], ["A", "Z"], ["_", "_"], ["a", "z"]]
+posixClasses.xdigit = [["0", "9"], ["A", "F"], ["a", "f"]]
 
 # escapeClass returns the class an escape stands for, or null.
 escapeClass = fn(c) {
@@ -64,13 +164,16 @@ escapeClass = fn(c) {
 	return null
 }
 
+# escapeChar returns the character an escape by name stands for, or null when
+# the escape is not one of them.
 escapeChar = fn(c) {
+	if c == "a" { return "\a" }
 	if c == "n" { return "\n" }
 	if c == "t" { return "\t" }
 	if c == "r" { return "\r" }
 	if c == "v" { return "\v" }
 	if c == "f" { return "\f" }
-	return c
+	return null
 }
 
 # --- parser ---
@@ -81,12 +184,37 @@ escapeChar = fn(c) {
 #	seq    := repeat*
 #	repeat := atom ("*" | "+" | "?" | "{n,m}") "?"?
 #	atom   := "(" alt ")" | "[" class "]" | "." | "^" | "$" | escape | char
+#
+# The flags are held by the parser and not by the tree: (?i) is a word said
+# once and obeyed until the enclosing group ends, so the parser remembers it
+# and every node it builds afterwards is born already folded.
 
-parser = fn(pattern) {
+newFlags = fn() {
+	f = new()
+	f.i = false
+	f.m = false
+	f.s = false
+	f.U = false
+	return f
+}
+
+copyFlags = fn(f) {
+	g = new()
+	g.i = f.i
+	g.m = f.m
+	g.s = f.s
+	g.U = f.U
+	return g
+}
+
+parser = fn(pattern, posix) {
 	p = new()
 	p.src = pattern
 	p.i = 0
 	p.ngroups = 0
+	p.posix = posix
+	p.names = [""]
+	p.flags = newFlags()
 
 	p.done = fn() { p.i >= len(p.src) }
 	p.peek = fn() { if p.done() { "" } else { p.src[p.i] } }
@@ -94,6 +222,118 @@ parser = fn(pattern) {
 		c = p.peek()
 		++p.i
 		return c
+	}
+
+	p.at = fn(k) { if p.i + k < len(p.src) { p.src[p.i + k] } else { "" } }
+
+	# perlOnly turns down the escapes and the groups that POSIX does not know,
+	# the way CompilePOSIX promises a plain ERE and nothing more.
+	p.perlOnly = fn(what) {
+		if p.posix {
+			return error("regexp: {what} is not POSIX ERE syntax")
+		}
+		return null
+	}
+
+	# parseNumber reads a run of digits in the given base, at most n of them.
+	p.parseNumber = fn(base, n, isdigit) {
+		v = 0
+		k = 0
+
+		for k < n && !p.done() && isdigit(p.peek()) {
+			d = p.next()
+			v = v * base + if isDigit(d) {
+				code(d) - code("0")
+			} else {
+				code(toLower(d)) - code("a") + 10
+			}
+			++k
+		}
+
+		return if k == 0 { null } else { v }
+	}
+
+	# escapeLiteral returns the character an escape stands for, once the class
+	# escapes and the assertions have had their turn. An unknown escape of a
+	# letter or a digit is an error, as it is in Go: it is room left for the
+	# escapes yet to be given a meaning.
+	p.escapeLiteral = fn(esc) {
+		named = escapeChar(esc)
+		if named != null {
+			return named
+		}
+
+		if esc == "x" {
+			if p.peek() == `{` {
+				p.next()
+				v = p.parseNumber(16, 8, isHex)
+				if v == null || p.peek() != `}` {
+					return error("regexp: invalid hexadecimal escape")
+				}
+				p.next()
+				if v < 1 || v > 255 {
+					return error("regexp: hexadecimal escape out of the byte range")
+				}
+				return char(v)
+			}
+
+			v = p.parseNumber(16, 2, isHex)
+			if v == null {
+				return error("regexp: invalid escape sequence \\x")
+			}
+			if v == 0 {
+				return error("regexp: no string holds the zero byte")
+			}
+			return char(v)
+		}
+
+		# \0 opens an octal escape, \1 to \7 only when a second digit follows:
+		# a lone one would be a backreference and no NFA can honour it.
+		if isOctal(esc) {
+			if esc != "0" && !isOctal(p.peek()) {
+				return error("regexp: backreferences are not supported")
+			}
+			--p.i
+			v = p.parseNumber(8, 3, isOctal)
+			if v == 0 {
+				return error("regexp: no string holds the zero byte")
+			}
+			return char(v)
+		}
+
+		if isWord(esc) {
+			return error("regexp: invalid escape sequence \\{esc}")
+		}
+		return esc
+	}
+
+	# parsePosix reads the [:name:] that stands inside a class, having seen
+	# the opening [ of it, and returns the ranges it names.
+	p.parsePosix = fn() {
+		p.next()
+		p.next()
+
+		neg = false
+		if p.peek() == "^" {
+			neg = true
+			p.next()
+		}
+
+		name = ""
+		for !p.done() && p.peek() != ":" {
+			name = name + p.next()
+		}
+		if p.at(0) != ":" || p.at(1) != "]" {
+			return error("regexp: missing closing :] in [:{name}:]")
+		}
+		p.next()
+		p.next()
+
+		ranges = posixClasses[name]
+		if ranges == null {
+			return error("regexp: unknown POSIX class [:{name}:]")
+		}
+		return if neg { complement(ranges) } else { ranges }
 	}
 
 	p.parseClass = fn() {
@@ -109,6 +349,17 @@ parser = fn(pattern) {
 		# A ] right at the start is a literal one, as in Go.
 		for !p.done() && (p.peek() != "]" || first) {
 			first = false
+
+			if p.peek() == "[" && p.at(1) == ":" {
+				if failed(posix = p.parsePosix()) {
+					return posix
+				}
+				for k = 0; k < len(posix); ++k {
+					ranges = append(ranges, posix[k])
+				}
+				continue
+			}
+
 			c = p.next()
 
 			if c == "\\" && !p.done() {
@@ -116,22 +367,30 @@ parser = fn(pattern) {
 				cls = escapeClass(esc)
 
 				if cls != null {
-					if cls.negated {
-						return error("regexp: \\{esc} is not allowed inside a class")
+					if failed(err = p.perlOnly("\\{esc}")) {
+						return err
 					}
-					for k = 0; k < len(cls.ranges); ++k {
-						ranges = append(ranges, cls.ranges[k])
+					# A negated class inside a class keeps no flag of its own,
+					# so it goes in turned inside out.
+					sub = if cls.negated { complement(cls.ranges) } else { cls.ranges }
+					for k = 0; k < len(sub); ++k {
+						ranges = append(ranges, sub[k])
 					}
 					continue
 				}
-				c = escapeChar(esc)
+
+				if failed(c = p.escapeLiteral(esc)) {
+					return c
+				}
 			}
 
-			if p.peek() == "-" && p.i + 1 < len(p.src) && p.src[p.i + 1] != "]" {
+			if p.peek() == "-" && p.at(1) != "]" && p.at(1) != "" {
 				p.next()
 				hi = p.next()
 				if hi == "\\" && !p.done() {
-					hi = escapeChar(p.next())
+					if failed(hi = p.escapeLiteral(p.next())) {
+						return hi
+					}
 				}
 				if hi < c {
 					return error("regexp: invalid character range {c}-{hi}")
@@ -149,6 +408,9 @@ parser = fn(pattern) {
 
 		if len(ranges) == 0 {
 			return error("regexp: empty character class")
+		}
+		if p.flags.i {
+			ranges = fold(ranges)
 		}
 		return classOf(ranges, negated)
 	}
@@ -189,41 +451,176 @@ parser = fn(pattern) {
 		return out
 	}
 
-	p.parseAtom = fn() {
-		c = p.next()
+	# charNode makes the node for a plain character. Under the i flag the
+	# letter becomes the class of its two cases, so that nothing downstream
+	# has to know about folding.
+	p.charNode = fn(ch) {
+		if p.flags.i {
+			lo = toLower(ch)
+			up = toUpper(ch)
+			if lo != up {
+				return classOf([[lo, lo], [up, up]], false)
+			}
+		}
 
-		if c == "(" {
-			capturing = true
-			if p.peek() == "?" && p.i + 1 < len(p.src) && p.src[p.i + 1] == ":" {
-				p.next()
-				p.next()
-				capturing = false
+		n = node(nChar)
+		n.ch = ch
+		return n
+	}
+
+	p.anyNode = fn() {
+		n = node(nAny)
+		n.nl = p.flags.s
+		return n
+	}
+
+	# setFlags reads the letters of a (?imsU-imsU) and turns them on or off.
+	p.setFlags = fn() {
+		neg = false
+		seen = false
+
+		for !p.done() {
+			c = p.peek()
+			if c == ")" || c == ":" {
+				if !seen {
+					return error("regexp: missing argument to (?)")
+				}
+				return null
 			}
 
-			index = 0
-			if capturing {
-				++p.ngroups
-				index = p.ngroups
+			p.next()
+			if c == "-" {
+				if neg {
+					return error("regexp: invalid flags")
+				}
+				neg = true
+				continue
 			}
 
-			if failed(inner = p.parseAlt()) {
-				return inner
+			on = !neg
+			if c == "i" {
+				p.flags.i = on
+			} else if c == "m" {
+				p.flags.m = on
+			} else if c == "s" {
+				p.flags.s = on
+			} else if c == "U" {
+				p.flags.U = on
+			} else {
+				return error("regexp: unknown flag {c}")
 			}
-			if p.peek() != ")" {
-				return error("regexp: missing closing )")
+			seen = true
+		}
+
+		return error("regexp: missing closing )")
+	}
+
+	# parseName reads the name of a (?P<name>x) up to its closing angle.
+	p.parseName = fn() {
+		name = ""
+		for !p.done() && p.peek() != ">" {
+			c = p.next()
+			if !isWord(c) {
+				return error("regexp: invalid named capture group")
+			}
+			name = name + c
+		}
+
+		if p.done() {
+			return error("regexp: missing closing > in a named group")
+		}
+		p.next()
+
+		if len(name) == 0 {
+			return error("regexp: a capture group cannot have an empty name")
+		}
+		for k = 0; k < len(p.names); ++k {
+			if p.names[k] == name {
+				return error("regexp: duplicate capture group name {name}")
+			}
+		}
+		return name
+	}
+
+	# parseGroup reads what follows an open parenthesis. The flags in force
+	# are saved and given back at the closing one, so that a (?i) said inside
+	# a group is forgotten outside of it.
+	p.parseGroup = fn() {
+		capturing = true
+		name = ""
+		saved = copyFlags(p.flags)
+
+		if p.peek() == "?" {
+			if failed(err = p.perlOnly("(?")) {
+				return err
 			}
 			p.next()
 
-			n = node(nGroup)
-			n.sub = inner
-			n.index = index
-			return n
+			c = p.peek()
+			if c == ":" {
+				p.next()
+				capturing = false
+			} else if c == "P" || c == "<" {
+				if c == "P" {
+					p.next()
+					if p.peek() == "=" {
+						return error("regexp: backreferences are not supported")
+					}
+					if p.peek() != "<" {
+						return error("regexp: invalid named capture group")
+					}
+				}
+				p.next()
+				if failed(name = p.parseName()) {
+					return name
+				}
+			} else {
+				# A (?flags) group holds nothing and matches nothing: it only
+				# leaves the flags changed behind it.
+				if failed(err = p.setFlags()) {
+					return err
+				}
+				if p.next() == ")" {
+					return node(nEmpty)
+				}
+				capturing = false
+			}
 		}
 
+		index = 0
+		if capturing {
+			++p.ngroups
+			index = p.ngroups
+			p.names = append(p.names, name)
+		}
+
+		if failed(inner = p.parseAlt()) {
+			return inner
+		}
+		if p.peek() != ")" {
+			return error("regexp: missing closing )")
+		}
+		p.next()
+		p.flags = saved
+
+		n = node(nGroup)
+		n.sub = inner
+		n.index = index
+		return n
+	}
+
+	p.parseAtom = fn() {
+		c = p.next()
+
+		if c == "(" { return p.parseGroup() }
 		if c == "[" { return p.parseClass() }
-		if c == "." { return node(nAny) }
-		if c == "^" { return node(nBegin) }
-		if c == "$" { return node(nEnd) }
+		if c == "." { return p.anyNode() }
+
+		if c == "^" || c == "$" {
+			n = node(if c == "^" { nBegin } else { nEnd })
+			n.line = p.flags.m
+			return n
+		}
 
 		if c == "\\" {
 			if p.done() {
@@ -231,17 +628,30 @@ parser = fn(pattern) {
 			}
 
 			esc = p.next()
-			if esc == "b" { return node(nWordB) }
-			if esc == "B" { return node(nNoWordB) }
+			if esc == "b" || esc == "B" || esc == "A" || esc == "z" {
+				if failed(err = p.perlOnly("\\{esc}")) {
+					return err
+				}
+				if esc == "b" { return node(nWordB) }
+				if esc == "B" { return node(nNoWordB) }
+
+				n = node(if esc == "A" { nBegin } else { nEnd })
+				n.line = false
+				return n
+			}
 
 			cls = escapeClass(esc)
 			if cls != null {
+				if failed(err = p.perlOnly("\\{esc}")) {
+					return err
+				}
 				return cls
 			}
 
-			n = node(nChar)
-			n.ch = escapeChar(esc)
-			return n
+			if failed(ch = p.escapeLiteral(esc)) {
+				return ch
+			}
+			return p.charNode(ch)
 		}
 
 		if c == ")" {
@@ -251,16 +661,18 @@ parser = fn(pattern) {
 			return error("regexp: nothing to repeat before {c}")
 		}
 
-		n = node(nChar)
-		n.ch = c
-		return n
+		return p.charNode(c)
 	}
 
 	p.parseRepeat = fn() {
 		if failed(atom = p.parseAtom()) {
 			return atom
 		}
+		return p.applyRepeat(atom)
+	}
 
+	# applyRepeat reads the operators that follow an atom, if any at all.
+	p.applyRepeat = fn(atom) {
 		for {
 			c = p.peek()
 			min = 0
@@ -299,11 +711,14 @@ parser = fn(pattern) {
 			n.sub = atom
 			n.min = min
 			n.max = max
-			n.lazy = false
+			n.lazy = p.flags.U
 
 			if p.peek() == "?" {
+				if failed(err = p.perlOnly("a lazy repetition")) {
+					return err
+				}
 				p.next()
-				n.lazy = true
+				n.lazy = !n.lazy
 			}
 
 			# a** means nothing, Go rejects it too.
@@ -316,10 +731,54 @@ parser = fn(pattern) {
 		}
 	}
 
+	# parseQuoted reads the text of a \Q...\E, the closing \E being optional
+	# at the end of the pattern.
+	p.parseQuoted = fn() {
+		p.next()
+		p.next()
+
+		lit = ""
+		for !p.done() {
+			if p.peek() == "\\" && p.at(1) == "E" {
+				p.next()
+				p.next()
+				return lit
+			}
+			lit = lit + p.next()
+		}
+
+		return lit
+	}
+
 	p.parseSeq = fn() {
 		items = []
 
 		for !p.done() && p.peek() != "|" && p.peek() != ")" {
+			# \Q...\E is a run of characters and not a single atom, so a star
+			# after it repeats the last one of them, as it would anywhere else.
+			if p.peek() == "\\" && (p.at(1) == "Q" || p.at(1) == "E") {
+				if failed(err = p.perlOnly("\\Q")) {
+					return err
+				}
+				if p.at(1) == "E" {
+					p.next()
+					p.next()
+					continue
+				}
+
+				lit = p.parseQuoted()
+				for k = 0; k < len(lit); ++k {
+					item = p.charNode(lit[k])
+					if k == len(lit) - 1 {
+						if failed(item = p.applyRepeat(item)) {
+							return item
+						}
+					}
+					items = append(items, item)
+				}
+				continue
+			}
+
 			if failed(item = p.parseRepeat()) {
 				return item
 			}
@@ -376,6 +835,8 @@ aBegin = 0
 aEnd = 1
 aWordB = 2
 aNoWordB = 3
+aBeginLine = 4
+aEndLine = 5
 
 compiler = fn() {
 	c = new()
@@ -407,7 +868,8 @@ compiler = fn() {
 		}
 
 		if t == nAny {
-			c.emit(opAny)
+			pc = c.emit(opAny)
+			c.at(pc).nl = n.nl
 			return null
 		}
 
@@ -421,9 +883,9 @@ compiler = fn() {
 		if t == nBegin || t == nEnd || t == nWordB || t == nNoWordB {
 			pc = c.emit(opAssert)
 			c.at(pc).x = if t == nBegin {
-				aBegin
+				if n.line { aBeginLine } else { aBegin }
 			} else if t == nEnd {
-				aEnd
+				if n.line { aEndLine } else { aEnd }
 			} else if t == nWordB {
 				aWordB
 			} else {
@@ -480,27 +942,24 @@ compiler = fn() {
 		}
 
 		if n.max == -1 {
-			if n.min == 0 {
-				# star: split body, end ; body ; jmp split ; end:
-				split = c.emit(opSplit)
-				c.setSplit(split, c.here(), 0, n.lazy)
-				c.compile(n.sub)
-
-				jmp = c.emit(opJmp)
-				c.at(jmp).x = split
-				c.setSplitExit(split, c.here(), n.lazy)
-				return null
-			}
-
-			# plus, after the mandatory copies: split body, end
+			# star: split body, end ; body ; split body, end ; end:
+			#
+			# The split that opens the loop and the one that closes it are two
+			# instructions and not one jumped back to. A thread walks an
+			# instruction once per position, so a body that matched nothing
+			# would find the single split already walked and die there, when
+			# what it should do is leave the loop: that is the difference
+			# between (|a)* matching nothing, as it does in Go, and matching a.
+			entry = c.emit(opSplit)
 			body = c.here()
-			split = c.emit(opSplit)
-			c.setSplit(split, c.here(), 0, n.lazy)
 			c.compile(n.sub)
+			loop = c.emit(opSplit)
+			exit = c.here()
 
-			jmp = c.emit(opJmp)
-			c.at(jmp).x = split
-			c.setSplitExit(split, c.here(), n.lazy)
+			c.setSplit(entry, body, 0, n.lazy)
+			c.setSplitExit(entry, exit, n.lazy)
+			c.setSplit(loop, body, 0, n.lazy)
+			c.setSplitExit(loop, exit, n.lazy)
 			return null
 		}
 
@@ -575,6 +1034,12 @@ assertHolds = fn(kind, text, pos) {
 	if kind == aEnd {
 		return pos == len(text)
 	}
+	if kind == aBeginLine {
+		return pos == 0 || text[pos - 1] == "\n"
+	}
+	if kind == aEndLine {
+		return pos == len(text) || text[pos] == "\n"
+	}
 
 	before = pos > 0 && isWord(text[pos - 1])
 	after = pos < len(text) && isWord(text[pos])
@@ -644,7 +1109,12 @@ newSeen = fn(n) {
 
 # run tries to match starting exactly at pos, returning the capture slots or
 # null. The threads are all advanced together, one character at a time.
-run = fn(prog, text, pos, nslots) {
+#
+# When longest is false the first thread to match ends the round and the ones
+# of lower priority are dropped, which is the leftmost first match Perl and Go
+# give. When it is true every thread is heard out and the match that reaches
+# furthest wins, which is the leftmost longest match POSIX asks for.
+run = fn(prog, text, pos, nslots, longest) {
 	caps = []
 	for i = 0; i < nslots; ++i {
 		caps = append(caps, -1)
@@ -668,10 +1138,16 @@ run = fn(prog, text, pos, nslots) {
 			ins = prog[th.pc]
 
 			if ins.op == opMatch {
-				# A thread of higher priority matched: the ones after it are
-				# alternatives we no longer care about.
-				matched = th.caps
-				break
+				if !longest {
+					# A thread of higher priority matched: the ones after it
+					# are alternatives we no longer care about.
+					matched = th.caps
+					break
+				}
+				if matched == null || th.caps[1] > matched[1] {
+					matched = th.caps
+				}
+				continue
 			}
 
 			if i >= len(text) {
@@ -680,7 +1156,7 @@ run = fn(prog, text, pos, nslots) {
 
 			if ins.op == opChar && ch == ins.ch {
 				nlist = addThread(nlist, seen, th.pc + 1, text, i + 1, th.caps, prog)
-			} else if ins.op == opAny && ch != "\n" {
+			} else if ins.op == opAny && (ins.nl || ch != "\n") {
 				nlist = addThread(nlist, seen, th.pc + 1, text, i + 1, th.caps, prog)
 			} else if ins.op == opClass && inRanges(ins, ch) {
 				nlist = addThread(nlist, seen, th.pc + 1, text, i + 1, th.caps, prog)
@@ -698,12 +1174,103 @@ run = fn(prog, text, pos, nslots) {
 	return matched
 }
 
+# --- expansion ---
+
+# capture returns what the group called name, or numbered by it, took hold of.
+# A name nobody answers to and a group that stayed out of the match both give
+# the empty string, the way Go's expansion does.
+capture = fn(src, caps, names, name) {
+	index = -1
+	numeric = true
+
+	for i = 0; i < len(name); ++i {
+		if !isDigit(name[i]) {
+			numeric = false
+			break
+		}
+	}
+
+	if numeric {
+		index = int(name)
+	} else {
+		for i = 0; i < len(names); ++i {
+			if names[i] == name {
+				index = i
+				break
+			}
+		}
+	}
+
+	if index < 0 || index * 2 + 1 >= len(caps) || caps[index * 2] < 0 {
+		return ""
+	}
+	return slice(src, caps[index * 2], caps[index * 2 + 1])
+}
+
+# expand appends to dst the template with every $name and every ${name} put
+# for what that group captured. A $ that opens no name stands for itself and
+# $$ is a single one.
+expand = fn(dst, template, src, caps, names) {
+	out = dst
+	i = 0
+
+	for i < len(template) {
+		if template[i] != "$" {
+			out = out + template[i]
+			++i
+			continue
+		}
+
+		j = i + 1
+		if j < len(template) && template[j] == "$" {
+			out = out + "$"
+			i = j + 1
+			continue
+		}
+
+		brace = j < len(template) && template[j] == `{`
+		if brace {
+			++j
+		}
+
+		name = ""
+		for j < len(template) && isWord(template[j]) {
+			name = name + template[j]
+			++j
+		}
+
+		if brace {
+			if j >= len(template) || template[j] != `}` {
+				name = ""
+			} else {
+				++j
+			}
+		}
+
+		# A malformed reference is text like any other and the scan carries
+		# on right after the dollar.
+		if len(name) == 0 {
+			out = out + "$"
+			++i
+			continue
+		}
+
+		out = out + capture(src, caps, names, name)
+		i = j
+	}
+
+	return out
+}
+
 # --- public API ---
 
-makeRegexp = fn(pattern, tree, ngroups) {
+makeRegexp = fn(pattern, tree, ngroups, names, posix) {
 	re = new()
 	re.pattern = pattern
 	re.ngroups = ngroups
+	re.names = names
+	re.posix = posix
+	re.longest = posix
 	re.prog = compileProgram(tree, ngroups)
 	re.nslots = (ngroups + 1) * 2
 
@@ -712,17 +1279,91 @@ makeRegexp = fn(pattern, tree, ngroups) {
 	# NumSubexp returns the number of capturing groups.
 	re.NumSubexp = fn() { re.ngroups }
 
-	# FindStringSubmatchIndex returns the index pairs of the leftmost match
-	# and of its groups, null when there is no match.
-	re.FindStringSubmatchIndex = fn(s) {
-		for i = 0; i <= len(s); ++i {
-			caps = run(re.prog, s, i, re.nslots)
+	# SubexpNames returns the name of every group, empty for the ones that
+	# were never given one. The first entry stands for the whole match and is
+	# always empty, so that a name sits at the index of its group.
+	re.SubexpNames = fn() { re.names }
+
+	# SubexpIndex returns the number of the group called name, or -1.
+	re.SubexpIndex = fn(name) {
+		if len(name) > 0 {
+			for i = 1; i < len(re.names); ++i {
+				if re.names[i] == name {
+					return i
+				}
+			}
+		}
+		return -1
+	}
+
+	# Copy returns a Regexp that matches the same pattern, so that a Longest
+	# said on the one leaves the other one alone.
+	re.Copy = fn() {
+		other = compile(re.pattern, re.posix)
+		other.longest = re.longest
+		return other
+	}
+
+	# MarshalText writes the Regexp out as the pattern it was compiled from.
+	re.MarshalText = fn() { bytes(re.pattern) }
+
+	# UnmarshalText makes the Regexp the one that the given pattern spells.
+	re.UnmarshalText = fn(b) {
+		if failed(other = compile(string(b), re.posix)) {
+			return other
+		}
+
+		re.pattern = other.pattern
+		re.prog = other.prog
+		re.names = other.names
+		re.ngroups = other.ngroups
+		re.nslots = other.nslots
+		re.longest = other.longest
+		return null
+	}
+
+	# Longest asks the searches that follow for the leftmost longest match
+	# instead of the leftmost first one, as POSIX wants it. It changes the
+	# regexp itself, so say it before searching and not in the middle.
+	re.Longest = fn() { re.longest = true }
+
+	# LiteralPrefix returns [prefix, complete]: the text every match must
+	# begin with, and whether the pattern is that text and nothing else.
+	re.LiteralPrefix = fn() {
+		prefix = ""
+
+		for pc = 0; pc < len(re.prog); ++pc {
+			ins = re.prog[pc]
+
+			if ins.op == opSave {
+				continue
+			}
+			if ins.op == opChar {
+				prefix = prefix + ins.ch
+				continue
+			}
+			return [prefix, ins.op == opMatch]
+		}
+
+		return [prefix, false]
+	}
+
+	# findFrom returns the capture slots of the first match that begins at or
+	# after pos. The program is anchored where it starts, so the beginning is
+	# tried one position at a time.
+	re.findFrom = fn(s, pos) {
+		for i = pos; i <= len(s); ++i {
+			caps = run(re.prog, s, i, re.nslots, re.longest)
 			if caps != null {
 				return caps
 			}
 		}
 		return null
 	}
+
+	# FindStringSubmatchIndex returns the index pairs of the leftmost match
+	# and of its groups, null when there is no match.
+	re.FindStringSubmatchIndex = fn(s) { re.findFrom(s, 0) }
 
 	# FindStringIndex returns the start and the end of the leftmost match.
 	re.FindStringIndex = fn(s) {
@@ -760,36 +1401,67 @@ makeRegexp = fn(pattern, tree, ngroups) {
 
 	re.Match = fn(b) { re.MatchString(string(b)) }
 
+	# The reader side of the family. Go reads only as far as it must, this
+	# reads the stream to its end and searches what it read.
+	#
+	# ponytail: an endless reader would never return here, which no stream a
+	# file or a connection gives ever is. Searching as the bytes come in is
+	# what to write the day one is.
+	re.FindReaderSubmatchIndex = fn(r) {
+		if failed(data = io.ReadAll(r)) {
+			return data
+		}
+		return re.FindStringSubmatchIndex(string(data))
+	}
+
+	re.FindReaderIndex = fn(r) {
+		caps = re.FindReaderSubmatchIndex(r)
+		if failed(caps) {
+			return caps
+		}
+		return if caps == null { null } else { [caps[0], caps[1]] }
+	}
+
+	re.MatchReader = fn(r) {
+		caps = re.FindReaderSubmatchIndex(r)
+		if failed(caps) {
+			return caps
+		}
+		return caps != null
+	}
+
 	# allMatches returns the captures of every match, at most n when n >= 0.
 	# It returns a list instead of taking a callback because a closure that
 	# appends to a list of its enclosing scope would append to its own copy.
 	re.allMatches = fn(s, n) {
 		out = []
 		pos = 0
+		prev = -1
 
 		for pos <= len(s) {
 			if n >= 0 && len(out) >= n {
 				return out
 			}
 
-			caps = null
-			i = pos
-			for i <= len(s) {
-				caps = run(re.prog, s, i, re.nslots)
-				if caps != null {
-					break
-				}
-				++i
-			}
+			caps = re.findFrom(s, pos)
 			if caps == null {
 				return out
 			}
 
-			out = append(out, caps)
+			if caps[1] == caps[0] {
+				# An empty match where the last one ended says nothing new, so
+				# it is dropped; either way it steps one character forward, or
+				# the same position would keep matching for ever.
+				if caps[0] != prev {
+					out = append(out, caps)
+				}
+				pos = caps[1] + 1
+			} else {
+				out = append(out, caps)
+				pos = caps[1]
+			}
 
-			# An empty match steps one character forward, otherwise the same
-			# position would keep matching.
-			pos = if caps[1] == caps[0] { caps[1] + 1 } else { caps[1] }
+			prev = caps[1]
 		}
 
 		return out
@@ -828,47 +1500,139 @@ makeRegexp = fn(pattern, tree, ngroups) {
 		return if len(out) == 0 { null } else { out }
 	}
 
-	# ReplaceAllStringFunc replaces every match with what f returns for it.
-	re.ReplaceAllStringFunc = fn(s, f) {
+	re.FindAllStringSubmatchIndex = fn(s, n) {
+		ms = re.allMatches(s, nOrAll(n))
+		return if len(ms) == 0 { null } else { ms }
+	}
+
+	# The byte side of the family. A pattern reads bytes as a string reads
+	# them, so each of these asks its string twin and dresses the answer back
+	# up in bytes.
+	toBytes = fn(x) { if x == null { null } else { bytes(x) } }
+
+	listToBytes = fn(l) {
+		if l == null {
+			return null
+		}
+
+		out = []
+		for i = 0; i < len(l); ++i {
+			out = append(out, toBytes(l[i]))
+		}
+		return out
+	}
+
+	re.Find = fn(b) {
+		s = string(b)
+		idx = re.FindStringIndex(s)
+		return if idx == null { null } else { bytes(slice(s, idx[0], idx[1])) }
+	}
+
+	re.FindIndex = fn(b) { re.FindStringIndex(string(b)) }
+	re.FindSubmatch = fn(b) { listToBytes(re.FindStringSubmatch(string(b))) }
+	re.FindSubmatchIndex = fn(b) { re.FindStringSubmatchIndex(string(b)) }
+	re.FindAll = fn(b, n) { listToBytes(re.FindAllString(string(b), n)) }
+	re.FindAllIndex = fn(b, n) { re.FindAllStringIndex(string(b), n) }
+	re.FindAllSubmatchIndex = fn(b, n) { re.FindAllStringSubmatchIndex(string(b), n) }
+
+	re.FindAllSubmatch = fn(b, n) {
+		ms = re.FindAllStringSubmatch(string(b), n)
+		if ms == null {
+			return null
+		}
+
+		out = []
+		for i = 0; i < len(ms); ++i {
+			out = append(out, listToBytes(ms[i]))
+		}
+		return out
+	}
+
+	# ExpandString appends to dst the template with every $1 and ${name} of it
+	# put for what that group of match captured in s.
+	re.ExpandString = fn(dst, template, s, match) { expand(dst, template, s, match, re.names) }
+
+	re.Expand = fn(dst, template, src, match) {
+		return bytes(expand(string(dst), string(template), string(src), match, re.names))
+	}
+
+	# replaceAll rebuilds s with what f makes of the captures of every match
+	# standing where the match was.
+	re.replaceAll = fn(s, f) {
 		ms = re.allMatches(s, -1)
 		out = ""
 		last = 0
 
 		for i = 0; i < len(ms); ++i {
-			out = out + slice(s, last, ms[i][0]) + f(slice(s, ms[i][0], ms[i][1]))
+			out = out + slice(s, last, ms[i][0]) + f(ms[i])
 			last = ms[i][1]
 		}
 
 		return out + slice(s, last, len(s))
 	}
 
-	# ReplaceAllString replaces every match with repl.
-	re.ReplaceAllString = fn(s, repl) { re.ReplaceAllStringFunc(s, fn(m) { repl }) }
+	# ReplaceAllStringFunc replaces every match with what f returns for it.
+	re.ReplaceAllStringFunc = fn(s, f) {
+		return re.replaceAll(s, fn(caps) { f(slice(s, caps[0], caps[1])) })
+	}
+
+	# ReplaceAllString replaces every match with repl, in which $1 and
+	# ${name} stand for what the groups captured.
+	re.ReplaceAllString = fn(s, repl) {
+		return re.replaceAll(s, fn(caps) { expand("", repl, s, caps, re.names) })
+	}
+
+	# ReplaceAllLiteralString replaces every match with repl taken word for
+	# word, no dollar of it meaning anything.
+	re.ReplaceAllLiteralString = fn(s, repl) { re.replaceAll(s, fn(caps) { repl }) }
+
+	re.ReplaceAll = fn(b, repl) { bytes(re.ReplaceAllString(string(b), string(repl))) }
+	re.ReplaceAllLiteral = fn(b, repl) { bytes(re.ReplaceAllLiteralString(string(b), string(repl))) }
+
+	re.ReplaceAllFunc = fn(b, f) {
+		s = string(b)
+		return bytes(re.replaceAll(s, fn(caps) { string(f(bytes(slice(s, caps[0], caps[1])))) }))
+	}
 
 	# Split slices s around every match, into at most n pieces when n >= 0.
 	re.Split = fn(s, n) {
 		limit = nOrAll(n)
-		ms = re.allMatches(s, -1)
-		out = []
-		last = 0
-
-		for i = 0; i < len(ms); ++i {
-			if limit >= 0 && len(out) >= limit - 1 {
-				break
-			}
-			out = append(out, slice(s, last, ms[i][0]))
-			last = ms[i][1]
+		if limit == 0 {
+			return null
+		}
+		if len(re.pattern) > 0 && len(s) == 0 {
+			return [""]
 		}
 
-		return append(out, slice(s, last, len(s)))
+		ms = re.allMatches(s, limit)
+		out = []
+		beg = 0
+		end = 0
+
+		for i = 0; i < len(ms); ++i {
+			if limit > 0 && len(out) >= limit - 1 {
+				break
+			}
+
+			end = ms[i][0]
+			# A match at the very beginning leaves no piece before it.
+			if ms[i][1] != 0 {
+				out = append(out, slice(s, beg, end))
+			}
+			beg = ms[i][1]
+		}
+
+		if end != len(s) {
+			out = append(out, slice(s, beg, len(s)))
+		}
+		return out
 	}
 
 	return re
 }
 
-# Compile parses a pattern and returns a Regexp, or an error.
-Compile = fn(pattern) {
-	p = parser(pattern)
+compile = fn(pattern, posix) {
+	p = parser(pattern, posix)
 
 	if failed(tree = p.parseAlt()) {
 		return tree
@@ -877,12 +1641,29 @@ Compile = fn(pattern) {
 		return error("regexp: unexpected {p.peek()}")
 	}
 
-	return makeRegexp(pattern, tree, p.ngroups)
+	return makeRegexp(pattern, tree, p.ngroups, p.names, posix)
 }
+
+# Compile parses a pattern and returns a Regexp, or an error.
+Compile = fn(pattern) { compile(pattern, false) }
+
+# CompilePOSIX is Compile for a plain POSIX ERE: none of the escapes and the
+# groups Perl added, and the leftmost longest match instead of the first one.
+CompilePOSIX = fn(pattern) { compile(pattern, true) }
 
 # MustCompile is Compile, but it stops the program on an invalid pattern.
 MustCompile = fn(pattern) {
 	re = Compile(pattern)
+	if failed(re) {
+		exit(string(re), 1)
+	}
+	return re
+}
+
+# MustCompilePOSIX is CompilePOSIX, but it stops the program on an invalid
+# pattern.
+MustCompilePOSIX = fn(pattern) {
+	re = CompilePOSIX(pattern)
 	if failed(re) {
 		exit(string(re), 1)
 	}
@@ -918,3 +1699,11 @@ MatchString = fn(pattern, s) {
 }
 
 Match = fn(pattern, b) { MatchString(pattern, string(b)) }
+
+MatchReader = fn(pattern, r) {
+	re = Compile(pattern)
+	if failed(re) {
+		return re
+	}
+	return re.MatchReader(r)
+}

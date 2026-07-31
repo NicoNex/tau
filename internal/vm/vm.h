@@ -126,10 +126,18 @@ static inline void set_const(struct object *list, size_t idx, struct object o) {
 }
 
 extern char *tau_module_dir;
+extern char *tau_exec_dir;
 
 static inline void set_module_dir(char *dir) {
 	free(tau_module_dir);
 	tau_module_dir = dir;
+}
+
+// Where the interpreter itself is, so that a shared object shipped beside it
+// is found from any working directory and under any prefix.
+static inline void set_exec_dir(char *dir) {
+	free(tau_exec_dir);
+	tau_exec_dir = dir;
 }
 
 void gc_init(void);

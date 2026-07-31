@@ -131,19 +131,22 @@ syscall:
 # The tests live next to what they test, so they are dropped after the copy
 # rather than avoided during it, subdirectories included. libffi comes first
 # because the interpreter is linked against it.
+# DESTDIR is prepended to every path, so that the tree can be built somewhere
+# it is not meant to run from. That is what a package is: the files laid out
+# as they will be, rooted anywhere. Empty for an ordinary install.
 install: libffi plugins tau tau-rt
 	# The library directory goes first, so that a module dropped from the
 	# stdlib doesn't stay installed forever.
-	rm -rf $(PREFIX)/lib/tau
-	mkdir -p $(PREFIX)/bin $(PREFIX)/lib/tau
-	cp tau $(PREFIX)/bin/tau
-	cp tau-rt $(PREFIX)/lib/tau/tau-rt
-	cp -r stdlib/. $(PREFIX)/lib/tau
-	find $(PREFIX)/lib/tau -name '*_test.tau' -delete
-	find $(PREFIX)/lib/tau \( -name 'Makefile' -o -name '*.c' \) -delete
+	rm -rf $(DESTDIR)$(PREFIX)/lib/tau
+	mkdir -p $(DESTDIR)$(PREFIX)/bin $(DESTDIR)$(PREFIX)/lib/tau
+	cp tau $(DESTDIR)$(PREFIX)/bin/tau
+	cp tau-rt $(DESTDIR)$(PREFIX)/lib/tau/tau-rt
+	cp -r stdlib/. $(DESTDIR)$(PREFIX)/lib/tau
+	find $(DESTDIR)$(PREFIX)/lib/tau -name '*_test.tau' -delete
+	find $(DESTDIR)$(PREFIX)/lib/tau \( -name 'Makefile' -o -name '*.c' \) -delete
 	@echo
-	@echo "tau        $(PREFIX)/bin/tau"
-	@echo "stdlib     $(PREFIX)/lib/tau"
+	@echo "tau        $(DESTDIR)$(PREFIX)/bin/tau"
+	@echo "stdlib     $(DESTDIR)$(PREFIX)/lib/tau"
 	@command -v tau >/dev/null || echo "note: $(PREFIX)/bin is not in your PATH"
 
 uninstall:

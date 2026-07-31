@@ -123,6 +123,22 @@ func searchDirs(vmdir string) []string {
 	}
 	dirs = append(dirs, vmdir)
 
+	// Next to the interpreter itself, which is what makes an install
+	// relocatable: a tree under C:\Program Files\Tau or /opt/tau is found
+	// because the binary is in it, not because a path was written down
+	// somewhere. It is also the only way the standard library is found on
+	// Windows, where none of the directories below exist.
+	if exe, err := os.Executable(); err == nil {
+		if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+			exe = resolved
+		}
+		bin := filepath.Dir(exe)
+		dirs = append(dirs,
+			filepath.Join(bin, "..", "lib", "tau"),
+			filepath.Join(bin, "lib", "tau"),
+		)
+	}
+
 	if home, err := os.UserHomeDir(); err == nil {
 		dirs = append(dirs, filepath.Join(home, ".local", "lib", "tau"))
 	}
@@ -304,4 +320,13 @@ func setModuleDir(file string) {
 
 func init() {
 	C.set_exit()
+
+	// The plugin loader is C and has no way of asking where the program is;
+	// Go does, so it is told once, here.
+	if exe, err := os.Executable(); err == nil {
+		if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+			exe = resolved
+		}
+		C.set_exec_dir(C.CString(filepath.Dir(exe)))
+	}
 }

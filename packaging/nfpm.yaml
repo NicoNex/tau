@@ -1,0 +1,65 @@
+# The one description three package managers are built from.
+#
+# A package of tau is not the binary on its own: the interpreter opens the
+# standard library at runtime, and half of that library opens a shared object
+# next to itself. Ship the binary alone and `import("os")` fails on a machine
+# that looks fine. So what goes in is the staged tree, whole, exactly as
+# `make install` lays it out.
+#
+# Built with:
+#	make install PREFIX=/usr DESTDIR=dist/root
+#	nfpm package -f packaging/nfpm.yaml -p deb -t dist/
+#
+# The architecture and the version come from the environment, since the same
+# file builds every one of them.
+name: tau
+arch: ${PKG_ARCH}
+platform: linux
+version: ${PKG_VERSION}
+section: devel
+priority: optional
+maintainer: Nicolò Santamaria <nicolo.santamaria@gmail.com>
+description: |
+  The tau programming language.
+  Tau is a dynamically typed, interpreted language, small on purpose: a handful
+  of keywords, one way to build an object, errors that are ordinary values, and
+  concurrency that looks like Go's. This package carries the interpreter, the
+  runtime a bundled program is built on, and the standard library it opens at
+  run time.
+vendor: Nicolò Santamaria
+homepage: https://github.com/NicoNex/tau
+license: GPL-3.0
+
+contents:
+  - src: dist/root/usr/bin/tau
+    dst: /usr/bin/tau
+
+  # The standard library and the shared objects it opens, and tau-rt, which
+  # `tau bundle` appends a program to.
+  - src: dist/root/usr/lib/tau
+    dst: /usr/lib/tau
+    type: tree
+
+  - src: LICENSE
+    dst: /usr/share/licenses/tau/LICENSE
+    packager: archlinux
+  - src: LICENSE
+    dst: /usr/share/doc/tau/LICENSE
+    packager: deb
+  - src: LICENSE
+    dst: /usr/share/licenses/tau/LICENSE
+    packager: rpm
+
+overrides:
+  deb:
+    depends:
+      - libc6
+  rpm:
+    depends:
+      - glibc
+  archlinux:
+    depends:
+      - glibc
+
+archlinux:
+  pkgbase: tau

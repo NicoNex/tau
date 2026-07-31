@@ -8,6 +8,7 @@
 #include "plugin.h"
 
 char *tau_module_dir = NULL;
+char *tau_exec_dir = NULL;
 
 struct object new_builtin_obj(struct object (*builtin)(struct object *args, size_t len)) {
 	return (struct object) {

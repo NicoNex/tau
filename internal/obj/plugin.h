@@ -40,6 +40,12 @@
 // ships a shared object next to itself is found from any working directory.
 extern char *tau_module_dir;
 
+// The directory the interpreter itself is in, set by the runtime. An install
+// that carries its own library tree is found through this and nothing else,
+// which is what makes one relocatable - and on Windows it is the only way,
+// since none of the directories at the bottom of this function are there.
+extern char *tau_exec_dir;
+
 static inline void *plugin_open(const char *path) {
 	void *handle = dlopen(path, RTLD_LAZY);
 	if (handle != NULL) return handle;
@@ -49,6 +55,14 @@ static inline void *plugin_open(const char *path) {
 
 	if (tau_module_dir != NULL) {
 		snprintf(buf, sizeof(buf), "%s/%s", tau_module_dir, path);
+		if ((handle = dlopen(buf, RTLD_LAZY)) != NULL) return handle;
+	}
+
+	if (tau_exec_dir != NULL) {
+		snprintf(buf, sizeof(buf), "%s/../lib/tau/%s", tau_exec_dir, path);
+		if ((handle = dlopen(buf, RTLD_LAZY)) != NULL) return handle;
+
+		snprintf(buf, sizeof(buf), "%s/lib/tau/%s", tau_exec_dir, path);
 		if ((handle = dlopen(buf, RTLD_LAZY)) != NULL) return handle;
 	}
 

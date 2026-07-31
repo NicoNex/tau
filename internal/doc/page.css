@@ -8,21 +8,24 @@
  * stacks below are what a machine already has.
  */
 :root {
-	--bg: #fcfcfd;
+	--bg: #f4f5fa;
 	--surface: #ffffff;
+	--surface-2: #f7f8fc;
 	--ink: #14151c;
 	--ink-2: #4e5364;
 	--ink-3: #8b90a3;
-	--line: #e6e7ef;
-	--line-2: #f0f1f7;
+	--line: #dcdeeb;
+	--line-2: #e8eaf4;
 	--accent: #4b52c8;
 	--accent-2: #6d6ff0;
 	--wash: #ecedfb;
-	--code: #f6f6fa;
+	--code: #eceefa;
 	--glow: rgba(109, 111, 240, .09);
 	--kw: #8250c4;
 	--str: #1c7a5e;
 	--num: #b4562a;
+	--fn: #2f6fd0;
+	--bi: #0d857a;
 
 	--serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Charter, "Bitstream Charter", Georgia, serif;
 	--mono: "JetBrains Mono", "Cascadia Code", "SF Mono", "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
@@ -32,26 +35,29 @@
 	--gutter: 3.5rem;
 	--head: 5.1rem;
 	--r: 10px;
-	--shadow: 0 1px 2px rgba(24, 26, 48, .04), 0 14px 36px -22px rgba(24, 26, 48, .3);
+	--shadow: 0 1px 2px rgba(24, 26, 48, .05), 0 16px 40px -24px rgba(24, 26, 48, .38);
 }
 
 @media (prefers-color-scheme: dark) {
 	:root {
-		--bg: #0d0e14;
-		--surface: #15161f;
+		--bg: #08090e;
+		--surface: #171926;
+		--surface-2: #1d2030;
 		--ink: #e9e9f2;
 		--ink-2: #a7a9bd;
 		--ink-3: #71748b;
-		--line: #262833;
-		--line-2: #1c1e29;
+		--line: #2c3042;
+		--line-2: #242839;
 		--accent: #9ba2ff;
 		--accent-2: #b7bcff;
 		--wash: #1e2040;
-		--code: #16171f;
+		--code: #0f111a;
 		--glow: rgba(155, 162, 255, .07);
 		--kw: #c99bf5;
 		--str: #6fd7ae;
 		--num: #f0a76a;
+		--fn: #8ab8f7;
+		--bi: #5fd3c2;
 		--shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 32px -20px rgba(0, 0, 0, .9);
 	}
 }
@@ -375,6 +381,8 @@ pre .c-str { color: var(--str); }
 pre .c-num { color: var(--num); }
 pre .c-kw  { color: var(--kw); font-weight: 600; }
 pre .c-lit { color: var(--kw); }
+pre .c-fn  { color: var(--fn); }
+pre .c-bi  { color: var(--bi); }
 
 section { scroll-margin-top: calc(var(--head) + 1.5rem); }
 
@@ -453,8 +461,8 @@ section:target > .decl > .nm { text-decoration: underline; text-underline-offset
 section.sub {
 	margin: 0.85rem 0 0;
 	padding: 0.95rem 1.15rem;
-	background: var(--code);
-	border: 1px solid transparent;
+	background: var(--surface-2);
+	border: 1px solid var(--line-2);
 	border-left: 3px solid var(--line);
 	border-radius: 0 10px 10px 0;
 	transition: border-color .15s, background .15s;
@@ -464,7 +472,7 @@ section.sub:hover { border-left-color: var(--accent); }
 section.sub:target { border-left-color: var(--accent); border-color: var(--accent); border-left-width: 3px; }
 section.sub > .decl { font-size: 1.04rem; margin-bottom: 0.6rem; }
 section.sub p, section.sub pre { max-width: calc(var(--measure) - 2.3rem); }
-section.sub pre { background: var(--surface); }
+
 section.sub > *:last-child { margin-bottom: 0; }
 
 /* -------------------------------------------------------------- footer -- */

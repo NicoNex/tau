@@ -7,6 +7,7 @@ import (
 
 	"github.com/NicoNex/tau/internal/item"
 	"github.com/NicoNex/tau/internal/lexer"
+	"github.com/NicoNex/tau/internal/obj"
 )
 
 // highlight colours a block of tau written inside a comment.
@@ -41,29 +42,47 @@ func highlightLines(src string) []template.HTML {
 		return plain(src)
 	}
 
+	// Where each token starts, worked out before anything is written: a
+	// string begins at what is between the quotes rather than at the quote,
+	// and the one in front of it has to stop short of the quote it does not
+	// own.
+	starts := make([]int, len(toks))
+	for i, t := range toks {
+		p := t.Pos
+		if t.Is(item.String) || t.Is(item.RawString) {
+			if p > 0 && (src[p-1] == '"' || src[p-1] == '`') {
+				p--
+			}
+		}
+		if p < 0 || p > len(src) || (i > 0 && p < starts[i-1]) {
+			return plain(src)
+		}
+		starts[i] = p
+	}
+
 	var (
 		out strings.Builder
 		pos int
 	)
 
-	for i, t := range toks {
-		if t.Pos < pos || t.Pos > len(src) {
+	for i := range toks {
+		if starts[i] < pos {
 			return plain(src)
 		}
 
 		// Whatever stood between the last token and this one is spacing, and
 		// belongs to nobody.
-		out.WriteString(html.EscapeString(src[pos:t.Pos]))
+		out.WriteString(html.EscapeString(src[pos:starts[i]]))
 
 		end := len(src)
 		if i+1 < len(toks) {
-			end = toks[i+1].Pos
+			end = starts[i+1]
 		}
 		// The token is what is left once the spacing before the next one is
 		// taken off the end.
-		text := strings.TrimRight(src[t.Pos:end], " \t\n")
+		text := strings.TrimRight(src[starts[i]:end], " \t\n")
 
-		if class := class(t); class != "" {
+		if class := class(toks, i); class != "" {
 			open := `<span class="` + class + `">`
 			out.WriteString(open)
 			// A newline inside the token ends the span and starts another,
@@ -73,7 +92,7 @@ func highlightLines(src string) []template.HTML {
 		} else {
 			out.WriteString(html.EscapeString(text))
 		}
-		pos = t.Pos + len(text)
+		pos = starts[i] + len(text)
 	}
 	out.WriteString(html.EscapeString(src[pos:]))
 
@@ -118,9 +137,38 @@ func lex(src string) ([]item.Item, bool) {
 	return out, ok
 }
 
-// class is what a token is painted as. Names and the punctuation between them
-// get none: colouring everything is colouring nothing.
-func class(i item.Item) string {
+// builtins are the names that are always in scope, taken from the interpreter
+// rather than written out again here: one added there is one painted here,
+// with nothing to keep in step by hand.
+var builtins = func() map[string]bool {
+	m := make(map[string]bool, len(obj.Builtins))
+	for _, name := range obj.Builtins {
+		m[name] = true
+	}
+	return m
+}()
+
+// class is what a token is painted as.
+//
+// A name is read in the company it keeps: one with a bracket after it is
+// something being called, which is what a reader looks for first when
+// following what a piece of code does. The rest of the names, and all the
+// punctuation between them, get nothing - colouring everything is colouring
+// nothing.
+func class(toks []item.Item, at int) string {
+	i := toks[at]
+
+	if i.Is(item.Ident) {
+		switch {
+		case builtins[i.Val]:
+			return "c-bi"
+		case at+1 < len(toks) && toks[at+1].Is(item.LParen):
+			return "c-fn"
+		default:
+			return ""
+		}
+	}
+
 	switch i.Typ {
 	case item.Comment:
 		return "c-com"

@@ -16,7 +16,7 @@ The `net.tau` library provides a Go-style API for network programming in Tau:
 ### TCP Server
 
 ```tau
-net = import("stdlib/net.tau")
+net = import("net")
 
 # Listen for connections
 ln = Listen("tcp", ":8080")
@@ -41,7 +41,7 @@ ln.Close()
 ### TCP Client
 
 ```tau
-net = import("stdlib/net.tau")
+net = import("net")
 
 # Connect to server
 conn = Dial("tcp", "localhost:8080")
@@ -60,7 +60,7 @@ conn.Close()
 ### UDP Server
 
 ```tau
-net = import("stdlib/net.tau")
+net = import("net")
 
 # Listen for packets
 pc = ListenPacket("udp", ":9090")
@@ -75,7 +75,7 @@ pc.Close()
 ### UDP Client
 
 ```tau
-net = import("stdlib/net.tau")
+net = import("net")
 
 # Connect via UDP
 conn = Dial("udp", "localhost:9090")

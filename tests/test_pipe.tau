@@ -22,71 +22,71 @@ receive_one = fn(p, done) {
 }
 
 testing.Main([
-		["an unbuffered send waits for a receiver", fn(t) {
-				p = pipe()
-				done = pipe(1)
+	["an unbuffered send waits for a receiver", fn(t) {
+		p = pipe()
+		done = pipe(1)
 
-				# The receiver takes its time. A send that does not wait for it
-				# would put all three values down at once and return in no time.
-				tau slow_receiver(p, 3, done)
+		# The receiver takes its time. A send that does not wait for it
+		# would put all three values down at once and return in no time.
+		tau slow_receiver(p, 3, done)
 
-				start = time.Mono()
-				for i = 0; i < 3; ++i {
-					send(p, i)
-				}
-				recv(done)
-				t.Assert(time.Since(start) >= 40 * time.Millisecond, "send returned before the receiver took the value")
-		}],
+		start = time.Mono()
+		for i = 0; i < 3; ++i {
+			send(p, i)
+		}
+		recv(done)
+		t.Assert(time.Since(start) >= 40 * time.Millisecond, "send returned before the receiver took the value")
+	}],
 
-		["a buffered send does not wait until the buffer is full", fn(t) {
-				p = pipe(4)
+	["a buffered send does not wait until the buffer is full", fn(t) {
+		p = pipe(4)
 
-				# Four values fit, so none of these waits for a receiver.
-				start = time.Mono()
-				for i = 0; i < 4; ++i {
-					send(p, i)
-				}
-				t.Assert(time.Since(start) < 20 * time.Millisecond, "a send waited even though the buffer had room")
+		# Four values fit, so none of these waits for a receiver.
+		start = time.Mono()
+		for i = 0; i < 4; ++i {
+			send(p, i)
+		}
+		t.Assert(time.Since(start) < 20 * time.Millisecond, "a send waited even though the buffer had room")
 
-				for i = 0; i < 4; ++i {
-					t.AssertEq(recv(p), i)
-				}
-		}],
+		for i = 0; i < 4; ++i {
+			t.AssertEq(recv(p), i)
+		}
+	}],
 
-		["a full buffer makes the sender wait", fn(t) {
-				p = pipe(1)
-				done = pipe(1)
+	["a full buffer makes the sender wait", fn(t) {
+		p = pipe(1)
+		done = pipe(1)
 
-				tau drain(p, 2, done)
+		tau drain(p, 2, done)
 
-				start = time.Mono()
-				send(p, 1)
-				send(p, 2)
-				recv(done)
-				t.Assert(time.Since(start) >= 25 * time.Millisecond, "a send did not wait for room in a full buffer")
-		}],
+		start = time.Mono()
+		send(p, 1)
+		send(p, 2)
+		recv(done)
+		t.Assert(time.Since(start) >= 25 * time.Millisecond, "a send did not wait for room in a full buffer")
+	}],
 
-		["values already in the pipe are delivered after close", fn(t) {
-				p = pipe(2)
-				send(p, 1)
-				send(p, 2)
-				close(p)
+	["values already in the pipe are delivered after close", fn(t) {
+		p = pipe(2)
+		send(p, 1)
+		send(p, 2)
+		close(p)
 
-				t.AssertEq(recv(p), 1)
-				t.AssertEq(recv(p), 2)
-				t.AssertEq(recv(p), null)
-		}],
+		t.AssertEq(recv(p), 1)
+		t.AssertEq(recv(p), 2)
+		t.AssertEq(recv(p), null)
+	}],
 
-		["an unbuffered pipe hands the value over", fn(t) {
-				p = pipe()
-				done = pipe(1)
+	["an unbuffered pipe hands the value over", fn(t) {
+		p = pipe()
+		done = pipe(1)
 
-				tau receive_one(p, done)
+		tau receive_one(p, done)
 
-				send(p, 42)
-				t.AssertEq(recv(done), 42)
+		send(p, 42)
+		t.AssertEq(recv(done), 42)
 
-				close(p)
-				t.AssertEq(recv(p), null)
-		}]
+		close(p)
+		t.AssertEq(recv(p), null)
+	}]
 ])

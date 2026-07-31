@@ -2,53 +2,53 @@ testing = import("testing")
 csv = import("encoding/csv")
 
 testing.Main([
-		["records and fields", fn(t) {
-				t.AssertEq(csv.Parse("a,b,c\n1,2,3\n", null), [["a", "b", "c"], ["1", "2", "3"]])
-				t.AssertEq(csv.Parse("a,b", null), [["a", "b"]])
-				t.AssertEq(csv.Parse("", null), [])
-				t.AssertEq(csv.Parse("a,,c", null), [["a", "", "c"]])
-				t.AssertEq(csv.Parse(",", null), [["", ""]])
-			}],
-		["quoted fields hold anything", fn(t) {
-				t.AssertEq(csv.Parse("a,\"b,c\"", null), [["a", "b,c"]])
-				t.AssertEq(csv.Parse("\"say \"\"hi\"\"\"", null), [["say \"hi\""]])
-				t.AssertEq(csv.Parse("\"two\nlines\"", null), [["two\nlines"]])
-				t.AssertEq(csv.Parse("\"\"", null), [[""]])
-				t.AssertError(csv.Parse("\"unclosed", null))
-			}],
-		["a record ends with either kind of newline", fn(t) {
-				t.AssertEq(csv.Parse("a\r\nb\r\n", null), [["a"], ["b"]])
-				t.AssertEq(csv.Parse("a\nb", null), [["a"], ["b"]])
+	["records and fields", fn(t) {
+		t.AssertEq(csv.Parse("a,b,c\n1,2,3\n", null), [["a", "b", "c"], ["1", "2", "3"]])
+		t.AssertEq(csv.Parse("a,b", null), [["a", "b"]])
+		t.AssertEq(csv.Parse("", null), [])
+		t.AssertEq(csv.Parse("a,,c", null), [["a", "", "c"]])
+		t.AssertEq(csv.Parse(",", null), [["", ""]])
+	}],
+	["quoted fields hold anything", fn(t) {
+		t.AssertEq(csv.Parse("a,\"b,c\"", null), [["a", "b,c"]])
+		t.AssertEq(csv.Parse("\"say \"\"hi\"\"\"", null), [["say \"hi\""]])
+		t.AssertEq(csv.Parse("\"two\nlines\"", null), [["two\nlines"]])
+		t.AssertEq(csv.Parse("\"\"", null), [[""]])
+		t.AssertError(csv.Parse("\"unclosed", null))
+	}],
+	["a record ends with either kind of newline", fn(t) {
+		t.AssertEq(csv.Parse("a\r\nb\r\n", null), [["a"], ["b"]])
+		t.AssertEq(csv.Parse("a\nb", null), [["a"], ["b"]])
 
-				# An empty line between records is not a record of its own.
-				t.AssertEq(csv.Parse("a\n\n\nb\n", null), [["a"], ["b"]])
-			}],
-		["another separator", fn(t) {
-				t.AssertEq(csv.Parse("a;b\n", ";"), [["a", "b"]])
-				t.AssertEq(csv.Parse("a\tb\n", "\t"), [["a", "b"]])
-				t.AssertEq(csv.Parse("a;b", ","), [["a;b"]])
-				t.AssertError(csv.Parse("a,b", ",,"))
-				t.AssertError(csv.Parse("a,b", "\""))
-			}],
-		["writing quotes only what needs it", fn(t) {
-				t.AssertEq(csv.FormatField("plain", null), "plain")
-				t.AssertEq(csv.FormatField("", null), "")
-				t.AssertEq(csv.FormatField("a,b", null), "\"a,b\"")
-				t.AssertEq(csv.FormatField("a\"b", null), "\"a\"\"b\"")
-				t.AssertEq(csv.FormatField("a\nb", null), "\"a\nb\"")
-				t.AssertEq(csv.FormatField(" padded ", null), "\" padded \"")
-				t.AssertEq(csv.FormatField("a,b", ";"), "a,b") # not the separator here
-			}],
-		["Format writes what Parse reads back", fn(t) {
-				t.AssertEq(csv.Format([["a", "b"], ["1", "2"]], null), "a,b\n1,2\n")
-				t.AssertEq(csv.Format([], null), "")
+		# An empty line between records is not a record of its own.
+		t.AssertEq(csv.Parse("a\n\n\nb\n", null), [["a"], ["b"]])
+	}],
+	["another separator", fn(t) {
+		t.AssertEq(csv.Parse("a;b\n", ";"), [["a", "b"]])
+		t.AssertEq(csv.Parse("a\tb\n", "\t"), [["a", "b"]])
+		t.AssertEq(csv.Parse("a;b", ","), [["a;b"]])
+		t.AssertError(csv.Parse("a,b", ",,"))
+		t.AssertError(csv.Parse("a,b", "\""))
+	}],
+	["writing quotes only what needs it", fn(t) {
+		t.AssertEq(csv.FormatField("plain", null), "plain")
+		t.AssertEq(csv.FormatField("", null), "")
+		t.AssertEq(csv.FormatField("a,b", null), "\"a,b\"")
+		t.AssertEq(csv.FormatField("a\"b", null), "\"a\"\"b\"")
+		t.AssertEq(csv.FormatField("a\nb", null), "\"a\nb\"")
+		t.AssertEq(csv.FormatField(" padded ", null), "\" padded \"")
+		t.AssertEq(csv.FormatField("a,b", ";"), "a,b") # not the separator here
+	}],
+	["Format writes what Parse reads back", fn(t) {
+		t.AssertEq(csv.Format([["a", "b"], ["1", "2"]], null), "a,b\n1,2\n")
+		t.AssertEq(csv.Format([], null), "")
 
-				rows = [
-					["plain", "with,comma"],
-					["with \"quotes\"", " padded "],
-					["two\nlines", ""]
-				]
-				t.AssertEq(csv.Parse(csv.Format(rows, null), null), rows)
-				t.AssertEq(csv.Parse(csv.Format(rows, ";"), ";"), rows)
-			}]
-	])
+		rows = [
+			["plain", "with,comma"],
+			["with \"quotes\"", " padded "],
+			["two\nlines", ""]
+		]
+		t.AssertEq(csv.Parse(csv.Format(rows, null), null), rows)
+		t.AssertEq(csv.Parse(csv.Format(rows, ";"), ";"), rows)
+	}]
+])

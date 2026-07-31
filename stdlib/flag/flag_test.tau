@@ -12,78 +12,78 @@ set = fn() {
 }
 
 testing.Main([
-		["the values declared are the values before parsing", fn(t) {
-				s = set()
-				t.AssertEq(s.Lookup("port").Value, 8080)
-				t.AssertEq(s.Lookup("name").Value, "none")
-				t.AssertEq(s.Lookup("rate").Value, 1.5)
-				t.AssertEq(s.Lookup("q").Value, false)
-				t.AssertEq(s.Lookup("nothing"), null)
+	["the values declared are the values before parsing", fn(t) {
+		s = set()
+		t.AssertEq(s.Lookup("port").Value, 8080)
+		t.AssertEq(s.Lookup("name").Value, "none")
+		t.AssertEq(s.Lookup("rate").Value, 1.5)
+		t.AssertEq(s.Lookup("q").Value, false)
+		t.AssertEq(s.Lookup("nothing"), null)
 
-				t.AssertEq(s.Parse([]), [])
-				t.AssertEq(s.Lookup("port").Value, 8080)
-			}],
-		["a flag and its value, however they are written", fn(t) {
-				s = set()
-				rest = s.Parse(["-port", "99", "--name=hello", "-rate=0.5", "-q"])
-				t.AssertEq(rest, [])
-				t.AssertEq(s.Lookup("port").Value, 99)
-				t.AssertEq(s.Lookup("name").Value, "hello")
-				t.AssertEq(s.Lookup("rate").Value, 0.5)
-				t.AssertEq(s.Lookup("q").Value, true)
-			}],
-		["a boolean can be given a value as well", fn(t) {
-				s = set()
-				s.Parse(["-q=false"])
-				t.AssertEq(s.Lookup("q").Value, false)
+		t.AssertEq(s.Parse([]), [])
+		t.AssertEq(s.Lookup("port").Value, 8080)
+	}],
+	["a flag and its value, however they are written", fn(t) {
+		s = set()
+		rest = s.Parse(["-port", "99", "--name=hello", "-rate=0.5", "-q"])
+		t.AssertEq(rest, [])
+		t.AssertEq(s.Lookup("port").Value, 99)
+		t.AssertEq(s.Lookup("name").Value, "hello")
+		t.AssertEq(s.Lookup("rate").Value, 0.5)
+		t.AssertEq(s.Lookup("q").Value, true)
+	}],
+	["a boolean can be given a value as well", fn(t) {
+		s = set()
+		s.Parse(["-q=false"])
+		t.AssertEq(s.Lookup("q").Value, false)
 
-				s.Reset()
-				s.Parse(["-q=1"])
-				t.AssertEq(s.Lookup("q").Value, true)
+		s.Reset()
+		s.Parse(["-q=1"])
+		t.AssertEq(s.Lookup("q").Value, true)
 
-				s.Reset()
-				t.AssertError(s.Parse(["-q=maybe"]))
-			}],
-		["what is left over comes back", fn(t) {
-				s = set()
-				t.AssertEq(s.Parse(["a", "-port", "1", "b"]), ["a", "b"])
+		s.Reset()
+		t.AssertError(s.Parse(["-q=maybe"]))
+	}],
+	["what is left over comes back", fn(t) {
+		s = set()
+		t.AssertEq(s.Parse(["a", "-port", "1", "b"]), ["a", "b"])
 
-				s.Reset()
-				t.AssertEq(s.Parse(["-q", "--", "-notaflag", "x"]), ["-notaflag", "x"])
+		s.Reset()
+		t.AssertEq(s.Parse(["-q", "--", "-notaflag", "x"]), ["-notaflag", "x"])
 
-				# A lone dash is a file name, not a flag.
-				s.Reset()
-				t.AssertEq(s.Parse(["-"]), ["-"])
-			}],
-		["what a set refuses", fn(t) {
-				s = set()
-				t.AssertError(s.Parse(["-nope", "1"]))
-				t.AssertError(s.Parse(["-port"]))
-				t.AssertError(s.Parse(["-port", "abc"]))
-				t.AssertError(s.Parse(["-rate", "abc"]))
-			}],
-		["Reset puts the values back", fn(t) {
-				s = set()
-				s.Parse(["-port", "1", "-q", "-name=x"])
-				s.Reset()
-				t.AssertEq(s.Lookup("port").Value, 8080)
-				t.AssertEq(s.Lookup("q").Value, false)
-				t.AssertEq(s.Lookup("name").Value, "none")
-			}],
-		["the usage names every flag", fn(t) {
-				strings = import("strings")
-				u = set().Usage()
-				t.AssertEq(strings.Contains(u, "tool"), true)
-				t.AssertEq(strings.Contains(u, "-port int"), true)
-				t.AssertEq(strings.Contains(u, "the port"), true)
-				t.AssertEq(strings.Contains(u, "default 8080"), true)
-				t.AssertEq(strings.Contains(u, "-q\n"), true) # a boolean takes no value
-			}],
-		["the module parses the command line", fn(t) {
-				# Nothing to parse in a test run, but the set is there and the
-				# declarations land in it.
-				f = flag.Bool("flag-test-only", false, "declared by the test")
-				t.AssertEq(f.Value, false)
-				t.AssertEq(flag.Lookup("flag-test-only"), f)
-			}]
-	])
+		# A lone dash is a file name, not a flag.
+		s.Reset()
+		t.AssertEq(s.Parse(["-"]), ["-"])
+	}],
+	["what a set refuses", fn(t) {
+		s = set()
+		t.AssertError(s.Parse(["-nope", "1"]))
+		t.AssertError(s.Parse(["-port"]))
+		t.AssertError(s.Parse(["-port", "abc"]))
+		t.AssertError(s.Parse(["-rate", "abc"]))
+	}],
+	["Reset puts the values back", fn(t) {
+		s = set()
+		s.Parse(["-port", "1", "-q", "-name=x"])
+		s.Reset()
+		t.AssertEq(s.Lookup("port").Value, 8080)
+		t.AssertEq(s.Lookup("q").Value, false)
+		t.AssertEq(s.Lookup("name").Value, "none")
+	}],
+	["the usage names every flag", fn(t) {
+		strings = import("strings")
+		u = set().Usage()
+		t.AssertEq(strings.Contains(u, "tool"), true)
+		t.AssertEq(strings.Contains(u, "-port int"), true)
+		t.AssertEq(strings.Contains(u, "the port"), true)
+		t.AssertEq(strings.Contains(u, "default 8080"), true)
+		t.AssertEq(strings.Contains(u, "-q\n"), true) # a boolean takes no value
+	}],
+	["the module parses the command line", fn(t) {
+		# Nothing to parse in a test run, but the set is there and the
+		# declarations land in it.
+		f = flag.Bool("flag-test-only", false, "declared by the test")
+		t.AssertEq(f.Value, false)
+		t.AssertEq(flag.Lookup("flag-test-only"), f)
+	}]
+])

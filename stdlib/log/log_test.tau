@@ -14,52 +14,52 @@ recorder = fn() {
 }
 
 testing.Main([
-		["a line carries the date and the message", fn(t) {
-				w = recorder()
-				l = log.New(w, "")
-				l.Print("hello")
+	["a line carries the date and the message", fn(t) {
+		w = recorder()
+		l = log.New(w, "")
+		l.Print("hello")
 
-				t.AssertEq(len(w.Lines), 1)
-				line = w.Lines[0]
-				t.AssertEq(strings.HasSuffix(line, "hello\n"), true)
+		t.AssertEq(len(w.Lines), 1)
+		line = w.Lines[0]
+		t.AssertEq(strings.HasSuffix(line, "hello\n"), true)
 
-				# The date in front is 2026/07/29 10:13:44, twenty characters
-				# with the space after it.
-				t.AssertEq(len(line), len("2026/07/29 10:13:44 hello\n"))
-				t.AssertEq(line[4], "/")
-				t.AssertEq(line[13], ":")
-			}],
-		["the prefix comes before the date", fn(t) {
-				w = recorder()
-				l = log.New(w, "worker ")
-				l.Print("started")
-				t.AssertEq(strings.HasPrefix(w.Lines[0], "worker "), true)
-				t.AssertEq(strings.HasSuffix(w.Lines[0], "started\n"), true)
-			}],
-		["without the date only the message is left", fn(t) {
-				w = recorder()
-				l = log.New(w, "app ")
-				l.Stamp = false
-				l.Print("bare")
-				t.AssertEq(w.Lines[0], "app bare\n")
+		# The date in front is 2026/07/29 10:13:44, twenty characters
+		# with the space after it.
+		t.AssertEq(len(line), len("2026/07/29 10:13:44 hello\n"))
+		t.AssertEq(line[4], "/")
+		t.AssertEq(line[13], ":")
+	}],
+	["the prefix comes before the date", fn(t) {
+		w = recorder()
+		l = log.New(w, "worker ")
+		l.Print("started")
+		t.AssertEq(strings.HasPrefix(w.Lines[0], "worker "), true)
+		t.AssertEq(strings.HasSuffix(w.Lines[0], "started\n"), true)
+	}],
+	["without the date only the message is left", fn(t) {
+		w = recorder()
+		l = log.New(w, "app ")
+		l.Stamp = false
+		l.Print("bare")
+		t.AssertEq(w.Lines[0], "app bare\n")
 
-				l.Print(42)
-				t.AssertEq(w.Lines[1], "app 42\n")
-			}],
-		["the module writes through a logger of its own", fn(t) {
-				w = recorder()
-				log.SetOutput(w)
-				log.SetPrefix("test ")
-				log.SetStamp(false)
+		l.Print(42)
+		t.AssertEq(w.Lines[1], "app 42\n")
+	}],
+	["the module writes through a logger of its own", fn(t) {
+		w = recorder()
+		log.SetOutput(w)
+		log.SetPrefix("test ")
+		log.SetStamp(false)
 
-				log.Print("one")
-				log.Print("two")
-				t.AssertEq(w.Lines, ["test one\n", "test two\n"])
+		log.Print("one")
+		log.Print("two")
+		t.AssertEq(w.Lines, ["test one\n", "test two\n"])
 
-				# Back to what the rest of the suite expects.
-				os = import("os")
-				log.SetOutput(os.Stderr)
-				log.SetPrefix("")
-				log.SetStamp(true)
-			}]
-	])
+		# Back to what the rest of the suite expects.
+		os = import("os")
+		log.SetOutput(os.Stderr)
+		log.SetPrefix("")
+		log.SetStamp(true)
+	}]
+])

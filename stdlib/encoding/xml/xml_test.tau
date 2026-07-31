@@ -2,120 +2,120 @@ testing = import("testing")
 xml = import("encoding/xml")
 
 testing.Main([
-		["an element, its attributes and its text", fn(t) {
-				doc = xml.Parse(`<book id="a" lang='en'>Tau</book>`)
-				t.AssertEq(doc.Name, "book")
-				t.AssertEq(doc.Attr["id"], "a")
-				# Single quotes are as good as double ones.
-				t.AssertEq(doc.Attr["lang"], "en")
-				t.AssertEq(doc.Text, "Tau")
-				t.AssertEq(len(doc.Children), 0)
-			}],
-		["children, in the order they were written", fn(t) {
-				doc = xml.Parse("<a><b/><c/><b/></a>")
-				t.AssertEq(len(doc.Children), 3)
-				t.AssertEq(doc.Children[0].Name, "b")
-				t.AssertEq(doc.Children[1].Name, "c")
-				t.AssertEq(doc.Children[2].Name, "b")
-			}],
-		["Child, All and Get", fn(t) {
-				doc = xml.Parse(`<a><b n="1"/><c/><b n="2"/></a>`)
-				t.AssertEq(xml.Child(doc, "b").Attr["n"], "1")
-				t.AssertEq(len(xml.All(doc, "b")), 2)
-				t.AssertEq(xml.Child(doc, "nope"), null)
-				t.AssertEq(len(xml.All(doc, "nope")), 0)
+	["an element, its attributes and its text", fn(t) {
+		doc = xml.Parse(`<book id="a" lang='en'>Tau</book>`)
+		t.AssertEq(doc.Name, "book")
+		t.AssertEq(doc.Attr["id"], "a")
+		# Single quotes are as good as double ones.
+		t.AssertEq(doc.Attr["lang"], "en")
+		t.AssertEq(doc.Text, "Tau")
+		t.AssertEq(len(doc.Children), 0)
+	}],
+	["children, in the order they were written", fn(t) {
+		doc = xml.Parse("<a><b/><c/><b/></a>")
+		t.AssertEq(len(doc.Children), 3)
+		t.AssertEq(doc.Children[0].Name, "b")
+		t.AssertEq(doc.Children[1].Name, "c")
+		t.AssertEq(doc.Children[2].Name, "b")
+	}],
+	["Child, All and Get", fn(t) {
+		doc = xml.Parse(`<a><b n="1"/><c/><b n="2"/></a>`)
+		t.AssertEq(xml.Child(doc, "b").Attr["n"], "1")
+		t.AssertEq(len(xml.All(doc, "b")), 2)
+		t.AssertEq(xml.Child(doc, "nope"), null)
+		t.AssertEq(len(xml.All(doc, "nope")), 0)
 
-				# Get is "" for what is not there, and node.Attr is what tells
-				# an absent attribute from one written empty.
-				t.AssertEq(xml.Get(xml.Child(doc, "b"), "n"), "1")
-				t.AssertEq(xml.Get(doc, "nope"), "")
-				t.AssertEq(doc.Attr["nope"], null)
-			}],
-		["the five named entities", fn(t) {
-				doc = xml.Parse("<a>&lt;&gt;&amp;&quot;&apos;</a>")
-				t.AssertEq(doc.Text, "<>&\"'")
-			}],
-		["character references, decimal and hex", fn(t) {
-				utf8 = import("unicode/utf8")
+		# Get is "" for what is not there, and node.Attr is what tells
+		# an absent attribute from one written empty.
+		t.AssertEq(xml.Get(xml.Child(doc, "b"), "n"), "1")
+		t.AssertEq(xml.Get(doc, "nope"), "")
+		t.AssertEq(doc.Attr["nope"], null)
+	}],
+	["the five named entities", fn(t) {
+		doc = xml.Parse("<a>&lt;&gt;&amp;&quot;&apos;</a>")
+		t.AssertEq(doc.Text, "<>&\"'")
+	}],
+	["character references, decimal and hex", fn(t) {
+		utf8 = import("unicode/utf8")
 
-				doc = xml.Parse("<a>&#65;&#x42;&#232;&#x1F600;</a>")
-				t.AssertEq(doc.Text, "ABè" + utf8.EncodeRune(0x1F600))
-				# Four bytes for the last one, two for the accented letter.
-				t.AssertEq(len(doc.Text), 1 + 1 + 2 + 4)
-			}],
-		["entities inside an attribute", fn(t) {
-				doc = xml.Parse(`<a n="x&amp;y&#65;"/>`)
-				t.AssertEq(doc.Attr["n"], "x&yA")
-			}],
-		["CDATA is text, whatever it holds", fn(t) {
-				doc = xml.Parse("<a><![CDATA[<b>&amp; not an entity]]></a>")
-				t.AssertEq(doc.Text, "<b>&amp; not an entity")
-				t.AssertEq(len(doc.Children), 0)
-			}],
-		["a declaration, a doctype, comments and instructions", fn(t) {
-				doc = xml.Parse(`<?xml version="1.0" encoding="UTF-8"?>
+		doc = xml.Parse("<a>&#65;&#x42;&#232;&#x1F600;</a>")
+		t.AssertEq(doc.Text, "ABè" + utf8.EncodeRune(0x1F600))
+		# Four bytes for the last one, two for the accented letter.
+		t.AssertEq(len(doc.Text), 1 + 1 + 2 + 4)
+	}],
+	["entities inside an attribute", fn(t) {
+		doc = xml.Parse(`<a n="x&amp;y&#65;"/>`)
+		t.AssertEq(doc.Attr["n"], "x&yA")
+	}],
+	["CDATA is text, whatever it holds", fn(t) {
+		doc = xml.Parse("<a><![CDATA[<b>&amp; not an entity]]></a>")
+		t.AssertEq(doc.Text, "<b>&amp; not an entity")
+		t.AssertEq(len(doc.Children), 0)
+	}],
+	["a declaration, a doctype, comments and instructions", fn(t) {
+		doc = xml.Parse(`<?xml version="1.0" encoding="UTF-8"?>
 					<!DOCTYPE a [ <!ENTITY x "y"> ]>
 					<!-- before -->
 					<?target data?>
 					<a><!-- inside -->text<?pi?></a>
 					<!-- after -->`)
-				t.AssertEq(doc.Name, "a")
-				t.AssertEq(doc.Text, "text")
-			}],
-		["whitespace is data", fn(t) {
-				doc = xml.Parse("<a>  \n  </a>")
-				t.AssertEq(doc.Text, "  \n  ")
-			}],
-		["Escape leaves alone what needs nothing", fn(t) {
-				t.AssertEq(xml.Escape("plain"), "plain")
-				t.AssertEq(xml.Escape("a<b>c&d\"e'f"), "a&lt;b&gt;c&amp;d&quot;e&apos;f")
-			}],
-		["String writes a node back", fn(t) {
-				t.AssertEq(xml.String(xml.Parse("<a/>")), "<a/>")
-				t.AssertEq(xml.String(xml.Parse(`<a n="1">x</a>`)), `<a n="1">x</a>`)
-				t.AssertEq(xml.String(xml.Parse("<a><b/></a>")), "<a><b/></a>")
-				# What has to be escaped on the way out is escaped.
-				t.AssertEq(xml.String(xml.Parse("<a>&lt;</a>")), "<a>&lt;</a>")
-			}],
-		["a tree built by hand", fn(t) {
-				n = xml.Node("greeting")
-				n.Attr["to"] = "world & everyone"
-				n.Text = "hello"
-				n.Children = append(n.Children, xml.Node("from"))
+		t.AssertEq(doc.Name, "a")
+		t.AssertEq(doc.Text, "text")
+	}],
+	["whitespace is data", fn(t) {
+		doc = xml.Parse("<a>  \n  </a>")
+		t.AssertEq(doc.Text, "  \n  ")
+	}],
+	["Escape leaves alone what needs nothing", fn(t) {
+		t.AssertEq(xml.Escape("plain"), "plain")
+		t.AssertEq(xml.Escape("a<b>c&d\"e'f"), "a&lt;b&gt;c&amp;d&quot;e&apos;f")
+	}],
+	["String writes a node back", fn(t) {
+		t.AssertEq(xml.String(xml.Parse("<a/>")), "<a/>")
+		t.AssertEq(xml.String(xml.Parse(`<a n="1">x</a>`)), `<a n="1">x</a>`)
+		t.AssertEq(xml.String(xml.Parse("<a><b/></a>")), "<a><b/></a>")
+		# What has to be escaped on the way out is escaped.
+		t.AssertEq(xml.String(xml.Parse("<a>&lt;</a>")), "<a>&lt;</a>")
+	}],
+	["a tree built by hand", fn(t) {
+		n = xml.Node("greeting")
+		n.Attr["to"] = "world & everyone"
+		n.Text = "hello"
+		n.Children = append(n.Children, xml.Node("from"))
 
-				t.AssertEq(xml.String(n),
-					`<greeting to="world &amp; everyone">hello<from/></greeting>`)
-			}],
-		["a document survives a roundtrip", fn(t) {
-				src = `<a x="1"><b>t</b><c y="2"><d/></c></a>`
-				t.AssertEq(xml.String(xml.Parse(src)), src)
-			}],
-		["what is not XML is an error, not a crash", fn(t) {
-				bad = [
-					"<a></b>",
-					"<a>",
-					"<a",
-					"not xml at all",
-					"",
-					"<a/>trailing",
-					"<a n=1/>",
-					"<a n/>",
-					"<a>&nope;</a>",
-					"<a>&#zz;</a>",
-					"<a>&unterminated</a>",
-					"<a><!-- never closed</a>",
-					"<a><![CDATA[ never closed</a>",
-					"<a><?pi never closed</a>",
-				]
+		t.AssertEq(xml.String(n),
+			`<greeting to="world &amp; everyone">hello<from/></greeting>`)
+	}],
+	["a document survives a roundtrip", fn(t) {
+		src = `<a x="1"><b>t</b><c y="2"><d/></c></a>`
+		t.AssertEq(xml.String(xml.Parse(src)), src)
+	}],
+	["what is not XML is an error, not a crash", fn(t) {
+		bad = [
+			"<a></b>",
+			"<a>",
+			"<a",
+			"not xml at all",
+			"",
+			"<a/>trailing",
+			"<a n=1/>",
+			"<a n/>",
+			"<a>&nope;</a>",
+			"<a>&#zz;</a>",
+			"<a>&unterminated</a>",
+			"<a><!-- never closed</a>",
+			"<a><![CDATA[ never closed</a>",
+			"<a><?pi never closed</a>",
+		]
 
-				for i = 0; i < len(bad); i++ {
-					t.Assert(failed(xml.Parse(bad[i])), "{bad[i]} should not parse")
-				}
-			}],
-		["an error says where it is", fn(t) {
-				e = xml.Parse("<a>\n<b>\n</c>\n</a>")
-				t.AssertError(e)
-				strings = import("strings")
-				t.Assert(strings.Contains(string(e), "3:"), "the line is named: {e}")
-			}],
-	])
+		for i = 0; i < len(bad); i++ {
+			t.Assert(failed(xml.Parse(bad[i])), "{bad[i]} should not parse")
+		}
+	}],
+	["an error says where it is", fn(t) {
+		e = xml.Parse("<a>\n<b>\n</c>\n</a>")
+		t.AssertError(e)
+		strings = import("strings")
+		t.Assert(strings.Contains(string(e), "3:"), "the line is named: {e}")
+	}],
+])

@@ -10,107 +10,107 @@ base = "http://" + addr
 mux = http.NewServeMux()
 
 mux.HandleFunc("/hello", fn(w, r) {
-		http.HeaderSet(w.Header(), "content-type", "text/plain")
-		w.Write("hello {r.Method}")
-	})
+	http.HeaderSet(w.Header(), "content-type", "text/plain")
+	w.Write("hello {r.Method}")
+})
 
 mux.HandleFunc("/echo", fn(w, r) {
-		w.Write(r.Body)
-	})
+	w.Write(r.Body)
+})
 
 mux.HandleFunc("/query", fn(w, r) {
-		w.Write("{r.Query[\"a\"]}|{r.Query[\"b\"]}")
-	})
+	w.Write("{r.Query[\"a\"]}|{r.Query[\"b\"]}")
+})
 
 mux.HandleFunc("/teapot", fn(w, r) {
-		w.WriteHeader(418)
-		w.Write("short and stout")
-	})
+	w.WriteHeader(418)
+	w.Write("short and stout")
+})
 
 mux.HandleFunc("/static/", fn(w, r) {
-		w.Write("under {r.Path}")
-	})
+	w.Write("under {r.Path}")
+})
 
 srv = http.NewServer(addr, mux)
 tau srv.ListenAndServe()
 time.Sleep(200)
 
 testing.Main([
-		["ParseURL takes a URL apart", fn(t) {
-				u = http.ParseURL("http://example.com/a/b?x=1&y=two")
+	["ParseURL takes a URL apart", fn(t) {
+		u = http.ParseURL("http://example.com/a/b?x=1&y=two")
 
-				t.AssertEq(u.Host, "example.com:80")
-				t.AssertEq(u.Hostname, "example.com")
-				t.AssertEq(u.Path, "/a/b")
-				t.AssertEq(u.RawQuery, "x=1&y=two")
-				t.AssertEq(u.Query, {"x": "1", "y": "two"})
+		t.AssertEq(u.Host, "example.com:80")
+		t.AssertEq(u.Hostname, "example.com")
+		t.AssertEq(u.Path, "/a/b")
+		t.AssertEq(u.RawQuery, "x=1&y=two")
+		t.AssertEq(u.Query, {"x": "1", "y": "two"})
 
-				t.AssertEq(http.ParseURL("http://localhost:8080").Host, "localhost:8080")
-				t.AssertEq(http.ParseURL("localhost:8080/p").Path, "/p")
-				t.AssertError(http.ParseURL("https://example.com"))
-				t.AssertError(http.ParseURL("http://"))
-			}],
-		["queries are unescaped", fn(t) {
-				q = http.ParseQuery("name=tau+lang&sym=%2B%2B&empty")
+		t.AssertEq(http.ParseURL("http://localhost:8080").Host, "localhost:8080")
+		t.AssertEq(http.ParseURL("localhost:8080/p").Path, "/p")
+		t.AssertError(http.ParseURL("https://example.com"))
+		t.AssertError(http.ParseURL("http://"))
+	}],
+	["queries are unescaped", fn(t) {
+		q = http.ParseQuery("name=tau+lang&sym=%2B%2B&empty")
 
-				t.AssertEq(q["name"], "tau lang")
-				t.AssertEq(q["sym"], "++")
-				t.AssertEq(q["empty"], "")
-			}],
-		["Escape writes what a URL can carry", fn(t) {
-				t.AssertEq(http.Escape("a b"), "a%20b")
-				t.AssertEq(http.Escape("a-b_c.d~e"), "a-b_c.d~e")
-				t.AssertEq(http.Escape("à"), "%C3%A0")
-			}],
-		["StatusText", fn(t) {
-				t.AssertEq(http.StatusText(200), "OK")
-				t.AssertEq(http.StatusText(404), "Not Found")
-				t.AssertEq(http.StatusText(999), "")
-			}],
-		["headers don't care about case", fn(t) {
-				h = http.HeaderSet({}, "Content-Type", "text/plain")
+		t.AssertEq(q["name"], "tau lang")
+		t.AssertEq(q["sym"], "++")
+		t.AssertEq(q["empty"], "")
+	}],
+	["Escape writes what a URL can carry", fn(t) {
+		t.AssertEq(http.Escape("a b"), "a%20b")
+		t.AssertEq(http.Escape("a-b_c.d~e"), "a-b_c.d~e")
+		t.AssertEq(http.Escape("à"), "%C3%A0")
+	}],
+	["StatusText", fn(t) {
+		t.AssertEq(http.StatusText(200), "OK")
+		t.AssertEq(http.StatusText(404), "Not Found")
+		t.AssertEq(http.StatusText(999), "")
+	}],
+	["headers don't care about case", fn(t) {
+		h = http.HeaderSet({}, "Content-Type", "text/plain")
 
-				t.AssertEq(http.HeaderGet(h, "content-type"), "text/plain")
-				t.AssertEq(http.HeaderGet(h, "CONTENT-TYPE"), "text/plain")
-				t.AssertEq(http.HeaderGet(h, "nope"), "")
-			}],
-		["Get", fn(t) {
-				if failed(resp = http.Get(base + "/hello")) {
-					t.Fatal("get: {resp}")
-					return null
-				}
+		t.AssertEq(http.HeaderGet(h, "content-type"), "text/plain")
+		t.AssertEq(http.HeaderGet(h, "CONTENT-TYPE"), "text/plain")
+		t.AssertEq(http.HeaderGet(h, "nope"), "")
+	}],
+	["Get", fn(t) {
+		if failed(resp = http.Get(base + "/hello")) {
+			t.Fatal("get: {resp}")
+			return null
+		}
 
-				t.AssertEq(resp.StatusCode, 200)
-				t.AssertEq(resp.Body, "hello GET")
-				t.AssertEq(http.HeaderGet(resp.Header, "content-type"), "text/plain")
-				t.AssertEq(http.HeaderGet(resp.Header, "content-length"), "9")
-			}],
-		["Post carries a body both ways", fn(t) {
-				if failed(resp = http.Post(base + "/echo", "text/plain", "the body")) {
-					t.Fatal("post: {resp}")
-					return null
-				}
+		t.AssertEq(resp.StatusCode, 200)
+		t.AssertEq(resp.Body, "hello GET")
+		t.AssertEq(http.HeaderGet(resp.Header, "content-type"), "text/plain")
+		t.AssertEq(http.HeaderGet(resp.Header, "content-length"), "9")
+	}],
+	["Post carries a body both ways", fn(t) {
+		if failed(resp = http.Post(base + "/echo", "text/plain", "the body")) {
+			t.Fatal("post: {resp}")
+			return null
+		}
 
-				t.AssertEq(resp.StatusCode, 200)
-				t.AssertEq(resp.Body, "the body")
-			}],
-		["the query reaches the handler", fn(t) {
-				resp = http.Get(base + "/query?a=1&b=two+words")
-				t.AssertEq(resp.Body, "1|two words")
-			}],
-		["a status code the handler chose", fn(t) {
-				resp = http.Get(base + "/teapot")
-				t.AssertEq(resp.StatusCode, 418)
-				t.AssertEq(resp.Body, "short and stout")
-			}],
-		["a pattern ending in a slash matches what is below it", fn(t) {
-				t.AssertEq(http.Get(base + "/static/a/b").Body, "under /static/a/b")
-			}],
-		["a path nobody registered is a 404", fn(t) {
-				resp = http.Get(base + "/nope")
-				t.AssertEq(resp.StatusCode, 404)
-			}],
-		["a server that isn't there is an error", fn(t) {
-				t.AssertError(http.Get("http://127.0.0.1:1/"))
-			}]
-	])
+		t.AssertEq(resp.StatusCode, 200)
+		t.AssertEq(resp.Body, "the body")
+	}],
+	["the query reaches the handler", fn(t) {
+		resp = http.Get(base + "/query?a=1&b=two+words")
+		t.AssertEq(resp.Body, "1|two words")
+	}],
+	["a status code the handler chose", fn(t) {
+		resp = http.Get(base + "/teapot")
+		t.AssertEq(resp.StatusCode, 418)
+		t.AssertEq(resp.Body, "short and stout")
+	}],
+	["a pattern ending in a slash matches what is below it", fn(t) {
+		t.AssertEq(http.Get(base + "/static/a/b").Body, "under /static/a/b")
+	}],
+	["a path nobody registered is a 404", fn(t) {
+		resp = http.Get(base + "/nope")
+		t.AssertEq(resp.StatusCode, 404)
+	}],
+	["a server that isn't there is an error", fn(t) {
+		t.AssertError(http.Get("http://127.0.0.1:1/"))
+	}]
+])

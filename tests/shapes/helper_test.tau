@@ -7,7 +7,7 @@ shapes = import("./")
 Excluded = "this name must not reach whoever imports shapes"
 
 testing.Main([
-		["the module sees itself the way anyone else does", fn(t) {
-				t.AssertEq(shapes.Area(2, 2), 8)
-			}],
-	])
+	["the module sees itself the way anyone else does", fn(t) {
+		t.AssertEq(shapes.Area(2, 2), 8)
+	}],
+])

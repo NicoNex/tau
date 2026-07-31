@@ -3,42 +3,42 @@ sha256 = import("crypto/sha256")
 hex = import("encoding/hex")
 
 testing.Main([
-		["the test vectors of FIPS 180-4", fn(t) {
-				t.AssertEq(sha256.Hex(""),
-					"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
-				t.AssertEq(sha256.Hex("abc"),
-					"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
-				t.AssertEq(sha256.Hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"),
-					"248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1")
-			}],
-		["a message longer than one block", fn(t) {
-				s = ""
-				for i = 0; i < 1000; ++i {
-					s = s + "a"
-				}
-				t.AssertEq(sha256.Hex(s),
-					"41edece42d63e8d9bf515a9ba6932e1c20cbc9f5a5d134645adb5db1b9737ea3")
-			}],
-		["the lengths where the padding changes block", fn(t) {
-				# 55 bytes still fit with the length, 56 need one block more.
-				a55 = ""
-				for i = 0; i < 55; ++i {
-					a55 = a55 + "a"
-				}
-				t.AssertEq(sha256.Hex(a55),
-					"9f4390f8d30c2dd92ec9f095b65e2b9ae9b0a925a5258e241c9f1e910f734318")
-				t.AssertEq(sha256.Hex(a55 + "a"),
-					"b35439a4ac6f0948b6d6f9e3c6af0f5f590ce20f1bde7090ef7970686ec6738a")
-			}],
-		["bytes and strings hash the same", fn(t) {
-				t.AssertEq(sha256.Sum("abc"), sha256.Sum(bytes("abc")))
-				t.AssertEq(len(sha256.Sum("abc")), sha256.Size)
-				t.AssertEq(type(sha256.Sum("abc")), "bytes")
-				t.AssertEq(sha256.Hex("abc"), hex.EncodeToString(sha256.Sum("abc")))
-				t.AssertEq(sha256.BlockSize, 64)
-			}],
-		["a text outside ASCII is hashed as its bytes", fn(t) {
-				t.AssertEq(sha256.Hex("città"), sha256.Hex(bytes("città")))
-				t.AssertNe(sha256.Hex("città"), sha256.Hex("citta"))
-			}]
-	])
+	["the test vectors of FIPS 180-4", fn(t) {
+		t.AssertEq(sha256.Hex(""),
+			"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+		t.AssertEq(sha256.Hex("abc"),
+			"ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad")
+		t.AssertEq(sha256.Hex("abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq"),
+			"248d6a61d20638b8e5c026930c3e6039a33ce45964ff2167f6ecedd419db06c1")
+	}],
+	["a message longer than one block", fn(t) {
+		s = ""
+		for i = 0; i < 1000; ++i {
+			s = s + "a"
+		}
+		t.AssertEq(sha256.Hex(s),
+			"41edece42d63e8d9bf515a9ba6932e1c20cbc9f5a5d134645adb5db1b9737ea3")
+	}],
+	["the lengths where the padding changes block", fn(t) {
+		# 55 bytes still fit with the length, 56 need one block more.
+		a55 = ""
+		for i = 0; i < 55; ++i {
+			a55 = a55 + "a"
+		}
+		t.AssertEq(sha256.Hex(a55),
+			"9f4390f8d30c2dd92ec9f095b65e2b9ae9b0a925a5258e241c9f1e910f734318")
+		t.AssertEq(sha256.Hex(a55 + "a"),
+			"b35439a4ac6f0948b6d6f9e3c6af0f5f590ce20f1bde7090ef7970686ec6738a")
+	}],
+	["bytes and strings hash the same", fn(t) {
+		t.AssertEq(sha256.Sum("abc"), sha256.Sum(bytes("abc")))
+		t.AssertEq(len(sha256.Sum("abc")), sha256.Size)
+		t.AssertEq(type(sha256.Sum("abc")), "bytes")
+		t.AssertEq(sha256.Hex("abc"), hex.EncodeToString(sha256.Sum("abc")))
+		t.AssertEq(sha256.BlockSize, 64)
+	}],
+	["a text outside ASCII is hashed as its bytes", fn(t) {
+		t.AssertEq(sha256.Hex("città"), sha256.Hex(bytes("città")))
+		t.AssertNe(sha256.Hex("città"), sha256.Hex("citta"))
+	}]
+])

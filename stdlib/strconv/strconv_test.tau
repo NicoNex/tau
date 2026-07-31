@@ -2,29 +2,29 @@ testing = import("testing")
 strconv = import("strconv")
 
 testing.Main([
-		["ParseInt reads every base", fn(t) {
-				t.AssertEq(strconv.Atoi("123"), 123)
-				t.AssertEq(strconv.Atoi("-45"), -45)
-				t.AssertEq(strconv.ParseInt("ff", 16), 255)
-				t.AssertEq(strconv.ParseInt("1010", 2), 10)
-			}],
-		["ParseInt reports what int() swallows", fn(t) {
-				t.AssertError(strconv.Atoi("abc"))
-				t.AssertError(strconv.Atoi(""))
-				t.AssertError(strconv.Atoi("12x"))
-				t.AssertError(strconv.ParseInt("ff", 10))
-			}],
-		["ParseFloat", fn(t) {
-				t.AssertEq(strconv.ParseFloat("3.25"), 3.25)
-				t.AssertEq(strconv.ParseFloat("-0.5"), -0.5)
-				t.AssertError(strconv.ParseFloat("x"))
-				t.AssertError(strconv.ParseFloat("1.2.3"))
-			}],
-		["FormatInt and FormatFloat", fn(t) {
-				t.AssertEq(strconv.FormatInt(255, 16), "ff")
-				t.AssertEq(strconv.FormatInt(-10, 2), "-1010")
-				t.AssertEq(strconv.FormatFloat(3.14159, 2), "3.14")
-				t.AssertEq(strconv.FormatFloat(2.0, 3), "2.000")
-				t.AssertEq(strconv.FormatFloat(3.14159, -1), "3.14159")
-			}]
-	])
+	["ParseInt reads every base", fn(t) {
+		t.AssertEq(strconv.Atoi("123"), 123)
+		t.AssertEq(strconv.Atoi("-45"), -45)
+		t.AssertEq(strconv.ParseInt("ff", 16), 255)
+		t.AssertEq(strconv.ParseInt("1010", 2), 10)
+	}],
+	["ParseInt reports what int() swallows", fn(t) {
+		t.AssertError(strconv.Atoi("abc"))
+		t.AssertError(strconv.Atoi(""))
+		t.AssertError(strconv.Atoi("12x"))
+		t.AssertError(strconv.ParseInt("ff", 10))
+	}],
+	["ParseFloat", fn(t) {
+		t.AssertEq(strconv.ParseFloat("3.25"), 3.25)
+		t.AssertEq(strconv.ParseFloat("-0.5"), -0.5)
+		t.AssertError(strconv.ParseFloat("x"))
+		t.AssertError(strconv.ParseFloat("1.2.3"))
+	}],
+	["FormatInt and FormatFloat", fn(t) {
+		t.AssertEq(strconv.FormatInt(255, 16), "ff")
+		t.AssertEq(strconv.FormatInt(-10, 2), "-1010")
+		t.AssertEq(strconv.FormatFloat(3.14159, 2), "3.14")
+		t.AssertEq(strconv.FormatFloat(2.0, 3), "2.000")
+		t.AssertEq(strconv.FormatFloat(3.14159, -1), "3.14159")
+	}]
+])

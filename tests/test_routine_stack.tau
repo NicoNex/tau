@@ -10,16 +10,16 @@ work = fn(a, b, done) {
 }
 
 testing.Main([
-		["starting routines in a loop does not grow the caller's stack", fn(t) {
-				done = pipe(1)
-				total = 0
+	["starting routines in a loop does not grow the caller's stack", fn(t) {
+		done = pipe(1)
+		total = 0
 
-				for i = 0; i < 5000; ++i {
-					tau work(i, 1, done)
-					total = total + recv(done)
-				}
+		for i = 0; i < 5000; ++i {
+			tau work(i, 1, done)
+			total = total + recv(done)
+		}
 
-				# Every routine sends back i + 1, so the whole loop sums 1..5000.
-				t.AssertEq(total, 12502500)
-		}]
+		# Every routine sends back i + 1, so the whole loop sums 1..5000.
+		t.AssertEq(total, 12502500)
+	}]
 ])

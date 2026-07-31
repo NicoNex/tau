@@ -2,57 +2,57 @@ testing = import("testing")
 re = import("regexp")
 
 testing.Main([
-		["MatchString", fn(t) {
-				d = re.Compile("[0-9]+")
-				t.AssertEq(d.MatchString("abc 123"), true)
-				t.AssertEq(d.MatchString("no digits"), false)
-			}],
-		["Find takes the leftmost longest", fn(t) {
-				d = re.Compile("[0-9]+")
-				t.AssertEq(d.FindString("abc 123 def 45"), "123")
-				t.AssertEq(d.FindStringIndex("abc 123"), [4, 7])
-				t.AssertEq(d.FindString("nothing"), "")
-				t.AssertEq(d.FindAllString("a1 b22 c333", -1), ["1", "22", "333"])
-				t.AssertEq(d.FindAllString("a1 b22 c333", 2), ["1", "22"])
-			}],
-		["alternation", fn(t) {
-				alt = re.Compile("cat|dog")
-				t.AssertEq(alt.MatchString("cat"), true)
-				t.AssertEq(alt.FindString("a cat here"), "cat")
-				t.AssertEq(alt.FindString("hotdog"), "dog")
-				t.AssertEq(alt.MatchString("bird"), false)
-			}],
-		["anchors and word boundaries", fn(t) {
-				w = re.Compile("^[a-z]+$")
-				t.AssertEq(w.MatchString("hello"), true)
-				t.AssertEq(w.MatchString("hello1"), false)
+	["MatchString", fn(t) {
+		d = re.Compile("[0-9]+")
+		t.AssertEq(d.MatchString("abc 123"), true)
+		t.AssertEq(d.MatchString("no digits"), false)
+	}],
+	["Find takes the leftmost longest", fn(t) {
+		d = re.Compile("[0-9]+")
+		t.AssertEq(d.FindString("abc 123 def 45"), "123")
+		t.AssertEq(d.FindStringIndex("abc 123"), [4, 7])
+		t.AssertEq(d.FindString("nothing"), "")
+		t.AssertEq(d.FindAllString("a1 b22 c333", -1), ["1", "22", "333"])
+		t.AssertEq(d.FindAllString("a1 b22 c333", 2), ["1", "22"])
+	}],
+	["alternation", fn(t) {
+		alt = re.Compile("cat|dog")
+		t.AssertEq(alt.MatchString("cat"), true)
+		t.AssertEq(alt.FindString("a cat here"), "cat")
+		t.AssertEq(alt.FindString("hotdog"), "dog")
+		t.AssertEq(alt.MatchString("bird"), false)
+	}],
+	["anchors and word boundaries", fn(t) {
+		w = re.Compile("^[a-z]+$")
+		t.AssertEq(w.MatchString("hello"), true)
+		t.AssertEq(w.MatchString("hello1"), false)
 
-				b = re.Compile("\\bcat\\b")
-				t.AssertEq(b.MatchString("a cat here"), true)
-				t.AssertEq(b.MatchString("concatenate"), false)
-			}],
-		["groups", fn(t) {
-				g = re.Compile("(\\w+)@(\\w+)")
-				t.AssertEq(g.NumSubexp(), 2)
-				t.AssertEq(g.FindStringSubmatch("bob@example"), ["bob@example", "bob", "example"])
-				t.AssertEq(g.FindStringSubmatch("nobody"), null)
-			}],
-		["greedy and lazy", fn(t) {
-				t.AssertEq(re.Compile("<.+>").FindString("<a><b>"), "<a><b>")
-				t.AssertEq(re.Compile("<.+?>").FindString("<a><b>"), "<a>")
-			}],
-		["Replace and Split", fn(t) {
-				d = re.Compile("[0-9]+")
-				t.AssertEq(d.ReplaceAllString("a1b22c", "#"), "a#b#c")
-				t.AssertEq(d.Split("a1b22c", -1), ["a", "b", "c"])
-			}],
-		["a bad pattern is an error", fn(t) {
-				t.AssertError(re.Compile("[unclosed"))
-				t.AssertError(re.Compile("("))
-				t.AssertError(re.Compile("a**"))
-			}],
-		["no exponential blowup", fn(t) {
-				evil = re.Compile("(a+)+b")
-				t.AssertEq(evil.MatchString("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), false)
-			}]
-	])
+		b = re.Compile("\\bcat\\b")
+		t.AssertEq(b.MatchString("a cat here"), true)
+		t.AssertEq(b.MatchString("concatenate"), false)
+	}],
+	["groups", fn(t) {
+		g = re.Compile("(\\w+)@(\\w+)")
+		t.AssertEq(g.NumSubexp(), 2)
+		t.AssertEq(g.FindStringSubmatch("bob@example"), ["bob@example", "bob", "example"])
+		t.AssertEq(g.FindStringSubmatch("nobody"), null)
+	}],
+	["greedy and lazy", fn(t) {
+		t.AssertEq(re.Compile("<.+>").FindString("<a><b>"), "<a><b>")
+		t.AssertEq(re.Compile("<.+?>").FindString("<a><b>"), "<a>")
+	}],
+	["Replace and Split", fn(t) {
+		d = re.Compile("[0-9]+")
+		t.AssertEq(d.ReplaceAllString("a1b22c", "#"), "a#b#c")
+		t.AssertEq(d.Split("a1b22c", -1), ["a", "b", "c"])
+	}],
+	["a bad pattern is an error", fn(t) {
+		t.AssertError(re.Compile("[unclosed"))
+		t.AssertError(re.Compile("("))
+		t.AssertError(re.Compile("a**"))
+	}],
+	["no exponential blowup", fn(t) {
+		evil = re.Compile("(a+)+b")
+		t.AssertEq(evil.MatchString("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"), false)
+	}]
+])

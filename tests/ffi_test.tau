@@ -6,109 +6,109 @@ ffi = import("ffi")
 lib = dlopen("ffi/libffitest.so")
 
 testing.Main([
-		["a signature is a C declaration", fn(t) {
-				# The name of the function and the names of the arguments may
-				# be there, so a line out of a header works as it is.
-				add = ffi.Func(lib.t_add_d, "double t_add_d(double a, double b)")
-				t.AssertEq(add(1.5, 2.25), 3.75)
+	["a signature is a C declaration", fn(t) {
+		# The name of the function and the names of the arguments may
+		# be there, so a line out of a header works as it is.
+		add = ffi.Func(lib.t_add_d, "double t_add_d(double a, double b)")
+		t.AssertEq(add(1.5, 2.25), 3.75)
 
-				# The exact width names work too, spelled either way, and the
-				# room around them is room.
-				t.AssertEq(ffi.Func(lib.t_add_i, " int32 ( int32 , int32 ) ")(2, 3), 5)
-				t.AssertEq(ffi.Func(lib.t_add_i, "int32_t(int32_t, int32_t)")(2, 3), 5)
-			}],
-		["floats come back as floats", fn(t) {
-				add = ffi.Func(lib.t_add_d, "double(double, double)")
-				t.AssertEq(add(1.5, 2.25), 3.75)
+		# The exact width names work too, spelled either way, and the
+		# room around them is room.
+		t.AssertEq(ffi.Func(lib.t_add_i, " int32 ( int32 , int32 ) ")(2, 3), 5)
+		t.AssertEq(ffi.Func(lib.t_add_i, "int32_t(int32_t, int32_t)")(2, 3), 5)
+	}],
+	["floats come back as floats", fn(t) {
+		add = ffi.Func(lib.t_add_d, "double(double, double)")
+		t.AssertEq(add(1.5, 2.25), 3.75)
 
-				addf = ffi.Func(lib.t_add_f, "float(float, float)")
-				t.AssertEq(addf(1.5, 2.25), 3.75)
-			}],
-		["narrow integers keep their width", fn(t) {
-				addi = ffi.Func(lib.t_add_i, "int32_t(int32_t, int32_t)")
-				t.AssertEq(addi(2, 3), 5)
-				# int32 arithmetic wraps where int64 would not.
-				t.AssertEq(addi(0x7fffffff, 1), -0x80000000)
+		addf = ffi.Func(lib.t_add_f, "float(float, float)")
+		t.AssertEq(addf(1.5, 2.25), 3.75)
+	}],
+	["narrow integers keep their width", fn(t) {
+		addi = ffi.Func(lib.t_add_i, "int32_t(int32_t, int32_t)")
+		t.AssertEq(addi(2, 3), 5)
+		# int32 arithmetic wraps where int64 would not.
+		t.AssertEq(addi(0x7fffffff, 1), -0x80000000)
 
-				addu = ffi.Func(lib.t_add_u, "unsigned int(unsigned int, unsigned int)")
-				t.AssertEq(addu(0xffffffff, 1), 0)
+		addu = ffi.Func(lib.t_add_u, "unsigned int(unsigned int, unsigned int)")
+		t.AssertEq(addu(0xffffffff, 1), 0)
 
-				neg = ffi.Func(lib.t_neg_c, "char(char)")
-				t.AssertEq(neg(5), -5)
+		neg = ffi.Func(lib.t_neg_c, "char(char)")
+		t.AssertEq(neg(5), -5)
 
-				adds = ffi.Func(lib.t_add_s, "short(short, short)")
-				t.AssertEq(adds(0x7fff, 1), -0x8000)
+		adds = ffi.Func(lib.t_add_s, "short(short, short)")
+		t.AssertEq(adds(0x7fff, 1), -0x8000)
 
-				addl = ffi.Func(lib.t_add_l, "long(long, long)")
-				t.AssertEq(addl(1, 2), 3)
-			}],
-		["bools and void", fn(t) {
-				not = ffi.Func(lib.t_not_b, "bool(bool)")
-				t.AssertEq(not(false), true)
-				t.AssertEq(not(true), false)
+		addl = ffi.Func(lib.t_add_l, "long(long, long)")
+		t.AssertEq(addl(1, 2), 3)
+	}],
+	["bools and void", fn(t) {
+		not = ffi.Func(lib.t_not_b, "bool(bool)")
+		t.AssertEq(not(false), true)
+		t.AssertEq(not(true), false)
 
-				bump = ffi.Func(lib.t_bump, "void(int64_t)")
-				counter = ffi.Func(lib.t_counter, "int64_t(void)")
-				t.AssertEq(bump(3), null)
-				bump(4)
-				t.AssertEq(counter(), 7)
-			}],
-		["strings in and out", fn(t) {
-				greet = ffi.Func(lib.t_greet, "char *(void)")
-				t.AssertEq(greet(), "ciao")
+		bump = ffi.Func(lib.t_bump, "void(int64_t)")
+		counter = ffi.Func(lib.t_counter, "int64_t(void)")
+		t.AssertEq(bump(3), null)
+		bump(4)
+		t.AssertEq(counter(), 7)
+	}],
+	["strings in and out", fn(t) {
+		greet = ffi.Func(lib.t_greet, "char *(void)")
+		t.AssertEq(greet(), "ciao")
 
-				nul = ffi.Func(lib.t_nullstr, "char *(void)")
-				t.AssertEq(nul(), null)
+		nul = ffi.Func(lib.t_nullstr, "char *(void)")
+		t.AssertEq(nul(), null)
 
-				slen = ffi.Func(lib.t_strlen, "long strlen(const char *s)")
-				t.AssertEq(slen("hello"), 5)
-				t.AssertEq(slen(null), -1)
-			}],
-		["pointers and memory", fn(t) {
-				buf = ffi.Func(lib.t_buf, "void *(void)")
-				t.AssertEq(bytes(buf(), 4), bytes([1, 2, 3, 4]))
+		slen = ffi.Func(lib.t_strlen, "long strlen(const char *s)")
+		t.AssertEq(slen("hello"), 5)
+		t.AssertEq(slen(null), -1)
+	}],
+	["pointers and memory", fn(t) {
+		buf = ffi.Func(lib.t_buf, "void *(void)")
+		t.AssertEq(bytes(buf(), 4), bytes([1, 2, 3, 4]))
 
-				# A returned struct is read field by field out of its bytes.
-				point = ffi.Func(lib.t_point, "void *(void)")
-				b = bytes(point(), 8)
-				t.AssertEq(b[0], 7)
-				t.AssertEq(b[4], 255)
+		# A returned struct is read field by field out of its bytes.
+		point = ffi.Func(lib.t_point, "void *(void)")
+		b = bytes(point(), 8)
+		t.AssertEq(b[0], 7)
+		t.AssertEq(b[4], 255)
 
-				# An out parameter: tau owns the buffer, C fills it.
-				fill = ffi.Func(lib.t_fill, "void t_fill(void *out, int n, unsigned char v)")
-				out = bytes(3)
-				fill(out, 3, 9)
-				t.AssertEq(out, bytes([9, 9, 9]))
-			}],
-		["mistakes are values, not crashes", fn(t) {
-				t.AssertEq(failed(ffi.Func(lib.no_such_symbol, "int(void)")), true)
-				t.AssertEq(failed(ffi.Func(lib.t_add_i, "int(int, banana)")), true)
-				t.AssertEq(failed(ffi.Func(lib.t_add_i, "int int")), true)
-				# The letters the signatures used to be written in.
-				t.AssertEq(failed(ffi.Func(lib.t_add_i, "i(ii)")), true)
-				# Variadic, which a prepared call cannot be.
-				t.AssertEq(failed(ffi.Func(lib.t_add_i, "int f(int, ...)")), true)
+		# An out parameter: tau owns the buffer, C fills it.
+		fill = ffi.Func(lib.t_fill, "void t_fill(void *out, int n, unsigned char v)")
+		out = bytes(3)
+		fill(out, 3, 9)
+		t.AssertEq(out, bytes([9, 9, 9]))
+	}],
+	["mistakes are values, not crashes", fn(t) {
+		t.AssertEq(failed(ffi.Func(lib.no_such_symbol, "int(void)")), true)
+		t.AssertEq(failed(ffi.Func(lib.t_add_i, "int(int, banana)")), true)
+		t.AssertEq(failed(ffi.Func(lib.t_add_i, "int int")), true)
+		# The letters the signatures used to be written in.
+		t.AssertEq(failed(ffi.Func(lib.t_add_i, "i(ii)")), true)
+		# Variadic, which a prepared call cannot be.
+		t.AssertEq(failed(ffi.Func(lib.t_add_i, "int f(int, ...)")), true)
 
-				addi = ffi.Func(lib.t_add_i, "int32_t(int32_t, int32_t)")
-				t.AssertEq(failed(addi(1)), true)
-				t.AssertEq(failed(addi(1, "two")), true)
+		addi = ffi.Func(lib.t_add_i, "int32_t(int32_t, int32_t)")
+		t.AssertEq(failed(addi(1)), true)
+		t.AssertEq(failed(addi(1, "two")), true)
 
-				t.AssertEq(failed(bytes(lib.t_add_i, -1)), true)
-			}],
-		["the old untyped call still works", fn(t) {
-				t.AssertEq(int(lib.t_add_i(2, 3), 32), 5)
-				t.AssertEq(int(lib.t_add_l(2, 3), 64), 5)
+		t.AssertEq(failed(bytes(lib.t_add_i, -1)), true)
+	}],
+	["the old untyped call still works", fn(t) {
+		t.AssertEq(int(lib.t_add_i(2, 3), 32), 5)
+		t.AssertEq(int(lib.t_add_l(2, 3), 64), 5)
 
-				# A pointer C returned, handed straight back to C: the raw
-				# call has to pass the address it holds, not what it points at.
-				libc = dlopen("libc.so.6")
-				if !failed(libc) {
-					p = libc.malloc(16)
-					libc.memcpy(p, "hello", 6)
-					t.AssertEq(int(libc.strlen(p)), 5)
-					t.AssertEq(string(p), "hello")
-					t.AssertEq(bytes(p, 5), bytes("hello"))
-					libc.free(p)
-				}
-			}]
-	])
+		# A pointer C returned, handed straight back to C: the raw
+		# call has to pass the address it holds, not what it points at.
+		libc = dlopen("libc.so.6")
+		if !failed(libc) {
+			p = libc.malloc(16)
+			libc.memcpy(p, "hello", 6)
+			t.AssertEq(int(libc.strlen(p)), 5)
+			t.AssertEq(string(p), "hello")
+			t.AssertEq(bytes(p, 5), bytes("hello"))
+			libc.free(p)
+		}
+	}]
+])

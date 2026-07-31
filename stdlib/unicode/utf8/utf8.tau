@@ -85,17 +85,17 @@ EncodeRune = fn(r) {
 	}
 	if r < 0x10000 {
 		return string(bytes([
-					0xe0 | (r >> 12),
-					0x80 | ((r >> 6) & 0x3f),
-					0x80 | (r & 0x3f)
-				]))
+			0xe0 | (r >> 12),
+			0x80 | ((r >> 6) & 0x3f),
+			0x80 | (r & 0x3f)
+		]))
 	}
 	return string(bytes([
-				0xf0 | (r >> 18),
-				0x80 | ((r >> 12) & 0x3f),
-				0x80 | ((r >> 6) & 0x3f),
-				0x80 | (r & 0x3f)
-			]))
+		0xf0 | (r >> 18),
+		0x80 | ((r >> 12) & 0x3f),
+		0x80 | ((r >> 6) & 0x3f),
+		0x80 | (r & 0x3f)
+	]))
 }
 
 # cont returns the six bits a continuation byte carries, or -1 when b isn't

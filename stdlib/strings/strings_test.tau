@@ -2,53 +2,53 @@ testing = import("testing")
 strings = import("strings")
 
 testing.Main([
-		["Contains, Index and Count", fn(t) {
-				t.AssertEq(strings.Contains("hello", "ell"), true)
-				t.AssertEq(strings.Contains("hello", "xyz"), false)
-				t.AssertEq(strings.Index("hello world", "world"), 6)
-				t.AssertEq(strings.Index("hello", "z"), -1)
-				t.AssertEq(strings.Count("banana", "na"), 2)
-				t.AssertEq(strings.Count("aaa", "a"), 3)
-			}],
-		["LastIndex", fn(t) {
-				t.AssertEq(strings.LastIndex("go gopher go", "go"), 10)
-				t.AssertEq(strings.LastIndex("abc", "z"), -1)
-			}],
-		["prefixes and suffixes", fn(t) {
-				t.AssertEq(strings.HasPrefix("golang", "go"), true)
-				t.AssertEq(strings.HasSuffix("golang", "ng"), true)
-				t.AssertEq(strings.HasPrefix("golang", "ng"), false)
-				t.AssertEq(strings.TrimPrefix("golang", "go"), "lang")
-				t.AssertEq(strings.TrimSuffix("golang", "ng"), "gola")
-			}],
-		["Split and Join", fn(t) {
-				t.AssertEq(strings.Split("a,b,c", ","), ["a", "b", "c"])
-				t.AssertEq(strings.Split("a", ","), ["a"])
-				t.AssertEq(strings.Join(["a", "b", "c"], "-"), "a-b-c")
-				t.AssertEq(strings.Join([], "-"), "")
-			}],
-		["Fields drops the empty pieces", fn(t) {
-				t.AssertEq(strings.Fields("  a  b  "), ["a", "b"])
-				t.AssertEq(strings.Fields(""), [])
-			}],
-		["Replace", fn(t) {
-				t.AssertEq(strings.ReplaceAll("a-b-c", "-", "+"), "a+b+c")
-				t.AssertEq(strings.Replace("a-b-c", "-", "+", 1), "a+b-c")
-			}],
-		["case and trimming", fn(t) {
-				t.AssertEq(strings.ToUpper("tau"), "TAU")
-				t.AssertEq(strings.ToLower("TAU"), "tau")
-				t.AssertEq(strings.TrimSpace("  x  "), "x")
-			}],
-		["Repeat and Reverse", fn(t) {
-				t.AssertEq(strings.Repeat("ab", 3), "ababab")
-				t.AssertEq(strings.Repeat("ab", 0), "")
-				t.AssertEq(strings.Reverse("tau"), "uat")
-				t.AssertEq(len(strings.Repeat("x", 50000)), 50000)
-			}],
-		["padding", fn(t) {
-				t.AssertEq(strings.PadLeft("42", 6, null), "    42")
-				t.AssertEq(strings.PadRight("ab", 5, "."), "ab...")
-				t.AssertEq(strings.PadLeft("toolong", 3, null), "toolong")
-			}]
-	])
+	["Contains, Index and Count", fn(t) {
+		t.AssertEq(strings.Contains("hello", "ell"), true)
+		t.AssertEq(strings.Contains("hello", "xyz"), false)
+		t.AssertEq(strings.Index("hello world", "world"), 6)
+		t.AssertEq(strings.Index("hello", "z"), -1)
+		t.AssertEq(strings.Count("banana", "na"), 2)
+		t.AssertEq(strings.Count("aaa", "a"), 3)
+	}],
+	["LastIndex", fn(t) {
+		t.AssertEq(strings.LastIndex("go gopher go", "go"), 10)
+		t.AssertEq(strings.LastIndex("abc", "z"), -1)
+	}],
+	["prefixes and suffixes", fn(t) {
+		t.AssertEq(strings.HasPrefix("golang", "go"), true)
+		t.AssertEq(strings.HasSuffix("golang", "ng"), true)
+		t.AssertEq(strings.HasPrefix("golang", "ng"), false)
+		t.AssertEq(strings.TrimPrefix("golang", "go"), "lang")
+		t.AssertEq(strings.TrimSuffix("golang", "ng"), "gola")
+	}],
+	["Split and Join", fn(t) {
+		t.AssertEq(strings.Split("a,b,c", ","), ["a", "b", "c"])
+		t.AssertEq(strings.Split("a", ","), ["a"])
+		t.AssertEq(strings.Join(["a", "b", "c"], "-"), "a-b-c")
+		t.AssertEq(strings.Join([], "-"), "")
+	}],
+	["Fields drops the empty pieces", fn(t) {
+		t.AssertEq(strings.Fields("  a  b  "), ["a", "b"])
+		t.AssertEq(strings.Fields(""), [])
+	}],
+	["Replace", fn(t) {
+		t.AssertEq(strings.ReplaceAll("a-b-c", "-", "+"), "a+b+c")
+		t.AssertEq(strings.Replace("a-b-c", "-", "+", 1), "a+b-c")
+	}],
+	["case and trimming", fn(t) {
+		t.AssertEq(strings.ToUpper("tau"), "TAU")
+		t.AssertEq(strings.ToLower("TAU"), "tau")
+		t.AssertEq(strings.TrimSpace("  x  "), "x")
+	}],
+	["Repeat and Reverse", fn(t) {
+		t.AssertEq(strings.Repeat("ab", 3), "ababab")
+		t.AssertEq(strings.Repeat("ab", 0), "")
+		t.AssertEq(strings.Reverse("tau"), "uat")
+		t.AssertEq(len(strings.Repeat("x", 50000)), 50000)
+	}],
+	["padding", fn(t) {
+		t.AssertEq(strings.PadLeft("42", 6, null), "    42")
+		t.AssertEq(strings.PadRight("ab", 5, "."), "ab...")
+		t.AssertEq(strings.PadLeft("toolong", 3, null), "toolong")
+	}]
+])

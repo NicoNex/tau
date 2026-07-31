@@ -2,62 +2,62 @@ testing = import("testing")
 json = import("encoding/json")
 
 testing.Main([
-		["encode", fn(t) {
-				t.AssertEq(json.Marshal({"n": 42}), `{"n":42}`)
-				t.AssertEq(json.Marshal([1, 2, 3]), "[1,2,3]")
-				t.AssertEq(json.Marshal("hi"), "\"hi\"")
-				t.AssertEq(json.Marshal(true), "true")
-				t.AssertEq(json.Marshal(null), "null")
-			}],
-		["decode", fn(t) {
-				v = json.Unmarshal(`{"name":"tau","xs":[1,2],"sub":{"k":true}}`)
-				t.AssertEq(v["name"], "tau")
-				t.AssertEq(v["xs"], [1, 2])
-				t.AssertEq(v["sub"]["k"], true)
-			}],
-		["numbers keep their kind and their digits", fn(t) {
-				t.AssertEq(json.Unmarshal("42"), 42)
-				t.AssertEq(json.Unmarshal("3.14159265"), 3.14159265)
-				t.AssertEq(json.Unmarshal("1e3"), 1000.0)
-				t.AssertEq(json.Unmarshal("-0.5"), -0.5)
-			}],
-		["a value survives a roundtrip", fn(t) {
-				o = {"name": "tau", "n": 42, "pi": 3.14159265, "ok": true, "xs": [1, 2, 3]}
-				t.AssertEq(json.Unmarshal(json.Marshal(o)), o)
-			}],
-		["objects are written as JSON objects", fn(t) {
-				o = new()
-				o.name = "tau"
-				o.n = 42
-				t.AssertEq(json.Marshal(o), `{"name":"tau","n":42}`)
-			}],
-		["Valid", fn(t) {
-				t.AssertEq(json.Valid(`{"a":1}`), true)
-				t.AssertEq(json.Valid("[1, 2]"), true)
-				t.AssertEq(json.Valid(`{oops`), false)
-				t.AssertEq(json.Valid(""), false)
-			}],
-		["MarshalIndent spreads the value over lines", fn(t) {
-				# A raw string: in an ordinary one a brace would open an
-				# interpolation.
-				t.AssertEq(json.MarshalIndent({"a": [1]}, "  "), `{
+	["encode", fn(t) {
+		t.AssertEq(json.Marshal({"n": 42}), `{"n":42}`)
+		t.AssertEq(json.Marshal([1, 2, 3]), "[1,2,3]")
+		t.AssertEq(json.Marshal("hi"), "\"hi\"")
+		t.AssertEq(json.Marshal(true), "true")
+		t.AssertEq(json.Marshal(null), "null")
+	}],
+	["decode", fn(t) {
+		v = json.Unmarshal(`{"name":"tau","xs":[1,2],"sub":{"k":true}}`)
+		t.AssertEq(v["name"], "tau")
+		t.AssertEq(v["xs"], [1, 2])
+		t.AssertEq(v["sub"]["k"], true)
+	}],
+	["numbers keep their kind and their digits", fn(t) {
+		t.AssertEq(json.Unmarshal("42"), 42)
+		t.AssertEq(json.Unmarshal("3.14159265"), 3.14159265)
+		t.AssertEq(json.Unmarshal("1e3"), 1000.0)
+		t.AssertEq(json.Unmarshal("-0.5"), -0.5)
+	}],
+	["a value survives a roundtrip", fn(t) {
+		o = {"name": "tau", "n": 42, "pi": 3.14159265, "ok": true, "xs": [1, 2, 3]}
+		t.AssertEq(json.Unmarshal(json.Marshal(o)), o)
+	}],
+	["objects are written as JSON objects", fn(t) {
+		o = new()
+		o.name = "tau"
+		o.n = 42
+		t.AssertEq(json.Marshal(o), `{"name":"tau","n":42}`)
+	}],
+	["Valid", fn(t) {
+		t.AssertEq(json.Valid(`{"a":1}`), true)
+		t.AssertEq(json.Valid("[1, 2]"), true)
+		t.AssertEq(json.Valid(`{oops`), false)
+		t.AssertEq(json.Valid(""), false)
+	}],
+	["MarshalIndent spreads the value over lines", fn(t) {
+		# A raw string: in an ordinary one a brace would open an
+		# interpolation.
+		t.AssertEq(json.MarshalIndent({"a": [1]}, "  "), `{
   "a": [
     1
   ]
 }`)
 
-				# What is inside a string stays as it was.
-				t.AssertEq(json.MarshalIndent({"a": "x,y"}, " "), `{
+		# What is inside a string stays as it was.
+		t.AssertEq(json.MarshalIndent({"a": "x,y"}, " "), `{
  "a": "x,y"
 }`)
 
-				# Indented or not, it is the same value.
-				v = {"a": 1, "b": [1, 2], "c": {"d": true}}
-				t.AssertEq(json.Unmarshal(json.MarshalIndent(v, null)), v)
-			}],
-		["broken input is an error", fn(t) {
-				t.AssertError(json.Unmarshal(`{oops`))
-				t.AssertError(json.Unmarshal("[1,]"))
-				t.AssertError(json.Unmarshal(""))
-			}]
-	])
+		# Indented or not, it is the same value.
+		v = {"a": 1, "b": [1, 2], "c": {"d": true}}
+		t.AssertEq(json.Unmarshal(json.MarshalIndent(v, null)), v)
+	}],
+	["broken input is an error", fn(t) {
+		t.AssertError(json.Unmarshal(`{oops`))
+		t.AssertError(json.Unmarshal("[1,]"))
+		t.AssertError(json.Unmarshal(""))
+	}]
+])

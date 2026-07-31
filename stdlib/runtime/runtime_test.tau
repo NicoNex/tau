@@ -3,56 +3,56 @@ runtime = import("runtime")
 list = import("list")
 
 testing.Main([
-		["NumCPU is a count, never less than one", fn(t) {
-				n = runtime.NumCPU()
+	["NumCPU is a count, never less than one", fn(t) {
+		n = runtime.NumCPU()
 
-				t.AssertEq(type(n), "int")
-				t.Assert(n >= 1, "NumCPU said {n}, which is no number of cores")
-				# The same question twice gives the same answer: nothing here
-				# reads a moving number.
-				t.AssertEq(runtime.NumCPU(), n)
-			}],
+		t.AssertEq(type(n), "int")
+		t.Assert(n >= 1, "NumCPU said {n}, which is no number of cores")
+		# The same question twice gives the same answer: nothing here
+		# reads a moving number.
+		t.AssertEq(runtime.NumCPU(), n)
+	}],
 
-		["OS is one of the names we know", fn(t) {
-				os = runtime.OS()
+	["OS is one of the names we know", fn(t) {
+		os = runtime.OS()
 
-				t.AssertEq(type(os), "string")
-				t.Assert(
-					list.Contains(["linux", "darwin", "windows", "freebsd", "openbsd", "netbsd"], os),
-					"OS said {os}, which is not a system this was built to name"
-				)
-			}],
+		t.AssertEq(type(os), "string")
+		t.Assert(
+			list.Contains(["linux", "darwin", "windows", "freebsd", "openbsd", "netbsd"], os),
+			"OS said {os}, which is not a system this was built to name"
+		)
+	}],
 
-		["Arch is one of the names we know", fn(t) {
-				arch = runtime.Arch()
+	["Arch is one of the names we know", fn(t) {
+		arch = runtime.Arch()
 
-				t.AssertEq(type(arch), "string")
-				t.Assert(
-					list.Contains(["amd64", "arm64", "386", "arm", "riscv64"], arch),
-					"Arch said {arch}, which is not an architecture this was built to name"
-				)
-			}],
+		t.AssertEq(type(arch), "string")
+		t.Assert(
+			list.Contains(["amd64", "arm64", "386", "arm", "riscv64"], arch),
+			"Arch said {arch}, which is not an architecture this was built to name"
+		)
+	}],
 
-		["a pool sized from NumCPU runs", fn(t) {
-				# What NumCPU is for: one routine per core, each answering once.
-				done = pipe(runtime.NumCPU())
-				work = fn(i, d) { send(d, i) }
+	["a pool sized from NumCPU runs", fn(t) {
+		# What NumCPU is for: one routine per core, each answering once.
+		done = pipe(runtime.NumCPU())
+		work = fn(i, d) { send(d, i) }
 
-				for i = 0; i < runtime.NumCPU(); i++ {
-					tau work(i, done)
-				}
+		for i = 0; i < runtime.NumCPU(); i++ {
+			tau work(i, done)
+		}
 
-				total = 0
-				for i = 0; i < runtime.NumCPU(); i++ {
-					total = total + recv(done)
-				}
+		total = 0
+		for i = 0; i < runtime.NumCPU(); i++ {
+			total = total + recv(done)
+		}
 
-				# Summed and not halved: the same numbers, in whatever
-				# order the routines finished in.
-				want = 0
-				for i = 0; i < runtime.NumCPU(); i++ {
-					want = want + i
-				}
-				t.AssertEq(total, want)
-			}]
-	])
+		# Summed and not halved: the same numbers, in whatever
+		# order the routines finished in.
+		want = 0
+		for i = 0; i < runtime.NumCPU(); i++ {
+			want = want + i
+		}
+		t.AssertEq(total, want)
+	}]
+])

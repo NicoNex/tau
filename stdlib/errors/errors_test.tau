@@ -2,17 +2,17 @@ testing = import("testing")
 errors = import("errors")
 
 testing.Main([
-		["New and Message", fn(t) {
-				e = errors.New("boom")
-				t.AssertError(e)
-				t.AssertEq(errors.Message(e), "boom")
-				t.AssertEq(errors.Message("not an error"), "")
-			}],
-		["Wrap keeps the original message", fn(t) {
-				e = errors.Wrap(errors.New("no such file"), "opening config")
-				t.AssertEq(errors.Is(e, "no such file"), true)
-				t.AssertEq(errors.Is(e, "opening config"), true)
-				t.AssertEq(errors.Is(e, "nope"), false)
-				t.AssertEq(errors.Is("not an error", "x"), false)
-			}]
-	])
+	["New and Message", fn(t) {
+		e = errors.New("boom")
+		t.AssertError(e)
+		t.AssertEq(errors.Message(e), "boom")
+		t.AssertEq(errors.Message("not an error"), "")
+	}],
+	["Wrap keeps the original message", fn(t) {
+		e = errors.Wrap(errors.New("no such file"), "opening config")
+		t.AssertEq(errors.Is(e, "no such file"), true)
+		t.AssertEq(errors.Is(e, "opening config"), true)
+		t.AssertEq(errors.Is(e, "nope"), false)
+		t.AssertEq(errors.Is("not an error", "x"), false)
+	}]
+])

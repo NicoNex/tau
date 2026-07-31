@@ -7,143 +7,143 @@ strings = import("strings")
 haveSh = os.Exists("/bin/sh")
 
 testing.Main([
-		["a program runs and its output comes back", fn(t) {
-				if !haveSh {
-					t.Skip("no /bin/sh here")
-					return null
-				}
+	["a program runs and its output comes back", fn(t) {
+		if !haveSh {
+			t.Skip("no /bin/sh here")
+			return null
+		}
 
-				r = exec.Run(["/bin/sh", "-c", "printf 'hello world'"])
-				t.AssertEq(r.Status, 0)
-				t.AssertEq(r.Stdout, "hello world")
-				t.AssertEq(r.Truncated, false)
-				t.AssertEq(r.Argv[0], "/bin/sh")
-			}],
-		["the status of a program that failed", fn(t) {
-				if !haveSh {
-					t.Skip("no /bin/sh here")
-					return null
-				}
+		r = exec.Run(["/bin/sh", "-c", "printf 'hello world'"])
+		t.AssertEq(r.Status, 0)
+		t.AssertEq(r.Stdout, "hello world")
+		t.AssertEq(r.Truncated, false)
+		t.AssertEq(r.Argv[0], "/bin/sh")
+	}],
+	["the status of a program that failed", fn(t) {
+		if !haveSh {
+			t.Skip("no /bin/sh here")
+			return null
+		}
 
-				t.AssertEq(exec.Run(["/bin/sh", "-c", "exit 3"]).Status, 3)
-				t.AssertEq(exec.Run(["/bin/sh", "-c", "exit 0"]).Status, 0)
+		t.AssertEq(exec.Run(["/bin/sh", "-c", "exit 3"]).Status, 3)
+		t.AssertEq(exec.Run(["/bin/sh", "-c", "exit 0"]).Status, 0)
 
-				# A program that isn't there is 127, the way a shell reports it.
-				t.AssertEq(exec.Run(["no-such-program-anywhere-xyz"]).Status, 127)
+		# A program that isn't there is 127, the way a shell reports it.
+		t.AssertEq(exec.Run(["no-such-program-anywhere-xyz"]).Status, 127)
 
-				# Output turns a status other than zero into an error, Run
-				# does not.
-				t.AssertError(exec.Output(["/bin/sh", "-c", "exit 1"]))
-				t.AssertEq(exec.Output(["/bin/sh", "-c", "printf ok"]), "ok")
-			}],
-		["the arguments go to the program as they are", fn(t) {
-				if !haveSh {
-					t.Skip("no /bin/sh here")
-					return null
-				}
+		# Output turns a status other than zero into an error, Run
+		# does not.
+		t.AssertError(exec.Output(["/bin/sh", "-c", "exit 1"]))
+		t.AssertEq(exec.Output(["/bin/sh", "-c", "printf ok"]), "ok")
+	}],
+	["the arguments go to the program as they are", fn(t) {
+		if !haveSh {
+			t.Skip("no /bin/sh here")
+			return null
+		}
 
-				# No shell in between, so this is one argument with spaces and
-				# semicolons in it, not a command line.
-				r = exec.Run(["/bin/echo", "a b; echo c"])
-				t.AssertEq(r.Stdout, "a b; echo c\n")
+		# No shell in between, so this is one argument with spaces and
+		# semicolons in it, not a command line.
+		r = exec.Run(["/bin/echo", "a b; echo c"])
+		t.AssertEq(r.Stdout, "a b; echo c\n")
 
-				# An argument with a zero byte in it cannot be passed on, and
-				# only bytes can carry one: a string stops there.
-				t.AssertError(exec.Run(["/bin/echo", bytes([97, 0, 98])]))
-				t.AssertEq(exec.Run(["/bin/echo", bytes("ok")]).Stdout, "ok\n")
-				t.AssertError(exec.Run([]))
-			}],
-		["what goes in on the standard input", fn(t) {
-				if !haveSh {
-					t.Skip("no /bin/sh here")
-					return null
-				}
+		# An argument with a zero byte in it cannot be passed on, and
+		# only bytes can carry one: a string stops there.
+		t.AssertError(exec.Run(["/bin/echo", bytes([97, 0, 98])]))
+		t.AssertEq(exec.Run(["/bin/echo", bytes("ok")]).Stdout, "ok\n")
+		t.AssertError(exec.Run([]))
+	}],
+	["what goes in on the standard input", fn(t) {
+		if !haveSh {
+			t.Skip("no /bin/sh here")
+			return null
+		}
 
-				o = exec.Options()
-				o.Input = "one\ntwo\nthree\n"
-				r = exec.RunWith(["/bin/sh", "-c", "wc -l"], o)
-				t.AssertEq(r.Status, 0)
-				t.AssertEq(strings.TrimSpace(r.Stdout), "3")
-			}],
-		["the error output is left out unless it is asked for", fn(t) {
-				if !haveSh {
-					t.Skip("no /bin/sh here")
-					return null
-				}
+		o = exec.Options()
+		o.Input = "one\ntwo\nthree\n"
+		r = exec.RunWith(["/bin/sh", "-c", "wc -l"], o)
+		t.AssertEq(r.Status, 0)
+		t.AssertEq(strings.TrimSpace(r.Stdout), "3")
+	}],
+	["the error output is left out unless it is asked for", fn(t) {
+		if !haveSh {
+			t.Skip("no /bin/sh here")
+			return null
+		}
 
-				cmd = ["/bin/sh", "-c", "printf out; printf err 1>&2"]
+		cmd = ["/bin/sh", "-c", "printf out; printf err 1>&2"]
 
-				o = exec.Options()
-				o.Stderr = true
-				t.AssertEq(exec.RunWith(cmd, o).Stdout, "outerr")
+		o = exec.Options()
+		o.Stderr = true
+		t.AssertEq(exec.RunWith(cmd, o).Stdout, "outerr")
 
-				# ponytail: without Stderr the error output goes wherever this
-				# program's does, so the test only checks that it is not kept.
-				t.AssertEq(exec.Run(cmd).Stdout, "out")
-			}],
-		["output past the limit is cut and said to be", fn(t) {
-				if !haveSh {
-					t.Skip("no /bin/sh here")
-					return null
-				}
+		# ponytail: without Stderr the error output goes wherever this
+		# program's does, so the test only checks that it is not kept.
+		t.AssertEq(exec.Run(cmd).Stdout, "out")
+	}],
+	["output past the limit is cut and said to be", fn(t) {
+		if !haveSh {
+			t.Skip("no /bin/sh here")
+			return null
+		}
 
-				o = exec.Options()
-				o.Max = 10
-				r = exec.RunWith(["/bin/sh", "-c", "printf 0123456789abcdef"], o)
-				t.AssertEq(r.Truncated, true)
-				t.AssertEq(r.Stdout, "0123456789")
+		o = exec.Options()
+		o.Max = 10
+		r = exec.RunWith(["/bin/sh", "-c", "printf 0123456789abcdef"], o)
+		t.AssertEq(r.Truncated, true)
+		t.AssertEq(r.Stdout, "0123456789")
 
-				# More than a pipe holds at once, read to the end all the same.
-				o2 = exec.Options()
-				o2.Max = 1 << 20
-				r2 = exec.RunWith(["/bin/sh", "-c", "printf 'x%.0s' $(seq 1 200000)"], o2)
-				t.AssertEq(r2.Status, 0)
-				t.AssertEq(len(r2.Stdout), 200000)
-				t.AssertEq(r2.Truncated, false)
-			}],
-		["a directory of its own, and a quiet run", fn(t) {
-				if !haveSh {
-					t.Skip("no /bin/sh here")
-					return null
-				}
+		# More than a pipe holds at once, read to the end all the same.
+		o2 = exec.Options()
+		o2.Max = 1 << 20
+		r2 = exec.RunWith(["/bin/sh", "-c", "printf 'x%.0s' $(seq 1 200000)"], o2)
+		t.AssertEq(r2.Status, 0)
+		t.AssertEq(len(r2.Stdout), 200000)
+		t.AssertEq(r2.Truncated, false)
+	}],
+	["a directory of its own, and a quiet run", fn(t) {
+		if !haveSh {
+			t.Skip("no /bin/sh here")
+			return null
+		}
 
-				here = os.Getwd()
+		here = os.Getwd()
 
-				o = exec.Options()
-				o.Dir = "/tmp"
-				t.AssertEq(strings.TrimSpace(exec.RunWith(["/bin/sh", "-c", "pwd"], o).Stdout), "/tmp")
-				t.AssertEq(os.Getwd(), here)
+		o = exec.Options()
+		o.Dir = "/tmp"
+		t.AssertEq(strings.TrimSpace(exec.RunWith(["/bin/sh", "-c", "pwd"], o).Stdout), "/tmp")
+		t.AssertEq(os.Getwd(), here)
 
-				t.AssertError(exec.RunWith(["/bin/sh", "-c", "pwd"], (fn() {
-								o = exec.Options()
-								o.Dir = "/no/such/directory/anywhere"
-								return o
-							})()))
+		t.AssertError(exec.RunWith(["/bin/sh", "-c", "pwd"], (fn() {
+			o = exec.Options()
+			o.Dir = "/no/such/directory/anywhere"
+			return o
+		})()))
 
-				# Quiet keeps nothing, the output goes where ours goes.
-				t.AssertEq(exec.Status(["/bin/sh", "-c", "exit 7"]), 7)
-			}],
-		["Sh runs a command line, pipes and all", fn(t) {
-				if !haveSh {
-					t.Skip("no /bin/sh here")
-					return null
-				}
+		# Quiet keeps nothing, the output goes where ours goes.
+		t.AssertEq(exec.Status(["/bin/sh", "-c", "exit 7"]), 7)
+	}],
+	["Sh runs a command line, pipes and all", fn(t) {
+		if !haveSh {
+			t.Skip("no /bin/sh here")
+			return null
+		}
 
-				t.AssertEq(exec.Sh("printf a | tr a b").Stdout, "b")
-				t.AssertEq(exec.Sh("exit 2").Status, 2)
-			}],
-		["Look finds a program the way a shell would", fn(t) {
-				if !haveSh {
-					t.Skip("no /bin/sh here")
-					return null
-				}
+		t.AssertEq(exec.Sh("printf a | tr a b").Stdout, "b")
+		t.AssertEq(exec.Sh("exit 2").Status, 2)
+	}],
+	["Look finds a program the way a shell would", fn(t) {
+		if !haveSh {
+			t.Skip("no /bin/sh here")
+			return null
+		}
 
-				sh = exec.Look("sh")
-				t.AssertEq(strings.HasSuffix(sh, "/sh"), true)
-				t.AssertEq(os.Exists(sh), true)
+		sh = exec.Look("sh")
+		t.AssertEq(strings.HasSuffix(sh, "/sh"), true)
+		t.AssertEq(os.Exists(sh), true)
 
-				t.AssertEq(exec.Look("/bin/sh"), "/bin/sh")
-				t.AssertError(exec.Look("/bin/no-such-program-xyz"))
-				t.AssertError(exec.Look("no-such-program-anywhere-xyz"))
-			}]
-	])
+		t.AssertEq(exec.Look("/bin/sh"), "/bin/sh")
+		t.AssertError(exec.Look("/bin/no-such-program-xyz"))
+		t.AssertError(exec.Look("no-such-program-anywhere-xyz"))
+	}]
+])

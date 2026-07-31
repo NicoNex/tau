@@ -36,7 +36,7 @@ testing.Main([
 			}],
 		["Args starts with the program itself", fn(t) {
 				t.Assert(len(os.Args) > 0, "no arguments at all")
-				t.AssertEq(os.Args[0], "stdlib/os_test.tau")
+				t.AssertEq(os.Args[0], "stdlib/os/os_test.tau")
 			}],
 		["the environment", fn(t) {
 				os.Setenv("TAU_TEST_VAR", "hello")

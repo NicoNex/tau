@@ -5,7 +5,7 @@ os = import("stdlib/os")
 println("os imported successfully")
 
 println("\nTesting os.Open...")
-if failed(f = os.Open("/tmp/test_import.txt", "w")) {
+if failed(f = os.Create("/tmp/test_import.txt")) {
 	println("FAILED: {f}")
 	exit(1)
 }

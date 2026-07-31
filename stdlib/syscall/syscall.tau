@@ -6,7 +6,7 @@ ffi = import("ffi")
 
 # The library is looked up next to the installed stdlib, dlopen() falls back
 # to ~/.local/lib/tau and /lib/tau when the relative path doesn't exist.
-lib = dlopen("syscall/libsyscall.so")
+lib = dlopen("libsyscall.so")
 
 # Every call is declared, so that a result comes back the width it really has
 # rather than as a machine word to be read with int(x, 64) - and forgetting

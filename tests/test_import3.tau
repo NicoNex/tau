@@ -1,4 +1,4 @@
-net = import("stdlib/net.tau")
+net = import("stdlib/net")
 
 # Check if libc exists in the net module
 print("Checking net module internals...\n")

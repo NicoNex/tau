@@ -7,7 +7,7 @@
 # Called the raw way and not through the ffi module, which is the one module
 # that cannot use it: ffi asks runtime for the OS and the architecture to
 # work out how wide a C int is, so an import here would be a circle.
-rt = dlopen("runtime/libruntime.so")
+rt = dlopen("libruntime.so")
 
 # NumCPU returns how many cores the program may run on, which is the number to
 # size a pool of tau routines with. It never returns less than 1.

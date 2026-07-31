@@ -1,4 +1,4 @@
-net = import("stdlib/net.tau")
+net = import("stdlib/net")
 print("Type of net: ")
 print(type(net))
 print("\n")

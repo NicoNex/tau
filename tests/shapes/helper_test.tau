@@ -1,3 +1,13 @@
-# A test file is about the module, not part of it: its names must not show up
-# among the ones the module hands out.
-Excluded = "this must not be exported"
+# A test file is about the module, not part of it: it sits inside the
+# directory and its names stay out of what the module exports, which is what
+# test_dirmod.tau checks from the outside.
+testing = import("testing")
+shapes = import("./")
+
+Excluded = "this name must not reach whoever imports shapes"
+
+testing.Main([
+		["the module sees itself the way anyone else does", fn(t) {
+				t.AssertEq(shapes.Area(2, 2), 8)
+			}],
+	])

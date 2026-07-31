@@ -138,18 +138,18 @@ func lookupPaths(vmdir, taupath string) []string {
 		if filepath.Ext(taupath) != "" {
 			return []string{taupath}
 		}
-		return []string{taupath + ".tau", taupath}
+		return []string{taupath, taupath + ".tau"}
 	}
 
 	// Only source: a '.tauc' holds bytecode, and the loader parses what it
 	// reads, so offering one here could only end in a lexer error about a
 	// byte nobody typed.
 	//
-	// The file first and the bare path after it: a directory is a module when
-	// it holds tau files, but only where there is no file of that name. The
-	// library relies on it - math.tau is the module and math/ is where
-	// math/rand lives, and the same for net and os.
-	exts := []string{".tau", ""}
+	// The directory first: a module is the directory holding its files, and a
+	// lone file is the shorthand for one that never grew past one. Where both
+	// exist the directory is the module, which is the only way round that lets
+	// os be a module and os/exec another one inside it.
+	exts := []string{"", ".tau"}
 	if filepath.Ext(taupath) != "" {
 		exts = []string{""}
 	}

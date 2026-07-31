@@ -492,9 +492,9 @@ and the capitalised ones are what the module hands out.
 
 ```
 shapes/
-	area.tau      Area, and a factor it keeps to itself
-	util.tau      Total, and the scale both files use
-	util_test.tau
+	area.tau         Area, and a factor it keeps to itself
+	util.tau         Total, and the scale both files use
+	shapes_test.tau
 ```
 
 ```python
@@ -517,12 +517,19 @@ order decides is only when top level code runs, and that order is the names of
 the files. Test files are about the module rather than part of it, so they are
 left out.
 
-Where both a file and a directory carry a name, the file is the module: that is
-what lets `math` be a module and `math/rand` another one beside it.
+Where both a file and a directory carry a name the directory is the module,
+which is the only way round that lets `os` be a module and `os/exec` another
+one inside it. The library is laid out that way throughout: every module is a
+directory, `os/os.tau` and `os/exec/exec.tau`, so any of them can grow to a
+second file without moving.
 
-The same holds for a module from elsewhere: `github.com/NicoNex/example` is
-`example.tau` at the root of that repository, or the root itself when it holds
-tau files and no such file.
+A lone file stays a module all the same, and is what most programs reach for:
+`import("./helper")` is `helper.tau` next door, and nothing has to be a
+directory until it has a reason to be.
+
+The same holds for a module from elsewhere: `github.com/NicoNex/example` is the
+root of that repository when it holds tau files, and `example.tau` at the root
+otherwise.
 
 ### Tests
 

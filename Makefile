@@ -45,6 +45,10 @@ all: libffi plugins tau tau-rt
 # The static library everything links against. Building it means autoreconf
 # and configure, minutes of work, so it is a file target: once it is there
 # nothing runs again until it is deleted.
+#
+# Every target that compiles against it names it as a prerequisite and not
+# just `all` does, because a fresh checkout is what CI hands to `make test`,
+# and ffi.h is not there until this has run.
 LIBFFI_A = $(DIR)/internal/obj/libffi/lib/libffi.a
 
 libffi: $(LIBFFI_A)
@@ -71,7 +75,7 @@ libffi-windows:
 	./configure --host=x86_64-w64-mingw32 --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
 	make install CC=x86_64-w64-mingw32-gcc AR=x86_64-w64-mingw32-ar RANLIB=x86_64-w64-mingw32-ranlib
 
-tau:
+tau: $(LIBFFI_A)
 	cd cmd/tau && \
 	CC=$(CC) \
 	CGO_CFLAGS="$(CFLAGS)" \
@@ -96,7 +100,7 @@ else
     RT_LIBS = -ldl -lpthread
 endif
 
-tau-rt:
+tau-rt: $(LIBFFI_A)
 	$(CC) -DTAU_RT -o $(DIR)/tau-rt $(RT_SRC) $(CFLAGS) $(LDFLAGS) $(RT_LIBS)
 	strip $(DIR)/tau-rt
 
@@ -113,11 +117,11 @@ tau-windows:
 
 windows: libffi-windows tau-windows
 
-debug:
+debug: $(LIBFFI_A)
 	cd cmd/tau && \
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DDEBUG" CGO_LDFLAGS="$(LDFLAGS)" go build -ldflags "$(LDFLAGS_VERSION)" -o $(DIR)/tau
 
-gc-debug:
+gc-debug: $(LIBFFI_A)
 	cd cmd/tau && \
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS) -DGC_DEBUG" CGO_LDFLAGS="$(LDFLAGS)" go build -ldflags "$(LDFLAGS_VERSION)" -o $(DIR)/tau
 
@@ -170,7 +174,7 @@ clean:
 fmt: tau
 	./tau fmt -w stdlib tests examples
 
-profile:
+profile: $(LIBFFI_A)
 	CC=$(CC) CGO_CFLAGS="$(CFLAGS)" CGO_LDFLAGS="$(LDFLAGS)" go build profile.go
 
 # The Go tests first, then the ones written in tau.

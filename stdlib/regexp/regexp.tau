@@ -194,7 +194,7 @@ newFlags = fn() {
 	f.i = false
 	f.m = false
 	f.s = false
-	f.U = false
+	f.ungreedy = false
 	return f
 }
 
@@ -203,7 +203,7 @@ copyFlags = fn(f) {
 	g.i = f.i
 	g.m = f.m
 	g.s = f.s
-	g.U = f.U
+	g.ungreedy = f.ungreedy
 	return g
 }
 
@@ -505,7 +505,7 @@ parser = fn(pattern, posix) {
 			} else if c == "s" {
 				p.flags.s = on
 			} else if c == "U" {
-				p.flags.U = on
+				p.flags.ungreedy = on
 			} else {
 				return error("regexp: unknown flag {c}")
 			}
@@ -711,7 +711,7 @@ parser = fn(pattern, posix) {
 			n.sub = atom
 			n.min = min
 			n.max = max
-			n.lazy = p.flags.U
+			n.lazy = p.flags.ungreedy
 
 			if p.peek() == "?" {
 				if failed(err = p.perlOnly("a lazy repetition")) {

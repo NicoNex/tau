@@ -178,14 +178,8 @@ func follow(entries []Entry, index map[string]Entry, seen []string) []Entry {
 		// Nothing it gives away of its own: a local the body needed is not
 		// something the reader of the documentation ever sees.
 		if !givesAway(e.Children) {
-			for _, name := range e.returns {
-				if contains(seen, name) {
-					continue
-				}
-				if from, ok := index[name]; ok && givesAway(from.Children) {
-					e.Children = follow(from.Children, index, append(seen, name))
-					break
-				}
+			if children := handedBack(e.returns, index, seen); children != nil {
+				e.Children = children
 			}
 		}
 		out[i] = e
@@ -208,6 +202,33 @@ func exported(entries []Entry) []Entry {
 }
 
 // givesAway reports whether any of these is a name a module hands out.
+// handedBack walks the names an entry could be handing back until one of them
+// builds something, and gives the fields of that one. It is a walk and not a
+// single step because a name is handed on more than once: Compile returns what
+// compile built, and compile what makeRegexp did, so the reader who writes
+// Compile is three names away from the object they end up holding.
+func handedBack(returns []string, index map[string]Entry, seen []string) []Entry {
+	for _, name := range returns {
+		if contains(seen, name) {
+			continue
+		}
+
+		from, ok := index[name]
+		if !ok {
+			continue
+		}
+
+		seen = append(seen, name)
+		if givesAway(from.Children) {
+			return follow(from.Children, index, seen)
+		}
+		if children := handedBack(from.returns, index, seen); children != nil {
+			return children
+		}
+	}
+	return nil
+}
+
 func givesAway(entries []Entry) bool {
 	for _, e := range entries {
 		if isExported(e.Name) {
@@ -521,6 +542,10 @@ func returns(toks []tok, start, end int) []string {
 		out    []string
 		locals = map[string]string{}
 		depth  int
+		// The last call the body makes with nothing written after it. A body
+		// is worth the value of its last expression, so a function ending in
+		// one hands back what it built, with no return to say so.
+		last string
 	)
 
 	for i := start; i < end; i++ {
@@ -543,6 +568,11 @@ func returns(toks []tok, start, end int) []string {
 		}
 
 		if !toks[i].Is(item.Return) || i+1 >= end || !toks[i+1].Is(item.Ident) {
+			// A call standing on its own, which is the value of the body when
+			// nothing follows it.
+			if toks[i].Is(item.Ident) && i+1 < end && toks[i+1].Is(item.LParen) {
+				last = toks[i].Val
+			}
 			continue
 		}
 
@@ -552,6 +582,12 @@ func returns(toks []tok, start, end int) []string {
 		} else if from, ok := locals[name]; ok {
 			out = append(out, from)
 		}
+	}
+
+	// A return says it outright and is believed first; the trailing call is
+	// only what is left to go on when the body never says it.
+	if len(out) == 0 && last != "" {
+		out = append(out, last)
 	}
 	return out
 }

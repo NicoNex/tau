@@ -62,6 +62,12 @@ static inline void encode_bookmarks(struct buffer *buf, struct bookmark *bookmar
 		write_uint32(buf, b.pos);
 		write_uint32(buf, b.len);
 		write_string(buf, b.line, b.len);
+
+		uint32_t flen = b.file != NULL ? strlen(b.file) : 0;
+		write_uint32(buf, flen);
+		if (flen > 0) {
+			write_string(buf, b.file, flen);
+		}
 	}
 }
 
@@ -166,6 +172,9 @@ static inline struct bookmark *decode_bookmarks(struct reader *r, size_t len) {
 		bms[i].pos = read_uint32(r);
 		bms[i].len = read_uint32(r);
 		bms[i].line = read_string(r, bms[i].len);
+
+		uint32_t flen = read_uint32(r);
+		bms[i].file = flen > 0 ? read_string(r, flen) : NULL;
 	}
 	return bms;
 }

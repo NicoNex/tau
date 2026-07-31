@@ -1,0 +1,25 @@
+testing = import("testing")
+shapes = import("./shapes")
+
+testing.Main([
+		["a name defined in one file is seen by the other", fn(t) {
+				# Area is in area.tau and calls scale, which is in util.tau.
+				t.AssertEq(shapes.Area(3, 4), 24)
+			}],
+		["and the other way round too", fn(t) {
+				# Total is in util.tau and calls Area, which is in area.tau.
+				t.AssertEq(shapes.Total([1, 2, 3]), 12)
+			}],
+		["only the capitalised names leave", fn(t) {
+				ks = keys(shapes)
+				t.AssertEq(len(ks), 3)
+				for i = 0; i < len(ks); i++ {
+					t.Assert(ks[i] != "scale", "scale is private")
+					t.Assert(ks[i] != "factor", "factor is private")
+					t.Assert(ks[i] != "Excluded", "a test file is not part of the module")
+				}
+			}],
+		["the module keeps its own name", fn(t) {
+				t.AssertEq(shapes.Name, "shapes")
+			}],
+	])

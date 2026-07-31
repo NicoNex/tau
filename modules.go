@@ -185,6 +185,30 @@ func CheckImports(entry string) error {
 		walk    func(file string) error
 	)
 
+	// A module may be a directory of files, and every one of them imports on
+	// its own account.
+	var walkModule func(p string) error
+
+	walkModule = func(p string) error {
+		info, err := os.Stat(p)
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() {
+			return walk(p)
+		}
+		files, err := mod.Files(p)
+		if err != nil {
+			return err
+		}
+		for _, f := range files {
+			if err := walk(f); err != nil {
+				return err
+			}
+		}
+		return nil
+	}
+
 	walk = func(file string) error {
 		if seen[file] {
 			return nil
@@ -211,7 +235,7 @@ func CheckImports(entry string) error {
 			if err != nil {
 				return fmt.Errorf("%v, imported by %s", err, relName(file))
 			}
-			if err := walk(next); err != nil {
+			if err := walkModule(next); err != nil {
 				return err
 			}
 		}
@@ -240,7 +264,7 @@ func CheckImports(entry string) error {
 		}
 		// A fetched module imports too, and what it imports has to be there
 		// as much as anything else.
-		if err := walk(file); err != nil {
+		if err := walkModule(file); err != nil {
 			return err
 		}
 	}

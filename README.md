@@ -484,10 +484,45 @@ network, a build reads what is already there, and a bundled program carries it.
 Fetching goes through `git`, which is therefore needed to *get* a module and
 not to build or run one.
 
-Inside a module, a path names either the file of that name or a directory of
-that name holding a file called after it: `github.com/NicoNex/example` is
-`example.tau` at the root, and `.../example/util` is either `util.tau` beside
-it or `util/util.tau`.
+### A module of several files
+
+A module is one file, or the directory holding several. The files of a
+directory are one scope: a name any of them defines is a name all of them see,
+and the capitalised ones are what the module hands out.
+
+```
+shapes/
+	area.tau      Area, and a factor it keeps to itself
+	util.tau      Total, and the scale both files use
+	util_test.tau
+```
+
+```python
+shapes = import("./shapes")
+
+println(shapes.Area(3, 4), shapes.Total([1, 2, 3]), keys(shapes))
+```
+
+```
+24 12 [Area, Name, Total]
+```
+
+Splitting a file in two is then a matter of layout and nothing else. As things
+were, two files sharing a helper meant exporting it, and the shape of the
+source decided what a module made public.
+
+Functions see each other whatever the order and whatever the file: a name used
+before its definition reserves its place, and the definition fills it. What the
+order decides is only when top level code runs, and that order is the names of
+the files. Test files are about the module rather than part of it, so they are
+left out.
+
+Where both a file and a directory carry a name, the file is the module: that is
+what lets `math` be a module and `math/rand` another one beside it.
+
+The same holds for a module from elsewhere: `github.com/NicoNex/example` is
+`example.tau` at the root of that repository, or the root itself when it holds
+tau files and no such file.
 
 ### Tests
 

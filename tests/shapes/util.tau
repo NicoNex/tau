@@ -1,0 +1,14 @@
+# scale and factor never leave the module: only the capitalised names do, and
+# that is what makes splitting a file in two a matter of layout.
+
+scale = fn(n) { n * factor }
+
+Name = "shapes"
+
+Total = fn(xs) {
+	t = 0
+	for i = 0; i < len(xs); i++ {
+		t += Area(xs[i], 1)
+	}
+	t
+}

@@ -138,13 +138,18 @@ func lookupPaths(vmdir, taupath string) []string {
 		if filepath.Ext(taupath) != "" {
 			return []string{taupath}
 		}
-		return []string{taupath + ".tau"}
+		return []string{taupath + ".tau", taupath}
 	}
 
 	// Only source: a '.tauc' holds bytecode, and the loader parses what it
 	// reads, so offering one here could only end in a lexer error about a
 	// byte nobody typed.
-	exts := []string{".tau"}
+	//
+	// The file first and the bare path after it: a directory is a module when
+	// it holds tau files, but only where there is no file of that name. The
+	// library relies on it - math.tau is the module and math/ is where
+	// math/rand lives, and the same for net and os.
+	exts := []string{".tau", ""}
 	if filepath.Ext(taupath) != "" {
 		exts = []string{""}
 	}
@@ -273,7 +278,11 @@ func lookup(vmfile, taupath string) (string, error) {
 	// The directory of the importing file, so that a module finds the ones
 	// that sit next to it whatever the working directory is.
 	for _, p := range lookupPaths(filepath.Dir(vmfile), taupath) {
-		if _, err := os.Stat(p); err != nil {
+		info, err := os.Stat(p)
+		if err != nil {
+			continue
+		}
+		if info.IsDir() && !mod.IsDirModule(p) {
 			continue
 		}
 

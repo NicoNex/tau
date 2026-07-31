@@ -1,0 +1,3 @@
+# A test file is about the module, not part of it: its names must not show up
+# among the ones the module hands out.
+Excluded = "this must not be exported"

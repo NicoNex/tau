@@ -1,0 +1,7 @@
+# One of the two files a module is made of. It uses a helper the other file
+# defines, and a name defined further down in this one: inside a module the
+# order of the files, and of the lines, decides only when top level code runs.
+
+Area = fn(w, h) { scale(w * h) }
+
+factor = 2

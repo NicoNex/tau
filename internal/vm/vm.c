@@ -169,7 +169,7 @@ inline void vm_errorf(struct vm * restrict vm, const char *fmt, ...) {
 	fprintf(
 		stderr,
 		"error in file %s at line %d:\n    %s\n    %s\n%s\n",
-		vm->file,
+		b->file != NULL ? b->file : vm->file,
 		b->lineno,
 		b->line,
 		arrow,
@@ -196,7 +196,7 @@ void go_vm_errorf(struct vm * restrict vm, const char *fmt) {
 	fprintf(
 		stderr,
 		"error in file %s at line %d:\n    %s\n    %s\n%s\n",
-		vm->file,
+		b->file != NULL ? b->file : vm->file,
 		b->lineno,
 		b->line,
 		arrow,

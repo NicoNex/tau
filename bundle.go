@@ -9,6 +9,7 @@ import (
 
 	bundlepkg "github.com/NicoNex/tau/internal/bundle"
 	"github.com/NicoNex/tau/internal/compiler"
+	modpkg "github.com/NicoNex/tau/internal/mod"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
 )
@@ -137,22 +138,29 @@ func collectInto(b *bundlepkg.Bundle, st *bundleState, file, src string) error {
 			return fmt.Errorf("build: %v, imported by %s", err, file)
 		}
 
-		mod, err := os.ReadFile(p)
+		// One file, or the several a directory module is made of.
+		files, err := moduleFiles(p)
 		if err != nil {
 			return err
 		}
 
 		// Its own imports first: a module that runs before what it imports
 		// would not find it.
-		if err := collectInto(b, st, p, string(mod)); err != nil {
-			return err
+		for _, f := range files {
+			src, err := os.ReadFile(f)
+			if err != nil {
+				return err
+			}
+			if err := collectInto(b, st, f, string(src)); err != nil {
+				return err
+			}
 		}
 		// The walk may have reached this one from somewhere else meanwhile.
 		if _, done := b.Modules[name]; done {
 			continue
 		}
 
-		code, err := compileModule(st, p, string(mod))
+		code, err := compileModule(st, files)
 		if err != nil {
 			return err
 		}
@@ -163,17 +171,56 @@ func collectInto(b *bundlepkg.Bundle, st *bundleState, file, src string) error {
 	return nil
 }
 
-// compileModule compiles one module for the place it will hold in the program,
-// and notes where its exported names land.
-func compileModule(st *bundleState, path, src string) (bundlepkg.ModuleCode, error) {
-	tree, errs := parser.Parse(path, src)
-	if len(errs) > 0 {
-		return bundlepkg.ModuleCode{}, fmt.Errorf("build: %v", errs[0])
+// moduleFiles are the files a resolved module is made of: the one file it is,
+// or the tau files of the directory it is, which compile as one.
+func moduleFiles(p string) ([]string, error) {
+	info, err := os.Stat(p)
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		return []string{p}, nil
 	}
 
+	files, err := modpkg.Files(p)
+	if err != nil {
+		return nil, err
+	}
+	if len(files) == 0 {
+		return nil, fmt.Errorf("build: %s holds no tau file", p)
+	}
+	return files, nil
+}
+
+// compileModule compiles one module for the place it will hold in the program,
+// and notes where its exported names land. The files of a directory module are
+// one unit, the same as they are when the module is imported at run time.
+func compileModule(st *bundleState, files []string) (bundlepkg.ModuleCode, error) {
 	c := compiler.NewImport(st.ndefs, st.nconsts)
-	c.SetFileInfo(path, src)
-	if err := c.Compile(tree); err != nil {
+	multi := len(files) > 1
+
+	for _, path := range files {
+		b, err := os.ReadFile(path)
+		if err != nil {
+			return bundlepkg.ModuleCode{}, err
+		}
+		src := string(b)
+
+		tree, errs := parser.Parse(path, src)
+		if len(errs) > 0 {
+			return bundlepkg.ModuleCode{}, fmt.Errorf("build: %v", errs[0])
+		}
+
+		if multi {
+			c.SetPartInfo(path, src)
+		} else {
+			c.SetFileInfo(path, src)
+		}
+		if err := c.CompilePart(tree); err != nil {
+			return bundlepkg.ModuleCode{}, err
+		}
+	}
+	if err := c.Finish(); err != nil {
 		return bundlepkg.ModuleCode{}, err
 	}
 

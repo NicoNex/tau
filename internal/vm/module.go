@@ -14,8 +14,30 @@ import (
 	"unsafe"
 
 	"github.com/NicoNex/tau/internal/compiler"
+	"github.com/NicoNex/tau/internal/mod"
 	"github.com/NicoNex/tau/internal/parser"
 )
+
+// moduleFiles are the files a resolved module is made of: the one file it is,
+// or the tau files of the directory it is.
+func moduleFiles(p string) ([]string, error) {
+	info, err := os.Stat(p)
+	if err != nil {
+		return nil, err
+	}
+	if !info.IsDir() {
+		return []string{p}, nil
+	}
+
+	files, err := mod.Files(p)
+	if err != nil {
+		return nil, err
+	}
+	if len(files) == 0 {
+		return nil, fmt.Errorf("%s holds no tau file", p)
+	}
+	return files, nil
+}
 
 // cerrf hands the VM an error message and frees the copy C was given, which
 // go_vm_errorf does not take over.
@@ -91,20 +113,46 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	inflight = append(inflight, p)
 	defer func() { inflight = inflight[:len(inflight)-1] }()
 
-	b, err := os.ReadFile(p)
+	// A module is either one file or the directory holding several, and the
+	// several are one scope: what one of them defines the others see, and only
+	// the capitalised names leave. Compiling them into a single unit is what
+	// makes that true, so there is one compiler here and not one per file.
+	files, err := moduleFiles(p)
 	if err != nil {
 		cerrf(vm, "import: %v", err)
 		return 1
 	}
-	tree, errs := parser.Parse(p, string(b))
-	if len(errs) > 0 {
-		cerrf(vm, "import: %v", errs[0])
-		return 1
-	}
 
 	c := compiler.NewImport(int(vm.state.ndefs), int(vm.state.consts.len))
-	c.SetFileInfo(p, string(b))
-	if err := c.Compile(tree); err != nil {
+	multi := len(files) > 1
+
+	for _, f := range files {
+		b, err := os.ReadFile(f)
+		if err != nil {
+			cerrf(vm, "import: %v", err)
+			return 1
+		}
+		tree, errs := parser.Parse(f, string(b))
+		if len(errs) > 0 {
+			cerrf(vm, "import: %v", errs[0])
+			return 1
+		}
+
+		// Only when there is more than one does a bookmark have to name its
+		// file: on its own it would be repeating what the VM already says.
+		if multi {
+			c.SetPartInfo(f, string(b))
+		} else {
+			c.SetFileInfo(f, string(b))
+		}
+		if err := c.CompilePart(tree); err != nil {
+			cerrf(vm, "%v", err)
+			return 1
+		}
+	}
+	// Names left undefined are asked about once the whole module is in: one
+	// file may use what the next one defines.
+	if err := c.Finish(); err != nil {
 		cerrf(vm, "%v", err)
 		return 1
 	}
@@ -112,9 +160,9 @@ func vm_exec_load_module(vm *C.struct_vm, cpath *C.char) int {
 	bc := c.Bytecode()
 	// The resolved path, so that the modules imported by this one are looked
 	// up next to it, and its own directory for the plugins it opens.
-	setModuleDir(p)
+	setModuleDir(files[0])
 	defer setModuleDir(C.GoString(vm.file))
-	tvm := C.new_vm_with_state(C.CString(p), cbytecode(bc), vm.state)
+	tvm := C.new_vm_with_state(C.CString(files[0]), cbytecode(bc), vm.state)
 	defer C.vm_dispose(tvm)
 	// The VM that ran the module has already said what went wrong and where,
 	// so there is nothing to add here.

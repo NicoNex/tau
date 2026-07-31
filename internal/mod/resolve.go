@@ -119,23 +119,29 @@ func (r *Resolver) Resolve(importPath string) (string, error) {
 
 	moddir := r.Dirs[modpath]
 	if sub == "" {
-		// The module's own path: the file is named after the module, and it
-		// sits at the root rather than in a directory of its own.
-		file := filepath.Join(moddir, path.Base(modpath)+".tau")
-		if _, err := os.Stat(file); err != nil {
-			return "", fmt.Errorf("%s: no %s.tau at the root of %s", importPath, path.Base(modpath), modpath)
-		}
-		return file, nil
-	}
-
-	for _, file := range []string{
-		filepath.Join(moddir, filepath.FromSlash(sub)) + ".tau",
-		filepath.Join(moddir, filepath.FromSlash(sub), path.Base(sub)+".tau"),
-	} {
-		if _, err := os.Stat(file); err == nil {
+		// The module's own path: the file named after it, and otherwise the
+		// root of the repository when that holds tau files.
+		if file := filepath.Join(moddir, path.Base(modpath)+".tau"); fileExists(file) {
 			return file, nil
 		}
+		if IsDirModule(moddir) {
+			return moddir, nil
+		}
+		return "", fmt.Errorf("%s: %s holds no tau file", importPath, modpath)
 	}
-	return "", fmt.Errorf("%s: %s holds neither %s.tau nor %s/%s.tau",
-		importPath, modpath, sub, sub, path.Base(sub))
+
+	dir := filepath.Join(moddir, filepath.FromSlash(sub))
+	if file := dir + ".tau"; fileExists(file) {
+		return file, nil
+	}
+	if IsDirModule(dir) {
+		return dir, nil
+	}
+	return "", fmt.Errorf("%s: %s holds neither %s.tau nor a %s directory",
+		importPath, modpath, sub, sub)
+}
+
+func fileExists(p string) bool {
+	info, err := os.Stat(p)
+	return err == nil && !info.IsDir()
 }

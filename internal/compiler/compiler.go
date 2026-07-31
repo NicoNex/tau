@@ -38,7 +38,10 @@ type Compiler struct {
 	// that runs them. A unit compiled on top of a running program (an import,
 	// a REPL line) brings only its own constants, appended to the ones already
 	// there, so the indices its bytecode carries have to be absolute.
-	constBase   int
+	constBase int
+	// The file being compiled when a module is made of more than one, empty
+	// for the usual case of a program or a module that is a single file.
+	partFile    string
 	scopes      []CompilationScope
 	scopeIndex  int
 	fileName    string
@@ -232,7 +235,7 @@ func (c *Compiler) Bookmark(pos int) {
 		return
 	}
 
-	b := tauerr.NewBookmark(c.fileContent, pos, c.Pos())
+	b := tauerr.NewBookmarkIn(c.partFile, c.fileContent, pos, c.Pos())
 	c.scopes[c.scopeIndex].bookmarks = append(c.scopes[c.scopeIndex].bookmarks, b)
 }
 
@@ -265,14 +268,26 @@ func (c *Compiler) WrapError(pos int, err error) error {
 }
 
 func (c *Compiler) Compile(node Compilable) error {
-	_, err := node.Compile(c)
-	c.Emit(code.OpHalt)
-
-	if err != nil {
+	if err := c.CompilePart(node); err != nil {
 		return err
 	}
+	return c.Finish()
+}
 
-	// Names used but never defined anywhere in the file: forward references
+// CompilePart compiles one of the several files a module is made of, into the
+// instructions of the ones before it. It stops short of ending the program and
+// of asking what is still undefined, because a name this file only uses may be
+// the one the next file defines.
+func (c *Compiler) CompilePart(node Compilable) error {
+	_, err := node.Compile(c)
+	return err
+}
+
+// Finish ends the program and says what was left dangling.
+func (c *Compiler) Finish() error {
+	c.Emit(code.OpHalt)
+
+	// Names used but never defined anywhere in the module: forward references
 	// are allowed, typos are not.
 	if name, pos, ok := c.Pending(); ok {
 		return c.UnresolvedError(name, pos)
@@ -283,6 +298,14 @@ func (c *Compiler) Compile(node Compilable) error {
 func (c *Compiler) SetFileInfo(name, content string) {
 	c.fileName = name
 	c.fileContent = content
+}
+
+// SetPartInfo is SetFileInfo for one file of a module made of several: what
+// follows is compiled from this file, and its bookmarks say so, so that an
+// error names the file it is actually in.
+func (c *Compiler) SetPartInfo(name, content string) {
+	c.SetFileInfo(name, content)
+	c.partFile = name
 }
 
 func (c *Compiler) LoadSymbol(s Symbol) int {

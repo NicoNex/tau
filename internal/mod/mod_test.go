@@ -1,6 +1,10 @@
 package mod
 
-import "testing"
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestIsRemote(t *testing.T) {
 	remote := []string{
@@ -171,5 +175,46 @@ func TestUsed(t *testing.T) {
 	}
 	if used["github.com/e/f"] {
 		t.Errorf("a module nothing imports is used: %v", used)
+	}
+}
+
+func TestFiles(t *testing.T) {
+	dir := t.TempDir()
+
+	for _, name := range []string{"b.tau", "a.tau", "z_test.tau", "notes.md"} {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte("x = 1\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.Mkdir(filepath.Join(dir, "sub"), 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	files, err := Files(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Sorted, because an order there has to be and that is the only one a
+	// reader can predict. A test file is about the module, not part of it,
+	// and neither a subdirectory nor a file that is not tau belongs.
+	want := []string{filepath.Join(dir, "a.tau"), filepath.Join(dir, "b.tau")}
+	if len(files) != len(want) {
+		t.Fatalf("Files = %v, want %v", files, want)
+	}
+	for i := range want {
+		if files[i] != want[i] {
+			t.Errorf("Files[%d] = %s, want %s", i, files[i], want[i])
+		}
+	}
+
+	if !IsDirModule(dir) {
+		t.Error("a directory of tau files is not a module")
+	}
+	if IsDirModule(filepath.Join(dir, "sub")) {
+		t.Error("a directory with no tau file is a module")
+	}
+	if IsDirModule(filepath.Join(dir, "a.tau")) {
+		t.Error("a file is a directory module")
 	}
 }

@@ -65,6 +65,7 @@ tau build FILE...       compile to '.tauc' bytecode
 tau bundle -o app FILE  compile into a standalone executable
 tau test [PATH...]      run the '*_test.tau' files found in PATH
 tau fmt [-w|-l] PATH... format sources in the canonical style
+tau doc [-b] MODULE     what a module exports, and the comments about it
 tau version             print the version
 tau help COMMAND        help for one command
 ```
@@ -76,6 +77,45 @@ release is a tag and nothing else, and a tree between two tags says so:
 $ tau version
 Tau v2.0.15-53-g5b05dc5 on Linux
 ```
+
+`tau doc` reads a module and writes what it gives whoever imports it. Tau has
+no types, so what another language documents as the methods of one is here the
+fields a constructor puts on the object it returns, and a name after the module
+goes one level in:
+
+```
+$ tau doc sync
+module sync
+
+    sync - the locks tau routines share state with.
+    ...
+
+Mutex = fn()
+    Mutex is a lock held by one routine at a time.
+...
+
+$ tau doc sync.Mutex.Lock
+module sync
+
+Lock = fn()
+    Lock takes the lock, waiting until whoever holds it gives it back.
+```
+
+It follows a return: `os.Open` hands back what an unexported `newFile` built,
+so `tau doc os.Open` documents the file it gives you rather than stopping at
+the call. With `-b` the same is written as a page and opened in a browser, at
+the name asked for:
+
+```bash
+tau doc -b encoding/json
+tau doc -b sync.WaitGroup.Add   # opens the page scrolled to Add
+```
+
+The page is written afresh every time, so it says what the module says now, and
+it lands in the cache directory (`~/.cache/tau/doc` on Linux) under the name of
+the module. It carries its own style and its own colouring - done by the lexer
+of the language itself - so it needs nothing from the network and can be thrown
+away at any time.
 
 A file can also carry a shebang and run on its own:
 

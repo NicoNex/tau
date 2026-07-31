@@ -16,6 +16,7 @@ import (
 	"github.com/NicoNex/tau/internal/ast"
 	bundlepkg "github.com/NicoNex/tau/internal/bundle"
 	"github.com/NicoNex/tau/internal/compiler"
+	"github.com/NicoNex/tau/internal/doc"
 	"github.com/NicoNex/tau/internal/format"
 	"github.com/NicoNex/tau/internal/parser"
 	"github.com/NicoNex/tau/internal/vm"
@@ -331,4 +332,71 @@ func FormatFiles(paths []string, write, list bool) error {
 		return fmt.Errorf("%d of %d files could not be formatted", failed, len(files))
 	}
 	return nil
+}
+
+// Doc writes what a module gives whoever imports it.
+//
+// arg is the module, on its own or followed by a name inside it:
+// "sync", "sync.Mutex", "sync.Mutex.Lock". The module is looked up the way an
+// import looks one up, so a checkout runs against its own standard library
+// with TAUPATH set and nothing installed.
+//
+// With browser the same thing is written as a page and opened, at the name
+// asked for rather than at the top.
+func Doc(arg string, browser bool) error {
+	name, sym, err := resolveDoc(arg)
+	if err != nil {
+		return err
+	}
+
+	path, err := vm.LookupModule(mustGetwd()+string(filepath.Separator), name)
+	if err != nil {
+		return err
+	}
+
+	pkg, err := doc.Load(name, path)
+	if err != nil {
+		return err
+	}
+	if sym != "" {
+		if _, ok := pkg.Find(sym); !ok {
+			return fmt.Errorf("tau doc: %s has no %s", name, sym)
+		}
+	}
+
+	if browser {
+		return doc.OpenBrowser(pkg, sym)
+	}
+	return doc.Text(os.Stdout, pkg, sym)
+}
+
+// resolveDoc splits "sync/atomic.Int.Add" into the module and the name inside
+// it. Which of the dotted parts is the module cannot be decided by looking at
+// the string - a module may itself be a file with a dot in its name - so it
+// is decided by asking: the longest leading part that names a module wins,
+// and the rest is the symbol.
+func resolveDoc(arg string) (name, sym string, err error) {
+	arg = strings.TrimSuffix(arg, ".")
+	if arg == "" {
+		return "", "", errors.New("tau doc: no module given")
+	}
+
+	cwd := mustGetwd() + string(filepath.Separator)
+	parts := strings.Split(arg, ".")
+
+	for i := len(parts); i > 0; i-- {
+		name = strings.Join(parts[:i], ".")
+		if _, err := vm.LookupModule(cwd, name); err == nil {
+			return name, strings.Join(parts[i:], "."), nil
+		}
+	}
+	return "", "", fmt.Errorf("no module named %q", parts[0])
+}
+
+func mustGetwd() string {
+	wd, err := os.Getwd()
+	if err != nil {
+		return "."
+	}
+	return wd
 }

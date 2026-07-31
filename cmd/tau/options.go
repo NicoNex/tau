@@ -36,6 +36,11 @@ type fmtOpt struct {
 	list  bool
 }
 
+type docOpt struct {
+	arg     string
+	browser bool
+}
+
 type replOpt struct {
 	simple bool
 }
@@ -94,6 +99,16 @@ func parseFmtOpts() (opt fmtOpt) {
 	return
 }
 
+func parseDocOpts() (opt docOpt) {
+	cmd := flag.NewFlagSet("doc", flag.ExitOnError)
+	cmd.BoolVar(&opt.browser, "b", false, "Write the documentation as a page and open it in a browser")
+	cmd.Usage = usageDoc
+	cmd.Parse(os.Args[2:])
+
+	opt.arg = cmd.Arg(0)
+	return
+}
+
 func parseReplOpts() (opt replOpt) {
 	cmd := flag.NewFlagSet("repl", flag.ExitOnError)
 	cmd.BoolVar(&opt.simple, "s", false, "Use the simple REPL instead of opening a terminal")
@@ -114,6 +129,7 @@ Commands:
   bundle    Compile a tau file into a standalone executable
   test      Run the tests of the given files or directories
   fmt       Format tau source files
+  doc       Show what a module exports
   repl      Start the interactive prompt
   get       Fetch a module and add it to tau.mod
   mod       Look after tau.mod
@@ -261,6 +277,34 @@ Examples:
   %s mod init github.com/you/thing
   %s mod tidy
 `, os.Args[0], os.Args[0], os.Args[0])
+}
+
+func usageDoc() {
+	fmt.Fprintf(os.Stderr, `Usage: %s doc [OPTIONS] MODULE[.NAME...]
+
+Show what a module gives whoever imports it: the comment written above each
+exported name, and the names that name holds in turn. The module is looked
+up the way an import looks one up.
+
+Asked for a module, it writes the module's own comment and a line for each
+exported name. Asked for a name, the whole comment of that name and a line
+for each of the names under it. Going deeper is asking for the deeper name,
+since tau has no types and what another language would call a method is a
+field of the object a function returns.
+
+Options:
+  -b        Write the documentation as a page and open it in a browser, at
+            the name asked for
+
+Arguments:
+  MODULE    The module, alone or followed by a name inside it
+
+Examples:
+  %s doc strings
+  %s doc sync.Mutex
+  %s doc sync.Mutex.Lock
+  %s doc -b encoding/json
+`, os.Args[0], os.Args[0], os.Args[0], os.Args[0], os.Args[0])
 }
 
 func usageRepl() {

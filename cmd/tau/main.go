@@ -56,6 +56,16 @@ func format() error {
 	return tau.FormatFiles(opt.paths, opt.write, opt.list)
 }
 
+// doc writes what a module gives whoever imports it.
+func doc() error {
+	opt := parseDocOpts()
+	if opt.arg == "" {
+		usageDoc()
+		return errUsage
+	}
+	return tau.Doc(opt.arg, opt.browser)
+}
+
 func version() error {
 	tau.PrintVersionInfo(os.Stdout)
 	return nil
@@ -78,6 +88,8 @@ func help() error {
 		usageTest()
 	case "fmt":
 		usageFmt()
+	case "doc":
+		usageDoc()
 	case "repl":
 		usageRepl()
 	case "get":
@@ -140,6 +152,8 @@ func main() {
 		check(test())
 	case "fmt":
 		check(format())
+	case "doc":
+		check(doc())
 	case "repl":
 		check(repl())
 	case "get":

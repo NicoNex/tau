@@ -111,11 +111,15 @@ tau doc -b encoding/json
 tau doc -b sync.WaitGroup.Add   # opens the page scrolled to Add
 ```
 
-The page is written afresh every time, so it says what the module says now, and
-it lands in the cache directory (`~/.cache/tau/doc` on Linux) under the name of
-the module. It carries its own style and its own colouring - done by the lexer
-of the language itself - so it needs nothing from the network and can be thrown
-away at any time.
+Every name on the page carries a link to the source it was read from, which is
+written out beside it as a listing with a line for every line of the file, and
+the link lands on the one the name is written on.
+
+The pages are written afresh every time, so they say what the module says now,
+and they land in the cache directory (`~/.cache/tau/doc` on Linux) under the
+name of the module. They carry their own style and their own colouring - done
+by the lexer of the language itself - so they need nothing from the network and
+can be thrown away at any time.
 
 A file can also carry a shebang and run on its own:
 

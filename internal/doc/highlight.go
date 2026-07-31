@@ -21,9 +21,24 @@ import (
 // into "..." - so anything the lexer cannot read comes out as plain text
 // rather than as a guess.
 func highlight(src string) template.HTML {
+	lines := highlightLines(src)
+
+	parts := make([]string, len(lines))
+	for i, l := range lines {
+		parts[i] = string(l)
+	}
+	return template.HTML(strings.Join(parts, "\n"))
+}
+
+// highlightLines is the same, one entry per line of the source.
+//
+// A token may hold newlines - a raw string does - so a span is closed at the
+// end of every line it crosses and opened again on the next. Each line then
+// stands on its own, which is what putting a number beside one needs.
+func highlightLines(src string) []template.HTML {
 	toks, ok := lex(src)
 	if !ok {
-		return template.HTML(html.EscapeString(src))
+		return plain(src)
 	}
 
 	var (
@@ -33,7 +48,7 @@ func highlight(src string) template.HTML {
 
 	for i, t := range toks {
 		if t.Pos < pos || t.Pos > len(src) {
-			return template.HTML(html.EscapeString(src))
+			return plain(src)
 		}
 
 		// Whatever stood between the last token and this one is spacing, and
@@ -49,10 +64,11 @@ func highlight(src string) template.HTML {
 		text := strings.TrimRight(src[t.Pos:end], " \t\n")
 
 		if class := class(t); class != "" {
-			out.WriteString(`<span class="`)
-			out.WriteString(class)
-			out.WriteString(`">`)
-			out.WriteString(html.EscapeString(text))
+			open := `<span class="` + class + `">`
+			out.WriteString(open)
+			// A newline inside the token ends the span and starts another,
+			// so that no line is left holding half of one.
+			out.WriteString(strings.ReplaceAll(html.EscapeString(text), "\n", `</span>`+"\n"+open))
 			out.WriteString(`</span>`)
 		} else {
 			out.WriteString(html.EscapeString(text))
@@ -61,7 +77,23 @@ func highlight(src string) template.HTML {
 	}
 	out.WriteString(html.EscapeString(src[pos:]))
 
-	return template.HTML(out.String())
+	return split(out.String())
+}
+
+// plain is the source with nothing painted on it, which is what anything the
+// lexer cannot read comes back as.
+func plain(src string) []template.HTML {
+	return split(html.EscapeString(src))
+}
+
+func split(s string) []template.HTML {
+	lines := strings.Split(s, "\n")
+
+	out := make([]template.HTML, len(lines))
+	for i, l := range lines {
+		out[i] = template.HTML(l)
+	}
+	return out
 }
 
 // lex reads the whole stream, and says whether it is tau at all. The channel

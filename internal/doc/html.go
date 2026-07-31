@@ -23,7 +23,7 @@ func HTML(w io.Writer, p Package) error {
 		Package: p,
 		Nav:     nav(p.Entries, ""),
 		Blocks:  blocks(p.Doc),
-		Body:    sections(p.Entries, "", 0),
+		Body:    sections(p, p.Entries, "", 0),
 	})
 }
 
@@ -54,8 +54,15 @@ func Write(p Package) (string, error) {
 		return "", err
 	}
 
-	name := strings.NewReplacer("/", "-", string(filepath.Separator), "-").Replace(p.Path)
-	path := filepath.Join(dir, name+".html")
+	// The listings first: the page links to them, and a link that lands on
+	// nothing is worse than no link.
+	for _, src := range p.Files {
+		if err := writeSource(dir, p, src); err != nil {
+			return "", err
+		}
+	}
+
+	path := filepath.Join(dir, pageName(p)+".html")
 
 	f, err := os.Create(path)
 	if err != nil {
@@ -108,12 +115,75 @@ func open(url string) error {
 	return nil
 }
 
-// view is what the template is given.
+// view is what the doc template is given.
 type view struct {
 	Package Package
 	Nav     []navItem
 	Blocks  []block
 	Body    []section
+}
+
+// listing is what the source template is given: one file, a line at a time.
+type listing struct {
+	Package Package
+	Name    string // the file, without the directories in front of it
+	Path    string // and with them
+	Doc     string // the page to go back to
+	Lines   []line
+}
+
+type line struct {
+	N    int
+	HTML template.HTML
+}
+
+// pageName is the file a module's documentation is written to. A path has
+// slashes in it and a file name cannot, so they become dashes.
+func pageName(p Package) string {
+	return strings.NewReplacer("/", "-", string(filepath.Separator), "-").Replace(p.Path)
+}
+
+// srcName is the file the listing of one source is written to, next to the
+// page that links to it.
+func srcName(p Package, src string) string {
+	if src == "" {
+		return ""
+	}
+	return pageName(p) + "." + filepath.Base(src) + ".html"
+}
+
+// writeSource writes the listing of one file and returns its name.
+func writeSource(dir string, p Package, src string) error {
+	text, err := os.ReadFile(src)
+	if err != nil {
+		return err
+	}
+
+	lines := highlightLines(string(text))
+	// A file ends in a newline, which is the end of the last line and not a
+	// line of its own.
+	if n := len(lines); n > 0 && lines[n-1] == "" {
+		lines = lines[:n-1]
+	}
+
+	rows := make([]line, len(lines))
+	for i, l := range lines {
+		rows[i] = line{N: i + 1, HTML: l}
+	}
+
+	f, err := os.Create(filepath.Join(dir, srcName(p, src)))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	return source.Execute(f, listing{
+		Package: p,
+		Name:    filepath.Base(src),
+		Path:    src,
+		Doc:     pageName(p) + ".html",
+		Lines:   rows,
+	})
 }
 
 // navItem is one line of the index down the side.
@@ -138,6 +208,7 @@ type section struct {
 	Val    string
 	Kind   string
 	Under  string // the name this hangs off, empty at the top level
+	Src    string // the line of the listing this was read from
 	Blocks []block
 	Kids   []section
 	Depth  int
@@ -172,7 +243,7 @@ func nav(entries []Entry, prefix string) []navItem {
 	return out
 }
 
-func sections(entries []Entry, prefix string, depth int) []section {
+func sections(p Package, entries []Entry, prefix string, depth int) []section {
 	var out []section
 
 	for _, e := range entries {
@@ -194,7 +265,8 @@ func sections(entries []Entry, prefix string, depth int) []section {
 			Kind:   kind,
 			Under:  prefix,
 			Blocks: blocks(e.Doc),
-			Kids:   sections(e.Children, id, depth+1),
+			Src:    fmt.Sprintf("%s#L%d", srcName(p, e.File), e.Line),
+			Kids:   sections(p, e.Children, id, depth+1),
 			Depth:  depth,
 		})
 	}
@@ -267,8 +339,23 @@ func dedent(line string) string {
 //go:embed page.tmpl.html
 var pageHTML string
 
+// The style both pages share, kept as a stylesheet so that an editor treats
+// it as one.
+//
+//go:embed page.css
+var pageCSS string
+
+// The listing of one source file, which is where a name on the doc page
+// points when the reader wants to know how it is done.
+//
+//go:embed source.tmpl.html
+var sourceHTML string
+
 var page = template.Must(template.New("doc").Funcs(template.FuncMap{
 	"indent": func(depth int) template.CSS {
 		return template.CSS(fmt.Sprintf("%.2frem", float64(depth)*0.9))
 	},
+	"css": func() template.CSS { return template.CSS(pageCSS) },
 }).Parse(pageHTML))
+
+var source = template.Must(page.New("source").Parse(sourceHTML))

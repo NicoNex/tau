@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{.Name}} - {{.Package.Path}}</title>
+<style>{{css}}</style>
+</head>
+<body>
+
+<header>
+	<div class="masthead">
+		<div class="mark">
+			<span class="wordmark"><span class="t">&#964;</span>au</span>
+			<span class="slash">/</span>
+			<a class="back" href="{{.Doc}}">{{.Package.Path}}</a>
+			<span class="slash">/</span>
+			<h1>{{.Name}}</h1>
+			<span class="kind">source</span>
+		</div>
+		<div class="import">
+			<code id="imp">{{.Path}}</code>
+			<button id="btn" onclick="copy()" title="copy the path of this file">Copy</button>
+		</div>
+	</div>
+</header>
+
+<div class="sheet source">
+	<main>
+		<pre class="listing"><code>{{range .Lines}}<span class="row" id="L{{.N}}"><a class="ln" href="#L{{.N}}">{{.N}}</a><span class="src">{{.HTML}}</span></span>{{end}}</code></pre>
+	</main>
+</div>
+
+<footer>
+	<span class="k">Source of</span> {{.Package.Path}} &#183; <a href="{{.Doc}}">back to the documentation</a><br>
+	<span class="k">Written by</span> &#964;au doc
+</footer>
+
+<button id="totop" title="back to the top" onclick="scrollTo({top: 0})">&uarr;</button>
+
+<script>
+function copy() {
+	var b = document.getElementById('btn');
+	navigator.clipboard.writeText(document.getElementById('imp').textContent).then(function () {
+		b.textContent = 'Copied';
+		b.classList.add('done');
+		setTimeout(function () { b.textContent = 'Copy'; b.classList.remove('done'); }, 1300);
+	});
+}
+
+// The line asked for is put a third of the way down rather than under the
+// masthead: what a name means is usually the lines around it, not the one it
+// is written on.
+function jump() {
+	var id = decodeURIComponent(location.hash.slice(1));
+	if (!id) { return; }
+
+	var el = document.getElementById(id);
+	if (!el) { return; }
+
+	var root = document.documentElement;
+	var was = root.style.scrollBehavior;
+	root.style.scrollBehavior = 'auto';
+	el.scrollIntoView({ block: 'center' });
+	root.style.scrollBehavior = was;
+}
+addEventListener('load', jump);
+addEventListener('hashchange', jump);
+
+var totop = document.getElementById('totop');
+var masthead = document.querySelector('header');
+addEventListener('scroll', function () {
+	totop.classList.toggle('show', scrollY > 700);
+	masthead.classList.toggle('scrolled', scrollY > 8);
+}, { passive: true });
+</script>
+
+</body>
+</html>

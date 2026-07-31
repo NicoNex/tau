@@ -1,0 +1,567 @@
+/*
+ * A page of a manual, not of a website. The prose is set in a serif because it
+ * is there to be read, the names in a monospace because they are there to be
+ * typed, and there is no third face.
+ *
+ * Nothing is fetched. The page is a file on this machine opened straight from
+ * disk, so a font from somewhere else is a font that never arrives, and the
+ * stacks below are what a machine already has.
+ */
+:root {
+	--bg: #fcfcfd;
+	--surface: #ffffff;
+	--ink: #14151c;
+	--ink-2: #4e5364;
+	--ink-3: #8b90a3;
+	--line: #e6e7ef;
+	--line-2: #f0f1f7;
+	--accent: #4b52c8;
+	--accent-2: #6d6ff0;
+	--wash: #ecedfb;
+	--code: #f6f6fa;
+	--glow: rgba(109, 111, 240, .09);
+	--kw: #8250c4;
+	--str: #1c7a5e;
+	--num: #b4562a;
+
+	--serif: "Iowan Old Style", "Palatino Linotype", Palatino, "Book Antiqua", Charter, "Bitstream Charter", Georgia, serif;
+	--mono: "JetBrains Mono", "Cascadia Code", "SF Mono", "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+
+	--measure: 44rem;
+	--rail: 17.5rem;
+	--gutter: 3.5rem;
+	--head: 5.1rem;
+	--r: 10px;
+	--shadow: 0 1px 2px rgba(24, 26, 48, .04), 0 14px 36px -22px rgba(24, 26, 48, .3);
+}
+
+@media (prefers-color-scheme: dark) {
+	:root {
+		--bg: #0d0e14;
+		--surface: #15161f;
+		--ink: #e9e9f2;
+		--ink-2: #a7a9bd;
+		--ink-3: #71748b;
+		--line: #262833;
+		--line-2: #1c1e29;
+		--accent: #9ba2ff;
+		--accent-2: #b7bcff;
+		--wash: #1e2040;
+		--code: #16171f;
+		--glow: rgba(155, 162, 255, .07);
+		--kw: #c99bf5;
+		--str: #6fd7ae;
+		--num: #f0a76a;
+		--shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 12px 32px -20px rgba(0, 0, 0, .9);
+	}
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html {
+	scroll-behavior: smooth;
+	scroll-padding-top: calc(var(--head) + 1.5rem);
+	background: var(--bg);
+}
+
+body {
+	margin: 0;
+	background: var(--bg);
+	color: var(--ink);
+	font-family: var(--serif);
+	font-size: 20.5px;
+	line-height: 1.7;
+	-webkit-font-smoothing: antialiased;
+	text-rendering: optimizeLegibility;
+	font-kerning: normal;
+}
+
+/* Light from the top left, so the page has somewhere to start. */
+body::before {
+	content: "";
+	position: fixed;
+	inset: 0 0 auto 0;
+	height: 32rem;
+	z-index: 0;
+	pointer-events: none;
+	background: radial-gradient(60rem 26rem at 18% -6rem, var(--glow), transparent 70%);
+}
+
+a { color: var(--accent); text-decoration: none; }
+code, pre, .mono { font-family: var(--mono); font-variant-ligatures: none; }
+
+.label {
+	font-family: var(--mono);
+	font-size: 0.68rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.15em;
+	color: var(--ink-3);
+}
+
+/* ------------------------------------------------------------ masthead -- */
+
+header {
+	position: sticky;
+	top: 0;
+	z-index: 20;
+	background: color-mix(in srgb, var(--bg) 78%, transparent);
+	backdrop-filter: saturate(180%) blur(14px);
+	-webkit-backdrop-filter: saturate(180%) blur(14px);
+	border-bottom: 1px solid transparent;
+	transition: border-color .2s, box-shadow .2s;
+}
+header.scrolled {
+	border-bottom-color: var(--line);
+	box-shadow: 0 1px 20px -12px rgba(16, 40, 45, .5);
+}
+
+.masthead {
+	max-width: 84rem;
+	margin: 0 auto;
+	height: var(--head);
+	padding: 0 2.5rem;
+	display: flex;
+	align-items: center;
+	gap: 1.5rem;
+}
+
+.mark {
+	display: flex;
+	align-items: center;
+	gap: 0.6rem;
+	min-width: 0;
+	animation: rise .55s cubic-bezier(.2, .7, .3, 1) both;
+}
+/* The name of the language, spelled with the letter it is named after. */
+.mark .wordmark {
+	font-family: var(--serif);
+	font-size: 1.4rem;
+	line-height: 1;
+	letter-spacing: -0.005em;
+	color: var(--ink);
+	white-space: nowrap;
+}
+.mark .wordmark .t {
+	font-style: italic;
+	font-size: 1.16em;
+	color: var(--accent);
+}
+.mark .slash {
+	font-family: var(--mono);
+	font-size: 1rem;
+	color: var(--line);
+	transform: translateY(-1px);
+}
+.mark h1 {
+	margin: 0;
+	font-family: var(--mono);
+	font-size: 1.14rem;
+	font-weight: 600;
+	letter-spacing: -0.025em;
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+}
+.mark .kind {
+	font-family: var(--mono);
+	font-size: 0.63rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.14em;
+	color: var(--accent);
+	background: var(--wash);
+	border-radius: 999px;
+	padding: 0.18rem 0.55rem;
+}
+
+.import {
+	margin-left: auto;
+	display: flex;
+	align-items: stretch;
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: var(--r);
+	overflow: hidden;
+	max-width: 100%;
+	box-shadow: var(--shadow);
+	animation: rise .55s .06s cubic-bezier(.2, .7, .3, 1) both;
+}
+/* Not a flex container: its children are the words of a line, and flex would
+   drop the spaces between them. */
+.import code {
+	display: block;
+	font-size: 0.83rem;
+	line-height: 1.45;
+	padding: 0.45rem 0.85rem;
+	white-space: nowrap;
+	overflow-x: auto;
+	color: var(--ink-2);
+}
+.import code b { font-weight: 500; color: var(--ink); }
+.import code .str { color: var(--accent); }
+.import button {
+	font-family: var(--mono);
+	font-size: 0.66rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.12em;
+	border: 0;
+	border-left: 1px solid var(--line);
+	background: transparent;
+	color: var(--ink-3);
+	padding: 0.5rem 0.9rem;
+	cursor: pointer;
+	white-space: nowrap;
+	transition: background .15s, color .15s;
+}
+.import button:hover { background: var(--wash); color: var(--accent); }
+.import button.done { background: var(--wash); color: var(--accent); }
+
+/* -------------------------------------------------------------- layout -- */
+
+.sheet {
+	position: relative;
+	z-index: 1;
+	max-width: 74rem;
+	margin: 0 auto;
+	padding: 3.75rem 2.75rem 6.5rem;
+	display: grid;
+	grid-template-columns: var(--rail) minmax(0, 1fr);
+	gap: var(--gutter);
+	align-items: start;
+}
+
+/* ------------------------------------------------------------ the rail -- */
+
+nav {
+	position: sticky;
+	top: calc(var(--head) + 1.5rem);
+	max-height: calc(100vh - var(--head) - 3rem);
+	display: flex;
+	flex-direction: column;
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: var(--r);
+	box-shadow: var(--shadow);
+	overflow: hidden;
+	animation: rise .55s .1s cubic-bezier(.2, .7, .3, 1) both;
+}
+
+.rail-head { padding: 0.85rem 0.9rem 0.75rem; border-bottom: 1px solid var(--line-2); }
+.rail-head .row {
+	display: flex;
+	align-items: baseline;
+	justify-content: space-between;
+	margin-bottom: 0.6rem;
+}
+.rail-head .row .n {
+	font-family: var(--mono);
+	font-size: 0.68rem;
+	font-weight: 600;
+	color: var(--accent);
+	background: var(--wash);
+	border-radius: 999px;
+	padding: 0.05rem 0.45rem;
+}
+
+#filter {
+	width: 100%;
+	font-family: var(--mono);
+	font-size: 0.8rem;
+	color: var(--ink);
+	background: var(--code);
+	border: 1px solid var(--line);
+	border-radius: 7px;
+	padding: 0.32rem 0.55rem;
+	outline: none;
+	transition: border-color .15s, box-shadow .15s;
+}
+#filter:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--wash); }
+#filter::placeholder { color: var(--ink-3); }
+
+.rail-list {
+	overflow-y: auto;
+	overscroll-behavior: contain;
+	padding: 0.5rem 0.45rem 0.6rem;
+	scrollbar-width: thin;
+	scrollbar-color: var(--line) transparent;
+}
+
+.rail-list a {
+	position: relative;
+	display: block;
+	font-family: var(--mono);
+	font-size: 0.86rem;
+	line-height: 1.62;
+	color: var(--ink-2);
+	border-radius: 7px;
+	padding: 0.14rem 0.5rem 0.14rem calc(0.55rem + var(--ind, 0rem));
+	white-space: nowrap;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	transition: color .12s, background .12s;
+}
+.rail-list a.top {
+	color: var(--ink);
+	font-weight: 600;
+	margin-top: 0.5rem;
+}
+.rail-list a.top:first-child { margin-top: 0; }
+
+/* The stroke that makes a field read as a field of the name above it. */
+.rail-list a.sub::before {
+	content: "";
+	position: absolute;
+	left: calc(0.12rem + var(--ind, 0rem));
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background: var(--line);
+	transition: background .12s;
+}
+.rail-list a:hover { background: var(--code); color: var(--ink); }
+.rail-list a:hover::before { background: var(--accent); }
+
+.rail-list a.on { background: var(--wash); color: var(--accent); font-weight: 600; }
+.rail-list a.on::before { background: var(--accent); }
+.rail-list .none {
+	padding: 0.7rem 0.5rem;
+	font-family: var(--mono);
+	font-size: 0.79rem;
+	color: var(--ink-3);
+}
+
+/* --------------------------------------------------------------- sheet -- */
+
+main { min-width: 0; animation: rise .55s .14s cubic-bezier(.2, .7, .3, 1) both; }
+
+.lede { margin-bottom: 3.5rem; }
+.lede > p:first-child {
+	font-size: 1.44rem;
+	line-height: 1.48;
+	letter-spacing: -0.014em;
+	margin-bottom: 1.4rem;
+}
+.lede::after {
+	content: "";
+	display: block;
+	width: 2.75rem;
+	height: 3px;
+	border-radius: 3px;
+	margin-top: 2.4rem;
+	background: linear-gradient(90deg, var(--accent), var(--accent-2));
+}
+
+p { margin: 0 0 1.05rem; max-width: var(--measure); }
+p:last-child { margin-bottom: 0; }
+
+pre {
+	background: var(--code);
+	border: 1px solid var(--line-2);
+	border-radius: var(--r);
+	padding: 0.95rem 1.1rem;
+	overflow-x: auto;
+	font-size: 0.88rem;
+	line-height: 1.66;
+	margin: 0 0 1.05rem;
+	max-width: var(--measure);
+	tab-size: 4;
+}
+
+/* Painted by the lexer of the language itself, not by a second grammar. */
+pre .c-com { color: var(--ink-3); font-style: italic; }
+pre .c-str { color: var(--str); }
+pre .c-num { color: var(--num); }
+pre .c-kw  { color: var(--kw); font-weight: 600; }
+pre .c-lit { color: var(--kw); }
+
+section { scroll-margin-top: calc(var(--head) + 1.5rem); }
+
+/* Every name a module hands out is its own card. What is being looked up is
+   almost never the whole page, so the thing being looked up has to have
+   edges: one card is one name, and what sits inside it belongs to it. */
+section.top {
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: 14px;
+	padding: 1.6rem 1.8rem;
+	margin-bottom: 1.5rem;
+	transition: border-color .18s, box-shadow .18s;
+}
+section.top:hover { border-color: color-mix(in srgb, var(--accent) 30%, var(--line)); }
+section.top:target { border-color: var(--accent); box-shadow: 0 0 0 3px var(--wash); }
+
+.decl {
+	position: relative;
+	margin: 0 0 0.8rem;
+	font-family: var(--mono);
+	font-size: 1.12rem;
+	font-weight: 400;
+	line-height: 1.5;
+	letter-spacing: -0.02em;
+	color: var(--ink-2);
+}
+.decl .nm { color: var(--accent); font-weight: 600; }
+.decl .sig { color: var(--ink); }
+.decl .kind {
+	font-size: 0.62rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.13em;
+	color: var(--ink-3);
+	border: 1px solid var(--line);
+	border-radius: 999px;
+	padding: 0.05rem 0.42rem;
+	margin-left: 0.55rem;
+	vertical-align: 0.12em;
+}
+/* The way through to the source, quiet until the block is under the eye. */
+.decl .src {
+	font-family: var(--mono);
+	font-size: 0.62rem;
+	font-weight: 600;
+	text-transform: uppercase;
+	letter-spacing: 0.13em;
+	color: var(--ink-3);
+	margin-left: 0.7rem;
+	vertical-align: 0.14em;
+	opacity: 0;
+	transition: opacity .15s, color .15s;
+}
+section:hover > .decl > .src, section:target > .decl > .src { opacity: 1; }
+.decl .src:hover { color: var(--accent); }
+
+.mark .back { color: var(--ink-2); }
+.mark .back:hover { color: var(--accent); }
+
+.decl .anchor {
+	position: absolute;
+	left: -1.15rem;
+	color: var(--ink-3);
+	opacity: 0;
+	font-size: 0.8rem;
+	transition: opacity .15s, color .15s;
+}
+section:hover > .decl > .anchor { opacity: .5; }
+.decl .anchor:hover { opacity: 1; color: var(--accent); }
+
+section:target > .decl > .nm { text-decoration: underline; text-underline-offset: 5px; }
+
+/* A field of the object the card builds: an inset block, so that the eye can
+   count them without reading them. */
+section.sub {
+	margin: 0.85rem 0 0;
+	padding: 0.95rem 1.15rem;
+	background: var(--code);
+	border: 1px solid transparent;
+	border-left: 3px solid var(--line);
+	border-radius: 0 10px 10px 0;
+	transition: border-color .15s, background .15s;
+}
+section.sub:first-of-type { margin-top: 1.4rem; }
+section.sub:hover { border-left-color: var(--accent); }
+section.sub:target { border-left-color: var(--accent); border-color: var(--accent); border-left-width: 3px; }
+section.sub > .decl { font-size: 1.04rem; margin-bottom: 0.6rem; }
+section.sub p, section.sub pre { max-width: calc(var(--measure) - 2.3rem); }
+section.sub pre { background: var(--surface); }
+section.sub > *:last-child { margin-bottom: 0; }
+
+/* -------------------------------------------------------------- footer -- */
+
+footer {
+	position: relative;
+	z-index: 1;
+	max-width: 74rem;
+	margin: 0 auto;
+	padding: 1.6rem 2.5rem 3.5rem;
+	border-top: 1px solid var(--line);
+	font-family: var(--mono);
+	font-size: 0.75rem;
+	line-height: 2;
+	color: var(--ink-3);
+}
+footer .k { text-transform: uppercase; letter-spacing: 0.13em; }
+
+/* ------------------------------------------------------------- listing -- */
+
+.sheet.source { grid-template-columns: minmax(0, 1fr); }
+
+.listing {
+	background: var(--surface);
+	border: 1px solid var(--line);
+	border-radius: 14px;
+	padding: 1.25rem 0;
+	margin: 0;
+	max-width: none;
+	overflow-x: auto;
+	font-size: 0.88rem;
+	line-height: 1.62;
+	tab-size: 4;
+}
+/* One row is one line: the break is the block, not a newline in the markup,
+   or every line would be spaced twice. An empty line still has a height. */
+.listing .row { display: block; min-height: 1.62em; }
+.listing .ln {
+	display: inline-block;
+	width: 4.2rem;
+	padding-right: 1.2rem;
+	text-align: right;
+	color: var(--ink-3);
+	opacity: .55;
+	user-select: none;
+	-webkit-user-select: none;
+	transition: opacity .12s, color .12s;
+}
+.listing .ln:hover { opacity: 1; color: var(--accent); }
+.listing .src { white-space: pre; }
+
+/* The line that was asked for, and the ones it sits between. */
+.listing .row:target { background: var(--wash); }
+.listing .row:target .ln { opacity: 1; color: var(--accent); font-weight: 700; }
+
+#totop {
+	position: fixed;
+	right: 1.6rem;
+	bottom: 1.6rem;
+	z-index: 30;
+	width: 2.4rem;
+	height: 2.4rem;
+	border-radius: 50%;
+	border: 1px solid var(--line);
+	background: var(--surface);
+	color: var(--ink-3);
+	font-family: var(--mono);
+	cursor: pointer;
+	box-shadow: var(--shadow);
+	opacity: 0;
+	pointer-events: none;
+	transform: translateY(0.4rem);
+	transition: opacity .2s, transform .2s, color .15s, border-color .15s;
+}
+#totop.show { opacity: 1; pointer-events: auto; transform: none; }
+#totop:hover { color: var(--accent); border-color: var(--accent); }
+
+@keyframes rise {
+	from { opacity: 0; transform: translateY(0.55rem); }
+	to { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+	html { scroll-behavior: auto; }
+	*, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+@media (max-width: 940px) {
+	:root { --head: 4rem; }
+	.masthead { padding: 0 1.25rem; gap: 0.9rem; }
+	.mark .kind, .mark .slash { display: none; }
+	.import code { font-size: 0.72rem; }
+	.sheet {
+		grid-template-columns: minmax(0, 1fr);
+		gap: 2rem;
+		padding: 1.75rem 1.25rem 4rem;
+	}
+	nav { position: static; max-height: 21rem; }
+	footer { padding: 1.25rem 1.25rem 3rem; }
+}

@@ -68,6 +68,16 @@ func Get(arg string) error {
 		}
 	} else if !mod.ValidVersion(version) {
 		return fmt.Errorf("tau get: %q is not a version like v1.2.3", version)
+	} else if !mod.MatchesMajor(repo, version) {
+		// Two majors of a library are two modules, and the path is what tells
+		// them apart. Asking for v2 of a path with no suffix is asking for
+		// something that path does not name.
+		major, base := mod.PathMajor(repo)
+		if major == 0 {
+			return fmt.Errorf("tau get: %s is v0 and v1 of that module; for %s ask for %s/v%d@%s",
+				repo, version, base, mod.Major(version), version)
+		}
+		return fmt.Errorf("tau get: %s is v%d of %s, and %s is not", repo, major, base, version)
 	}
 
 	f.SetRequire(repo, version)

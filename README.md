@@ -468,6 +468,50 @@ require (
 fetches it, `tau mod tidy` makes the file say what the source actually imports.
 Versions are git tags of the form `v1.2.3`.
 
+What a module calls itself has to be what it was required as. A repository
+that moved, a fork required under the name of its origin and a v2 required
+without the suffix that makes it one would all otherwise build, and build
+something other than what was asked for.
+
+#### Two versions of the same library
+
+From v2 onwards the major version is part of the path, and the module says so
+itself:
+
+```
+module github.com/NicoNex/example/v2
+```
+
+```python
+one = import("github.com/NicoNex/example")
+two = import("github.com/NicoNex/example/v2")
+```
+
+Two majors of a library are two modules, incompatible by definition, and a
+program that reaches both through its dependencies has to be able to hold
+both. A version that is not part of the path cannot do that. Tags of the wrong
+major are invisible to a path: `v2.1.0` answers for `.../v2` and for nothing
+else, and a path with no suffix is `v0` and `v1`.
+
+#### A name that is not a forge
+
+An import path is an address, but it does not have to be the address of a
+repository. A host can answer for a name it keeps:
+
+```html
+<meta name="tau-import" content="tau.dev/text git https://github.com/x/text">
+```
+
+Served under the path itself, that redirects the name to wherever the code is
+this year. Without it a project that changes host has to change every import
+that ever mentioned it, and the name of a library ends up belonging to a forge
+rather than to whoever wrote it. A `go-import` tag is read the same way: a host
+already serving Go modules is answering the same question, and there is no
+reason to make anyone publish it twice.
+
+The forges whose paths are already their clone URLs are asked nothing, so the
+usual import costs no request at all.
+
 Where two modules ask for different versions of a third, the build takes the
 highest of what was asked, and never a version nobody asked for. That rule is
 minimum version selection, and what it buys is an answer that needs no solver

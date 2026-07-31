@@ -66,6 +66,15 @@ func Load(dir string) (*Resolver, error) {
 			}
 			return nil, err
 		}
+		// What it calls itself has to be what it was fetched as. This is what
+		// catches a repository that moved, a fork required under the name of
+		// its origin, and a v2 required without the suffix that makes it one -
+		// all of which otherwise build, and build the wrong thing.
+		if sub.Module != req.Path {
+			return nil, fmt.Errorf(
+				"%s@%s says it is %q: require it under that name, or the two names are two modules",
+				req.Path, req.Version, sub.Module)
+		}
 		queue = append(queue, sub.Require...)
 	}
 

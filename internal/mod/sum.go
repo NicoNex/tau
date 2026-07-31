@@ -117,7 +117,27 @@ func (s Sums) Write(dir string) error {
 		path, version, _ := strings.Cut(k, "@")
 		fmt.Fprintf(&b, "%s %s %s\n", path, version, s[k])
 	}
-	return os.WriteFile(filepath.Join(dir, SumName), []byte(b.String()), 0644)
+	// Written beside itself and renamed over: two builds running at once
+	// otherwise leave a file that is half of each, and a sum file that cannot
+	// be read stops every build after them.
+	final := filepath.Join(dir, SumName)
+	tmp, err := os.CreateTemp(dir, "."+SumName+".*")
+	if err != nil {
+		return err
+	}
+	defer os.Remove(tmp.Name())
+
+	if _, err := tmp.WriteString(b.String()); err != nil {
+		tmp.Close()
+		return err
+	}
+	if err := tmp.Close(); err != nil {
+		return err
+	}
+	if err := os.Chmod(tmp.Name(), 0644); err != nil {
+		return err
+	}
+	return os.Rename(tmp.Name(), final)
 }
 
 // Verify checks a fetched tree against what is written down, and writes it

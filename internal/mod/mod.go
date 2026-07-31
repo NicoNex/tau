@@ -27,6 +27,49 @@ func IsRemote(path string) bool {
 	return strings.Contains(first, ".")
 }
 
+// PathMajor takes the major version a path declares off the end of it.
+// "github.com/x/y/v2" is major 2 of the module whose repository is
+// github.com/x/y, and a path with no suffix is major 0 or 1.
+//
+// It is the rule Go arrived at, and it is not decoration: two majors of one
+// library are two different modules, incompatible by definition, and a program
+// that reaches both through its dependencies has to be able to hold both. A
+// version number that is not part of the path cannot do that.
+func PathMajor(path string) (major int, base string) {
+	i := strings.LastIndex(path, "/v")
+	if i < 0 {
+		return 0, path
+	}
+	suffix := path[i+2:]
+	if suffix == "" || suffix == "0" || suffix == "1" || strings.HasPrefix(suffix, "0") {
+		return 0, path
+	}
+	for _, r := range suffix {
+		if r < '0' || r > '9' {
+			return 0, path
+		}
+	}
+
+	n := 0
+	for _, r := range suffix {
+		n = n*10 + int(r-'0')
+	}
+	return n, path[:i]
+}
+
+// MatchesMajor reports whether a version belongs to the module at this path:
+// v2.x.y under a path ending in /v2, and v0.x.y or v1.x.y under one with no
+// suffix at all.
+func MatchesMajor(path, version string) bool {
+	want, _ := PathMajor(path)
+	got := Major(version)
+
+	if want == 0 {
+		return got <= 1
+	}
+	return got == want
+}
+
 // Home is where fetched modules live: ~/.tau, or TAUHOME when it is set.
 //
 // It holds pkg/, one directory per module and version, and dl/, the raw

@@ -214,6 +214,15 @@ func parseVersion(v string) ([3]int, bool) {
 	return out, true
 }
 
+// Major is the first number of a version, -1 when it is not one.
+func Major(v string) int {
+	parsed, ok := parseVersion(v)
+	if !ok {
+		return -1
+	}
+	return parsed[0]
+}
+
 // CompareVersions orders two versions, -1, 0 or 1. Anything unparseable sorts
 // below everything, so a bad version can never win a selection.
 func CompareVersions(a, b string) int {

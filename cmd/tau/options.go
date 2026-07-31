@@ -233,6 +233,9 @@ func usageGet() {
 Fetch a module, add it to tau.mod and write its hash into tau.sum. Without a
 version the highest one tagged vX.Y.Z is taken.
 
+From v2 onwards the major is part of the path, so github.com/you/thing/v2 and
+github.com/you/thing are two modules and a program may hold both.
+
 Modules land in $TAUHOME, or ~/.tau when that is unset, under pkg/ and one
 directory per version. Nothing is ever fetched while a program runs.
 
@@ -242,7 +245,8 @@ already there does not need it.
 Examples:
   %s get github.com/NicoNex/example
   %s get github.com/NicoNex/example@v1.2.0
-`, os.Args[0], os.Args[0], os.Args[0])
+  %s get github.com/NicoNex/example/v2
+`, os.Args[0], os.Args[0], os.Args[0], os.Args[0])
 }
 
 func usageMod() {

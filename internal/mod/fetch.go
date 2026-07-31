@@ -44,8 +44,17 @@ func HaveGit() bool {
 }
 
 // Versions lists the released versions of a module, newest last.
+//
+// Only the ones whose major the path claims: v2.x.y answers for a path ending
+// in /v2 and for nothing else, and a path with no suffix is v0 and v1. A tag
+// of the wrong major is another module that happens to live in the same
+// repository.
 func Versions(path string) ([]string, error) {
-	out, err := git("", "ls-remote", "--tags", "--refs", "https://"+path)
+	url, err := RepoURL(path)
+	if err != nil {
+		return nil, err
+	}
+	out, err := git("", "ls-remote", "--tags", "--refs", url)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +65,7 @@ func Versions(path string) ([]string, error) {
 		if !ok {
 			continue
 		}
-		if v := strings.TrimSpace(ref); ValidVersion(v) {
+		if v := strings.TrimSpace(ref); ValidVersion(v) && MatchesMajor(path, v) {
 			vs = append(vs, v)
 		}
 	}
@@ -71,7 +80,10 @@ func Latest(path string) (string, error) {
 		return "", err
 	}
 	if len(vs) == 0 {
-		return "", fmt.Errorf("%s has no version tagged vX.Y.Z", path)
+		if major, base := PathMajor(path); major > 0 {
+			return "", fmt.Errorf("%s has no version tagged v%d.Y.Z (v%d of %s)", path, major, major, base)
+		}
+		return "", fmt.Errorf("%s has no version tagged v0.Y.Z or v1.Y.Z", path)
 	}
 	return vs[len(vs)-1], nil
 }
@@ -84,7 +96,15 @@ func Latest(path string) (string, error) {
 // or four elements long, and this runs in `tau get` and `tau mod tidy`, never
 // in a build.
 func RepoRoot(path string) (string, error) {
-	parts := strings.Split(path, "/")
+	major, base := PathMajor(path)
+
+	// A host that redirects says which prefix it answers for, and that is the
+	// module: there is nothing left to guess.
+	if prefix, _, err := lookupRepo(path); err == nil && prefix != base {
+		return withMajor(prefix, major), nil
+	}
+
+	parts := strings.Split(base, "/")
 	if len(parts) < 2 {
 		return "", fmt.Errorf("%q is not an import path a host can answer", path)
 	}
@@ -92,10 +112,19 @@ func RepoRoot(path string) (string, error) {
 	for n := len(parts); n >= 2; n-- {
 		candidate := strings.Join(parts[:n], "/")
 		if _, err := git("", "ls-remote", "--quiet", "--exit-code", "https://"+candidate, "HEAD"); err == nil {
-			return candidate, nil
+			return withMajor(candidate, major), nil
 		}
 	}
 	return "", fmt.Errorf("no repository found for %q", path)
+}
+
+// withMajor puts back the suffix PathMajor took off, so that what comes out of
+// a lookup is a module path and not a repository address.
+func withMajor(base string, major int) string {
+	if major == 0 {
+		return base
+	}
+	return fmt.Sprintf("%s/v%d", base, major)
 }
 
 // Fetch puts a module version in the cache and returns where it landed. A
@@ -112,6 +141,19 @@ func Fetch(path, version string) (string, error) {
 	if !HaveGit() {
 		return "", fmt.Errorf("%s@%s is not in the cache and git is not installed to fetch it", path, version)
 	}
+	if !MatchesMajor(path, version) {
+		major, base := PathMajor(path)
+		if major == 0 {
+			return "", fmt.Errorf("%s is v0 and v1 of %s: %s belongs to %s/v%d",
+				path, path, version, path, Major(version))
+		}
+		return "", fmt.Errorf("%s is v%d of %s, and %s is not", path, major, base, version)
+	}
+
+	url, err := RepoURL(path)
+	if err != nil {
+		return "", err
+	}
 
 	// Next to the destination and not in /tmp: a rename across filesystems is
 	// a copy that can half happen, and a half module in the cache is a module
@@ -126,7 +168,7 @@ func Fetch(path, version string) (string, error) {
 	defer os.RemoveAll(tmp)
 
 	if _, err := git("", "clone", "--quiet", "--depth", "1", "--branch", version,
-		"https://"+path, tmp); err != nil {
+		url, tmp); err != nil {
 		return "", fmt.Errorf("fetching %s@%s: %w", path, version, err)
 	}
 	// The history is of no use to a build and is most of the bytes.

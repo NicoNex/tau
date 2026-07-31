@@ -218,3 +218,92 @@ func TestFiles(t *testing.T) {
 		t.Error("a file is a directory module")
 	}
 }
+
+func TestPathMajor(t *testing.T) {
+	cases := []struct {
+		path  string
+		major int
+		base  string
+	}{
+		{"github.com/x/y", 0, "github.com/x/y"},
+		{"github.com/x/y/v2", 2, "github.com/x/y"},
+		{"github.com/x/y/v10", 10, "github.com/x/y"},
+		// v0 and v1 are the path with no suffix, so those are directories.
+		{"github.com/x/y/v1", 0, "github.com/x/y/v1"},
+		{"github.com/x/y/v0", 0, "github.com/x/y/v0"},
+		{"github.com/x/y/v02", 0, "github.com/x/y/v02"},
+		{"github.com/x/y/view", 0, "github.com/x/y/view"},
+	}
+	for _, c := range cases {
+		major, base := PathMajor(c.path)
+		if major != c.major || base != c.base {
+			t.Errorf("PathMajor(%q) = %d, %q; want %d, %q", c.path, major, base, c.major, c.base)
+		}
+	}
+
+	// A tag belongs to the path that names its major, and to no other.
+	yes := [][2]string{
+		{"github.com/x/y", "v0.3.0"},
+		{"github.com/x/y", "v1.0.0"},
+		{"github.com/x/y/v2", "v2.1.0"},
+	}
+	no := [][2]string{
+		{"github.com/x/y", "v2.0.0"},
+		{"github.com/x/y/v2", "v1.9.0"},
+		{"github.com/x/y/v2", "v3.0.0"},
+	}
+	for _, c := range yes {
+		if !MatchesMajor(c[0], c[1]) {
+			t.Errorf("MatchesMajor(%q, %q) = false, want true", c[0], c[1])
+		}
+	}
+	for _, c := range no {
+		if MatchesMajor(c[0], c[1]) {
+			t.Errorf("MatchesMajor(%q, %q) = true, want false", c[0], c[1])
+		}
+	}
+}
+
+func TestParseMeta(t *testing.T) {
+	page := `<html><head>
+		<meta name="go-import" content="tau.dev/text git https://github.com/other/text">
+		<meta name="tau-import" content="tau.dev/text git https://github.com/x/text">
+	</head></html>`
+
+	// Both tags answer, and the tau one is the one that means this language.
+	prefix, url, err := parseMeta(page, "tau.dev/text")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prefix != "tau.dev/text" || url != "https://github.com/x/text" {
+		t.Errorf("parseMeta = %q, %q", prefix, url)
+	}
+
+	// A host serving only Go modules answers the same question.
+	prefix, url, err = parseMeta(
+		`<meta name="go-import" content="tau.dev/text git https://github.com/other/text">`,
+		"tau.dev/text")
+	if err != nil || url != "https://github.com/other/text" {
+		t.Errorf("parseMeta go-import = %q, %q, %v", prefix, url, err)
+	}
+
+	// The attributes the other way round are as valid, and as common.
+	_, url, err = parseMeta(
+		`<meta content="tau.dev/text git https://example.org/t.git" name="tau-import"/>`,
+		"tau.dev/text")
+	if err != nil || url != "https://example.org/t.git" {
+		t.Errorf("parseMeta reversed = %q, %v", url, err)
+	}
+
+	// A tag about some other module is not an answer.
+	if _, _, err := parseMeta(
+		`<meta name="tau-import" content="other.dev/thing git https://x/y">`,
+		"tau.dev/text"); err == nil {
+		t.Error("a tag for another prefix was accepted")
+	}
+
+	// Neither is a page with no tag at all.
+	if _, _, err := parseMeta("<html><body>hi</body></html>", "tau.dev/text"); err == nil {
+		t.Error("a page with no tag was accepted")
+	}
+}

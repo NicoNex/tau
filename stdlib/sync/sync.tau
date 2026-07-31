@@ -10,6 +10,13 @@
 # is a reference. And as in Go, the first rule is that a pipe is usually the
 # better answer. Reach for a lock only when the thing being shared is state
 # rather than a message.
+#
+# Every field these objects use is given a value where the object is built,
+# before any other routine can reach it. That is not tidiness: giving a field
+# it never had grows the object, while assigning to one it already has only
+# writes over it. Two routines growing the same object at once is a race no
+# lock here would cover, since it is the lock itself being built. Anything
+# added to this file has to keep that rule.
 
 # Mutex is a lock held by one routine at a time.
 #

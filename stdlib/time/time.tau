@@ -12,14 +12,14 @@ Minute = 60000
 Hour = 3600000
 
 # Now returns the wall clock time in milliseconds since the Unix epoch.
-Now = fn() { int(syscall.TimeMillis()) }
+Now = fn() { syscall.TimeMillis() }
 
 # Unix returns the wall clock time in whole seconds since the Unix epoch.
-Unix = fn() { int(syscall.TimeUnix()) }
+Unix = fn() { syscall.TimeUnix() }
 
 # Mono returns a monotonic timestamp in milliseconds. Only differences
 # between two of these have a meaning.
-Mono = fn() { int(syscall.TimeMono()) }
+Mono = fn() { syscall.TimeMono() }
 
 # Since returns the milliseconds elapsed since the monotonic timestamp t.
 Since = fn(t) { Mono() - t }

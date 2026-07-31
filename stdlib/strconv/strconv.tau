@@ -20,7 +20,7 @@ lower = fn(s) {
 	for i = 0; i < len(s); ++i {
 		c = s[i]
 		if c >= "A" && c <= "Z" {
-			out = out + digits[10 + (int(bytes(c)[0]) - 65)]
+			out = out + digits[10 + (bytes(c)[0] - 65)]
 		} else {
 			out = out + c
 		}

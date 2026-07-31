@@ -79,15 +79,18 @@ jobs:
           make VERSION=${{ steps.v.outputs.tag }}
           make install PREFIX=/usr DESTDIR="$PWD/dist/root" VERSION=${{ steps.v.outputs.tag }}
 
-      # The tarball is the same tree, rooted at tau/, for anyone whose package
-      # manager is none of the three below. It works unpacked anywhere: the
-      # interpreter finds its library beside itself.
-      - name: Tarball
+      # The archive is the same tree, rooted at tau/, for anyone whose package
+      # manager is none of the three below. It carries the script that puts it
+      # somewhere, and works unpacked anywhere in any case: the interpreter
+      # finds its library beside itself.
+      - name: Archive
         run: |
           mkdir -p dist/tar/tau
           cp -r dist/root/usr/bin dist/root/usr/lib dist/tar/tau/
-          cp LICENSE README.md dist/tar/tau/
-          tar -C dist/tar -czf "dist/tau-${{ steps.v.outputs.tag }}-linux-${{ matrix.arch }}.tar.gz" tau
+          cp LICENSE README.md packaging/install.sh dist/tar/tau/
+          chmod +x dist/tar/tau/install.sh
+          uname -m > dist/tar/tau/lib/tau/ARCH
+          tar -C dist/tar --zstd -cf "dist/tau-${{ steps.v.outputs.tag }}-linux-$(uname -m).tar.zst" tau
 
       - name: Packages
         env:
@@ -100,20 +103,32 @@ jobs:
           done
 
       # A package that installs and then cannot import is the failure this
-      # whole file exists to avoid, so it is installed and used here.
+      # whole file exists to avoid, so both ways in are used here before
+      # anything is released.
       - name: Install the package and use it
         run: |
+          printf 'os = import("os")\natomic = import("sync/atomic")\nprintln("ok", atomic.Int(41).Add(1))\n' > /tmp/check.tau
+
           sudo dpkg -i dist/tau_*_${{ matrix.arch }}.deb
           cd /tmp
-          printf 'os = import("os")\natomic = import("sync/atomic")\nprintln("ok", atomic.Int(41).Add(1))\n' > check.tau
           env -u TAUPATH tau check.tau | grep -q 'ok 42'
           env -u TAUPATH tau version
+          sudo dpkg -r tau
+
+      - name: Install from the archive and use it
+        run: |
+          mkdir -p /tmp/unpack
+          tar -C /tmp/unpack --zstd -xf dist/*.tar.zst
+          /tmp/unpack/tau/install.sh --prefix=/tmp/pfx
+          cd /tmp
+          env -u TAUPATH /tmp/pfx/bin/tau check.tau | grep -q 'ok 42'
+          /tmp/unpack/tau/install.sh --prefix=/tmp/pfx --uninstall
 
       - uses: actions/upload-artifact@v4
         with:
           name: linux-${{ matrix.arch }}
           path: |
-            dist/*.tar.gz
+            dist/*.tar.zst
             dist/*.deb
             dist/*.rpm
             dist/*.pkg.tar.zst

@@ -44,6 +44,23 @@ sudo make install PREFIX=/usr/local
 ones. `make fmt` formats the tau sources in the tree. `make tau-lsp` builds the
 language server, which speaks LSP over stdin and stdout.
 
+Building it is one way in. Every release also carries packages, which need no
+compiler: a `.deb`, an `.rpm` and an Arch package for x86_64 and aarch64, an
+installer for Windows, and an archive for everything else.
+
+```bash
+tar --zstd -xf tau-v2.1.0-linux-x86_64.tar.zst
+./tau/install.sh                    # /usr/local as root, ~/.local otherwise
+./tau/install.sh --prefix=/opt/tau  # or wherever
+./tau/install.sh --uninstall
+```
+
+Any prefix works and none of them needs a variable set afterwards: the
+interpreter looks for its standard library next to itself before it looks
+anywhere else, so a tree moved somewhere new keeps working. Unpacking the
+archive and running `tau/bin/tau` without installing anything works for the
+same reason.
+
 A module is looked up, in order, in the directories of `TAUPATH` (separated
 like `PATH`), next to the file that imports it, then in `~/.local/lib/tau`,
 `/usr/local/lib/tau` and `/lib/tau`. That is how a checkout runs against its

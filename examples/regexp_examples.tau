@@ -1,6 +1,6 @@
 # regexp_examples.tau - Examples using the regexp.tau library
 
-regexp = import("stdlib/regexp.tau")
+regexp = import("regexp")
 
 # Example 1: Simple pattern matching
 simpleMatch = fn() {

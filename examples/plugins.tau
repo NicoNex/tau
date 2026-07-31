@@ -1,4 +1,0 @@
-p = dlopen("plugin/plugin.so")
-p.Hello()
-
-p.Sum(3, 4)

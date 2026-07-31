@@ -14,7 +14,7 @@ NewStream = fn() {
 		apply(fn(item) { filterFn(item) })
 	}
 	stream.ForEach = fn(eachFn) {
-		apply(fn (item) { eachFn(item); true })
+		apply(fn(item) { eachFn(item); true })
 	}
 
 	stream.Start = fn(items) {
@@ -40,9 +40,9 @@ main = fn() {
 	array = [1, 2, 3, 4]
 
 	stream = NewStream().
-		Filter(fn(item) { item%2 == 0}).
-		ForEach(println).
-		Map(fn(item) { item * 3})
+	Filter(fn(item) { item % 2 == 0 }).
+	ForEach(println).
+	Map(fn(item) { item * 3 })
 
 	println("START:", array)
 	println("STREAM:", stream.Start(array))

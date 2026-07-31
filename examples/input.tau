@@ -1,2 +1,4 @@
+#!/usr/bin/env tau
+
 name = input("What is your name? ")
-printf("Hello %s\n", name)
+println("Hello {name}")

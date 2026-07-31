@@ -1,9 +1,9 @@
 #!/usr/bin/env tau
 
-it = import("import_test")
+greeting = import("greeting")
 
-it.TestPrint()
+greeting.TestPrint()
 
-println(it.Snuffles.Name)
-println(it.Snuffles.Age)
-println(it.Snuffles.ID())
+println(greeting.Snuffles.Name)
+println(greeting.Snuffles.Age)
+println(greeting.Snuffles.ID())

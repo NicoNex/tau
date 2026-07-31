@@ -11,7 +11,7 @@ message = fn(id, data) {
 }
 
 # plumber listens from the data pipe (dataPipe) and sends the received data object
-# to the message pipe (msgPipe) including the provided ID.
+# to the message pipe (messages) including the provided ID.
 plumber = fn(id, dataPipe, msgPipe) {
 	for d = recv(dataPipe) {
 		send(msgPipe, message(id, d))
@@ -37,9 +37,9 @@ main = fn() {
 	tau someFunction(p)
 	tau someOtherFunction(stop)
 
-	# listen for messages in the message pipe (msgPipe) and runs
+	# listen for messages in the message pipe (messages) and runs
 	# a different operation for each received ID.
-	for msg = recv(msgPipe) {
+	for msg = recv(messages) {
 		if msg.ID == 0 {
 			close(p)
 			close(stop)

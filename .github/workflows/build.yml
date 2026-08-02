@@ -118,7 +118,9 @@ jobs:
       - name: Install from the archive and use it
         run: |
           mkdir -p /tmp/unpack
-          tar -C /tmp/unpack --zstd -xf dist/*.tar.zst
+          # The exact archive, not dist/*.tar.zst: the archlinux package is a
+          # .pkg.tar.zst too, and the glob would hand tar two files.
+          tar -C /tmp/unpack --zstd -xf "dist/tau-${{ steps.v.outputs.tag }}-linux-$(uname -m).tar.zst"
           /tmp/unpack/tau/install.sh --prefix=/tmp/pfx
           cd /tmp
           env -u TAUPATH /tmp/pfx/bin/tau check.tau | grep -q 'ok 42'

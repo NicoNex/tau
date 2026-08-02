@@ -13,6 +13,10 @@ DEFAULT_CC = $(CC)
 CFLAGS = -g -Ofast -I$(DIR)/internal/obj/libffi/include
 LDFLAGS = -L$(DIR)/internal/obj/libffi/lib $(DIR)/internal/obj/libffi/lib/libffi.a -lm
 
+# GNU libtool's bootstrapper. Everywhere it is `libtoolize`; on macOS Homebrew
+# ships it as `glibtoolize` so it does not clash with Apple's own libtool.
+LIBTOOLIZE := libtoolize
+
 UNAME_S := $(shell uname -s)
 ifeq ($(UNAME_S),Linux)
     ACLOCAL_PATH := /usr/share/aclocal
@@ -21,6 +25,7 @@ endif
 ifeq ($(UNAME_S),Darwin)
     ACLOCAL_PATH := /usr/local/share/aclocal
     INSTALL_PATH := /usr/local/bin
+    LIBTOOLIZE := glibtoolize
     # The default `gcc` on macOS is clang, whose integrated assembler rejects
     # libffi's aarch64 .S (invalid CFI advance_loc). A real GNU gcc is needed,
     # and Homebrew installs it version-suffixed (gcc-16). Pick the newest one
@@ -64,6 +69,7 @@ $(LIBFFI_A):
 	fi
 
 	cd libffi && \
+	ACLOCAL_PATH=$(ACLOCAL_PATH) $(LIBTOOLIZE) --copy --force && \
 	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
 	CC=$(CC) ./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
 	make install CC=$(CC)
@@ -74,9 +80,10 @@ libffi-windows:
 	    git submodule update --recursive; \
 	fi
 
-	CC=$(CC) cd libffi && \
+	cd libffi && \
+	ACLOCAL_PATH=$(ACLOCAL_PATH) $(LIBTOOLIZE) --copy --force && \
 	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
-	./configure --host=x86_64-w64-mingw32 --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
+	CC=$(CC) ./configure --host=x86_64-w64-mingw32 --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
 	make install CC=x86_64-w64-mingw32-gcc AR=x86_64-w64-mingw32-ar RANLIB=x86_64-w64-mingw32-ranlib
 
 tau: $(LIBFFI_A)

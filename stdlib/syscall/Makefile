@@ -10,13 +10,16 @@ ifeq ($(UNAME_S),Darwin)
 endif
 ifeq ($(OS),Windows_NT)
     TARGET = libsyscall.dll
-    CFLAGS = -shared -O2 -lws2_32
+    CFLAGS = -shared -O2
+    # After the source, not in CFLAGS: ld resolves left to right, so the
+    # winsock import library has to follow the object that calls into it.
+    LIBS = -lws2_32
 endif
 
 all: $(TARGET)
 
 $(TARGET): syscall.c
-	$(CC) $(CFLAGS) -o $(TARGET) syscall.c
+	$(CC) $(CFLAGS) -o $(TARGET) syscall.c $(LIBS)
 
 clean:
 	rm -f $(TARGET) *.o

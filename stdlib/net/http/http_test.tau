@@ -2,9 +2,6 @@ testing = import("testing")
 http = import("net/http")
 time = import("time")
 
-addr = "127.0.0.1:45181"
-base = "http://" + addr
-
 # The server runs for the whole file: one routine, started once, serving
 # whatever the tests ask of it.
 mux = http.NewServeMux()
@@ -31,9 +28,16 @@ mux.HandleFunc("/static/", fn(w, r) {
 	w.Write("under {r.Path}")
 })
 
-srv = http.NewServer(addr, mux)
+# Port 0 lets the kernel hand out a free port, so runs back to back never
+# collide on a fixed one whose earlier connections are still in TIME_WAIT.
+srv = http.NewServer("127.0.0.1:0", mux)
 tau srv.ListenAndServe()
-time.Sleep(200)
+
+# Wait for the listener to be up rather than guessing at a fixed delay: the
+# routine sets srv.ln the moment it is bound, so poll that and stop as soon
+# as it is there. Then read the address it actually got.
+for i = 0; i < 400 && srv.ln == null; ++i { time.Sleep(5) }
+base = "http://" + srv.ln.Addr
 
 testing.Main([
 	["ParseURL takes a URL apart", fn(t) {

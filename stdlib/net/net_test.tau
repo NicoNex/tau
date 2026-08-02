@@ -1,10 +1,6 @@
 testing = import("testing")
 net = import("net")
 
-# addr is a port high enough to be free and fixed enough to be dialled: the
-# listener has no way to report the port the kernel picked.
-addr = "127.0.0.1:45123"
-
 testing.Main([
 	["JoinHostPort and SplitHostPort", fn(t) {
 		t.AssertEq(net.JoinHostPort("127.0.0.1", 80), "127.0.0.1:80")
@@ -32,10 +28,13 @@ testing.Main([
 		t.AssertError(net.LookupPort("tcp", "nope"))
 	}],
 	["a listener and a connection talk to each other", fn(t) {
-		if failed(ln = net.Listen("tcp", addr)) {
-			t.Skip("cannot listen on {addr}: {ln}")
+		# Port 0 so back-to-back runs never collide on a fixed port still held
+		# in TIME_WAIT; ln.Addr reports the one the kernel actually picked.
+		if failed(ln = net.Listen("tcp", "127.0.0.1:0")) {
+			t.Skip("cannot listen: {ln}")
 			return null
 		}
+		addr = ln.Addr
 
 		# The server echoes one message back, uppercased by nobody: what
 		# matters is that the bytes make the round trip.

@@ -110,8 +110,14 @@ testing.Main([
 		here = os.Getwd()
 
 		o = exec.Options()
-		o.Dir = "/tmp"
-		t.AssertEq(strings.TrimSpace(exec.RunWith(["/bin/sh", "-c", "pwd"], o).Stdout), "/tmp")
+		o.Dir = os.TempDir()
+		# The child prints the canonical directory, symlinks resolved: on macOS
+		# the temp dir lives under /private. Compare against the resolution the
+		# parent gets by standing in the same place, not the literal name.
+		os.Chdir(o.Dir)
+		want = os.Getwd()
+		os.Chdir(here)
+		t.AssertEq(strings.TrimSpace(exec.RunWith(["/bin/sh", "-c", "pwd"], o).Stdout), want)
 		t.AssertEq(os.Getwd(), here)
 
 		t.AssertError(exec.RunWith(["/bin/sh", "-c", "pwd"], (fn() {

@@ -130,7 +130,17 @@ Listen = fn(network, address) {
 
 	ln = new()
 	ln.fd = fd
-	ln.Addr = address
+
+	# The address the kernel actually bound: with a port of 0 it picks a free
+	# one, and the caller learns which through ln.Addr. Falls back to what was
+	# asked for if the lookup fails.
+	name = bytes(syscall.SockaddrInSize())
+	namelen = syscall.Int32(syscall.SockaddrInSize())
+	if failed(syscall.Getsockname(fd, name, namelen)) {
+		ln.Addr = address
+	} else {
+		ln.Addr = JoinHostPort(syscall.SockaddrIP(name), syscall.SockaddrPort(name))
+	}
 
 	# Accept waits for the next connection.
 	ln.Accept = fn() {

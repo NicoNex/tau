@@ -189,6 +189,11 @@ TempDir = fn() {
 	if d == null {
 		return "/tmp"
 	}
+	# macOS sets TMPDIR with a trailing slash; drop it so joining a name does
+	# not leave a doubled separator, the way Go's os.TempDir does.
+	for len(d) > 1 && d[len(d)-1] == "/" {
+		d = slice(d, 0, len(d)-1)
+	}
 	return d
 }
 
@@ -280,7 +285,11 @@ MkdirAll = fn(path, perm) {
 	cur = ""
 	for i = 0; i < len(parts); ++i {
 		if parts[i] == "" {
-			cur = "/"
+			# A leading empty part is the root and rebuilds the slash; an
+			# interior one is a doubled separator and means nothing.
+			if i == 0 {
+				cur = "/"
+			}
 			continue
 		}
 

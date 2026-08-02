@@ -79,14 +79,20 @@ testing.Main([
 
 	["WaitGroup waits for what Add counted", fn(t) {
 		wg = sync.WaitGroup()
+		mu = sync.Mutex()
 		c = new()
 		c.n = 0
 
+		# c.n++ is a read-modify-write, so the routines that share it need the
+		# lock or an increment is lost. What is under test is that Wait holds
+		# until every Done, not that ++ is atomic.
 		wg.Add(3)
 		for i = 0; i < 3; i++ {
 			tau fn() {
 				time.Sleep(30)
+				mu.Lock()
 				c.n++
+				mu.Unlock()
 				wg.Done()
 			}()
 		}
@@ -96,7 +102,7 @@ testing.Main([
 		# Waiting on a group that owes nothing returns at once, and the group
 		# is good for another round.
 		wg.Wait()
-		wg.Tau(fn() { c.n++ })
+		wg.Tau(fn() { mu.Lock(); c.n++; mu.Unlock() })
 		wg.Wait()
 		t.AssertEq(c.n, 4)
 	}],

@@ -159,6 +159,14 @@ int64_t sys_accept(int64_t sockfd, void *addr, void *addrlen) {
 #endif
 }
 
+int64_t sys_getsockname(int64_t sockfd, void *addr, void *addrlen) {
+#if !defined(_WIN32) && !defined(WIN32)
+    return getsockname((int)sockfd, (struct sockaddr *)addr, (socklen_t *)addrlen);
+#else
+    return getsockname((SOCKET)sockfd, (struct sockaddr *)addr, (int *)addrlen);
+#endif
+}
+
 int64_t sys_connect(int64_t sockfd, const void *addr, int64_t addrlen) {
 #if !defined(_WIN32) && !defined(WIN32)
     return connect((int)sockfd, (const struct sockaddr *)addr, (socklen_t)addrlen);

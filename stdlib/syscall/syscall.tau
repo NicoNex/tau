@@ -28,6 +28,7 @@ sys = ffi.Bind(lib, [
 	"int64_t sys_listen(int64_t sockfd, int64_t backlog)",
 	"int64_t sys_accept(int64_t sockfd, void *addr, void *addrlen)",
 	"int64_t sys_connect(int64_t sockfd, const void *addr, int64_t addrlen)",
+	"int64_t sys_getsockname(int64_t sockfd, void *addr, void *addrlen)",
 	"int64_t sys_send(int64_t sockfd, const void *buf, int64_t len, int64_t flags)",
 	"int64_t sys_recv(int64_t sockfd, void *buf, int64_t len, int64_t flags)",
 	"int64_t sys_sendto(int64_t sockfd, const void *buf, int64_t len, int64_t flags, const void *dest_addr, int64_t addrlen)",
@@ -288,6 +289,13 @@ Accept = fn(sockfd, addr, addrlen) {
 		return error("accept failed: errno {Errno()}")
 	}
 	return result
+}
+
+Getsockname = fn(sockfd, addr, addrlen) {
+	if sys.sys_getsockname(sockfd, addr, addrlen) < 0 {
+		return error("getsockname failed: errno {Errno()}")
+	}
+	return null
 }
 
 Connect = fn(sockfd, addr, addrlen) {

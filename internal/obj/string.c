@@ -2,15 +2,9 @@
 #include <string.h>
 #include "object.h"
 
-#if defined(_WIN32) || defined(WIN32)
-	char *strndup(char * restrict s, size_t len) {
-		char *dup = malloc(sizeof(char) * len + 1);
-		dup[len] = '\0';
-		memcpy(dup, s, sizeof(char) * len);
-
-		return dup;
-	}
-#endif
+// strndup was once missing on mingw and polyfilled here; mingw-w64 now declares
+// and provides it (POSIX-2008), and the old polyfill's non-const parameter
+// clashed with that declaration. Rely on the system's strndup everywhere.
 
 void dispose_string_obj(struct object o) {
 	// A slice doesn't own the buffer, its owner frees it.

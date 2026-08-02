@@ -17,6 +17,7 @@
 #else
     #include <winsock2.h>
     #include <ws2tcpip.h>
+    #include <direct.h>  // _mkdir, _rmdir, _chdir
     #pragma comment(lib, "ws2_32.lib")
     #define SHUT_RD SD_RECEIVE
     #define SHUT_WR SD_SEND

@@ -16,7 +16,7 @@ func redirectStdout(w io.Writer) {
 		return
 	}
 	// Set the pipe writer as the stdout
-	syscall.Dup2(int(pw.Fd()), syscall.Stdout)
+	dupTo(int(pw.Fd()), syscall.Stdout)
 
 	go func() {
 		var buf = make([]byte, 4096)

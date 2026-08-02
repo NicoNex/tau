@@ -8,6 +8,12 @@
 // nftw, for the walk that removes the unpacked plugins on the way out.
 #define _XOPEN_SOURCE 700
 
+// mkdtemp is a BSD extension: on macOS defining _XOPEN_SOURCE hides it unless
+// _DARWIN_C_SOURCE is on too. A no-op elsewhere.
+#ifdef __APPLE__
+#define _DARWIN_C_SOURCE
+#endif
+
 #include <stdarg.h>
 #include <stdint.h>
 #include <stdio.h>

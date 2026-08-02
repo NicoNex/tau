@@ -21,7 +21,11 @@ endif
 ifeq ($(UNAME_S),Darwin)
     ACLOCAL_PATH := /usr/local/share/aclocal
     INSTALL_PATH := /usr/local/bin
-    GCC := $(shell which gcc-14)
+    # The default `gcc` on macOS is clang, whose integrated assembler rejects
+    # libffi's aarch64 .S (invalid CFI advance_loc). A real GNU gcc is needed,
+    # and Homebrew installs it version-suffixed (gcc-16). Pick the newest one
+    # on PATH rather than pinning a version that ages out of the formula.
+    GCC := $(shell for d in $$(echo $$PATH | tr ':' ' '); do for f in "$$d"/gcc-[0-9]*; do [ -x "$$f" ] && echo "$$f"; done; done 2>/dev/null | grep -E '/gcc-[0-9]+$$' | awk -F- '{print $$NF, $$0}' | sort -n | tail -1 | cut -d' ' -f2-)
 endif
 
 # Check if CC is defined
@@ -59,9 +63,9 @@ $(LIBFFI_A):
 	    git submodule update --recursive; \
 	fi
 
-	CC=$(CC) cd libffi && \
+	cd libffi && \
 	ACLOCAL_PATH=$(ACLOCAL_PATH) autoreconf -i && \
-	./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
+	CC=$(CC) ./configure --prefix=$(DIR)/internal/obj/libffi --disable-shared --enable-static --disable-multi-os-directory && \
 	make install CC=$(CC)
 
 libffi-windows:

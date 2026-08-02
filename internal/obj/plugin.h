@@ -46,7 +46,7 @@ extern char *tau_module_dir;
 // since none of the directories at the bottom of this function are there.
 extern char *tau_exec_dir;
 
-static inline void *plugin_open(const char *path) {
+static inline void *plugin_search(const char *path) {
 	void *handle = dlopen(path, RTLD_LAZY);
 	if (handle != NULL) return handle;
 
@@ -91,4 +91,30 @@ static inline void *plugin_open(const char *path) {
 
 	snprintf(buf, sizeof(buf), "/lib/tau/%s", path);
 	return dlopen(buf, RTLD_LAZY);
+}
+
+// The stdlib names its plugins with a ".so" suffix, the extension the loader
+// ships on Linux. macOS builds them ".dylib" and Windows ".dll", so when the
+// literal name is not found, retry the whole search with the native suffix.
+// On Linux ".so" is already native, so this is a no-op and the first search
+// is the only one that runs.
+static inline void *plugin_open(const char *path) {
+	void *handle = plugin_search(path);
+	if (handle != NULL) return handle;
+
+#if defined(_WIN32) || defined(WIN32)
+	const char *ext = ".dll";
+#elif defined(__APPLE__)
+	const char *ext = ".dylib";
+#else
+	const char *ext = NULL;
+#endif
+
+	size_t n = strlen(path);
+	if (ext != NULL && n > 3 && strcmp(path + n - 3, ".so") == 0) {
+		char alt[4096];
+		snprintf(alt, sizeof(alt), "%.*s%s", (int)(n - 3), path, ext);
+		return plugin_search(alt);
+	}
+	return handle;
 }

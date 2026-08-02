@@ -5,6 +5,9 @@
 *.prof
 *.py
 *.so
+*.dylib
+*.dll
+*.dSYM/
 
 # Scratch scripts at the repo root. Everything under tests/, stdlib/ and
 # examples/ is part of the repo.

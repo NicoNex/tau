@@ -1,4 +1,12 @@
-DIR := $(shell pwd)
+# The tree's own directory, absolute. On Windows the compiler and linker cgo
+# drives are native, not the MSYS ones, and read an MSYS path like /d/a/tau as
+# the D: drive's \d\a\tau; cygpath -m gives the mixed form D:/a/tau that both
+# the native tools and the MSYS shell understand.
+ifeq ($(OS),Windows_NT)
+    DIR := $(shell cygpath -m "$$(pwd)")
+else
+    DIR := $(shell pwd)
+endif
 
 # The version `tau version` prints, taken from the tag the tree is on rather
 # than written in the source: a release is a tag and nothing else. A tree

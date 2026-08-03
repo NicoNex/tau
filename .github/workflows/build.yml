@@ -141,11 +141,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # macos-14 and later are Apple silicon; macos-13 is the last Intel one.
+          # macos-14 and later are Apple silicon. Intel macOS (macos-13) is
+          # retired on GitHub-hosted runners, so there is no amd64 image to
+          # build on; the release ships arm64 macOS only.
           - runner: macos-14
             arch: arm64
-          - runner: macos-13
-            arch: amd64
     runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4

@@ -4,8 +4,12 @@
 # the native tools and the MSYS shell understand.
 ifeq ($(OS),Windows_NT)
     DIR := $(shell cygpath -m "$$(pwd)")
+    # Windows executables end in .exe: gcc and go both write the name that way,
+    # so the rules that make and copy them have to say so too.
+    EXE := .exe
 else
     DIR := $(shell pwd)
+    EXE :=
 endif
 
 # The version `tau version` prints, taken from the tag the tree is on rather
@@ -99,7 +103,7 @@ tau: $(LIBFFI_A)
 	CC=$(CC) \
 	CGO_CFLAGS="$(CFLAGS)" \
 	CGO_LDFLAGS="$(LDFLAGS)" \
-	go build -ldflags "$(LDFLAGS_VERSION)" -o $(DIR)/tau
+	go build -ldflags "$(LDFLAGS_VERSION)" -o $(DIR)/tau$(EXE)
 
 # The runtime a bundled program is built on: the VM, the objects and the
 # bytecode decoder, and nothing else. No lexer, no parser, no syntax tree, no
@@ -120,8 +124,8 @@ else
 endif
 
 tau-rt: $(LIBFFI_A)
-	$(CC) -DTAU_RT -o $(DIR)/tau-rt $(RT_SRC) $(CFLAGS) $(LDFLAGS) $(RT_LIBS)
-	strip $(DIR)/tau-rt
+	$(CC) -DTAU_RT -o $(DIR)/tau-rt$(EXE) $(RT_SRC) $(CFLAGS) $(LDFLAGS) $(RT_LIBS)
+	strip $(DIR)/tau-rt$(EXE)
 
 tau-windows:
 	cd cmd/tau && \
@@ -170,8 +174,8 @@ install: libffi plugins tau tau-rt
 	# stdlib doesn't stay installed forever.
 	rm -rf $(DESTDIR)$(PREFIX)/lib/tau
 	mkdir -p $(DESTDIR)$(PREFIX)/bin $(DESTDIR)$(PREFIX)/lib/tau
-	cp tau $(DESTDIR)$(PREFIX)/bin/tau
-	cp tau-rt $(DESTDIR)$(PREFIX)/lib/tau/tau-rt
+	cp tau$(EXE) $(DESTDIR)$(PREFIX)/bin/tau$(EXE)
+	cp tau-rt$(EXE) $(DESTDIR)$(PREFIX)/lib/tau/tau-rt$(EXE)
 	cp -r stdlib/. $(DESTDIR)$(PREFIX)/lib/tau
 	find $(DESTDIR)$(PREFIX)/lib/tau -name '*_test.tau' -delete
 	find $(DESTDIR)$(PREFIX)/lib/tau \( -name 'Makefile' -o -name '*.c' \) -delete
@@ -181,7 +185,7 @@ install: libffi plugins tau tau-rt
 	@command -v tau >/dev/null || echo "note: $(PREFIX)/bin is not in your PATH"
 
 uninstall:
-	rm -f $(PREFIX)/bin/tau
+	rm -f $(PREFIX)/bin/tau$(EXE)
 	rm -rf $(PREFIX)/lib/tau
 
 clean:

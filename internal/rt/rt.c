@@ -28,6 +28,18 @@
 #include "../obj/object.h"
 #include "../compiler/bytecode.h"
 
+// Windows has neither POSIX mkdir(path, mode) - mingw's takes a path alone -
+// nor setenv; the environment is set through _putenv_s. Shimmed after the
+// system headers so mingw's own one-argument mkdir declaration is read first.
+#if defined(_WIN32) || defined(WIN32)
+#include <direct.h>
+#define mkdir(path, mode) _mkdir(path)
+static inline int setenv(const char *name, const char *value, int overwrite) {
+	(void)overwrite;
+	return _putenv_s(name, value);
+}
+#endif
+
 #define TRAILER_LEN 12
 static const char exec_magic[4] = {'T', 'A', 'U', 'X'};
 static const char bundle_magic[5] = {'T', 'A', 'U', 'B', 0x03};
